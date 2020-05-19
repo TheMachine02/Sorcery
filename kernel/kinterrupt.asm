@@ -95,9 +95,10 @@ kinterrupt:
 	ld	c, (iy+KERNEL_THREAD_IRQ)
 	tst	a, c
 	jr	z, .irq_skip
+	ld	(iy+KERNEL_THREAD_IRQ), 0
 	call	kthread.resume
 ; reload the current retire queue (previous node of the retired node)
-	ld	iy, (kqueue_retire_current)	
+	ld	iy, (kqueue_retire_current)
 .irq_skip:
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
 	djnz	.irq_resume_loop
@@ -145,8 +146,8 @@ kscheduler:
 ; if not active, grab kqueue_active_current thread
 ; if queue empty, schedule idle thread
 	ld	ix, (iy+KERNEL_THREAD_NEXT)
-	ld	a, (iy+KERNEL_THREAD_IRQ)
-	or  a, (iy+KERNEL_THREAD_STATUS)
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	or	a, a
 	jr	z, .dispatch
 	ld	hl, kqueue_active_size
 	ld	a, (hl)
@@ -166,11 +167,10 @@ kscheduler:
 	lea	hl, iy+0
 	lea	de, ix+0
 	sbc	hl, de
-	jr	z, .context_change_minimal
+	jr	z, .context_restore_minimal
 ; same one, just quit and restore fast
 	ld	(kthread_current), de	; mark new current
 ; save state of the current thread
-.context_change:
 	exx
 	ex	af,af'
 	push	hl
@@ -183,7 +183,7 @@ kscheduler:
 	add	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
 .context_restore:
-    lea hl, ix+KERNEL_THREAD_STACK_LIMIT
+	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
 	ld	a, (hl)
 	inc	hl
 	out0	(0x3A), a
@@ -204,7 +204,7 @@ kscheduler:
 ; give back the execution
 	ei
 	reti
-.context_change_minimal:
+.context_restore_minimal:
 	pop	iy
 	pop	ix
 	exx

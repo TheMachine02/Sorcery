@@ -84,11 +84,11 @@ kvideo:
 	set	2, (hl)
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
-	; carry flag is untouched, meaning that this IRQ will need a thread wake    
+; carry flag is untouched, meaning that this IRQ will need a thread wake    
 	ret	z
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
 	call	kthread.resume
-	; reset the carry flag, IRQ doesn't need thread to be waked
+; reset the carry flag, IRQ doesn't need thread to be waked
 	ccf
 	ret
 
@@ -105,6 +105,7 @@ kvideo:
 ; However, since the lock reset itself to NULL, if such interrupt occur, the member will be read as NULL
 ; Waking up a null thread is a no-op
 ; An other thing to consider is even trying to wake the thread make no sense because it is already active
+; In sake a simplicity, take no further action
 	ld	hl, (kthread_current)
 	ld	(DRIVER_VIDEO_IRQ_LOCK_THREAD), hl
 	ret

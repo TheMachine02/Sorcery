@@ -46,6 +46,7 @@ kmutex:
 ; hl = mutex byte
 
 .lock:
+; TODO NEED TO CHECK IF WE ALREADY OWN IT
 	sra	(hl)
 	jr	nc, .lock_acquire
 	call	kthread.yield

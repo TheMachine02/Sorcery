@@ -1,4 +1,8 @@
-; this header reside in thread memory.
+; this header reside in thread memory
+; DONT TOUCH ANYTHING YOU DONT WANT TO BREAK IN THIS HEADER
+; Atomic is UTERLY important while writing to it
+; you can read pid, ppid, irq (but it will not be a *safe* value, meaning it can change the next instruction
+; you can read heap, 
 define	KERNEL_THREAD_HEADER_SIZE           0x20
 define	KERNEL_THREAD_HEADER                0x00
 define	KERNEL_THREAD_PID                   0x00
@@ -21,8 +25,7 @@ define	KERNEL_THREAD_IDLE                  KERNEL_THREAD
 
 define	TASK_RUNNING             0
 define	TASK_INTERRUPTIBLE       1    ; can be waked up by signal
-define	TASK_UNINTERRUPTIBLE     2    ; need to be explicitely waked up
-define	TASK_STOPPED             3    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
+define	TASK_STOPPED             2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 
 define	kqueue_active                       0xD00100
 define	kqueue_active_size                  0xD00100
@@ -152,15 +155,14 @@ kthread:
 ; iy = thread
     
 .suspend:
+; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though)
 	di
 	push	iy
 	push	hl
 	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
-	ld	hl, kqueue_active
-	call	kqueue.remove
-	ld	hl, kqueue_retire
-	call	kqueue.insert
+; the process to write the thread state and change the queue should be always a critical section
+	call	task_switch_interruptible
+; also note that writing THREAD_IRQ doesn't *need* to be atomic, but testing is
 	pop	hl
 	pop	iy
 ; switch away from current thread to a new active thread
@@ -181,16 +183,11 @@ kthread:
 	tstdi
 	ld	a, (iy+KERNEL_THREAD_STATUS)    ; this read need to be atomic !
 	cp	a, TASK_INTERRUPTIBLE
-; can't wake TASK_RUNNING (0) and TASK_STOPPED (3) and TASK_UNINTERRUPTIBLE (2)
+; can't wake TASK_RUNNING (0) and TASK_STOPPED (2)
 ; range -1 > 1
 ; if a=2 , nc, if a=255, nc, else c
 	jr	nz, .resume_exit_atomic
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_RUNNING
-	ld	(iy+KERNEL_THREAD_IRQ), 0
-	ld	hl, kqueue_retire
-	call	kqueue.remove
-	ld	hl, kqueue_active
-	call	kqueue.insert
+	call	task_switch_running
 	ld	a, 0xFF
 	ld	(kthread_need_reschedule), a
 .resume_exit_atomic:
@@ -203,7 +200,7 @@ kthread:
 .exit:
 	di
 	ld	sp, (KERNEL_STACK)
-; first disable stack protector
+; first disable stack protector (load the kernel_stack stack protector)
 	ld	a, 0xA0
 	out0	(0x3A), a
 	ld	a, 0x00
@@ -217,6 +214,8 @@ kthread:
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	ksignal.kill
+; need to free IRQ locked and mutex locked to thread
+	
 ; de = next thread to be active
 	ld	a, (kqueue_active_size)
 	dec	a
@@ -253,6 +252,9 @@ kthread:
 	ld	a, (iy+KERNEL_THREAD_PPID)
 	pop	iy
 	ret
+   
+   
+; DANGEROUS AREA, helper function ;
     
 .reserve_pid:
 ; find a free pid
@@ -294,6 +296,10 @@ kthread:
 	inc	hl
 	ld	(hl), de
 	ret
+
+; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_RUNNING
+; may break if not in this state before
+; need to be fully atomic
 	
 .IHEADER:
 	db	0x00		; ID 0 reserved
@@ -301,9 +307,34 @@ kthread:
 	dl	NULL		; No prev
 	db	NULL		; No PPID
 	db	0xFF		; IRQ all
-	db	TASK_RUNNING	; Status : running
+	db	TASK_INTERRUPTIBLE	; Status : running
 	dl	0xD000A0	; Stack limit
 	dl	0xD000E0	; Stack will be writed at first unschedule
 	dl	NULL		; No true heap for idle thread
 	dl	NULL		; No friend
 .IHEADER_END:
+
+task_switch_running:
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_RUNNING
+	ld	hl, kqueue_retire
+	call	kqueue.remove
+	ld	hl, kqueue_active
+	jp	kqueue.insert
+
+; from TASK_RUNNING to TASK_STOPPED
+; may break if not in this state before
+; need to be fully atomic
+task_switch_stopped:
+	ld (iy+KERNEL_THREAD_STATUS), TASK_STOPPED
+	ld	hl, kqueue_active
+	call	kqueue.remove
+	ld	hl, kqueue_retire
+	jp	kqueue.insert
+
+; from TASK_RUNNING to TASK_INTERRUPTIBLE
+task_switch_interruptible:
+	ld (iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
+	ld	hl, kqueue_active
+	call	kqueue.remove
+	ld	hl, kqueue_retire
+	jp	kqueue.insert
