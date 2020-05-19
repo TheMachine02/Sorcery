@@ -42,7 +42,7 @@ kkeyboard:
 ; enable interrupt chip side
 	ld	hl, DRIVER_KEYBOARD_IMSC
 	ld	(hl), 2
-; lock rest
+; lock reset
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
 	ld	hl, .irq_handler
