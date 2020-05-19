@@ -123,7 +123,7 @@ kirq:
 	push	hl
 	push	bc
 	push	af
-	; enable a specific IRQ
+; enable a specific IRQ
 	ld	c, a
 	ld	a, c
 	rra
@@ -131,12 +131,12 @@ kirq:
 	cpl
 	and	00111100b
 	ld	b, a
-	; this is the second byte for interrupt mask
+; this is the second byte for interrupt mask
 	ld	a, c
 	cpl
 	and	00001111b
 	ld	c, a
-	; critical section ;
+; critical section ;
 	tstdi
 ; this is the first byte
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
