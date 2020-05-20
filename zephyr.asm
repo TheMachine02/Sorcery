@@ -38,7 +38,6 @@ include	'kernel/kmmu.asm'
  rb	$0220A8-$
 include	'kernel/kpanic.asm'
 include	'kernel/kflash.asm'
-include	'kernel/kcachefs.asm'
 
 
 include	'kernel/exec/kexec.asm'

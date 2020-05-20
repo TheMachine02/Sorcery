@@ -103,6 +103,7 @@ kmmu:
 	ld	(hl), a
 	tstei
 	ld	a, l
+	or	a, a
 	sbc	hl, hl
 	ld	h, a
 	add	hl, hl
@@ -305,28 +306,26 @@ kmmu:
 	pop	de
 	ret
 
-.create_heap:
+.heap_page:
 ; a = thread_id
 	ld	hl, KERNEL_MMU_RAM
-	push	bc
-	ld	b, 16
-	call	.map_block_thread
-;    call    .map_page_thread
+	call    .map_page_thread
 	jr	c, .create_error   ; error out, null is sent, else, we have HL=page adress
 ; size / prev / next / pointer 
 	push	hl
 	ex	(sp), ix
-	ld	bc, KERNEL_MMU_PAGE_SIZE*16 - KERNEL_MEMORY_BLOCK_SIZE
+	push 	bc
+	ld	bc, KERNEL_MMU_PAGE_SIZE - KERNEL_MEMORY_BLOCK_SIZE
 	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), bc
 	ld	bc, NULL
 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), bc
 	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
 	lea	bc, ix+KERNEL_MEMORY_BLOCK_SIZE
 	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), bc
+	pop	bc
 ; hl = heap adress
 	pop	ix
 .create_error:
-	pop	bc
 	ret    
     
 .MEMORY_PAGE:
@@ -481,17 +480,69 @@ kmalloc:
 	jr	z, .malloc_test_block
 .malloc_next_block:
 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
+	or	a, a
+	jr	z, .malloc_break
 	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-	or	a, a   ; is the adress is != NULL (high byte is certain, since we won't be in 0x00xxxx range
-	jr	nz, .malloc_loop
-	ld	ix, (kthread_current)
-	ld	(ix+KERNEL_THREAD_ERRNO), ENOMEM
-	pop	ix
-	pop	de
+	jr	.malloc_loop
+; so, we didn't find any memory block large enough for us
+; let's try to map more memory to the thread
+; first, get size+BLOCK_HEADER / block size 
+; ix is the last block, it's important !
+.malloc_break:
+	ld	hl, KERNEL_MEMORY_BLOCK_SIZE
+	add	hl, de
+	push	hl
+	ld	a, l
+	inc	sp
+	ex	(sp), hl
+	dec	sp
+; we need to round UP here	
+	or	a, a
+	jr	z, $+3
+	inc	hl
+	srl	h
+	rr	l
+	jr	nc, $+3
+	inc	hl
+	srl	h
+	rr	l
+	jr	nc, $+3
+	inc	hl
+	srl	h
+	rr	l
+	jr	nc, $+3
+	inc	hl
+	ld	b, l
+	pop	hl
+	ld	hl, KERNEL_MMU_RAM
+	call	kmmu.map_block
+; block a certain number of block
+; return hl as the adress
+; de is still size
+	jp	c, .malloc_error
+	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
+; there is a *new block*
+; create the block, point it to ix, and then jump to test block
+	push	hl
+; b * KERNEL_MMU_PAGE_SIZE/256 > bc
 	or	a, a
 	sbc	hl, hl
-	scf
-	ret
+assert KERNEL_MMU_PAGE_SIZE/256 = 8
+	ld	h, b
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	bc, -KERNEL_MEMORY_BLOCK_SIZE
+	add	hl, bc
+; this is the size of the block
+	lea	bc, ix+0
+	pop	ix
+	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), hl
+	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
+	ld	hl, NULL
+	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
+	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
+	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
 .malloc_test_block:
 	ld	hl, (ix+KERNEL_MEMORY_BLOCK_DATA)
 	sbc	hl, de
@@ -536,6 +587,15 @@ kmalloc:
 	pop	ix
 	pop	de
 	or	a, a
+	ret
+.malloc_error:
+	ld	ix, (kthread_current)
+	ld	(ix+KERNEL_THREAD_ERRNO), ENOMEM
+	pop	ix
+	pop	de
+	or	a, a
+	sbc	hl, hl
+	scf
 	ret
 
 kfree:

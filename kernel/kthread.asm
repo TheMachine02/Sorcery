@@ -118,7 +118,7 @@ kthread:
 ; stack protector ;
 ; please note write affect memory, so do a + 4 to be safe    
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
-	call	kmmu.create_heap
+	call	kmmu.heap_page
 	jr	c, .create_error_free
 	ld	(iy+KERNEL_THREAD_HEAP), hl
 ; iy is thread adress, a is still PID    
@@ -213,8 +213,11 @@ kthread:
 	out0	(0x3C), a
 	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_PID)
+	push	hl
 	call	.free_pid
+	pop	hl
 ; signal parent thread of the end of the child thread
+; also send HL as exit code
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	ksignal.kill

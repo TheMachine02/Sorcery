@@ -51,9 +51,12 @@ THREAD_INIT_TEST:
 	ld	hl, elf_frozen_example
 	call	kexec.load_elf16    
 ; boom, kill it
-	ld	c, 2
-	ld	a, SIGSTOP
-	call	ksignal.kill
+;	ld	c, 2
+;	ld	a, SIGSTOP
+;	call	ksignal.kill
+	
+	ld	hl, 65536
+	call	kmalloc
 	
 	call	kvideo.irq_lock
 	ld	bc, 0
