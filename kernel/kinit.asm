@@ -14,8 +14,6 @@ define	KERNEL_CRYSTAL_TIMER_DIV314         0x03
 
 define	NULL 0
 
-define errno				0xD00002
-
 kinit:
 	di	; boot 5.0.1 stupidity power ++
 	ld	a, KERNEL_CRYSTAL_TIMER_DIV314
