@@ -45,15 +45,6 @@ ksignal:
 	pop	iy
 	pop	ix
 	ret
-.handler_context_yield:
-; context restore and yield
-	pop	af
-	pop	de
-	pop	bc
-	pop	hl
-	pop	iy
-	pop	ix
-	jp	kthread.yield
 	
 .handler_stop:
 	di
@@ -70,7 +61,16 @@ ksignal:
 	or	a, a
 	jr	z, .handler_context_restore
 	call	task_switch_interruptible
-	jr	.handler_context_yield
+	
+.handler_context_yield:
+; context restore and yield
+	pop	af
+	pop	de
+	pop	bc
+	pop	hl
+	pop	iy
+	pop	ix
+	jp	kthread.yield
 	
 .HANDLER_JUMP:
  dl	.handler_context_restore
@@ -99,17 +99,25 @@ ksignal:
  dl	kthread.core
 	
 .raise:
+; Raise signal to current thread
+; REGSAFE and ERRNO compliant
+; int raise(int sig)
+; register A is signal
+; Also silently pass register HL to signal handler as a void*
+; return -1 on error, 0 on success with errno correctly set
 	push	hl
 	ld	hl, (kthread_current)
 	ld	c, (hl)
 	pop	hl
 
-.queue:
-; pid, signal, data*
 .kill:
-; pid, signal
-; a = signal, c = pid, hl = data (optionnal)
-; return -1 on error and errno
+; Send signal to thread
+; REGSAFE and ERRNO compliant
+; int kill(pid_t pid, int sig)
+; register A is signal
+; register C is pid
+; Also silently pass register HL to signal handler as a void*
+; return -1 on error, 0 on success with errno correctly set
 	push	iy
 	push	bc
 	push	de
@@ -170,27 +178,34 @@ ksignal:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
 	call	nz, task_switch_running
-	or	a, a
-	sbc	hl, hl
-.kill_exit:
 	tstei
 	ld	a, b
+	or	a, a
+	sbc	hl, hl
 	pop	de
 	pop	bc
 	pop	iy
 	ret
 .kill_no_thread:
+	ld	a, ESRCH
+	jr	.kill_errno
 .kill_no_permission:
+	ld	a, EPERM
+	jr	.kill_errno
 .kill_no_signal:
-	scf
-	sbc	hl, hl
+	ld	a, EINVAL
+.kill_errno:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), a
 	tstei
 	ld	a, b
+	scf
+	sbc	hl, hl
 	pop	de
 	pop	bc
 	pop	iy
-	scf
-	ret	
+	ret
+
 .wait:
 	jp	kthread.suspend
 

@@ -1,8 +1,8 @@
 ; this header reside in thread memory
 ; DONT TOUCH ANYTHING YOU DONT WANT TO BREAK IN THIS HEADER
 ; Atomic is UTERLY important while writing to it
-; you can read pid, ppid, irq (but it will not be a *safe* value, meaning it can change the next instruction
-; you can read heap, 
+; you can read pid, ppid, irq (but it will not be a *safe value, meaning it can change the next instruction
+; for safety dont touch anything here except PID and PPID ;
 define	KERNEL_THREAD_HEADER_SIZE           0x20
 define	KERNEL_THREAD_HEADER                0x00
 define	KERNEL_THREAD_PID                   0x00
@@ -11,10 +11,14 @@ define	KERNEL_THREAD_PREVIOUS              0x04
 define	KERNEL_THREAD_PPID                  0x07
 define	KERNEL_THREAD_IRQ                   0x08
 define	KERNEL_THREAD_STATUS                0x09
+; static thread data that can be manipulated freely ;
 define	KERNEL_THREAD_STACK_LIMIT           0x0A
 define	KERNEL_THREAD_STACK                 0x0D
 define	KERNEL_THREAD_HEAP                  0x10
 define	KERNEL_THREAD_TIMING                0x13
+define	KERNEL_THREAD_ERRNO		    0x16
+define	KERNEL_THREAD_SIGNAL_MESSAGE	    0x17
+define  KERNEL_THREAD_SIGNAL_MASK	    0x1A
 ; 8 bytes ;
 ; signal mask ;
 ; 0x20 first bytes
@@ -162,7 +166,7 @@ kthread:
 	ld	iy, (kthread_current)
 ; the process to write the thread state and change the queue should be always a critical section
 	call	task_switch_interruptible
-; also note that writing THREAD_IRQ doesn't *need* to be atomic, but testing is
+; also note that writing THREAD_IRQ doesn't *need to be atomic, but testing is
 	pop	hl
 	pop	iy
 ; switch away from current thread to a new active thread
@@ -240,6 +244,9 @@ kthread:
 	jp	.exit
    
 .get_pid:
+; REGSAFE and ERRNO compliant
+; pid_t getpid()
+; return value is register A
 	push	hl
 	ld	hl, (kthread_current)
 	ld	a, (hl)
@@ -247,6 +254,9 @@ kthread:
 	ret
     
 .get_ppid:
+; REGSAFE and ERRNO compliant
+; pid_t getppid()
+; return value is register A
 	push	iy
 	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_PPID)

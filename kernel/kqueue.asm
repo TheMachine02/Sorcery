@@ -49,7 +49,7 @@ kqueue:
 
 .remove:
 ; iy is node to remove
-; update queue_current to NULL is count=0 or previous node of the removed node
+; update queue_current to NULL if count=0 or previous node of the removed node
 ; hl is queue pointer (count, queue_current)
 	dec	(hl)
 	jr	z, .null_queue

@@ -463,13 +463,12 @@ kmmu:
  db 0    ; 0xD3F800
 
 kmalloc:
-; block :
-; size (3) | free (free is upper bit)
-; next (3)
-; prev (3)
-; ptr (3)
-; [register SAFE]
-; return value in HL
+; Memory allocation routine
+; REGSAFE and ERRNO compliant
+; void* malloc(size_t size)
+; register HL is size
+; return NULL if failed and errno set or void* otherwise
+; also set carry if failed
 	push	de
 	ex	de, hl
 	push	ix
@@ -485,6 +484,8 @@ kmalloc:
 	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
 	or	a, a   ; is the adress is != NULL (high byte is certain, since we won't be in 0x00xxxx range
 	jr	nz, .malloc_loop
+	ld	ix, (kthread_current)
+	ld	(ix+KERNEL_THREAD_ERRNO), ENOMEM
 	pop	ix
 	pop	de
 	or	a, a
@@ -538,8 +539,11 @@ kmalloc:
 	ret
 
 kfree:
-; free value hl
-; [register SAFE]
+; Memory free routine
+; REGSAFE and ERRNO compliant
+; void free(void* ptr)
+; if ptr is NULL, return silently
+; behaviour is undetermined if ptr wasn't malloc'ed before
 	push	ix
 	push	iy
 	push	de
@@ -596,29 +600,4 @@ kfree:
 	pop	de
 	pop	iy
 	pop	ix
-	or	a, a
-	sbc	hl, hl
-	ret
-
-kmemset:
-; a = value to set
-; hl = adress to set
-; bc = size to set
-; [register SAFE]
-	push	hl
-	push	de
-	push	bc
-	ld	(hl), a
-	ex	de, hl
-	or	a, a
-	sbc	hl, hl
-	add	hl, de
-	cpi
-	jp	po, .set_quit
-	ex	de, hl
-	ldir
-.set_quit:
-	pop	bc
-	pop	de
-	pop	hl
 	ret

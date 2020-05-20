@@ -1,8 +1,8 @@
 include	'include/ez80.inc'
+include	'include/asm-errno.inc'
 include	'include/tiformat.inc'
 format	ti executable 'ZEPHYR'
 include	'include/os.inc'
-
 ;-------------------------------------------------------------------------------
 	os_create
 ;-------------------------------------------------------------------------------
@@ -44,6 +44,6 @@ include	'kernel/kcachefs.asm'
 include	'kernel/exec/kexec.asm'
 include	'kernel/crypto/kcrc.asm'
 include	'kernel/driver/video.asm'
-;include	'kernel/driver/rtc.asm'
-;include	'kernel/driver/timer.asm'
+include	'kernel/driver/rtc.asm'
+include	'kernel/driver/timer.asm'
 include	'kernel/driver/keyboard.asm'
