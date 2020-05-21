@@ -34,8 +34,8 @@ kinit:
 	call	kpower.init
 	call	kmmu.init
 	call	kwatchdog.init
-	call	kthread.init
 	call	kinterrupt.init
+	call	kthread.init
 
 ; driver init, nice
 	call	kvideo.init
@@ -51,9 +51,9 @@ THREAD_INIT_TEST:
 	ld	hl, elf_frozen_example
 	call	kexec.load_elf16    
 ; boom, kill it
-;	ld	c, 2
-;	ld	a, SIGSTOP
-;	call	ksignal.kill
+	ld	c, 2
+	ld	a, SIGSTOP
+	call	ksignal.kill
 	
 	ld	hl, 65536
 	call	kmalloc

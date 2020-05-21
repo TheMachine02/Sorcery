@@ -27,7 +27,7 @@ define KERNEL_CSTATE_GRANULARITY 50 ; 50ms
 ; watchdog : 32768, 3277 MAX value for idle timing0
 ; cystal timer : 104Hz (tous les 10 sample)
 	ld 	a, 0x03
-	ld	hl, (KERNEL_THREAD+KERNEL_THREAD_TIMING)
+	ld	hl, (KERNEL_THREAD+KERNEL_THREAD_TIME)
 	ld	de, 410
 	or	a, a
 	sbc	hl, de

@@ -125,6 +125,7 @@ kmmu:
 ; try map b memory block (each are 2048)
 .map_block_thread:
 ; void*, thread_id, block_count
+; REGSAFE
 ; hl , a , b
 	push	bc
 	dec	b
@@ -183,6 +184,7 @@ kmmu:
 .map_block_mark:
 	ld	l, d
 	ld	b, e
+	dec	b	; we need to reduce this by one !
 	or	a, KERNEL_MMU_USED_MASK
 .map_block_mark_loop:
 	ld	(hl), a
@@ -205,7 +207,7 @@ kmmu:
 	ret
 
 .unmap_page:
-; [register SAFE], return a = thread id
+; REGSAFE, return a = thread id
 	push	hl
 	push	bc
 	ld	bc, (kthread_current)
@@ -215,7 +217,7 @@ kmmu:
 .unmap_page_thread:
 ; void* (hl) : any adress within an aligned page
 ; unmap the memory page
-; [register SAFE] (return a = thread id)
+; REGSAFE, return a = thread id
 	push	hl
 	push	bc
 .unmap_page_jump:
@@ -262,7 +264,7 @@ kmmu:
 ; marking block as free doesn't require atomic, since we check if we own them.
 ; if we schedule out, we will continue to free anyway when we'll be here again
 ; mark free ONLY after clearing it, to avoid data left out
-; [register SAFE], return a = thread id
+; REGSAFE, return a = current thread
 	push	hl
 	push	bc
 .unmap_block_jump:
@@ -284,7 +286,7 @@ kmmu:
     
 .zero_page:
 ; hl is MAP adress
-; destroy : none
+; REGSAFE
 	push	de
 	push	bc
 	push	hl
@@ -305,28 +307,6 @@ kmmu:
 	pop	bc
 	pop	de
 	ret
-
-.heap_page:
-; a = thread_id
-	ld	hl, KERNEL_MMU_RAM
-	call    .map_page_thread
-	jr	c, .create_error   ; error out, null is sent, else, we have HL=page adress
-; size / prev / next / pointer 
-	push	hl
-	ex	(sp), ix
-	push 	bc
-	ld	bc, KERNEL_MMU_PAGE_SIZE - KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), bc
-	ld	bc, NULL
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), bc
-	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
-	lea	bc, ix+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), bc
-	pop	bc
-; hl = heap adress
-	pop	ix
-.create_error:
-	ret    
     
 .MEMORY_PAGE:
  db RESERVED ; 0xD00000
@@ -598,6 +578,77 @@ assert KERNEL_MMU_PAGE_SIZE/256 = 8
 	scf
 	ret
 
+krealloc:
+; Memory realloc routine
+; REGSAFE and ERRNO compliant
+; void* realloc(void* ptr, size_t newsize)
+; if ptr is NULL, return silently
+	push	ix
+	push	de
+	push	hl
+	pop	ix
+; try to mask the adress, ie >= D00000
+	ex	de, hl
+	ld	hl, 0x300000
+	add	hl, de
+	jr	nc, .realloc_error
+; check if adress is valid
+	ld	hl, (ix-3)
+	or	a, a
+	sbc	hl, de
+	jr	nz, .realloc_error
+; invalid adress, return quietly
+; TODO try to merge with the next block, if free, to avoid copy
+; TODO if resize to smaller size, shrink the current block instead allocating new one
+; read the next block size and if it is free
+; else, malloc and copy and free
+; 	lea	ix, ix-KERNEL_MEMORY_BLOCK_SIZE
+; 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
+; 	or	a, a
+; 	jr	z, .realloc_malloc_cpy
+; 	ld	iy, (iy+KERNEL_MEMORY_BLOCK_NEXT)
+; 	bit	7, (iy+KERNEL_MEMORY_BLOCK_FREE)
+; 	jr	nz, .realloc_malloc_cpy
+; is size enough ?
+; 	ld	hl, (ix+KERNEL_MEMORY_BLOCK_DATA)
+; 	ld	de, (iy+KERNEL_MEMORY_BLOCK_DATA)
+; 	add	hl, de
+; clean out the *used* mask
+; 	ld	de, 0x800000
+; 	add	hl, de
+; 	or	a, a
+; 	sbc	hl, bc	; if nc, we are good ! merge ix and iy, return ix+12
+; 	jr	c, .realloc_malloc_cpy
+.realloc_malloc_cpy:
+	or	a, a
+	sbc	hl, hl
+	adc	hl, bc
+	jr	z, .realloc_free
+	call	kmalloc
+	jr	c, .realloc_error
+	push	hl
+	ex	de, hl
+	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
+; copy for the new size only
+	ldir
+	pop	de
+.realloc_free:
+	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
+	call	kfree
+	ex	de, hl
+	pop	de
+	pop	ix
+	or	a, a
+	ret
+.realloc_error:
+; set hl = NULL, ERRNO set appropriately
+	or	a, a
+	sbc	hl, hl
+	pop	de
+	pop	ix
+	scf
+	ret
+	
 kfree:
 ; Memory free routine
 ; REGSAFE and ERRNO compliant
@@ -608,11 +659,12 @@ kfree:
 	push	iy
 	push	de
 	push	hl
+	push	hl
 	pop	ix
 ; try to mask the adress, ie >= D00000
-	lea	de, ix+0
-	ld	hl, 0xCFFFFF
-	sbc	hl, de
+	ex	de, hl
+	ld	hl, 0x300000
+	add	hl, de
 	jr	nc, .free_exit
 ; check if adress is valid
 	ld	hl, (ix-3)
@@ -657,6 +709,7 @@ kfree:
 ; changed the prev of the next block
 	ld	(iy+KERNEL_MEMORY_BLOCK_PREV), ix
 .free_exit:
+	pop	hl
 	pop	de
 	pop	iy
 	pop	ix

@@ -138,9 +138,9 @@ kscheduler:
 	ld	hl, KERNEL_INTERRUPT_MAX_TIME + 1
 	or	a, a
 	sbc	hl, de
-	ld	de, (iy+KERNEL_THREAD_TIMING)
+	ld	de, (iy+KERNEL_THREAD_TIME)
 	add	hl, de
-	ld	(iy+KERNEL_THREAD_TIMING), hl
+	ld	(iy+KERNEL_THREAD_TIME), hl	; this is total time of the thread (@32768Hz, may overflow)
 ; check if current thread is active : if yes, grab next_thread
 ; idle is marked as NOT ACTIVE, NULL is NOT ACTIVE
 ; if not active, grab kqueue_active_current thread

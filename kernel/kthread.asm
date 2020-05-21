@@ -3,48 +3,48 @@
 ; Atomic is UTERLY important while writing to it
 ; you can read pid, ppid, irq (but it will not be a *safe value, meaning it can change the next instruction
 ; for safety dont touch anything here except PID and PPID ;
-define	KERNEL_THREAD_HEADER_SIZE           0x20
-define	KERNEL_THREAD_HEADER                0x00
-define	KERNEL_THREAD_PID                   0x00
-define	KERNEL_THREAD_NEXT                  0x01
-define	KERNEL_THREAD_PREVIOUS              0x04
-define	KERNEL_THREAD_PPID                  0x07
-define	KERNEL_THREAD_IRQ                   0x08
-define	KERNEL_THREAD_STATUS                0x09
+define	KERNEL_THREAD_HEADER			0x00
+define	KERNEL_THREAD_PID			0x00
+define	KERNEL_THREAD_NEXT			0x01
+define	KERNEL_THREAD_PREVIOUS			0x04
+define	KERNEL_THREAD_PPID			0x07
+define	KERNEL_THREAD_IRQ			0x08
+define	KERNEL_THREAD_STATUS			0x09
 ; static thread data that can be manipulated freely ;
-define	KERNEL_THREAD_STACK_LIMIT           0x0A
-define	KERNEL_THREAD_STACK                 0x0D
-define	KERNEL_THREAD_HEAP                  0x10
-define	KERNEL_THREAD_TIMING                0x13
-define	KERNEL_THREAD_ERRNO		    0x16
-define	KERNEL_THREAD_SIGNAL_MESSAGE	    0x17
-define  KERNEL_THREAD_SIGNAL_MASK	    0x1A
-; 8 bytes ;
-; signal mask ;
-; 0x20 first bytes
+; within it's own thread ... don't manipulate other thread memory, it's not nice ;
+define	KERNEL_THREAD_STACK_LIMIT		0x0A
+define	KERNEL_THREAD_STACK			0x0D
+define	KERNEL_THREAD_HEAP			0x10
+define	KERNEL_THREAD_TIME			0x13
+define	KERNEL_THREAD_ERRNO			0x16
+define	KERNEL_THREAD_SIGNAL_MESSAGE		0x17
+define  KERNEL_THREAD_SIGNAL_MASK		0x1A
+define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x20
+; up to 0x80, table is 96 bytes or 32 descriptor ;
 
-define	KERNEL_THREAD_STACK_SIZE            4096
+define	KERNEL_THREAD_HEADER_SIZE		0x80
+define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
+define	KERNEL_THREAD_DESCRIPTOR_TABLE_SIZE	32
+define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 
-define	KERNEL_THREAD_IDLE                  KERNEL_THREAD
+define	TASK_RUNNING				0
+define	TASK_INTERRUPTIBLE			1    ; can be waked up by signal
+define	TASK_STOPPED				2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 
-define	TASK_RUNNING             0
-define	TASK_INTERRUPTIBLE       1    ; can be waked up by signal
-define	TASK_STOPPED             2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
+define	kqueue_active				0xD00100
+define	kqueue_active_size			0xD00100
+define	kqueue_active_current			0xD00101
 
-define	kqueue_active                       0xD00100
-define	kqueue_active_size                  0xD00100
-define	kqueue_active_current               0xD00101
+define	kqueue_retire				0xD00104
+define	kqueue_retire_size			0xD00104
+define	kqueue_retire_current			0xD00105
 
-define	kqueue_retire                       0xD00104
-define	kqueue_retire_size                  0xD00104
-define	kqueue_retire_current               0xD00105
-
-define	kthread_current                     0xD00108
-define	kthread_need_reschedule             0xD0010B
+define	kthread_current				0xD00108
+define	kthread_need_reschedule			0xD0010B
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
-define	kthread_pid_bitmap                  0xD00200
+define	kthread_pid_bitmap			0xD00200
 
 kthread:
 .init:
@@ -114,11 +114,13 @@ kthread:
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
-	lea	hl, iy+KERNEL_THREAD_HEADER_SIZE + 4
+	ld	de, KERNEL_THREAD_HEADER_SIZE + 4
+	lea	hl, iy + 0
+	add	hl, de
 ; stack protector ;
 ; please note write affect memory, so do a + 4 to be safe    
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
-	call	kmmu.heap_page
+	call	.heap_page
 	jr	c, .create_error_free
 	ld	(iy+KERNEL_THREAD_HEAP), hl
 ; iy is thread adress, a is still PID    
@@ -222,7 +224,6 @@ kthread:
 	ld	a, SIGCHLD
 	call	ksignal.kill
 ; need to free IRQ locked and mutex locked to thread
-	
 ; de = next thread to be active
 	ld	a, (kqueue_active_size)
 	dec	a
@@ -265,10 +266,58 @@ kthread:
 	ld	a, (iy+KERNEL_THREAD_PPID)
 	pop	iy
 	ret
-   
-   
-; DANGEROUS AREA, helper function ;
-    
+	
+.heap_size:
+; parse all block
+	push	ix
+	push	bc
+	ld	ix, (kthread_current)
+	ld	ix, (ix+KERNEL_THREAD_HEAP)
+; sum of all block is the heap size
+	or	a, a
+	sbc	hl, hl
+.heap_size_loop:
+	ld	bc, (ix+KERNEL_MEMORY_BLOCK_DATA)
+	add	hl, bc
+	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
+	or	a, a
+	jr	z, .heap_size_break
+	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
+	jr	.heap_size_loop
+.heap_size_break:
+; clean out the upper bit
+	ld	bc, 0x800000
+	add	hl, bc
+	jr	nc, $-1
+	pop	bc
+	pop	ix
+	ret
+
+; DANGEROUS AREA, helper function ;	
+	
+.heap_page:
+; helper function
+; a = thread_id
+	ld	hl, KERNEL_MMU_RAM
+	call    kmmu.map_page_thread
+	jr	c, .heap_error   ; error out, null is sent, else, we have HL=page adress
+; size / prev / next / pointer 
+	push	hl
+	ex	(sp), ix
+	push 	bc
+	ld	bc, KERNEL_MMU_PAGE_SIZE - KERNEL_MEMORY_BLOCK_SIZE
+	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), bc
+	ld	bc, NULL
+	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), bc
+	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
+	lea	bc, ix+KERNEL_MEMORY_BLOCK_SIZE
+	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), bc
+	pop	bc
+; hl = heap adress
+	pop	ix
+.heap_error:
+	ret    
+
 .reserve_pid:
 ; find a free pid
 ; this should be called in an atomic / critical code section to be sure it will still be free when used
@@ -320,11 +369,16 @@ kthread:
 	dl	NULL		; No prev
 	db	NULL		; No PPID
 	db	0xFF		; IRQ all
-	db	TASK_INTERRUPTIBLE	; Status : running
-	dl	0xD000A0	; Stack limit
+	db	TASK_INTERRUPTIBLE	; Status
 	dl	0xD000E0	; Stack will be writed at first unschedule
+	dl	0xD000A0	; Stack limit
 	dl	NULL		; No true heap for idle thread
 	dl	NULL		; No friend
+	db	NULL
+	dl	NULL
+	dl	NULL
+	dl	NULL
+; descriptor table, initialised to NULL anyway when mapping page...
 .IHEADER_END:
 
 task_switch_running:
