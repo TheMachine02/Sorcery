@@ -74,7 +74,12 @@ krtc:
 	bit	DRIVER_RTC_IRQ_LOCK_SET, (hl)
 	ret	z
 	ld	iy, (DRIVER_RTC_IRQ_LOCK_THREAD)
-	call	kthread.resume
+	push	af
+	ld	a, (iy+KERNEL_THREAD_IRQ)
+	or	a, a
+	ld	(iy+KERNEL_THREAD_IRQ), 0
+	call	nz, kthread.resume
+	pop	af
 	ccf
 	ret	
 	

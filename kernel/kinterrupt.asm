@@ -1,24 +1,26 @@
-define	KERNEL_INTERRUPT_STATUS_RAW        0xF00000
-define	KERNEL_INTERRUPT_ENABLE_MASK       0xF00004
-define	KERNEL_INTERRUPT_ACKNOWLEDGE       0xF00008
-define	KERNEL_INTERRUPT_SIGNAL_LATCH      0xF0000C
-define	KERNEL_INTERRUPT_STATUS_MASKED     0xF00014
-define	KERNEL_INTERRUPT_REVISION          0xF00050
-define	KERNEL_INTERRUPT_REVISION_BASE     0x010900
-define	KERNEL_INTERRUPT_EARLY_SWITCH      0xD177BA
+define	KERNEL_INTERRUPT_STATUS_RAW		0xF00000
+define	KERNEL_INTERRUPT_ENABLE_MASK		0xF00004
+define	KERNEL_INTERRUPT_ACKNOWLEDGE		0xF00008
+define	KERNEL_INTERRUPT_SIGNAL_LATCH		0xF0000C
+define	KERNEL_INTERRUPT_STATUS_MASKED		0xF00014
+define	KERNEL_INTERRUPT_REVISION		0xF00050
+define	KERNEL_INTERRUPT_REVISION_BASE		0x010900
+define	KERNEL_INTERRUPT_EARLY_SWITCH		0xD177BA
 
-define	KERNEL_INTERRUPT_ON                00000001b
-define	KERNEL_INTERRUPT_TIMER1            00000010b
-define	KERNEL_INTERRUPT_TIMER2            00000100b
-define	KERNEL_INTERRUPT_TIMER3            00001000b
-define	KERNEL_INTERRUPT_TIMER_OS          00010000b
-define	KERNEL_INTERRUPT_KEYBOARD          00000100b
-define	KERNEL_INTERRUPT_LCD               00001000b
-define	KERNEL_INTERRUPT_RTC               00010000b
-define	KERNEL_INTERRUPT_USB               00100000b
+define	KERNEL_INTERRUPT_ON			00000001b
+define	KERNEL_INTERRUPT_TIMER1			00000010b
+define	KERNEL_INTERRUPT_TIMER2			00000100b
+define	KERNEL_INTERRUPT_TIMER3			00001000b
+define	KERNEL_INTERRUPT_TIMER_OS		00010000b
+define	KERNEL_INTERRUPT_KEYBOARD		00000100b
+define	KERNEL_INTERRUPT_LCD			00001000b
+define	KERNEL_INTERRUPT_RTC			00010000b
+define	KERNEL_INTERRUPT_USB			00100000b
 
-define	KERNEL_INTERRUPT_TIME              0xF16000
-define	KERNEL_INTERRUPT_MAX_TIME          0x008000
+define	KERNEL_INTERRUPT_TIME			0xF16000
+define	KERNEL_INTERRUPT_MAX_TIME		0x008000
+
+define	KERNEL_TIME_JIFFIES_TO_MS		54
 
 kinterrupt:
 .init:
@@ -55,7 +57,7 @@ kinterrupt:
 	ld	(hl), b
 ; check type of the interrupt : master source ?
 	bit	4, c
-	jp	nz, kscheduler.schedule
+	jp	nz, kscheduler.timer
 	ld	a, b
 	rla
 	rla
@@ -95,10 +97,12 @@ kinterrupt:
 	ld	c, (iy+KERNEL_THREAD_IRQ)
 	tst	a, c
 	jr	z, .irq_skip
+	ld	hl, (iy+KERNEL_THREAD_PREVIOUS)
+	push	hl
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	call	kthread.resume
 ; reload the current retire queue (previous node of the retired node)
-	ld	iy, (kqueue_retire_current)
+	pop	iy
 .irq_skip:
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
 	djnz	.irq_resume_loop
@@ -115,7 +119,30 @@ kinterrupt:
 	reti
 	
 kscheduler:
-	
+
+.timer:
+; schedule jiffies timer first ;
+	ld	a, (kqueue_retire_size)
+	ld	iy, (kqueue_retire_current)
+	or	a, a
+	jr	z, .schedule
+	ld	b, a
+.timer_try_wake_loop:
+	ld	a, (iy+KERNEL_THREAD_TIMEOUT)
+	or	a, a
+	jr	z, .timer_try_skip
+	dec	(iy+KERNEL_THREAD_TIMEOUT)
+	jr	nz, .timer_try_skip
+	ld	hl, (iy+KERNEL_THREAD_PREVIOUS)
+	push	hl
+	call	kthread.resume
+; reload the current retire queue (previous node of the retired node)
+	pop	iy
+.timer_try_skip:
+	ld	iy, (iy+KERNEL_THREAD_NEXT)
+	djnz	.timer_try_wake_loop
+	jr	.schedule
+
 .switch:
 .yield:
 	di
@@ -145,6 +172,7 @@ kscheduler:
 ; idle is marked as NOT ACTIVE, NULL is NOT ACTIVE
 ; if not active, grab kqueue_active_current thread
 ; if queue empty, schedule idle thread
+; schedule on the active list now ;
 	ld	ix, (iy+KERNEL_THREAD_NEXT)
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a

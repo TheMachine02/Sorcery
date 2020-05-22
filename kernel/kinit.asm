@@ -16,7 +16,7 @@ define	NULL 0
 
 kinit:
 	di	; boot 5.0.1 stupidity power ++
-	ld	a, KERNEL_CRYSTAL_TIMER_DIV314
+	ld	a, KERNEL_CRYSTAL_TIMER_DIV154
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	sp, 0xD000E0
 	ld	(KERNEL_STACK), sp
@@ -73,6 +73,10 @@ THREAD_INIT_TEST:
 	push	bc
 	call	kvideo.put_int
 	call	kvideo.swap
+	
+	ld	a, 200
+	call	kthread.sleep
+	
 	
 ;	ld	c, 2
 ;	ld	a, SIGCONT

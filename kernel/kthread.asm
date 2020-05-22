@@ -16,9 +16,10 @@ define	KERNEL_THREAD_STACK_LIMIT		0x0A
 define	KERNEL_THREAD_STACK			0x0D
 define	KERNEL_THREAD_HEAP			0x10
 define	KERNEL_THREAD_TIME			0x13
-define	KERNEL_THREAD_ERRNO			0x16
-define	KERNEL_THREAD_SIGNAL_MESSAGE		0x17
-define  KERNEL_THREAD_SIGNAL_MASK		0x1A
+define	KERNEL_THREAD_TIMEOUT			0x16
+define	KERNEL_THREAD_ERRNO			0x17
+define	KERNEL_THREAD_SIGNAL_MESSAGE		0x18
+define  KERNEL_THREAD_SIGNAL_MASK		0x1B
 define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x20
 ; up to 0x80, table is 96 bytes or 32 descriptor ;
 
@@ -27,7 +28,7 @@ define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_DESCRIPTOR_TABLE_SIZE	32
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 
-define	TASK_RUNNING				0
+define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1    ; can be waked up by signal
 define	TASK_STOPPED				2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 
@@ -49,18 +50,18 @@ define	kthread_pid_bitmap			0xD00200
 kthread:
 .init:
 	tstdi
-	xor	a, a
 	ld	de, NULL
 	ld	hl, kqueue_active
-	ld	(hl), a
+	ld	(hl), e
 	inc	hl
 	ld	(hl), de
 	ld	hl, kqueue_retire
-	ld	(hl), a
+	ld	(hl), e
 	inc	hl
 	ld	(hl), de
 	ld	de, KERNEL_THREAD
 	ld	(kthread_current), de
+	ld	a, e
 	ld	(kthread_need_reschedule), a
 ; copy idle thread (ie, kernel thread. Stack is kernel stackh, code is init kernel)
 	ld	hl, .IHEADER
@@ -109,7 +110,8 @@ kthread:
 	pop	iy
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_IRQ), 0
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_RUNNING
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+	ld	(iy+KERNEL_THREAD_TIMEOUT), 0
 	lea	hl, iy - 24
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	hl, de
@@ -173,7 +175,7 @@ kthread:
 	pop	iy
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
-	jp	kthread.yield
+	jp	.yield
 	
 .resume:
 ; wake thread (adress iy)
@@ -189,7 +191,7 @@ kthread:
 	tstdi
 	ld	a, (iy+KERNEL_THREAD_STATUS)    ; this read need to be atomic !
 	cp	a, TASK_INTERRUPTIBLE
-; can't wake TASK_RUNNING (0) and TASK_STOPPED (2)
+; can't wake TASK_READY (0) and TASK_STOPPED (2)
 ; range -1 > 1
 ; if a=2 , nc, if a=255, nc, else c
 	jr	nz, .resume_exit_atomic
@@ -246,6 +248,17 @@ kthread:
    
 .core:
 	jp	.exit
+	
+.sleep:
+; a = time in ms
+	di
+	push	hl
+	push	iy
+	ld	iy, (kthread_current)
+	call	task_switch_sleep_ms
+	pop	iy
+	pop	hl
+	jp	.yield
    
 .get_pid:
 ; REGSAFE and ERRNO compliant
@@ -359,7 +372,7 @@ kthread:
 	ld	(hl), de
 	ret
 
-; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_RUNNING
+; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
 ; may break if not in this state before
 ; need to be fully atomic
 	
@@ -375,6 +388,7 @@ kthread:
 	dl	NULL		; No true heap for idle thread
 	dl	NULL		; No friend
 	db	NULL
+	db	NULL
 	dl	NULL
 	dl	NULL
 	dl	NULL
@@ -382,25 +396,38 @@ kthread:
 .IHEADER_END:
 
 task_switch_running:
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_RUNNING
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	hl, kqueue_retire
 	call	kqueue.remove
 	ld	hl, kqueue_active
 	jp	kqueue.insert
 
-; from TASK_RUNNING to TASK_STOPPED
+; from TASK_READY to TASK_STOPPED
 ; may break if not in this state before
 ; need to be fully atomic
 task_switch_stopped:
-	ld (iy+KERNEL_THREAD_STATUS), TASK_STOPPED
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
 	ld	hl, kqueue_active
 	call	kqueue.remove
 	ld	hl, kqueue_retire
 	jp	kqueue.insert
 
-; from TASK_RUNNING to TASK_INTERRUPTIBLE
+; sleep	'a' ms, granularity of about 4,7 ms
+task_switch_sleep_ms:
+; do  a * (32768/154/1000)
+	ld	h, a
+	ld	l, KERNEL_TIME_JIFFIES_TO_MS
+	mlt	hl
+	ld	a, l
+	or	a, a
+	jr	z, $+3
+	inc	h
+	inc	h
+	ld	(iy+KERNEL_THREAD_TIMEOUT), h
+	
+; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:
-	ld (iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
 	ld	hl, kqueue_active
 	call	kqueue.remove
 	ld	hl, kqueue_retire

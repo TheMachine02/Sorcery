@@ -87,7 +87,12 @@ kvideo:
 ; carry flag is untouched, meaning that this IRQ will need a thread wake    
 	ret	z
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
-	call	kthread.resume
+	push	af
+	ld	a, (iy+KERNEL_THREAD_IRQ)
+	or	a, a
+	ld	(iy+KERNEL_THREAD_IRQ), 0
+	call	nz, kthread.resume
+	pop	af
 ; reset the carry flag, IRQ doesn't need thread to be waked
 	ccf
 	ret

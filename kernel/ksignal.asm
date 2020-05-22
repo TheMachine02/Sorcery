@@ -36,7 +36,6 @@ ksignal:
 	ld	hl, (hl)
 	jp	(hl)
 .handler_context_restore:
-	ei
 ; semi context_restore
 	pop	af
 	pop	de
@@ -44,11 +43,12 @@ ksignal:
 	pop	hl
 	pop	iy
 	pop	ix
+	ei
 	ret
 	
 .handler_stop:
 	di
-; thread is in active queue, TASK_RUNNING state
+; thread is in active queue, TASK_READY state
 ; stop it anyway
 	call	task_switch_stopped
 	jr	.handler_context_yield
@@ -122,7 +122,6 @@ ksignal:
 	push	bc
 	push	de
 	ld	b, a
-	tstdi
 	ex	de, hl
 	ld	hl, (kthread_current)
 	ld	a, (hl)
@@ -130,6 +129,8 @@ ksignal:
 	add	a, a
 	ld	hl, kthread_pid_bitmap
 	ld	l, a
+; let's start the critical section right now
+	tstdi
 	ld	a, c
 	ld	c, (hl)
 	dec	c
@@ -158,7 +159,6 @@ ksignal:
 ; push the context on the thread stack
 	push	ix
 	ld 	ix, (iy+KERNEL_THREAD_STACK)
-	ex	de, hl
 	ld	hl, .handler
 	ld	(ix-3), hl
 	sbc	hl, hl
@@ -207,9 +207,11 @@ ksignal:
 	ret
 
 .wait:
+; wait for a signal
 	jp	kthread.suspend
 
 .timedwait:
+; sleep for a duration, can be waked by signal
     ret
     
 ; change thread signal list ; 
