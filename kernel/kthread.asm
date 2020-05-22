@@ -250,16 +250,28 @@ kthread:
 	jp	.exit
 	
 .sleep:
-; a = time in ms
+; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
 	di
-	push	hl
 	push	iy
 	ld	iy, (kthread_current)
+	ld	a, l	; uint8 only
 	call	task_switch_sleep_ms
 	pop	iy
-	pop	hl
-	jp	.yield
-   
+	call	.yield
+; we are back with interrupt
+	ld	l, (iy+KERNEL_THREAD_TIMEOUT)
+; times in jiffies left to sleep
+	ld	h, 38		; (154/32768)*1000*8
+	mlt	hl
+	srl	h
+	rr	l
+	srl	h
+	rr	l
+	srl	h
+	rr	l
+	or	a, a
+	ret
+	
 .get_pid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getpid()
