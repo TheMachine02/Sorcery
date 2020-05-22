@@ -16,6 +16,7 @@ define	NULL 0
 
 kinit:
 	di	; boot 5.0.1 stupidity power ++
+; about 220 times per seconde, master interrupt (or jiffies)
 	ld	a, KERNEL_CRYSTAL_TIMER_DIV154
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	sp, 0xD000E0
@@ -50,14 +51,10 @@ THREAD_INIT_TEST:
 ; load frozen elf16 example
 	ld	hl, elf_frozen_example
 	call	kexec.load_elf16    
-; boom, kill it
-	ld	c, 2
-	ld	a, SIGSTOP
-	call	ksignal.kill
-	
+; huge malloc
 	ld	hl, 65536
 	call	kmalloc
-	
+; video lock
 	call	kvideo.irq_lock
 	ld	bc, 0
 .loop:
@@ -73,15 +70,12 @@ THREAD_INIT_TEST:
 	push	bc
 	call	kvideo.put_int
 	call	kvideo.swap
-	
-	ld	a, 200
+; we can sleep now ! (only 8 bits value for now)
+	ld	hl, 200
 	call	kthread.sleep
-	
-	
 ;	ld	c, 2
 ;	ld	a, SIGCONT
 ;	call	ksignal.kill
-
 	pop	bc
 	inc	bc
 	jr	.loop
