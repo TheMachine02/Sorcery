@@ -1,4 +1,0 @@
-ktty:
-
-.init:
-	ret
