@@ -53,8 +53,8 @@ kinit:
     
 THREAD_INIT_TEST:
 ; load frozen elf16 example
-	ld	hl, elf_frozen_example
-	call	kexec.load_elf16_ptr   
+;	ld	hl, elf_frozen_example
+;	call	kexec.load_elf16_ptr   
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
 	ld	iy, TEST_THREAD_C
 	ld	hl, 65536
@@ -76,9 +76,6 @@ THREAD_INIT_TEST:
 	push	bc
 	call	kvideo.put_int
 	call	kvideo.swap
-; we can sleep now ! (only 8 bits value for now)
-	ld	hl, 200
-	call	kthread.sleep
 ;	ld	c, 2
 ;	ld	a, SIGCONT
 ;	call	ksignal.kill
@@ -91,6 +88,9 @@ TEST_THREAD_C:
 	ld hl, (ix+6)
 	call	kmalloc
 .spin:
+; we can sleep now ! (only 8 bits value for now)
+	ld	hl, 20	; 20 ms is nice
+	call	kthread.sleep
 	jr	.spin
 	pop ix
 	ret

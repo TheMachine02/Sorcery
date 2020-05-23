@@ -18,7 +18,7 @@ define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
 define	KERNEL_INTERRUPT_TIME			0xF16000
-define	KERNEL_INTERRUPT_MAX_TIME		0x008000
+define	KERNEL_INTERRUPT_MAX_TIME		0x020000
 
 define	KERNEL_TIME_JIFFIES_TO_MS		75		; (154/32768)*1000*16
 define	KERNEL_TIME_MS_TO_JIFFIES		54		; (32768/154)/1000*256
@@ -167,7 +167,7 @@ kscheduler:
 	ld	hl, klocal_timer_queue
 	ld	a, (hl)
 	or	a, a
-	jr	z, .schedule
+	jr	z, .clock_state
 	inc	hl
 ; this is first thread with a timer
 	ld	iy, (hl)
@@ -177,7 +177,17 @@ kscheduler:
 	call	z, .local_timer_call
 	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
 	djnz	.local_timer_queue
-	
+.clock_state:
+	ld	a, (kcstate_timer)
+	inc	a
+	cp	a, 20
+	jr	nz, .clock_state_skip
+	call	kcstate.idle_inject
+	ld	hl, 0
+	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
+	xor	a, a
+.clock_state_skip:
+	ld	(kcstate_timer), a
 .schedule:
 	ld	hl, kthread_need_reschedule
 	xor	a, a

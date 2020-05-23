@@ -219,7 +219,7 @@ kthread:
 	pop	iy
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
-	jp	.yield
+	jp	task_switch_block
 
 .suspend:
 ; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically)
@@ -234,7 +234,7 @@ kthread:
 	pop	iy
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
-	jp	.yield
+	jp	task_switch_block
 	
 .resume:
 ; wake thread (adress iy)
@@ -315,7 +315,7 @@ kthread:
 	ld	a, l	; uint8 only
 	call	task_switch_sleep_ms
 	pop	iy
-	call	.yield
+	call	task_switch_block
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
 	di
@@ -483,6 +483,8 @@ task_switch_interruptible:
 	call	kqueue.remove
 	ld	hl, kthread_queue_retire
 	jp	kqueue.insert
+	
+task_switch_block = kthread.yield
 	
 task_add_timer:
 	ld	hl, klocal_timer.callback_default

@@ -17,7 +17,10 @@ kpower:
     
 kcstate:
 
-define KERNEL_CSTATE_GRANULARITY 50 ; 50ms
+; change clock every 100ms, based on the last 100ms load
+define KERNEL_CSTATE_GRANULARITY 100
+
+define	kcstate_timer		0xD00310
 
 .get_clock:
 	in0	a, (KERNEL_POWER_CPU_CLOCK)
@@ -25,7 +28,7 @@ define KERNEL_CSTATE_GRANULARITY 50 ; 50ms
 
 .idle_inject:
 ; watchdog : 32768, 3277 MAX value for idle timing0
-; cystal timer : 104Hz (tous les 10 sample)
+; cystal timer : 104Hz (tous les 20 sample)
 	ld 	a, 0x03
 	ld	hl, (KERNEL_THREAD+KERNEL_THREAD_TIME)
 	ld	de, 410

@@ -1,4 +1,4 @@
-define KERNEL_REGISTER_DUMP 0xD00021
+define KERNEL_REGISTER_DUMP KERNEL_THREAD+KERNEL_THREAD_HEADER	; pseudo heap space
 define KERNEL_REGISTER_IX   0
 define KERNEL_REGISTER_IY   3
 define KERNEL_REGISTER_HL   6
@@ -25,7 +25,7 @@ kpanic:
 ;	ld	sp, (KERNEL_STACK) ; (note that idle thread reside within kernel stack, usually at the adress KERNEL_STACK)
 ; let's use the thread stack for now
 ; shady boot interrupt, curse YOU !
-    push	af
+	push	af
 	pop	hl
 	ld	(ix+KERNEL_REGISTER_AF), hl
 ; disable watchdog as soon I am safe. & perform cleanup
@@ -50,7 +50,7 @@ kpanic:
 	jp	$000000
 
 .nmi_watchdog_violation:
-    ld	hl, 1
+	ld	hl, 1
 	ld	e, 1
 	ld	bc, .WATCHDOG_ERROR_STRING
 	call	kvideo.put_string
@@ -62,13 +62,11 @@ kpanic:
 	ld	e, 13
 	ld	bc, (ix+KERNEL_REGISTER_PC)
 	call	kvideo.put_hex
-    
-    call    kvideo.swap
-    call    kkeyboard.wait_key
+	call    kvideo.swap
+	call    kkeyboard.wait_key
 ; kill current thread
 ; it does mean it didn't play nice
 ; a reboot is maybe more in order....
-	
 	jp .nmi_reboot
 	
 .WATCHDOG_ERROR_STRING:

@@ -89,7 +89,7 @@ kvideo:
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
 	push	af
 	ld	a, (iy+KERNEL_THREAD_IRQ)
-	tst	a, DRIVER_VIDEO_IRQ
+	or	a, a
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	call	nz, kthread.resume
 	pop	af
