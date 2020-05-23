@@ -38,6 +38,7 @@ kinit:
 	call	kpower.init
 	call	kmmu.init
 	call	kwatchdog.init
+	call	klocal_timer.init
 	call	kinterrupt.init
 	call	kthread.init
 
@@ -74,8 +75,8 @@ THREAD_INIT_TEST:
 	call	kvideo.put_int
 	call	kvideo.swap
 ; we can sleep now ! (only 8 bits value for now)
-;	ld	hl, 200
-;	call	kthread.sleep
+	ld	hl, 200
+	call	kthread.sleep
 ;	ld	c, 2
 ;	ld	a, SIGCONT
 ;	call	ksignal.kill

@@ -33,6 +33,7 @@ include	'kernel/kpower.asm'
 include	'kernel/kthread.asm'
 include	'kernel/ksignal.asm'
 include	'kernel/kqueue.asm'
+include	'kernel/ktimer.asm'
 include	'kernel/katomic.asm'
 include	'kernel/kmmu.asm'
  rb	$0220A8-$

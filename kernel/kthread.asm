@@ -16,31 +16,38 @@ define	KERNEL_THREAD_STACK_LIMIT		0x0A
 define	KERNEL_THREAD_STACK			0x0D
 define	KERNEL_THREAD_HEAP			0x10
 define	KERNEL_THREAD_TIME			0x13
-define	KERNEL_THREAD_TIMEOUT			0x16
-define	KERNEL_THREAD_ERRNO			0x17
-define	KERNEL_THREAD_SIGNAL_CODE		0x18
-define	KERNEL_THREAD_SIGNAL_MESSAGE		0x19
-define  KERNEL_THREAD_SIGNAL_MASK		0x1C
-define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x20
-; up to 0x80, table is 96 bytes or 32 descriptor ;
+define	KERNEL_THREAD_ERRNO			0x16
+define	KERNEL_THREAD_SIGNAL			0x17
+define	KERNEL_THREAD_SIGNAL_CODE		0x17
+define	KERNEL_THREAD_SIGNAL_MESSAGE		0x18
+define  KERNEL_THREAD_SIGNAL_MASK		0x1B
+define	KERNEL_THREAD_TIMER			0x1F
+define	KERNEL_THREAD_TIMER_COUNT		0x1F
+define	KERNEL_THREAD_TIMER_NEXT		0x20
+define	KERNEL_THREAD_TIMER_PREVIOUS		0x23
+define	KERNEL_THREAD_TIMER_CALLBACK		0x26
+
+define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x2F
+; up to 0x80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
+; 24 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		0x80
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
-define	KERNEL_THREAD_DESCRIPTOR_TABLE_SIZE	32
+define	KERNEL_THREAD_DESCRIPTOR_TABLE_SIZE	24
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1    ; can be waked up by signal
 define	TASK_STOPPED				2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 
-define	kqueue_active				0xD00100
-define	kqueue_active_size			0xD00100
-define	kqueue_active_current			0xD00101
+define	kthread_queue_active			0xD00100
+define	kthread_queue_active_size		0xD00100
+define	kthread_queue_active_current		0xD00101
 
-define	kqueue_retire				0xD00104
-define	kqueue_retire_size			0xD00104
-define	kqueue_retire_current			0xD00105
+define	kthread_queue_retire			0xD00104
+define	kthread_queue_retire_size		0xD00104
+define	kthread_queue_retire_current		0xD00105
 
 define	kthread_need_reschedule			0xD00108
 define	kthread_current				0xD00109
@@ -53,11 +60,11 @@ kthread:
 .init:
 	tstdi
 	ld	de, NULL
-	ld	hl, kqueue_active
+	ld	hl, kthread_queue_active
 	ld	(hl), e
 	inc	hl
 	ld	(hl), de
-	ld	hl, kqueue_retire
+	ld	hl, kthread_queue_retire
 	ld	(hl), e
 	inc	hl
 	ld	(hl), de
@@ -125,7 +132,8 @@ kthread:
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
-	ld	(iy+KERNEL_THREAD_TIMEOUT), 0
+; timer ;
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), 0
 ; stack limit set first ;
 	lea	hl, iy + 4
 	ld	de, KERNEL_THREAD_HEADER_SIZE
@@ -170,7 +178,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_PPID), a
 ; setup the queue
 ; insert the thread to the ready queue
-	ld	hl, kqueue_active
+	ld	hl, kthread_queue_active
 	call   kqueue.insert
 ; setup the stack \o/
 	ld	de, KERNEL_THREAD_STACK_SIZE
@@ -262,7 +270,7 @@ kthread:
 	call	ksignal.kill
 ; need to free IRQ locked and mutex locked to thread
 ; de = next thread to be active
-	ld	a, (kqueue_active_size)
+	ld	a, (kthread_queue_active_size)
 	dec	a
 	or	a, a
 	ld	ix, (iy+KERNEL_THREAD_NEXT)
@@ -270,7 +278,7 @@ kthread:
 	ld	ix, KERNEL_THREAD_IDLE
 .exit_idle:
 ; remove from active
-	ld	hl, kqueue_active
+	ld	hl, kthread_queue_active
 	call	kqueue.remove
 ; unmap the memory of the thread
 ; this also unmap the stack
@@ -291,7 +299,11 @@ kthread:
 	pop	iy
 	call	.yield
 ; we are back with interrupt
-	ld	l, (iy+KERNEL_THREAD_TIMEOUT)
+; this one is risky with interrupts
+	di
+	call	task_delete_timer
+	ei
+	ld	l, (iy+KERNEL_THREAD_TIMER_COUNT)
 ; times in jiffies left to sleep
 	ld	h, KERNEL_TIME_JIFFIES_TO_MS
 	mlt	hl
@@ -417,9 +429,9 @@ kthread:
 
 task_switch_running:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
-	ld	hl, kqueue_retire
+	ld	hl, kthread_queue_retire
 	call	kqueue.remove
-	ld	hl, kqueue_active
+	ld	hl, kthread_queue_active
 	jp	kqueue.insert
 
 ; from TASK_READY to TASK_STOPPED
@@ -427,9 +439,9 @@ task_switch_running:
 ; need to be fully atomic
 task_switch_stopped:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
-	ld	hl, kqueue_active
+	ld	hl, kthread_queue_active
 	call	kqueue.remove
-	ld	hl, kqueue_retire
+	ld	hl, kthread_queue_retire
 	jp	kqueue.insert
 
 ; sleep	'a' ms, granularity of about 4,7 ms
@@ -443,12 +455,27 @@ task_switch_sleep_ms:
 	jr	z, $+3
 	inc	h
 	inc	h
-	ld	(iy+KERNEL_THREAD_TIMEOUT), h
+	ld	a, h
+	call	task_add_timer
 	
 ; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
-	ld	hl, kqueue_active
+	ld	hl, kthread_queue_active
 	call	kqueue.remove
-	ld	hl, kqueue_retire
+	ld	hl, kthread_queue_retire
 	jp	kqueue.insert
+	
+task_add_timer:
+	ld	hl, klocal_timer.callback_default
+	ld	(iy+KERNEL_THREAD_TIMER_CALLBACK), hl
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
+	ld	hl, klocal_timer_queue	
+	jp	klocal_timer.insert
+
+task_delete_timer:
+	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
+	or	a, a
+	ret	z	; can't disable, already disabled!
+	ld	hl, klocal_timer_queue
+	jp	klocal_timer.remove

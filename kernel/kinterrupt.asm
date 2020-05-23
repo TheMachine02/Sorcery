@@ -58,7 +58,7 @@ kinterrupt:
 	ld	(hl), b
 ; check type of the interrupt : master source ?
 	bit	4, c
-	jr	nz, kscheduler.timer
+	jr	nz, kscheduler.local_timer
 	ld	a, b
 	rla
 	rla
@@ -84,8 +84,8 @@ kinterrupt:
 ; reschedule if kthread_need_reschedule is set
 ; set by kthread.resume
 	ld	c, a
-	ld	iy, (kqueue_retire_current)
-	ld	a, (kqueue_retire_size)
+	ld	hl, kthread_queue_retire
+	ld	a, (hl)
 	or	a, a
 ; z = no thread to awake
 	jr	z, .irq_exit
@@ -94,6 +94,8 @@ kinterrupt:
 	ld	a, c
 	or	a, a
 	jr	z, .irq_exit
+	inc	hl
+	ld	iy, (hl)
 .irq_resume_loop:
 	ld	c, (iy+KERNEL_THREAD_IRQ)
 	tst	a, c
@@ -130,30 +132,52 @@ kscheduler:
 	push	iy
 	jr	.schedule
 
-.timer:
-; schedule jiffies timer first ;
-	ld	hl, kqueue_retire
+; .timer:
+; ; schedule jiffies timer first ;
+; 	ld	hl, kthread_queue_retire
+; 	ld	a, (hl)
+; 	inc	hl
+; 	ld	iy, (hl)
+; 	or	a, a
+; 	jr	z, .schedule
+; 	ld	b, a
+; .timer_try_wake_loop:
+; 	ld	a, (iy+KERNEL_THREAD_TIMEOUT)
+; 	or	a, a
+; 	jr	z, .timer_try_skip
+; 	dec	(iy+KERNEL_THREAD_TIMEOUT)
+; 	jr	nz, .timer_try_skip
+; 	ld	hl, (iy+KERNEL_THREAD_PREVIOUS)
+; 	push	hl
+; 	call	kthread.resume
+; ; reload the current retire queue (previous node of the retired node)
+; 	pop	iy
+; .timer_try_skip:
+; 	ld	iy, (iy+KERNEL_THREAD_NEXT)
+; 	djnz	.timer_try_wake_loop
+
+.local_timer_call:
+; don't touch bc and iy that's all
+	ld	hl, (iy+KERNEL_THREAD_TIMER_CALLBACK)
+	jp	(hl)
+	
+.local_timer:
+; schedule jiffies timer first
+; super fast loooop
+	ld	hl, klocal_timer_queue
 	ld	a, (hl)
-	inc	hl
-	ld	iy, (hl)
 	or	a, a
 	jr	z, .schedule
+	inc	hl
+; this is first thread with a timer
+	ld	iy, (hl)
 	ld	b, a
-.timer_try_wake_loop:
-	ld	a, (iy+KERNEL_THREAD_TIMEOUT)
-	or	a, a
-	jr	z, .timer_try_skip
-	dec	(iy+KERNEL_THREAD_TIMEOUT)
-	jr	nz, .timer_try_skip
-	ld	hl, (iy+KERNEL_THREAD_PREVIOUS)
-	push	hl
-	call	kthread.resume
-; reload the current retire queue (previous node of the retired node)
-	pop	iy
-.timer_try_skip:
-	ld	iy, (iy+KERNEL_THREAD_NEXT)
-	djnz	.timer_try_wake_loop
-
+.local_timer_queue:
+	dec	(iy+KERNEL_THREAD_TIMER_COUNT)
+	call	z, .local_timer_call
+	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
+	djnz	.local_timer_queue
+	
 .schedule:
 	ld	hl, kthread_need_reschedule
 	xor	a, a
@@ -176,20 +200,20 @@ kscheduler:
 	ld	(iy+KERNEL_THREAD_TIME), hl
 ; check if current thread is active : if yes, grab next_thread
 ; idle is marked as NOT ACTIVE, NULL is NOT ACTIVE
-; if not active, grab kqueue_active_current thread
+; if not active, grab kthread_queue_active_current thread
 ; if queue empty, schedule idle thread
 ; schedule on the active list now ;
 	ld	ix, (iy+KERNEL_THREAD_NEXT)
 	or	a, (iy+KERNEL_THREAD_STATUS)
 	jr	z, .dispatch
-	ld	hl, kqueue_active_size
+	ld	hl, kthread_queue_active
 	ld	a, (hl)
 	inc	hl
 	ld	ix, (hl)
 	or	a, a
 	jr	nz, .dispatch
 ; schedule the idle thread
-	ld	a, (kqueue_retire_size)
+	ld	a, (kthread_queue_retire_size)
 	or	a, a
 ; panic if NO thread
 	jp	z, kinterrupt.nmi

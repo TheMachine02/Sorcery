@@ -89,7 +89,7 @@ kvideo:
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
 	push	af
 	ld	a, (iy+KERNEL_THREAD_IRQ)
-	or	a, a
+	tst	a, DRIVER_VIDEO_IRQ
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	call	nz, kthread.resume
 	pop	af
@@ -143,7 +143,6 @@ kvideo:
 ; is interrupt enabled ?
 ; quit if not enabled, wait for vsync signal else
 	ret	po
-	ei
 	
 .vsync:
 	ld	iy, (kthread_current)
