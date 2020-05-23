@@ -132,30 +132,6 @@ kscheduler:
 	push	iy
 	jr	.schedule
 
-; .timer:
-; ; schedule jiffies timer first ;
-; 	ld	hl, kthread_queue_retire
-; 	ld	a, (hl)
-; 	inc	hl
-; 	ld	iy, (hl)
-; 	or	a, a
-; 	jr	z, .schedule
-; 	ld	b, a
-; .timer_try_wake_loop:
-; 	ld	a, (iy+KERNEL_THREAD_TIMEOUT)
-; 	or	a, a
-; 	jr	z, .timer_try_skip
-; 	dec	(iy+KERNEL_THREAD_TIMEOUT)
-; 	jr	nz, .timer_try_skip
-; 	ld	hl, (iy+KERNEL_THREAD_PREVIOUS)
-; 	push	hl
-; 	call	kthread.resume
-; ; reload the current retire queue (previous node of the retired node)
-; 	pop	iy
-; .timer_try_skip:
-; 	ld	iy, (iy+KERNEL_THREAD_NEXT)
-; 	djnz	.timer_try_wake_loop
-
 .local_timer_call:
 ; don't touch bc and iy that's all
 	ld	hl, (iy+KERNEL_THREAD_TIMER_CALLBACK)
@@ -177,16 +153,17 @@ kscheduler:
 	call	z, .local_timer_call
 	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
 	djnz	.local_timer_queue
+; proof-of-concept
 .clock_state:
 	ld	a, (kcstate_timer)
 	inc	a
-	cp	a, 20
-	jr	nz, .clock_state_skip
-	call	kcstate.idle_inject
+	cp	a, KERNEL_CSTATE_SAMPLING
+	jr	nz, .clock_state_exit
+	call	kcstate.idle_adjust
 	ld	hl, 0
 	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
 	xor	a, a
-.clock_state_skip:
+.clock_state_exit:
 	ld	(kcstate_timer), a
 .schedule:
 	ld	hl, kthread_need_reschedule

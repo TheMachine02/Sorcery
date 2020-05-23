@@ -8,27 +8,24 @@ kpower:
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 	ret
 
-.getBatteryLevel=0x0003B0
+.get_battery_level=0x0003B0
 
-.getBatteryChargingStatus:
+.get_battery_charging_status:
 	in0	a, (KERNEL_POWER_CHARGING)
 	or	a, a
 	ret
     
-kcstate:
-
+define	KERNEL_CSTATE_GRANULARITY	100
 ; change clock every 100ms, based on the last 100ms load
-define KERNEL_CSTATE_GRANULARITY 100
+define	KERNEL_CSTATE_SAMPLING		20
 
 define	kcstate_timer		0xD00310
 
-.get_clock:
-	in0	a, (KERNEL_POWER_CPU_CLOCK)
-	ret
+kcstate:
 
-.idle_inject:
-; watchdog : 32768, 3277 MAX value for idle timing0
-; cystal timer : 104Hz (tous les 20 sample)
+.idle_adjust:
+; watchdog : 32768, ~3250 MAX value for idle timing0
+; cystal timer : 212 Hz (tous les 21 sample)
 	ld 	a, 0x03
 	ld	hl, (KERNEL_THREAD+KERNEL_THREAD_TIME)
 	ld	de, 410
@@ -47,4 +44,8 @@ define	kcstate_timer		0xD00310
 	
 .set_clock:
 	out0	(KERNEL_POWER_CPU_CLOCK), a
+	ret
+
+.get_clock:
+	in0	a, (KERNEL_POWER_CPU_CLOCK)
 	ret
