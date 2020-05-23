@@ -42,8 +42,8 @@ _boot_case24                   equ 000011Ch
 _boot_case24D                  equ 0000120h
 _boot_case8                    equ 0000124h
 _boot_case8D                   equ 0000128h
-_boot_frameset                 equ 000012Ch
-_boot_frameset0                equ 0000130h
+__frameset                 equ 000012Ch
+__frameset0                equ 0000130h
 _boot_iand                     equ 0000134h
 _boot_icmpzero                 equ 0000138h
 _boot_idivs                    equ 000013Ch
