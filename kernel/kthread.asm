@@ -26,7 +26,6 @@ define	KERNEL_THREAD_TIMER_COUNT		0x1F
 define	KERNEL_THREAD_TIMER_NEXT		0x20
 define	KERNEL_THREAD_TIMER_PREVIOUS		0x23
 define	KERNEL_THREAD_TIMER_CALLBACK		0x26
-
 define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x2F
 ; up to 0x80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 24 descriptors usables ;
@@ -70,7 +69,7 @@ kthread:
 	ld	(hl), de
 	ld	de, KERNEL_THREAD
 	ld	(kthread_current), de
-	ld	a, e
+	xor	a, a
 	ld	(kthread_need_reschedule), a
 ; copy idle thread (ie, kernel thread. Stack is kernel stackh, code is init kernel)
 	ld	hl, .IHEADER
@@ -109,10 +108,11 @@ kthread:
 .create:
 ; Create a thread
 ; REGSAFE and ERRNO compliant
-; void thread_create(void* entry)
-; register IY is entry
+; void thread_create(void* thread_entry, void* thread_arg)
+; register IY is entry, register HL is send to the stack for void* thread_arg
 ; error -1 and c set, 0 and nc otherwise, ERRNO set
 ; HL, BC, DE copied from current context to the new thread
+; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
 	push	af
 	push	iy
 	push	ix
@@ -141,7 +141,7 @@ kthread:
 ; please note write affect memory, so do a + 4 to be safe    
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 ; stack ;
-	lea	hl, iy - 24
+	lea	hl, iy - 27
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
@@ -184,16 +184,19 @@ kthread:
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	iy, de
 	ld	hl, .exit
-	ld	(iy-3), hl
-	ld	(iy-6), ix
+	ld	(iy-6), hl
+	ld	(iy-9), ix
 	ld	de, NULL
-	ld	(iy-9), de		; ix [NULL] > int argc, char *argv[]
-	ld	(iy-12), de		; iy [NULL] > in the future
-	ld	(iy-24), de		; af [NULL] > TODO
+	ld	(iy-12), de		; ix [NULL] > int argc, char *argv[]
+	ld	(iy-15), de		; iy [NULL] > in the future
+	ld	(iy-27), de		; af [NULL] > TODO
 	exx
-	ld	(iy-15), hl
-	ld	(iy-18), bc
-	ld	(iy-21), de
+; this can be grab with call __frameset0 \ ld hl, (ix+6) \ pop ix
+	ld	(iy-3), hl
+; note, we don't care for ASM thread at all, we have hl, bc, de already
+	ld	(iy-18), hl
+	ld	(iy-21), bc
+	ld	(iy-24), de
 	tstei
 	pop	ix
 	pop	iy
@@ -201,7 +204,6 @@ kthread:
 	or	a, a
 	sbc	hl, hl
 	ret
-; iy = thread
 
 .wait_on_IRQ:
 ; suspend till waked by an IRQ
@@ -315,7 +317,7 @@ kthread:
 	pop	iy
 	call	.yield
 ; we are back with interrupt
-; this one is risky with interrupts
+; this one is risky with interrupts, so disable them the time to do it
 	di
 	call	task_delete_timer
 	ei

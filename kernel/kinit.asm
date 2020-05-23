@@ -54,11 +54,13 @@ kinit:
 THREAD_INIT_TEST:
 ; load frozen elf16 example
 	ld	hl, elf_frozen_example
-	call	kexec.load_elf16_ptr    
-; huge malloc
+	call	kexec.load_elf16_ptr   
+; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
+	ld	iy, TEST_THREAD_C
 	ld	hl, 65536
-	call	kmalloc
-; video lock
+	call	kthread.create
+
+; video lock for me
 	call	kvideo.irq_lock
 	ld	bc, 0
 .loop:
@@ -84,8 +86,14 @@ THREAD_INIT_TEST:
 	inc	bc
 	jr	.loop
     
-.teststring:
-	db "HELLO WORLD !",0
-
+TEST_THREAD_C:
+	call __frameset0
+	ld hl, (ix+6)
+	call	kmalloc
+.spin:
+	jr	.spin
+	pop ix
+	ret
+    
 elf_frozen_example:
 include	'frozen.asm'
