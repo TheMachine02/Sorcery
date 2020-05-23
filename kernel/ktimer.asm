@@ -71,10 +71,10 @@ klocal_timer:
 ; update queue_current to inserted node
 ; inplace insert of the node
 ; return 
+	ld	a, (hl)
 	inc	(hl)
-	dec	(hl)
+	or	a, a
 	jr	z, .create_queue
-	inc	(hl)
 	push	ix
 ; prev_node.next = new_node
 ; next_node.prev = new_node
@@ -99,7 +99,6 @@ klocal_timer:
 	pop	ix
 	ret
 .create_queue:
-	inc	(hl)
 	inc	hl
 	ld	(hl), iy
 	dec	hl
@@ -111,8 +110,10 @@ klocal_timer:
 ; iy is node to remove
 ; update queue_current to NULL if count=0 or previous node of the removed node
 ; hl is queue pointer (count, queue_current)
-	dec	(hl)
+	ld	a, (hl)
+	or	a, a
 	jr	z, .null_queue
+	dec	(hl)
 	push	iy
 	push	ix
 	ld	ix, (iy+KERNEL_THREAD_TIMER_NEXT)
