@@ -202,9 +202,25 @@ kthread:
 	sbc	hl, hl
 	ret
 ; iy = thread
-    
+
+.wait_on_IRQ:
+; suspend till waked by an IRQ
+	di
+	push	iy
+	push	hl
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_IRQ), a
+; the process to write the thread state and change the queue should be always a critical section
+	call	task_switch_interruptible
+; also note that writing THREAD_IRQ doesn't *need to be atomic, but testing is
+	pop	hl
+	pop	iy
+; switch away from current thread to a new active thread
+; cause should already have been writed
+	jp	.yield
+
 .suspend:
-; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though)
+; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically)
 	di
 	push	iy
 	push	hl

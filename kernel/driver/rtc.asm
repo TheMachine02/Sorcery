@@ -132,9 +132,8 @@ krtc:
 
 .wait_bit:
 	push	af
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), DRIVER_RTC_IRQ
-	call	kthread.suspend
+	ld	a, DRIVER_RTC_IRQ
+	call	kthread.wait_on_IRQ
 	ld	hl, DRIVER_RTC_ISR
 	pop	af
 	tst	a, (hl)

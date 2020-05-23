@@ -145,9 +145,9 @@ kvideo:
 	ret	po
 	
 .vsync:
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), DRIVER_VIDEO_IRQ
-	jp	kthread.suspend
+; We need to write to IRQ
+	ld	a, DRIVER_VIDEO_IRQ
+	jp	kthread.wait_on_IRQ
 
 .clear:
 	ld.atomic de, (DRIVER_VIDEO_BUFFER)

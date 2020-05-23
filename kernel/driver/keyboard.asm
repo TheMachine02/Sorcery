@@ -99,17 +99,15 @@ kkeyboard:
 	ret
 
 .wait_key:
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), DRIVER_KEYBOARD_IRQ
-	jp	kthread.suspend
+	ld	a, DRIVER_KEYBOARD_IRQ
+	jp	kthread.wait_on_IRQ
 	    
 .wait_scan:
 	ld	hl, DRIVER_KEYBOARD_IMSC
 	set	0, (hl)
-.wait_scan_bit:    
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), DRIVER_KEYBOARD_IRQ
-	call	kthread.suspend
+	ld	a, DRIVER_KEYBOARD_IRQ
+.wait_scan_bit:
+	call	kthread.wait_on_IRQ
 	ld	hl, DRIVER_KEYBOARD_ISR
 	bit	0, (hl)
 	jr	z, .wait_scan_bit
