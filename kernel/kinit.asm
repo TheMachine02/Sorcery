@@ -32,6 +32,9 @@ kinit:
 	ld	a, 0xD0
 	out0	(0x3C), a
     
+	ld	a, 0x03
+	ld	($E00005), a
+    
 	call	kpower.init
 	call	kmmu.init
 	call	kwatchdog.init
@@ -50,7 +53,7 @@ kinit:
 THREAD_INIT_TEST:
 ; load frozen elf16 example
 	ld	hl, elf_frozen_example
-	call	kexec.load_elf16    
+	call	kexec.load_elf16_ptr    
 ; huge malloc
 	ld	hl, 65536
 	call	kmalloc
@@ -71,8 +74,8 @@ THREAD_INIT_TEST:
 	call	kvideo.put_int
 	call	kvideo.swap
 ; we can sleep now ! (only 8 bits value for now)
-	ld	hl, 200
-	call	kthread.sleep
+;	ld	hl, 200
+;	call	kthread.sleep
 ;	ld	c, 2
 ;	ld	a, SIGCONT
 ;	call	ksignal.kill

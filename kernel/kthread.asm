@@ -18,13 +18,15 @@ define	KERNEL_THREAD_HEAP			0x10
 define	KERNEL_THREAD_TIME			0x13
 define	KERNEL_THREAD_TIMEOUT			0x16
 define	KERNEL_THREAD_ERRNO			0x17
-define	KERNEL_THREAD_SIGNAL_MESSAGE		0x18
-define  KERNEL_THREAD_SIGNAL_MASK		0x1B
+define	KERNEL_THREAD_SIGNAL_CODE		0x18
+define	KERNEL_THREAD_SIGNAL_MESSAGE		0x19
+define  KERNEL_THREAD_SIGNAL_MASK		0x1C
 define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x20
 ; up to 0x80, table is 96 bytes or 32 descriptor ;
 
 define	KERNEL_THREAD_HEADER_SIZE		0x80
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
+define	KERNEL_THREAD_HEAP_SIZE			4096
 define	KERNEL_THREAD_DESCRIPTOR_TABLE_SIZE	32
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 
@@ -40,8 +42,8 @@ define	kqueue_retire				0xD00104
 define	kqueue_retire_size			0xD00104
 define	kqueue_retire_current			0xD00105
 
-define	kthread_current				0xD00108
-define	kthread_need_reschedule			0xD0010B
+define	kthread_need_reschedule			0xD00108
+define	kthread_current				0xD00109
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
@@ -81,52 +83,78 @@ kthread:
 
 .yield=kscheduler.yield
 	
-.create_error_free:
-	pop	hl
-	call	kmmu.unmap_block_thread
-.create_error:
-	ei
+.create_no_mem:
+.create_no_pid:
+	ld	l, EAGAIN
+.create_errno:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), l
+; restore register and pop all the stack
+	exx
+	tstei
+	pop	ix
+	pop	iy
+	pop	af
 	scf
+	sbc	hl, hl
 	ret
 
 .create:
-; iy thread code
+; Create a thread
+; REGSAFE and ERRNO compliant
+; void thread_create(void* entry)
+; register IY is entry
+; error -1 and c set, 0 and nc otherwise, ERRNO set
+; HL, BC, DE copied from current context to the new thread
+	push	af
+	push	iy
+	push	ix
 	tstdi
-; push all register into the stack > thread creation preserve all register
-; except : IX = THREAD code adress, IY = STACK
-; insert it in active list
+; save hl, de, bc registers
 	exx
-	ex	af, af' ; save registers
 	lea	ix, iy+0
 	call	.reserve_pid
-	jr	c, .create_error
+	jr	c, .create_no_pid
 	ld	hl, KERNEL_MMU_RAM
-	ld	b, KERNEL_THREAD_STACK_SIZE/KERNEL_MMU_PAGE_SIZE
+	ld	b, KERNEL_THREAD_STACK_SIZE/KERNEL_MMU_PAGE_SIZE + KERNEL_THREAD_HEAP_SIZE/KERNEL_MMU_PAGE_SIZE
 	call	kmmu.map_block_thread
-	jr	c, .create_error
+	jr	c, .create_no_mem
 ; hl is adress    
-	push	hl
 	push	hl
 	pop	iy
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	(iy+KERNEL_THREAD_TIMEOUT), 0
+; stack limit set first ;
+	lea	hl, iy + 4
+	ld	de, KERNEL_THREAD_HEADER_SIZE
+	add	hl, de
+; please note write affect memory, so do a + 4 to be safe    
+	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
+; stack ;
 	lea	hl, iy - 24
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
-	ld	de, KERNEL_THREAD_HEADER_SIZE + 4
+; heap ;
 	lea	hl, iy + 0
 	add	hl, de
-; stack protector ;
-; please note write affect memory, so do a + 4 to be safe    
-	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
-	call	.heap_page
-	jr	c, .create_error_free
 	ld	(iy+KERNEL_THREAD_HEAP), hl
+	push	hl
+	ex	(sp), ix
+	ld	de, KERNEL_MMU_PAGE_SIZE - KERNEL_MEMORY_BLOCK_SIZE
+	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), de
+	ld	de, NULL
+	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), de
+	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), de
+	lea	de, ix+KERNEL_MEMORY_BLOCK_SIZE
+	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), de
+	pop	ix
+; map the thread to be transparent to the scheduler
 ; iy is thread adress, a is still PID    
 ; map the pid
+	or	a, a
 	sbc	hl, hl
 	add	a, a
 	add	a, a
@@ -140,26 +168,31 @@ kthread:
 	ld	hl, (kthread_current)
 	ld	a, (hl)
 	ld	(iy+KERNEL_THREAD_PPID), a
+; setup the queue
+; insert the thread to the ready queue
+	ld	hl, kqueue_active
+	call   kqueue.insert
+; setup the stack \o/
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	iy, de
 	ld	hl, .exit
 	ld	(iy-3), hl
 	ld	(iy-6), ix
+	ld	de, NULL
+	ld	(iy-9), de		; ix [NULL] > int argc, char *argv[]
+	ld	(iy-12), de		; iy [NULL] > in the future
+	ld	(iy-24), de		; af [NULL] > TODO
 	exx
-	ex	af, af'
-	ld	(iy-9), ix
-	ld	(iy-12), iy
 	ld	(iy-15), hl
 	ld	(iy-18), bc
 	ld	(iy-21), de
-	push	af
-	pop	hl
-	ld	(iy-24), hl
+	tstei
+	pop	ix
 	pop	iy
-; insert into the active list and yield to this newly created thread
-	ld	hl, kqueue_active
-	call   kqueue.insert
-	retei
+	pop	af
+	or	a, a
+	sbc	hl, hl
+	ret
 ; iy = thread
     
 .suspend:
@@ -181,8 +214,8 @@ kthread:
 ; wake thread (adress iy)
 ; insert in place in the RR list
 ; return iy = kqueue_current
-	push	hl
 	push	af
+	push	hl
 	lea	hl, iy+0
 	add	hl, de
 	or	a, a
@@ -201,10 +234,12 @@ kthread:
 .resume_exit_atomic:
 	tstei
 .resume_exit:
-	pop af
-	pop hl
+	pop	hl
+	pop	af
 	ret
-	
+
+.core:
+
 .exit:
 	di
 	ld	sp, (KERNEL_STACK)
@@ -245,10 +280,7 @@ kthread:
 	ld	(kthread_current), ix
 ; go into the thread directly, without schedule (pop all stack and discard current context)
 	jp	kscheduler.context_restore
-   
-.core:
-	jp	.exit
-	
+   	
 .sleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
 	di
@@ -261,15 +293,14 @@ kthread:
 ; we are back with interrupt
 	ld	l, (iy+KERNEL_THREAD_TIMEOUT)
 ; times in jiffies left to sleep
-	ld	h, 38		; (154/32768)*1000*8
+	ld	h, KERNEL_TIME_JIFFIES_TO_MS
 	mlt	hl
-	srl	h
-	rr	l
-	srl	h
-	rr	l
-	srl	h
-	rr	l
-	or	a, a
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	xor	a, a
+	ld	l, h
+	ld	h, a
 	ret
 	
 .get_pid:
@@ -320,29 +351,6 @@ kthread:
 
 ; DANGEROUS AREA, helper function ;	
 	
-.heap_page:
-; helper function
-; a = thread_id
-	ld	hl, KERNEL_MMU_RAM
-	call    kmmu.map_page_thread
-	jr	c, .heap_error   ; error out, null is sent, else, we have HL=page adress
-; size / prev / next / pointer 
-	push	hl
-	ex	(sp), ix
-	push 	bc
-	ld	bc, KERNEL_MMU_PAGE_SIZE - KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), bc
-	ld	bc, NULL
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), bc
-	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
-	lea	bc, ix+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), bc
-	pop	bc
-; hl = heap adress
-	pop	ix
-.heap_error:
-	ret    
-
 .reserve_pid:
 ; find a free pid
 ; this should be called in an atomic / critical code section to be sure it will still be free when used
@@ -428,7 +436,7 @@ task_switch_stopped:
 task_switch_sleep_ms:
 ; do  a * (32768/154/1000)
 	ld	h, a
-	ld	l, KERNEL_TIME_JIFFIES_TO_MS
+	ld	l, KERNEL_TIME_MS_TO_JIFFIES
 	mlt	hl
 	ld	a, l
 	or	a, a

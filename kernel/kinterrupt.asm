@@ -20,7 +20,8 @@ define	KERNEL_INTERRUPT_USB			00100000b
 define	KERNEL_INTERRUPT_TIME			0xF16000
 define	KERNEL_INTERRUPT_MAX_TIME		0x008000
 
-define	KERNEL_TIME_JIFFIES_TO_MS		54
+define	KERNEL_TIME_JIFFIES_TO_MS		75		; (154/32768)*1000*16
+define	KERNEL_TIME_MS_TO_JIFFIES		54		; (32768/154)/1000*256
 
 kinterrupt:
 .init:
@@ -57,7 +58,7 @@ kinterrupt:
 	ld	(hl), b
 ; check type of the interrupt : master source ?
 	bit	4, c
-	jp	nz, kscheduler.timer
+	jr	nz, kscheduler.timer
 	ld	a, b
 	rla
 	rla
@@ -120,10 +121,21 @@ kinterrupt:
 	
 kscheduler:
 
+.switch:
+.yield:
+	di
+	ex	af, af'
+	exx
+	push	ix
+	push	iy
+	jr	.schedule
+
 .timer:
 ; schedule jiffies timer first ;
-	ld	a, (kqueue_retire_size)
-	ld	iy, (kqueue_retire_current)
+	ld	hl, kqueue_retire
+	ld	a, (hl)
+	inc	hl
+	ld	iy, (hl)
 	or	a, a
 	jr	z, .schedule
 	ld	b, a
@@ -141,41 +153,34 @@ kscheduler:
 .timer_try_skip:
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
 	djnz	.timer_try_wake_loop
-	jr	.schedule
 
-.switch:
-.yield:
-	di
-	ex	af, af'
-	exx
-	push	ix
-	push	iy
-	
 .schedule:
-	ld	a, 0x00
-	ld	(kthread_need_reschedule), a
-	ld	iy, (kthread_current)
+	ld	hl, kthread_need_reschedule
+	xor	a, a
+	ld	(hl), a
+	inc	hl
+	ld	iy, (hl)
 ; reset watchdog
-	ld	de, (KERNEL_INTERRUPT_TIME)
-	ld	hl, KERNEL_WATCHDOG_RST
+	ld	hl, KERNEL_WATCHDOG_COUNTER
+	ld	de, (hl)
+	ld	l, KERNEL_WATCHDOG_RST mod 256
 	ld	(hl), 0xB9
 	inc	hl
 	ld	(hl), 0x5A
 ; mark timing used (24 bits count)
 	ld	hl, KERNEL_INTERRUPT_MAX_TIME + 1
-	or	a, a
 	sbc	hl, de
 	ld	de, (iy+KERNEL_THREAD_TIME)
 	add	hl, de
-	ld	(iy+KERNEL_THREAD_TIME), hl	; this is total time of the thread (@32768Hz, may overflow)
+; this is total time of the thread (@32768Hz, may overflow)
+	ld	(iy+KERNEL_THREAD_TIME), hl
 ; check if current thread is active : if yes, grab next_thread
 ; idle is marked as NOT ACTIVE, NULL is NOT ACTIVE
 ; if not active, grab kqueue_active_current thread
 ; if queue empty, schedule idle thread
 ; schedule on the active list now ;
 	ld	ix, (iy+KERNEL_THREAD_NEXT)
-	ld	a, (iy+KERNEL_THREAD_STATUS)
-	or	a, a
+	or	a, (iy+KERNEL_THREAD_STATUS)
 	jr	z, .dispatch
 	ld	hl, kqueue_active_size
 	ld	a, (hl)

@@ -27,7 +27,8 @@ ksignal:
 ; hl = data, a = signal code, iy is thread
 ; stack is context to restore
 ; note that signal can be masked in the KERNEL_THREAD_SIGNAL 8 bytes mask
-	ex	de, hl
+	ld	(iy+KERNEL_THREAD_SIGNAL_CODE), a
+	ld	(iy+KERNEL_THREAD_SIGNAL_MESSAGE), hl
 	ld	c, a
 	ld	b, 3
 	mlt	bc
@@ -206,14 +207,30 @@ ksignal:
 	pop	iy
 	ret
 
+; to do = read and output signal
 .wait:
-; wait for a signal
-	jp	kthread.suspend
-
+; wait for a signal, return hl = signal
+	call	kthread.suspend
+	or	a, a
+	sbc	hl, hl
+	push	iy
+	ld	iy, (kthread_current)
+	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	pop	iy
+	ret
+	
 .timedwait:
 ; sleep for a duration, can be waked by signal
-    ret
-    
+; todo : clean signal after read
+	call	kthread.sleep
+	or	a, a
+	sbc	hl, hl
+	push	iy
+	ld	iy, (kthread_current)
+	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	pop	iy
+	ret
+	
 ; change thread signal list ; 
 .procmask: 
     ret

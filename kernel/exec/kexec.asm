@@ -29,35 +29,60 @@ define	kexec_section_ptr   0xD0000D
 
 kexec:
 
-.load_elf16:
-; hl is pointer to file
-	ld	iy, .ELF16_LOADER
-	jp	kthread.create
-
-.ELF16_LOADER:
-	push	hl
-	pop	ix
-; ix is the program header
-	ld	a, (ix+ELF_MAG0)
+.load_elf16_ptr:
+; Load an elf16 program
+; REGSAFE and ERRNO compliant
+; int load_elf16_ptr(void* ptr)
+; register HL is ptr
+; error -1 and c set, 0 and nc otherwise, ERRNO set
+; HL, BC, DE, IX is zero, IY is start program adress, A is zero and flag reset
+	push	iy
+	ld	a, (hl)
 	cp	0x8F
-	jp	nz, kthread.exit
-	ld	a, (ix+ELF_MAG1)
+	jr	nz, .load_elf16_no_exec
+	inc	hl
+	ld	a, (hl)
 	cp	'E'
-	ld	a, (ix+ELF_MAG2)
+	jr	nz, .load_elf16_no_exec
+	inc	hl
+	ld	a, (hl)
 	cp	'L'
-	jp	nz, kthread.exit
-	ld	a, (ix+ELF_MAG3)
+	jr	nz, .load_elf16_no_exec
+	inc	hl
+	ld	a, (hl)
 	cp	'F'
-	jp	nz, kthread.exit
-	ld	a, (ix+ELF_TYPE)
+	jr	nz, .load_elf16_no_exec
+	inc	hl
+	ld	a, (hl)
 	cp	ELF_EXEC
-	jp	nz, kthread.exit
+	jr	nz, .load_elf16_no_exec
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	hl
+	ld	iy, .load_program
+; pass through error from kthread.create
+	call	kthread.create
+	pop	iy
+	ret
+.load_elf16_no_exec:
+	ld	l, ENOEXEC
+.load_elf16_errno:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), l
+	pop	iy
+	scf
+	sbc	hl, hl
+	ret
+	
 .load_program:
 ; read section table, generate malloc table
 ; section is : 
 ; type, 0x0
 ; section_file offset
 ; section_size
+	push	hl
+	pop	ix
 	ld	hl, 1024
 	call	kmalloc
 	jp	c, kthread.exit
@@ -175,12 +200,11 @@ kexec:
 	lea	ix, ix+ELF_SECTION_HEADER_SIZE
 	djnz	.section_realloc_loop
 	ld	hl, (kexec_section_ptr)
-	ld	ix, (hl)
+	ld	iy, (hl)
 	call	kfree
-	ld	iy, (kthread_current)
-	ld	iy, (iy+KERNEL_THREAD_STACK)
-	ld	hl, 0
-	ld	de, 0
-	ld	bc, 0
+	ld	ix, NULL
+	lea	hl, ix+0
+	lea	de, ix+0
+	lea	bc, ix+0
 	xor	a, a
-	jp	(ix)
+	jp	(iy)
