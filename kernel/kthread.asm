@@ -40,6 +40,8 @@ define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1    ; can be waked up by signal
 define	TASK_STOPPED				2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 
+define  KERNEL_THREAD_ONCE_INIT			0xFE
+
 define	kthread_queue_active			0xD00100
 define	kthread_queue_active_size		0xD00100
 define	kthread_queue_active_current		0xD00101
@@ -219,7 +221,7 @@ kthread:
 	pop	iy
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
-	jp	task_switch_block
+	jp	task_yield
 
 .suspend:
 ; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically)
@@ -234,7 +236,7 @@ kthread:
 	pop	iy
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
-	jp	task_switch_block
+	jp	task_yield
 	
 .resume:
 ; wake thread (adress iy)
@@ -264,6 +266,20 @@ kthread:
 	pop	af
 	ret
 
+.once:
+; int pthread_once(pthread_once_t *once_control, void (*init_routine) (void));   
+; de point to the init routine, hl point to *once_control, destroy all reg based on the init routine
+; return hl=0
+; else swap de and hl
+	sra	(hl)	; tst and set, that's magiiic
+	ex	de, hl
+	call	nc, .once_call
+	or	a, a
+	sbc	hl, hl
+	ret	
+.once_call:
+	jp	(hl)
+	
 .core:
 
 .exit:
@@ -314,8 +330,7 @@ kthread:
 	ld	iy, (kthread_current)
 	ld	a, l	; uint8 only
 	call	task_switch_sleep_ms
-	pop	iy
-	call	task_switch_block
+	call	task_yield
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
 	di
@@ -331,6 +346,7 @@ kthread:
 	xor	a, a
 	ld	l, h
 	ld	h, a
+	pop	iy
 	ret
 	
 .get_pid:
@@ -484,7 +500,7 @@ task_switch_interruptible:
 	ld	hl, kthread_queue_retire
 	jp	kqueue.insert
 	
-task_switch_block = kthread.yield
+task_yield = kthread.yield
 	
 task_add_timer:
 	ld	hl, klocal_timer.callback_default

@@ -88,7 +88,7 @@ kmutex:
 ; no, try again :
 .lock_block:
 ; well, go to sleep a bit, 'kay ?
-	call	task_switch_block
+	call	task_yield
 	sra	(hl)
 	jr	c, .lock_block
 ; finally got it ! niiiiice	

@@ -66,19 +66,29 @@ THREAD_INIT_TEST:
 .loop:
 	push	bc
 	ld.atomic de, (DRIVER_VIDEO_BUFFER)
-	ld	bc, 320*14
+	ld	bc, 320*26
 	ld	hl, 0xE40000
 	ldir
-;	call  kvideo.clear
+; 	call  kvideo.clear
 	ld	hl, 0
 	ld	e, 0
 	pop	bc
 	push	bc
 	call	kvideo.put_int
+	
+	
+	call	kcstate.get_clock
+	ld	bc, 0
+	ld	c, a
+	ld	hl, 0
+	ld	e, 13
+	call	kvideo.put_hex
+	
 	call	kvideo.swap
-;	ld	c, 2
-;	ld	a, SIGCONT
-;	call	ksignal.kill
+	
+	ld	hl, 10	; 10 ms is nice
+	call	kthread.sleep
+	
 	pop	bc
 	inc	bc
 	jr	.loop
@@ -91,6 +101,9 @@ TEST_THREAD_C:
 ; we can sleep now ! (only 8 bits value for now)
 	ld	hl, 20	; 20 ms is nice
 	call	kthread.sleep
+; trap opcode instruction
+;db	0xDD, 0xFF
+; need to catch rst 00h for that !
 	jr	.spin
 	pop ix
 	ret

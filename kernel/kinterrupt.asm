@@ -23,6 +23,9 @@ define	KERNEL_INTERRUPT_MAX_TIME		0x020000
 define	KERNEL_TIME_JIFFIES_TO_MS		75		; (154/32768)*1000*16
 define	KERNEL_TIME_MS_TO_JIFFIES		54		; (32768/154)/1000*256
 
+define	SCHED_RR				0
+define	SCHED_FIFO				1
+
 kinterrupt:
 .init:
 	tstdi
@@ -45,7 +48,7 @@ kinterrupt:
 .rst28:
 .rst30:
     ret
-.nmi = kpanic.nmi
+.nmi = knmi.service
 
 .service:
 	pop	hl
@@ -119,7 +122,7 @@ kinterrupt:
 	exx
 	ex	af, af'
 	ei
-	reti
+	ret
 	
 kscheduler:
 
@@ -247,11 +250,11 @@ kscheduler:
 	pop	ix
 ; give back the execution
 	ei
-	reti
+	ret
 .context_restore_minimal:
 	pop	iy
 	pop	ix
 	exx
 	ex	af, af'
 	ei
-	reti
+	ret

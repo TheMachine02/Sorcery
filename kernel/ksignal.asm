@@ -99,20 +99,23 @@ ksignal:
  dl	.handler_stop
  dl	kthread.core
 	
-.raise:
+;.raise:
 ; Raise signal to current thread
 ; REGSAFE and ERRNO compliant
 ; int raise(int sig)
 ; register A is signal
 ; Also silently pass register HL to signal handler as a void*
 ; return -1 on error, 0 on success with errno correctly set
+; WAIT THATS BROKEN, cause we need to do a pseudo context save >> kill assume were are not trying to send signal to ourselves
+; TODO : FIX THAT
 	push	hl
 	ld	hl, (kthread_current)
 	ld	c, (hl)
 	pop	hl
 
+	
 .kill:
-; Send signal to thread
+; Send signal to an other thread
 ; REGSAFE and ERRNO compliant
 ; int kill(pid_t pid, int sig)
 ; register A is signal
