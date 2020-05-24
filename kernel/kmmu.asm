@@ -15,6 +15,8 @@ define	KERNEL_MEMORY_BLOCK_PTR          9
 define	KERNEL_MEMORY_BLOCK_SIZE        12
 define	KERNEL_MEMORY_MALLOC_THRESHOLD  64 
 
+assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) < 257
+
 kmmu:
 .init:
 ; setup memory protection
@@ -80,7 +82,7 @@ kmmu:
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
 	cpl
-	add	a, KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE + 1
+	add	a, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 + 1
 	ld	b, a
 ; !! critical code section !!
 	tstdi
@@ -152,7 +154,7 @@ kmmu:
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
 	cpl
-	add	a, KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE + 1
+	add	a, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 + 1
 	ld	b, a
 ; critical code section ;
 	tstdi
@@ -269,7 +271,7 @@ kmmu:
 	push	bc
 .unmap_block_jump:
 	or	a, KERNEL_MMU_USED_MASK
-	ld	b, KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE
+	ld	b, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256
 	ld	hl, KERNEL_MMU_MAP
 .unmap_block_loop:
 	cp	a, (hl)

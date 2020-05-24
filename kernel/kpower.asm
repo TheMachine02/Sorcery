@@ -1,6 +1,8 @@
-define	KERNEL_POWER_CHARGING       0x000B
-define	KERNEL_POWER_BATTERY        0x0000
-define	KERNEL_POWER_CPU_CLOCK      0x0001
+define	KERNEL_POWER_CHARGING		0x000B
+define	KERNEL_POWER_BATTERY		0x0000
+define	KERNEL_POWER_CPU_CLOCK		0x0001
+
+define	KERNEL_POWER_PWM		0xB024
 
 kpower:
 .init:
@@ -17,7 +19,7 @@ kpower:
     
 define	KERNEL_CSTATE_GRANULARITY	100
 ; change clock every 100ms, based on the last 100ms load
-define	KERNEL_CSTATE_SAMPLING		20
+define	KERNEL_CSTATE_SAMPLING		21
 
 define	kcstate_timer		0xD00310
 

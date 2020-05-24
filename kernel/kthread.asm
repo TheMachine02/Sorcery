@@ -438,10 +438,6 @@ kthread:
 	inc	hl
 	ld	(hl), de
 	ret
-
-; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
-; may break if not in this state before
-; need to be fully atomic
 	
 .IHEADER:
 	db	0x00		; ID 0 reserved
@@ -462,6 +458,9 @@ kthread:
 ; descriptor table, initialised to NULL anyway when mapping page...
 .IHEADER_END:
 
+; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
+; may break if not in this state before
+; need to be fully atomic
 task_switch_running:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	hl, kthread_queue_retire

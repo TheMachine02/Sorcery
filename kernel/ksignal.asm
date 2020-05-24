@@ -181,23 +181,21 @@ kill:
 	jr	z, .raise_frame
 	push	ix
 	ld 	ix, (iy+KERNEL_THREAD_STACK)
-	ld	(ix-3), de
 	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	ld	(ix-6), hl
-	ld	hl, _sigframerestore
-	ld	(ix-9), hl
-	ld	hl, ksignal.handler
-	ld	(ix-12), hl
 	sbc	hl, hl
 	ld	(ix-15), hl
 	ld	(ix-18), iy
 	ld	(ix-21), de
 	ld	(ix-24), hl
 	ld	(ix-27), hl
-	ld	h, a
-	ld	(ix-30), hl
+	ld	(ix-30), bc
+	ld	(ix-3), de
+	ld	l, a
+	ld	(ix-6), hl
+	ld	hl, _sigreturn
+	ld	(ix-9), hl
+	ld	hl, ksignal.handler
+	ld	(ix-12), hl
 ; adjust stack position
 	lea	hl, ix-30
 	ld	(iy+KERNEL_THREAD_STACK), hl
@@ -237,16 +235,6 @@ kill:
 .raise_frame:
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
-; we'll need all register to restore 
-; return adress
-; 	pop	af
-;	pop	de
-;	pop	bc
-;	pop	hl
-;	pop	iy
-;	pop	ix
-; return adress of the signal handler
-; right now we have (return adresss : iy : bc : de)
 	tstei
 	ld	a, b
 	or	a, a
@@ -265,13 +253,13 @@ kill:
 	push	hl	; data = NULL
 	ld	l, a
 	push	hl	; signal
-	ld	ix, _sigframerestore
+	ld	ix, _sigreturn
 	push	ix
 	ld	ix, ksignal.handler
 	jp	(ix)
 	
-   ; sig return will need to cleanup stack, and there is a lot to do
-_sigframerestore:
+; sig return will need to cleanup stack, and there is a lot to do, it should NEVER be called
+_sigreturn:
 ; return adress
 ; sp+6 stackframe
 ; sp+3 *ucontext
@@ -279,6 +267,8 @@ _sigframerestore:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
+; if this result is non zero, we already have interrupt disabled, plus, it will be scheduled away if an interrupt fire
+; If it is zero, well we continue anyway
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
 	jr	nz, .yield

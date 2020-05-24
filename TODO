@@ -1,0 +1,6 @@
+Dynamic Linker library
+
+>> load library in memory and load realloc table
+>> realloc call in program based of the library
+
+int main ()
