@@ -3,8 +3,8 @@ include 'include/elf16.inc'
 
 elf16file ELF_EXEC
 
-section code, ELF_RW_INSTR
-trap:
+section .text, ELF_RW_INSTR
+loop:
 	ld	de, 0
 	ld	b, 4
 	ld	hl, example
@@ -15,7 +15,7 @@ trap:
 	ld	hl, example2
 	call	crc16_dnp.byte
 	
-	jr	trap
+	jr	loop
 
 crc16_dnp:
 .byte:
@@ -54,17 +54,17 @@ crc16_dnp:
 	ld	e, a
 	ret    
     
-section bss, ELF_RW_ZERO
+section .bss, ELF_RW_ZERO
 free:
 rb	256
 
-section data, ELF_RW_DATA
+section .data, ELF_RW_DATA
 example:    
 db	0x00, 0x01, 0x02, 0x03   ; 0x40A7
 example2:
 db	0xA5, 0x5A, 0x42, 0x42   ; 0xDDC5
  
-section rodata, ELF_RO_DATA
+section .rodata, ELF_RO_DATA
 crc16_dnp_table:
 dw	0x0000, 0x365e, 0x6cbc, 0x5ae2, 0xd978, 0xef26, 0xb5c4, 0x839a
 dw	0xff89, 0xc9d7, 0x9335, 0xa56b, 0x26f1, 0x10af, 0x4a4d, 0x7c13

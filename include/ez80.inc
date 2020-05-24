@@ -846,12 +846,6 @@ inst pea, @src*
 	end if
 end inst
 
-macro trap
-    ei
-    halt
-    jr $-2
-end macro
-
 inst im, @mode*
 	if modeind
 		err 'invalid indirection'

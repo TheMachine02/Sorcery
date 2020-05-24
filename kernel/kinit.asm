@@ -49,7 +49,9 @@ kinit:
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
 ; nice idle thread code
-	trap
+	ei
+	halt
+	jr $-2
     
 THREAD_INIT_TEST:
 ; load frozen elf16 example
