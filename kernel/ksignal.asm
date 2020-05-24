@@ -22,6 +22,7 @@ define	SIGSYS		23          ; Bad syscall            ; CORE
 
 ksignal:
 
+; void	handler(int sig, void *ucontext)
 .handler:
 ; this is called by the thread
 ; hl = data, a = signal code, iy is thread
@@ -36,7 +37,7 @@ ksignal:
 	add	hl, bc
 	ld	hl, (hl)
 	jp	(hl)
-.handler_context_restore:
+.handler_frame_restore:
 ; semi context_restore
 	pop	af
 	pop	de
@@ -52,7 +53,7 @@ ksignal:
 ; thread is in active queue, TASK_READY state
 ; stop it anyway
 	call	task_switch_stopped
-	jr	.handler_context_yield
+	jr	.handler_frame_yield
 	
 .handler_continue:
 ; we currently have a running thread. Just check if it was waiting for IRQ request too, if so, we will yield
@@ -60,10 +61,10 @@ ksignal:
 	di
 	ld	a, (iy+KERNEL_THREAD_IRQ)	; this read need to be atomic
 	or	a, a
-	jr	z, .handler_context_restore
+	jr	z, .handler_frame_restore
 	call	task_switch_interruptible
 	
-.handler_context_yield:
+.handler_frame_yield:
 ; context restore and yield
 	pop	af
 	pop	de
@@ -74,14 +75,14 @@ ksignal:
 	jp	kthread.yield
 	
 .HANDLER_JUMP:
- dl	.handler_context_restore
+ dl	.handler_frame_restore
  dl	kthread.exit
  dl	kthread.exit
  dl	kthread.core
  dl	kthread.core
  dl	kthread.core
  dl	kthread.core
- dl	.handler_context_restore
+ dl	.handler_frame_restore
  dl	kthread.core
  dl	kthread.exit
  dl	kthread.exit
@@ -90,8 +91,8 @@ ksignal:
  dl	kthread.exit
  dl	kthread.exit
  dl	kthread.exit
- dl	.handler_context_restore
- dl	.handler_context_restore
+ dl	.handler_frame_restore
+ dl	.handler_frame_restore
  dl	.handler_continue
  dl	.handler_stop
  dl	.handler_stop
@@ -99,22 +100,22 @@ ksignal:
  dl	.handler_stop
  dl	kthread.core
 	
-;.raise:
+abort:
+	ld	a, SIGABRT
+	
+raise:
 ; Raise signal to current thread
 ; REGSAFE and ERRNO compliant
 ; int raise(int sig)
 ; register A is signal
 ; Also silently pass register HL to signal handler as a void*
 ; return -1 on error, 0 on success with errno correctly set
-; WAIT THATS BROKEN, cause we need to do a pseudo context save >> kill assume were are not trying to send signal to ourselves
-; TODO : FIX THAT
 	push	hl
 	ld	hl, (kthread_current)
 	ld	c, (hl)
 	pop	hl
-
 	
-.kill:
+kill:
 ; Send signal to an other thread
 ; REGSAFE and ERRNO compliant
 ; int kill(pid_t pid, int sig)
@@ -144,7 +145,7 @@ ksignal:
 	ld	l, a
 	ld	a, (hl)
 	or	a, a
-	jr	z, .kill_no_thread
+	jr	z, .no_thread
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
@@ -154,16 +155,22 @@ ksignal:
 	ld	a, c
 ; permission of the (current thread-1) < signaled thread (if equal)
 	cp	a, (hl)
-	jr	nc, .kill_no_permission
+	jr	nc, .no_permission
 ; check the signal to send
 	ld	a, b
 	or	a, a
-	jr	z, .kill_no_signal
+	jr	z, .no_signal
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
+	ld	a, b
+	ld	hl, (kthread_current)
+	lea	bc, iy+0
+	sbc	hl, bc
+	ld	b, a	; save a pls
+	jr	z, .raise_frame
 	push	ix
 	ld 	ix, (iy+KERNEL_THREAD_STACK)
-	ld	hl, .handler
+	ld	hl, ksignal.handler
 	ld	(ix-3), hl
 	sbc	hl, hl
 	ld	(ix-6), hl
@@ -190,15 +197,15 @@ ksignal:
 	pop	bc
 	pop	iy
 	ret
-.kill_no_thread:
+.no_thread:
 	ld	a, ESRCH
-	jr	.kill_errno
-.kill_no_permission:
+	jr	.errno
+.no_permission:
 	ld	a, EPERM
-	jr	.kill_errno
-.kill_no_signal:
+	jr	.errno
+.no_signal:
 	ld	a, EINVAL
-.kill_errno:
+.errno:
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_ERRNO), a
 	tstei
@@ -209,8 +216,39 @@ ksignal:
 	pop	bc
 	pop	iy
 	ret
-
-; to do = read and output signal
+.raise_frame:
+; so now, I have iy = thread to signal, still the signal in a, data in de
+; push the context on the thread stack
+; we'll need all register to restore 
+; return adress
+; 	pop	af
+;	pop	de
+;	pop	bc
+;	pop	hl
+;	pop	iy
+;	pop	ix
+; return adress of the signal handler
+; right now we have (return adresss : iy : bc : de)
+	tstei
+	ld	a, b
+	or	a, a
+	pop	de
+	pop	bc
+	ex	(sp), ix
+	push	iy
+	or	a, a
+	sbc	hl, hl
+	push	hl
+	push	bc
+	push	de
+	push	af
+; stack is now clean
+	ex	de, hl		; = data
+	ld	de, ksignal.handler	; routine call
+	push	de
+; change state of the thread based on the context : we are the running thread. Ret will bring us to the needed state, and the context_restore will clean the routine for us
+	ret
+	
 .wait:
 ; wait for a signal, return hl = signal
 	call	kthread.suspend

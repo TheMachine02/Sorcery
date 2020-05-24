@@ -301,19 +301,20 @@ kthread:
 ; also send HL as exit code
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
-	call	ksignal.kill
+	call	kill
 ; need to free IRQ locked and mutex locked to thread
 ; de = next thread to be active
-	ld	a, (kthread_queue_active_size)
-	dec	a
-	or	a, a
-	ld	ix, (iy+KERNEL_THREAD_NEXT)
-	jr	nz, .exit_idle
-	ld	ix, KERNEL_THREAD_IDLE
-.exit_idle:
 ; remove from active
 	ld	hl, kthread_queue_active
 	call	kqueue.remove
+; find next to schedule
+	ld	a, (hl)
+	or	a, a
+	inc	hl
+	ld	ix, (hl)
+	jr	nz, .exit_idle
+	ld	ix, KERNEL_THREAD_IDLE
+.exit_idle:
 ; unmap the memory of the thread
 ; this also unmap the stack
 	call	kmmu.unmap_block
