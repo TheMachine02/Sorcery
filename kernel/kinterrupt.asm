@@ -17,9 +17,6 @@ define	KERNEL_INTERRUPT_LCD			00001000b
 define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
-define	KERNEL_INTERRUPT_TIME			0xF16000
-define	KERNEL_INTERRUPT_MAX_TIME		0x020000
-
 define	KERNEL_TIME_JIFFIES_TO_MS		75		; (154/32768)*1000*16
 define	KERNEL_TIME_MS_TO_JIFFIES		54		; (32768/154)/1000*256
 
@@ -182,7 +179,7 @@ kscheduler:
 	inc	hl
 	ld	(hl), 0x5A
 ; mark timing used (24 bits count)
-	ld	hl, KERNEL_INTERRUPT_MAX_TIME + 1
+	ld	hl, KERNEL_WATCHDOG_MAX_TIME + 1
 	sbc	hl, de
 	ld	de, (iy+KERNEL_THREAD_TIME)
 	add	hl, de
