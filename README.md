@@ -1,4 +1,4 @@
-# Zephyr
+# Mistral
 
 ## A preempted multitasked libre kernel for the ez80
 
