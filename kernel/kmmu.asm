@@ -62,10 +62,10 @@ kmmu:
 	push	bc
 .map_page_jump:
 	ld	c, a
+	dec	sp
 	push	hl    ; this version is interrupt safe, as we always have two bytes pushed on the stack
 	inc	sp
 	ex	(sp), hl
-	dec	sp
 	ld	a, h
 	sub	a, KERNEL_MMU_RAM shr 16
 	ld	h, a
@@ -134,10 +134,10 @@ kmmu:
 	ld	c, b
 	push	de
 	ld	e, a
+	dec	sp
 	push	hl
 	inc	sp
 	ex	(sp), hl
-	dec	sp
 	ld	a, h
 	sub	a, KERNEL_MMU_RAM shr 16
 	ld	h, a
@@ -223,10 +223,10 @@ kmmu:
 .unmap_page_jump:
 	or	a, KERNEL_MMU_USED_MASK
 	ld	c, a
+	dec	sp
 	push	hl
 	inc	sp
 	ex	(sp), hl
-	dec	sp
 	ld	a, h
 	sub	a, KERNEL_MMU_RAM shr 16
 	ld	h, a
@@ -452,6 +452,7 @@ kmalloc:
 	push	de
 	ex	de, hl
 	push	ix
+	push	bc
 	ld	ix, (kthread_current)
 	ld	ix, (ix+KERNEL_THREAD_HEAP)
 ; reset carry flag for loop sbc
@@ -472,11 +473,11 @@ kmalloc:
 .malloc_break:
 	ld	hl, KERNEL_MEMORY_BLOCK_SIZE
 	add	hl, de
+	dec	sp
 	push	hl
 	ld	a, l
 	inc	sp
 	ex	(sp), hl
-	dec	sp
 ; we need to round UP here	
 	or	a, a
 	jr	z, $+3
@@ -529,7 +530,6 @@ assert KERNEL_MMU_PAGE_SIZE/256 = 8
 	sbc	hl, de
 	jr	c, .malloc_next_block    
 .malloc_mark_block:
-	push	bc
 ; thresold to slipt the block. If the size left is >= 64 bytes, then slipt
 	ld	bc, KERNEL_MEMORY_MALLOC_THRESHOLD
 	or	a, a
@@ -574,6 +574,7 @@ assert KERNEL_MMU_PAGE_SIZE/256 = 8
 .malloc_errno:
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_ERRNO), ENOMEM
+	pop	bc
 	pop	ix
 	pop	de
 	pop	af
