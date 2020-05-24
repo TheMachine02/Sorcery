@@ -86,9 +86,9 @@ THREAD_INIT_TEST:
 	
 	call	kvideo.swap
 	
-	ld	hl, 10	; 10 ms is nice
+	ld	hl, 250	; 250 ms is nice
 	call	kthread.sleep
-	
+; we were waked by spining thread !
 	pop	bc
 	inc	bc
 	jr	.loop
@@ -104,6 +104,10 @@ TEST_THREAD_C:
 ; trap opcode instruction
 ;db	0xDD, 0xFF
 ; need to catch rst 00h for that !
+	ld	hl, 0xAA55AA
+	ld	a, SIGCONT
+	ld	c, 1
+	call	kill
 	jr	.spin
 	pop ix
 	ret
