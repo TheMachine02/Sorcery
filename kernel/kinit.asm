@@ -104,10 +104,6 @@ TEST_THREAD_C:
 ; trap opcode instruction
 ;db	0xDD, 0xFF
 ; need to catch rst 00h for that !
-	di
-	halt
-	call	abort
-
 	jr	.spin
 	pop ix
 	ret
