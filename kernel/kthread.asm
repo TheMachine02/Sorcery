@@ -276,7 +276,7 @@ kthread:
 	call	nc, .once_call
 	or	a, a
 	sbc	hl, hl
-	ret	
+	ret
 .once_call:
 	jp	(hl)
 	

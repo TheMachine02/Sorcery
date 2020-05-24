@@ -21,8 +21,10 @@ define	SIGTTOU		22          ; Terminal output        ; STOP
 define	SIGSYS		23          ; Bad syscall            ; CORE
 
 ksignal:
-
 ; void	handler(int sig, void *ucontext)
+; sp+6 *ucontext
+; sp+3 sig 
+; sp is return
 .handler:
 ; this is called by the thread
 ; hl = data, a = signal code, iy is thread
@@ -30,6 +32,7 @@ ksignal:
 ; note that signal can be masked in the KERNEL_THREAD_SIGNAL 8 bytes mask
 	ld	(iy+KERNEL_THREAD_SIGNAL_CODE), a
 	ld	(iy+KERNEL_THREAD_SIGNAL_MESSAGE), hl
+	dec	a
 	ld	c, a
 	ld	b, 3
 	mlt	bc
@@ -37,23 +40,12 @@ ksignal:
 	add	hl, bc
 	ld	hl, (hl)
 	jp	(hl)
-.handler_frame_restore:
-; semi context_restore
-	pop	af
-	pop	de
-	pop	bc
-	pop	hl
-	pop	iy
-	pop	ix
-	ei
-	ret
-	
+
 .handler_stop:
 	di
 ; thread is in active queue, TASK_READY state
 ; stop it anyway
-	call	task_switch_stopped
-	jr	.handler_frame_yield
+	jp	task_switch_stopped
 	
 .handler_continue:
 ; we currently have a running thread. Just check if it was waiting for IRQ request too, if so, we will yield
@@ -61,28 +53,20 @@ ksignal:
 	di
 	ld	a, (iy+KERNEL_THREAD_IRQ)	; this read need to be atomic
 	or	a, a
-	jr	z, .handler_frame_restore
-	call	task_switch_interruptible
+	ret	z
+	jp	task_switch_interruptible
 	
-.handler_frame_yield:
-; context restore and yield
-	pop	af
-	pop	de
-	pop	bc
-	pop	hl
-	pop	iy
-	pop	ix
-	jp	kthread.yield
-	
+.handler_return:
+	ret
+
 .HANDLER_JUMP:
- dl	.handler_frame_restore
  dl	kthread.exit
  dl	kthread.exit
  dl	kthread.core
  dl	kthread.core
  dl	kthread.core
  dl	kthread.core
- dl	.handler_frame_restore
+ dl	.handler_return
  dl	kthread.core
  dl	kthread.exit
  dl	kthread.exit
@@ -91,14 +75,41 @@ ksignal:
  dl	kthread.exit
  dl	kthread.exit
  dl	kthread.exit
- dl	.handler_frame_restore
- dl	.handler_frame_restore
+ dl	.handler_return
+ dl	.handler_return
  dl	.handler_continue
  dl	.handler_stop
  dl	.handler_stop
  dl	.handler_stop
  dl	.handler_stop
  dl	kthread.core
+	
+.wait:
+; wait for a signal, return hl = signal
+	call	kthread.suspend
+	or	a, a
+	sbc	hl, hl
+	push	iy
+	ld	iy, (kthread_current)
+	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	pop	iy
+	ret
+	
+.timedwait:
+; sleep for a duration, can be waked by signal
+; todo : clean signal after read
+	call	kthread.sleep
+	or	a, a
+	sbc	hl, hl
+	push	iy
+	ld	iy, (kthread_current)
+	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	pop	iy
+	ret
+	
+; change thread signal list ; 
+.procmask: 
+    ret	
 	
 abort:
 	ld	a, SIGABRT
@@ -170,18 +181,25 @@ kill:
 	jr	z, .raise_frame
 	push	ix
 	ld 	ix, (iy+KERNEL_THREAD_STACK)
-	ld	hl, ksignal.handler
-	ld	(ix-3), hl
+	ld	(ix-3), de
+	or	a, a
 	sbc	hl, hl
+	ld	l, a
 	ld	(ix-6), hl
-	ld	(ix-9), iy
-	ld	(ix-12), de
+	ld	hl, _sigframerestore
+	ld	(ix-9), hl
+	ld	hl, ksignal.handler
+	ld	(ix-12), hl
+	sbc	hl, hl
 	ld	(ix-15), hl
-	ld	(ix-18), hl
+	ld	(ix-18), iy
+	ld	(ix-21), de
+	ld	(ix-24), hl
+	ld	(ix-27), hl
 	ld	h, a
-	ld	(ix-21), hl
+	ld	(ix-30), hl
 ; adjust stack position
-	lea	hl, ix-21
+	lea	hl, ix-30
 	ld	(iy+KERNEL_THREAD_STACK), hl
 	pop	ix
 ; change state of the thread based on the context
@@ -235,7 +253,8 @@ kill:
 	pop	de
 	pop	bc
 	ex	(sp), ix
-	push	iy
+; all stack clean
+	push	ix
 	or	a, a
 	sbc	hl, hl
 	push	hl
@@ -243,35 +262,38 @@ kill:
 	push	de
 	push	af
 ; stack is now clean
-	ex	de, hl		; = data
-	ld	de, ksignal.handler	; routine call
-	push	de
-; change state of the thread based on the context : we are the running thread. Ret will bring us to the needed state, and the context_restore will clean the routine for us
-	ret
+	push	hl	; data = NULL
+	ld	l, a
+	push	hl	; signal
+	ld	ix, _sigframerestore
+	push	ix
+	ld	ix, ksignal.handler
+	jp	(ix)
 	
-.wait:
-; wait for a signal, return hl = signal
-	call	kthread.suspend
+   ; sig return will need to cleanup stack, and there is a lot to do
+_sigframerestore:
+; return adress
+; sp+6 stackframe
+; sp+3 *ucontext
+; sp+sig
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
-	sbc	hl, hl
-	push	iy
-	ld	iy, (kthread_current)
-	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	jr	nz, .yield
+	pop	af
+	pop	de
+	pop	bc
+	pop	hl
 	pop	iy
+	pop	ix
 	ret
-	
-.timedwait:
-; sleep for a duration, can be waked by signal
-; todo : clean signal after read
-	call	kthread.sleep
-	or	a, a
-	sbc	hl, hl
-	push	iy
-	ld	iy, (kthread_current)
-	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+.yield:
+	pop	af
+	pop	de
+	pop	bc
+	pop	hl
 	pop	iy
-	ret
-	
-; change thread signal list ; 
-.procmask: 
-    ret
+	pop	ix
+	jp	task_yield
