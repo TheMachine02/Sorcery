@@ -1,8 +1,8 @@
-# Mistral
+# Sorcery
 
 ## A preempted multitasked libre kernel for the ez80
 
-What does than mean ? Zephyr can execute up to 64 concurrent tasks. It implements POSIX-like thread with signal, real-time scheduling, hardware and software interrupt. It aims to do fast context switches, round robin scheduling (not yet with priority)
+What does than mean ? Sorcery can execute up to 64 concurrent tasks. It implements POSIX-like thread with signal, real-time scheduling, hardware and software interrupt. It aims to do fast context switches, round robin scheduling (not yet with priority)
 
 ## Advanced memory gestion
 
