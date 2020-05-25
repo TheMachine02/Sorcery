@@ -1,3 +1,7 @@
+define	SIGEV_NONE			0
+define 	SIGEV_SIGNAL			1
+define	SIGEV_THREAD			2
+
 ; timer queue
 define	klocal_timer_queue		0xD00300
 define 	klocal_timer_size		0xD00300
@@ -17,7 +21,7 @@ klocal_timer:
 	tstdi
 	ld	iy, (kthread_current)
 	ld	hl, .callback_default
-	ld	(iy+KERNEL_THREAD_TIMER_NOTIFY), hl
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
 	ld	hl, klocal_timer_queue
 	call	.insert
@@ -41,7 +45,7 @@ klocal_timer:
 	
 ; WITHIN kinterrupt.asm ;
 ; .local_timer_call:
-; 	ld	hl, (iy+KERNEL_THREAD_TIMER_NOTIFY)
+; 	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
 ; 	jp	(hl)
 ; 	
 ; .local_timer:

@@ -17,8 +17,8 @@ define	KERNEL_INTERRUPT_LCD			00001000b
 define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
-define	KERNEL_TIME_JIFFIES_TO_MS		75		; (154/32768)*1000*16
-define	KERNEL_TIME_MS_TO_JIFFIES		54		; (32768/154)/1000*256
+define	KERNEL_TIME_JIFFIES_TO_MS		106	;75		; (154/32768)*1000*16
+define	KERNEL_TIME_MS_TO_JIFFIES		38	;54		; (32768/154)/1000*256
 
 define	SCHED_RR				0
 define	SCHED_FIFO				1
@@ -127,19 +127,26 @@ kscheduler:
 	push	iy
 	jr	.schedule
 
-.local_timer_call:
+.local_timer_process:
 ; don't touch bc and iy that's all
+; remove the timer from the queue
 	ld	hl, klocal_timer_queue
 	call	klocal_timer.remove
-;	ld	hl, (iy+KERNEL_THREAD_TIMER_NOTIFY)
-;	jp	(hl)
+; switch based on what we should do
+	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY)
+	or	a, a
+	ret	z
+	dec	a
+	jr	z, .local_timer_signal
+	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
+	jp	(hl)
+.local_timer_signal:
 	ld	c, (iy+KERNEL_THREAD_PID)
-	ld	a, SIGCONT
+	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNO)
 	jp	kill
-
+	
 .local_timer:
 ; schedule jiffies timer first
-; super fast loooop
 	ld	hl, klocal_timer_queue
 	ld	a, (hl)
 	or	a, a
@@ -150,21 +157,22 @@ kscheduler:
 	ld	b, a
 .local_timer_queue:
 	dec	(iy+KERNEL_THREAD_TIMER_COUNT)
-	call	z, .local_timer_call
+	call	z, .local_timer_process
 	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
 	djnz	.local_timer_queue
 ; proof-of-concept
 .clock_state:
-; 	ld	a, (kcstate_timer)
-; 	inc	a
-; 	cp	a, KERNEL_CSTATE_SAMPLING
-; 	jr	nz, .clock_state_exit
-; 	call	kcstate.idle_adjust
-; 	ld	hl, 0
-; 	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
-; 	xor	a, a
-; .clock_state_exit:
-; 	ld	(kcstate_timer), a
+	ld	a, (kcstate_timer)
+	inc	a
+	cp	a, KERNEL_CSTATE_SAMPLING
+	jr	nz, .clock_state_exit
+	call	kcstate.idle_adjust
+	ld	hl, 0
+	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
+	xor	a, a
+.clock_state_exit:
+	ld	(kcstate_timer), a
+	
 .schedule:
 	ld	hl, kthread_need_reschedule
 	xor	a, a

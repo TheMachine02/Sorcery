@@ -16,8 +16,8 @@ define	NULL 0
 
 kinit:
 	di	; boot 5.0.1 stupidity power ++
-; about 220 times per seconde, master interrupt (or jiffies)
-	ld	a, KERNEL_CRYSTAL_TIMER_DIV154
+; about 150 times per seconde, master interrupt (or jiffies)
+	ld	a, KERNEL_CRYSTAL_TIMER_DIV218
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	sp, 0xD000E0
 	ld	(KERNEL_STACK), sp
@@ -101,7 +101,7 @@ TEST_THREAD_C:
 	call	kmalloc
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
-	ld	hl, 20	; 20 ms is nice
+	ld	hl, 50	; 10 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
 ;db	0xDD, 0xFF

@@ -25,7 +25,9 @@ define	KERNEL_THREAD_TIMER			0x1F
 define	KERNEL_THREAD_TIMER_COUNT		0x1F
 define	KERNEL_THREAD_TIMER_NEXT		0x20
 define	KERNEL_THREAD_TIMER_PREVIOUS		0x23
-define	KERNEL_THREAD_TIMER_NOTIFY		0x26
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	0x26
+define	KERNEL_THREAD_TIMER_EV_SIGNO		0x27
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	0x28
 define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x2F
 ; up to 0x80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 24 descriptors usables ;
@@ -522,9 +524,11 @@ task_switch_interruptible:
 task_yield = kthread.yield
 	
 task_add_timer:
-	ld	hl, klocal_timer.callback_default
-	ld	(iy+KERNEL_THREAD_TIMER_NOTIFY), hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
+	ld	a, SIGEV_SIGNAL
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	a, SIGCONT
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNO), a
 	ld	hl, klocal_timer_queue	
 	jp	klocal_timer.insert
 
