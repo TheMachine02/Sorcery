@@ -11,7 +11,7 @@ include	'include/os.inc'
 	os_rom
 ;-------------------------------------------------------------------------------
 
-include 'gaia_certificate.asm'
+include 'sorcery_certificate.asm'
 	db	$5a,$a5,$ff,$00
 	jp	$030000
 KERNEL_JUMP_TABLE:
