@@ -25,7 +25,7 @@ define	KERNEL_THREAD_TIMER			0x1F
 define	KERNEL_THREAD_TIMER_COUNT		0x1F
 define	KERNEL_THREAD_TIMER_NEXT		0x20
 define	KERNEL_THREAD_TIMER_PREVIOUS		0x23
-define	KERNEL_THREAD_TIMER_CALLBACK		0x26
+define	KERNEL_THREAD_TIMER_NOTIFY		0x26
 define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x2F
 ; up to 0x80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 24 descriptors usables ;
@@ -216,15 +216,35 @@ kthread:
 	ld	(iy+KERNEL_THREAD_IRQ), a
 ; the process to write the thread state and change the queue should be always a critical section
 	call	task_switch_interruptible
-; also note that writing THREAD_IRQ doesn't *need to be atomic, but testing is
 	pop	hl
 	pop	iy
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
 	jp	task_yield
 
+.resume_from_IRQ:
+; resume a thread waiting IRQ
+; interrupt should be DISABLED when calling this routine
+	push	af
+	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
+	ld	a, (iy+KERNEL_THREAD_IRQ)
+	ld	(iy+KERNEL_THREAD_IRQ), 0
+	or	a, a
+	jr	z, .resume_from_IRQ_exit
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_INTERRUPTIBLE
+	jr	nz, .resume_from_IRQ_exit
+	call	task_switch_running
+	ld	a, 0xFF
+	ld	(kthread_need_reschedule), a
+.resume_from_IRQ_exit:
+	pop	af
+	lea	iy, ix+0
+; return ix = iy = previous thread in the thread queue
+	ret
+	
 .suspend:
-; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically)
+; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically, also, IRQ signal will be reset by IRQ handler, not by wake
 	di
 	push	iy
 	push	hl
@@ -488,7 +508,6 @@ task_switch_sleep_ms:
 	or	a, a
 	jr	z, $+3
 	inc	h
-	inc	h
 	ld	a, h
 	call	task_add_timer
 	
@@ -504,7 +523,7 @@ task_yield = kthread.yield
 	
 task_add_timer:
 	ld	hl, klocal_timer.callback_default
-	ld	(iy+KERNEL_THREAD_TIMER_CALLBACK), hl
+	ld	(iy+KERNEL_THREAD_TIMER_NOTIFY), hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
 	ld	hl, klocal_timer_queue	
 	jp	klocal_timer.insert

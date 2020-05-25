@@ -61,16 +61,12 @@ kkeyboard:
 	bit	DRIVER_KEYBOARD_IRQ_LOCK_SET, (hl)
 	ret	z
 	ld	iy, (DRIVER_KEYBOARD_IRQ_LOCK_THREAD)
-	push	af
-	ld	a, (iy+KERNEL_THREAD_IRQ)
-	or	a, a
-	ld	(iy+KERNEL_THREAD_IRQ), 0
-	call	nz, kthread.resume
-	pop	af
+	call	kthread.resume_from_IRQ
 	ccf
 	ret
 		
 .irq_lock:
+	di
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
 	sra	(hl)
 	jr	nc, .irq_lock_acquire
@@ -79,6 +75,7 @@ kkeyboard:
 .irq_lock_acquire:
 	ld	hl, (kthread_current)
 	ld	(DRIVER_KEYBOARD_IRQ_LOCK_THREAD), hl
+	ei
 	ret
 
 .irq_unlock:
@@ -91,11 +88,11 @@ kkeyboard:
 	ret	nz
 .irq_lock_reset:
 ; set them freeeeee
-	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK_THREAD
+	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
+	ld	(hl), KERNEL_MUTEX_MAGIC
+	inc	hl
 	ld	de, NULL
 	ld	(hl), de
-	dec	hl
-	ld	(hl), KERNEL_MUTEX_MAGIC
 	ret
 
 .wait_key:

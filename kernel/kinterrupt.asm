@@ -58,7 +58,8 @@ kinterrupt:
 	ld	(hl), b
 ; check type of the interrupt : master source ?
 	bit	4, c
-	jr	nz, kscheduler.local_timer
+	jp	nz, kscheduler.local_timer
+.irq_acknowledge:
 	ld	a, b
 	rla
 	rla
@@ -81,35 +82,29 @@ kinterrupt:
 	rra
 	call	c, KERNEL_IRQ_HANDLER_128
 	rra
-; reschedule if kthread_need_reschedule is set
-; set by kthread.resume
+.irq_generic:
 	ld	c, a
 	ld	hl, kthread_queue_retire
 	ld	a, (hl)
 	or	a, a
 ; z = no thread to awake
-	jr	z, .irq_exit
+	jr	z, .irq_generic_exit
 	ld	b, a
 ; c = irq where we need to resume thread
 	ld	a, c
 	or	a, a
-	jr	z, .irq_exit
+	jr	z, .irq_generic_exit
 	inc	hl
 	ld	iy, (hl)
-.irq_resume_loop:
+.irq_generic_loop:
 	ld	c, (iy+KERNEL_THREAD_IRQ)
 	tst	a, c
-	jr	z, .irq_skip
-	ld	hl, (iy+KERNEL_THREAD_PREVIOUS)
-	push	hl
-	ld	(iy+KERNEL_THREAD_IRQ), 0
-	call	kthread.resume
-; reload the current retire queue (previous node of the retired node)
-	pop	iy
-.irq_skip:
+	call	nz, kthread.resume_from_IRQ
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
-	djnz	.irq_resume_loop
-.irq_exit:	
+	djnz	.irq_generic_loop
+; reschedule if kthread_need_reschedule is set
+; set by kthread.resume
+.irq_generic_exit:
 	ld	a, (kthread_need_reschedule)
 	or	a, a
 	jr	nz, kscheduler.schedule
@@ -134,9 +129,14 @@ kscheduler:
 
 .local_timer_call:
 ; don't touch bc and iy that's all
-	ld	hl, (iy+KERNEL_THREAD_TIMER_CALLBACK)
-	jp	(hl)
-	
+	ld	hl, klocal_timer_queue
+	call	klocal_timer.remove
+;	ld	hl, (iy+KERNEL_THREAD_TIMER_NOTIFY)
+;	jp	(hl)
+	ld	c, (iy+KERNEL_THREAD_PID)
+	ld	a, SIGCONT
+	jp	kill
+
 .local_timer:
 ; schedule jiffies timer first
 ; super fast loooop
@@ -155,16 +155,16 @@ kscheduler:
 	djnz	.local_timer_queue
 ; proof-of-concept
 .clock_state:
-	ld	a, (kcstate_timer)
-	inc	a
-	cp	a, KERNEL_CSTATE_SAMPLING
-	jr	nz, .clock_state_exit
-	call	kcstate.idle_adjust
-	ld	hl, 0
-	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
-	xor	a, a
-.clock_state_exit:
-	ld	(kcstate_timer), a
+; 	ld	a, (kcstate_timer)
+; 	inc	a
+; 	cp	a, KERNEL_CSTATE_SAMPLING
+; 	jr	nz, .clock_state_exit
+; 	call	kcstate.idle_adjust
+; 	ld	hl, 0
+; 	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
+; 	xor	a, a
+; .clock_state_exit:
+; 	ld	(kcstate_timer), a
 .schedule:
 	ld	hl, kthread_need_reschedule
 	xor	a, a
@@ -228,15 +228,8 @@ kscheduler:
 	ld	(iy+KERNEL_THREAD_STACK), hl
 .context_restore:
 	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
-	ld	a, (hl)
-	inc	hl
-	out0	(0x3A), a
-	ld	a, (hl)
-	inc	hl
-	out0	(0x3B), a
-	ld	a, (hl)
-	inc	hl
-	out0	(0x3C), a
+	ld	bc, 0x00033A
+	otimr
 	ld	hl, (hl)
 	ld	sp, hl
 	pop	af

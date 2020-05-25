@@ -29,7 +29,7 @@ ksignal:
 ; this is called by the thread
 ; hl = data, a = signal code, iy is thread
 ; stack is context to restore
-; note that signal can be masked in the KERNEL_THREAD_SIGNAL 8 bytes mask
+; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
 	ld	(iy+KERNEL_THREAD_SIGNAL_CODE), a
 	ld	(iy+KERNEL_THREAD_SIGNAL_MESSAGE), hl
 	dec	a
@@ -121,6 +121,7 @@ raise:
 ; register A is signal
 ; Also silently pass register HL to signal handler as a void*
 ; return -1 on error, 0 on success with errno correctly set
+; note that raising a signal in a signal handler may not be a good idea without doing what we want first
 	push	hl
 	ld	hl, (kthread_current)
 	ld	c, (hl)
@@ -156,7 +157,7 @@ kill:
 	ld	l, a
 	ld	a, (hl)
 	or	a, a
-	jr	z, .no_thread
+	jq	z, .no_thread
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
@@ -166,11 +167,11 @@ kill:
 	ld	a, c
 ; permission of the (current thread-1) < signaled thread (if equal)
 	cp	a, (hl)
-	jr	nc, .no_permission
+	jq	nc, .no_permission
 ; check the signal to send
 	ld	a, b
 	or	a, a
-	jr	z, .no_signal
+	jq	z, .no_signal
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
 	ld	a, b
@@ -178,27 +179,39 @@ kill:
 	lea	bc, iy+0
 	sbc	hl, bc
 	ld	b, a	; save a pls
-	jr	z, .raise_frame
+	jq	z, .raise_frame
 	push	ix
-	ld 	ix, (iy+KERNEL_THREAD_STACK)
+	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
+	ld	bc, 0x00033A
+	otimr
+	ld	ix, (hl)
 	or	a, a
 	sbc	hl, hl
-	ld	(ix-15), hl
-	ld	(ix-18), iy
-	ld	(ix-21), de
-	ld	(ix-24), hl
+	ld	(ix-18), hl
+	ld	(ix-21), iy
+	ld	(ix-24), de
 	ld	(ix-27), hl
-	ld	(ix-30), bc
-	ld	(ix-3), de
+	ld	(ix-30), hl
+	ld	b, a
+	ld	c, 0
+	ld	(ix-33), bc
+	ld	l, 0xFF		; pe set
+	ld	(ix-3), hl
+	ld	(ix-6), de
 	ld	l, a
-	ld	(ix-6), hl
-	ld	hl, _sigreturn
 	ld	(ix-9), hl
-	ld	hl, ksignal.handler
+	ld	hl, _sigreturn
 	ld	(ix-12), hl
+	ld	hl, ksignal.handler
+	ld	(ix-15), hl
 ; adjust stack position
-	lea	hl, ix-30
+	lea	hl, ix-33
 	ld	(iy+KERNEL_THREAD_STACK), hl
+	ld	ix, (kthread_current)
+	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
+	ld	bc, 0x00033A
+	otimr
+	ld	b, a
 	pop	ix
 ; change state of the thread based on the context
 ; if state is RUNNING, make it running 
@@ -235,21 +248,20 @@ kill:
 .raise_frame:
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
-	tstei
+	pop	hl	; this is the raise() interrupt status
 	ld	a, b
-	or	a, a
 	pop	de
 	pop	bc
 	ex	(sp), ix
 ; all stack clean
 	push	ix
-	or	a, a
-	sbc	hl, hl
-	push	hl
+	ld	ix, 0
+	push	ix
 	push	bc
 	push	de
 	push	af
 ; stack is now clean
+	push	hl
 	push	hl	; data = NULL
 	ld	l, a
 	push	hl	; signal
@@ -267,11 +279,15 @@ _sigreturn:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
+	di
 ; if this result is non zero, we already have interrupt disabled, plus, it will be scheduled away if an interrupt fire
 ; If it is zero, well we continue anyway
+	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
 	jr	nz, .yield
+; restore interrupt status (from a schedule = always on, from raise() passed)
+	tstei
 	pop	af
 	pop	de
 	pop	bc
@@ -280,6 +296,7 @@ _sigreturn:
 	pop	ix
 	ret
 .yield:
+	tstei
 	pop	af
 	pop	de
 	pop	bc

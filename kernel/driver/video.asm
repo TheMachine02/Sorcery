@@ -87,32 +87,22 @@ kvideo:
 ; carry flag is untouched, meaning that this IRQ will need a thread wake    
 	ret	z
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
-	push	af
-	ld	a, (iy+KERNEL_THREAD_IRQ)
-	or	a, a
-	ld	(iy+KERNEL_THREAD_IRQ), 0
-	call	nz, kthread.resume
-	pop	af
+	call	kthread.resume_from_IRQ
 ; reset the carry flag, IRQ doesn't need thread to be waked
 	ccf
 	ret
 
 .irq_lock:
+	di
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	sra	(hl)
 	jr	nc, .irq_lock_acquire
 	call	kthread.yield
 	jr	.irq_lock
 .irq_lock_acquire:
-; note that an interrupt could occur between the jump and the load
-; it is equivalent to an other thread trying to read the member of the mutex
-; which lead to undefined behaviour
-; However, since the lock reset itself to NULL, if such interrupt occur, the member will be read as NULL
-; Waking up a null thread is a no-op
-; An other thing to consider is even trying to wake the thread make no sense because it is already active
-; In sake a simplicity, take no further action
 	ld	hl, (kthread_current)
 	ld	(DRIVER_VIDEO_IRQ_LOCK_THREAD), hl
+	ei
 	ret
 
 .irq_unlock:
@@ -124,13 +114,12 @@ kvideo:
 ; nope, bail out
 	ret	nz
 ; set them freeeeee
-
 .irq_lock_reset:
-	ld	hl, DRIVER_VIDEO_IRQ_LOCK_THREAD
+	ld	hl, DRIVER_VIDEO_IRQ_LOCK
+	ld	(hl), KERNEL_MUTEX_MAGIC
+	inc	hl
 	ld	de, NULL
 	ld	(hl), de
-	dec	hl
-	ld	(hl), KERNEL_MUTEX_MAGIC
 	ret
     
 .swap:

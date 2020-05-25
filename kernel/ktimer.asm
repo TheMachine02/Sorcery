@@ -17,7 +17,7 @@ klocal_timer:
 	tstdi
 	ld	iy, (kthread_current)
 	ld	hl, .callback_default
-	ld	(iy+KERNEL_THREAD_TIMER_CALLBACK), hl
+	ld	(iy+KERNEL_THREAD_TIMER_NOTIFY), hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
 	ld	hl, klocal_timer_queue
 	call	.insert
@@ -37,13 +37,11 @@ klocal_timer:
 
 .callback_default:
 ; please note, timer_next is still valid per timer queue
-	ld	hl, klocal_timer_queue
-	call	.remove
 	jp	kthread.resume
 	
 ; WITHIN kinterrupt.asm ;
 ; .local_timer_call:
-; 	ld	hl, (iy+KERNEL_THREAD_TIMER_CALLBACK)
+; 	ld	hl, (iy+KERNEL_THREAD_TIMER_NOTIFY)
 ; 	jp	(hl)
 ; 	
 ; .local_timer:
