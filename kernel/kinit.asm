@@ -1,44 +1,43 @@
-define	KERNEL_MEMORY			0xD00000
-define	KERNEL_THREAD			0xD00010
+define	KERNEL_HEAP			$D00040
+define	KERNEL_THREAD			$D00010
 define	KERNEL_STACK			KERNEL_THREAD + KERNEL_THREAD_STACK
-define	KERNEL_STACK_SIZE		0x40
+define	KERNEL_STACK_SIZE		$30
 
-define	KERNEL_BOOT_MEMORY0		0xD0009B   ; touched memory by the boot.
-define	KERNEL_BOOT_MEMORY1		0xD000AC   ; same, a set somewhere
+define	KERNEL_BOOT_MEMORY0		$D0009B   ; touched memory by the boot.
+define	KERNEL_BOOT_MEMORY1		$D000AC   ; same, a set somewhere
 
-define	KERNEL_CRYSTAL_CTLR		0x00
+define	KERNEL_CRYSTAL_CTLR		$00
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 
 define	NULL 0
 
 kinit:
-	di	; boot 5.0.1 stupidity power ++
-; about 150 times per seconde, master interrupt (or jiffies)
+; boot 5.0.1 stupidity power ++
+	di
+; setup stack for the kernel
+	ld	sp, $D000E0
+	ld	(KERNEL_STACK), sp
+	ld.sis sp, $0000
+; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
-	ld	sp, 0xD000E0
-	ld	(KERNEL_STACK), sp
-	ld.sis sp, 0xD000E0 and 0xFFFF
-	ld	a, ( KERNEL_MEMORY shr 16 ) and 0xFF
-	ld	MB, a
 ; blank stack protector
-	ld	a, 0xA0
-	out0	(0x3A), a
-	ld	a, 0x00
-	out0	(0x3B), a
-	ld	a, 0xD0
-	out0	(0x3C), a
-    
-	ld	a, 0x03
+	ld	a, $B0
+	out0	($3A), a
+	ld	a, $00
+	out0	($3B), a
+	ld	a, $D0
+	out0	($3C), a
+; faster flash acess please    
+	ld	a, $03
 	ld	($E00005), a
-    
+; general system init
 	call	kpower.init
 	call	kmmu.init
 	call	kwatchdog.init
 	call	klocal_timer.init
 	call	kinterrupt.init
 	call	kthread.init
-
 ; driver init, nice
 	call	kvideo.init
 	call	kkeyboard.init
@@ -50,7 +49,7 @@ kinit:
 	halt
 	jr $-2
 
-kuname:	
+kname:	
 	ld	hl, .KERNEL_NAME
 	ret
 	
@@ -78,7 +77,7 @@ THREAD_INIT_TEST:
 	push	bc
 	ld	de, (DRIVER_VIDEO_BUFFER)
 	ld	bc, 320*26
-	ld	hl, 0xE40000
+	ld	hl, $E40000
 	ldir
 ; 	call  kvideo.clear
 	ld	hl, 0
@@ -112,9 +111,9 @@ TEST_THREAD_C:
 	ld	hl, 32	; 32 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
-;db	0xDD, 0xFF
+;db	$DD, $FF
 ; need to catch rst 00h for that !
-	ld	hl, 0xAA55AA
+	ld	hl, $AA55AA
 	ld	a, SIGCONT
 	ld	c, 1
 	call	kill
