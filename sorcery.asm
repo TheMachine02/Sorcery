@@ -3,6 +3,9 @@ include	'include/asm-errno.inc'
 include	'include/tiformat.inc'
 format	ti executable 'SORCERY'
 include	'include/os.inc'
+
+include 'config'
+
 ;-------------------------------------------------------------------------------
 	os_create
 ;-------------------------------------------------------------------------------

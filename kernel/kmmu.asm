@@ -299,14 +299,18 @@ kmmu:
 	pop	hl
 	pop	bc
 	ret
-	    
+
+if CONFIG_USE_BOOT_PATCH
+.MEMORY_PAGE:
+ db 4 dup RESERVED
+ db 252 dup 0x00
+else
 .MEMORY_PAGE:
  db 4  dup RESERVED
- db 60 dup 0x00
- db 28 dup 0x00
+ db 88 dup 0x00
  db RESERVED ; 0xD17000 > stupid interrupt check (one day, with some boot patch ..)
- db 35 dup 0x00
- db 128 dup 0x00
+ db 163 dup 0x00
+end if
 
 kmalloc:
 ; Memory allocation routine

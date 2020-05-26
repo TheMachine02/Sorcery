@@ -1,23 +1,20 @@
-define	KERNEL_MEMORY                      0xD00000
-define	KERNEL_THREAD                      0xD00010
-define	KERNEL_STACK                       KERNEL_THREAD + KERNEL_THREAD_STACK
-define	KERNEL_STACK_SIZE                  0x40
+define	KERNEL_MEMORY			0xD00000
+define	KERNEL_THREAD			0xD00010
+define	KERNEL_STACK			KERNEL_THREAD + KERNEL_THREAD_STACK
+define	KERNEL_STACK_SIZE		0x40
 
-define	KERNEL_BOOT_MEMORY0                0xD0009B   ; touched memory by the boot.
-define	KERNEL_BOOT_MEMORY1                0xD000AC   ; same, a set somewhere
+define	KERNEL_BOOT_MEMORY0		0xD0009B   ; touched memory by the boot.
+define	KERNEL_BOOT_MEMORY1		0xD000AC   ; same, a set somewhere
 
-define	KERNEL_CRYSTAL_CTLR                 0x00
-define	KERNEL_CRYSTAL_TIMER_DIV74          0x00
-define	KERNEL_CRYSTAL_TIMER_DIV154         0x01
-define	KERNEL_CRYSTAL_TIMER_DIV218         0x02
-define	KERNEL_CRYSTAL_TIMER_DIV314         0x03
+define	KERNEL_CRYSTAL_CTLR		0x00
+define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 
 define	NULL 0
 
 kinit:
 	di	; boot 5.0.1 stupidity power ++
 ; about 150 times per seconde, master interrupt (or jiffies)
-	ld	a, KERNEL_CRYSTAL_TIMER_DIV218
+	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	sp, 0xD000E0
 	ld	(KERNEL_STACK), sp

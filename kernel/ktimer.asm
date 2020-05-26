@@ -2,6 +2,23 @@ define	SIGEV_NONE			0
 define 	SIGEV_SIGNAL			1
 define	SIGEV_THREAD			2
 
+; (div/32768)*1000*16
+; (32768/div)/1000*256
+
+if CONFIG_CRYSTAL_DIVISOR = 3
+	define	TIME_JIFFIES_TO_MS		153
+	define	TIME_MS_TO_JIFFIES		27
+else if CONFIG_CRYSTAL_DIVISOR = 2
+	define	TIME_JIFFIES_TO_MS		106
+	define	TIME_MS_TO_JIFFIES		38
+else if CONFIG_CRYSTAL_DIVISOR = 1
+	define	TIME_JIFFIES_TO_MS		75
+	define	TIME_MS_TO_JIFFIES		54
+else
+	define	TIME_JIFFIES_TO_MS		36
+	define	TIME_JIFFIES_TO_MS		113
+end if
+
 ; timer queue
 define	klocal_timer_queue		0xD00300
 define 	klocal_timer_size		0xD00300
