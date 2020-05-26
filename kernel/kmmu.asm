@@ -334,62 +334,62 @@ kmalloc:
 .malloc_next_block:
 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
 	or	a, a
-	jr	z, .malloc_break
+	jr	z, .malloc_errno
 	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
 	jr	.malloc_loop
 ; so, we didn't find any memory block large enough for us
 ; let's try to map more memory to the thread
 ; first, get size+BLOCK_HEADER / block size 
 ; ix is the last block, it's important !
-.malloc_break:
-	ld	hl, KERNEL_MEMORY_BLOCK_SIZE
-	add	hl, de
-	dec	sp
-	push	hl
-	ld	a, l
-	inc	sp
-	ex	(sp), hl
-; we need to round UP here	
-	or	a, a
-	jr	z, $+3
-	inc	hl
-	srl	h
-	rr	l
-	jr	nc, $+3
-	inc	hl
-	srl	h
-	rr	l
-	jr	nc, $+3
-	inc	hl
-	ld	b, l
-	pop	hl
-	ld	hl, KERNEL_MMU_RAM
-	call	kmmu.map_block
-; block a certain number of block
-; return hl as the adress
-; de is still size
-	jp	c, .malloc_errno
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
-; there is a *new block*
-; create the block, point it to ix, and then jump to test block
-	push	hl
-; b * KERNEL_MMU_PAGE_SIZE/256 > bc
-	or	a, a
-	sbc	hl, hl
-	ld	h, b
-	add	hl, hl
-	add	hl, hl
-	ld	bc, -KERNEL_MEMORY_BLOCK_SIZE
-	add	hl, bc
-; this is the size of the block
-	lea	bc, ix+0
-	pop	ix
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), hl
-	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
-	ld	hl, NULL
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
-	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
+; .malloc_break:
+; 	ld	hl, KERNEL_MEMORY_BLOCK_SIZE
+; 	add	hl, de
+; 	dec	sp
+; 	push	hl
+; 	ld	a, l
+; 	inc	sp
+; 	ex	(sp), hl
+; ; we need to round UP here	
+; 	or	a, a
+; 	jr	z, $+3
+; 	inc	hl
+; 	srl	h
+; 	rr	l
+; 	jr	nc, $+3
+; 	inc	hl
+; 	srl	h
+; 	rr	l
+; 	jr	nc, $+3
+; 	inc	hl
+; 	ld	b, l
+; 	pop	hl
+; 	ld	hl, KERNEL_MMU_RAM
+; 	call	kmmu.map_block
+; ; block a certain number of block
+; ; return hl as the adress
+; ; de is still size
+; 	jp	c, .malloc_errno
+; 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
+; ; there is a *new block*
+; ; create the block, point it to ix, and then jump to test block
+; 	push	hl
+; ; b * KERNEL_MMU_PAGE_SIZE/256 > bc
+; 	or	a, a
+; 	sbc	hl, hl
+; 	ld	h, b
+; 	add	hl, hl
+; 	add	hl, hl
+; 	ld	bc, -KERNEL_MEMORY_BLOCK_SIZE
+; 	add	hl, bc
+; ; this is the size of the block
+; 	lea	bc, ix+0
+; 	pop	ix
+; 	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), hl
+; 	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
+; 	ld	hl, NULL
+; 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
+; 	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
+; 	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
 .malloc_test_block:
 	ld	hl, (ix+KERNEL_MEMORY_BLOCK_DATA)
 	sbc	hl, de
