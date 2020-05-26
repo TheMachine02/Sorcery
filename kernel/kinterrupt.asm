@@ -17,8 +17,8 @@ define	KERNEL_INTERRUPT_LCD			00001000b
 define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
-define	KERNEL_TIME_JIFFIES_TO_MS		106	;75		; (154/32768)*1000*16
-define	KERNEL_TIME_MS_TO_JIFFIES		38	;54		; (32768/154)/1000*256
+define	TIME_JIFFIES_TO_MS		106	;75		; (154/32768)*1000*16
+define	TIME_MS_TO_JIFFIES		38	;54		; (32768/154)/1000*256
 
 define	SCHED_RR				0
 define	SCHED_FIFO				1
@@ -53,12 +53,10 @@ kinterrupt:
 	ld	hl, KERNEL_INTERRUPT_STATUS_MASKED
 	ld	bc, (hl)
 	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and 0xFF
-	ld	(hl), c
-	inc	hl
-	ld	(hl), b
+	ld	(hl), bc
 ; check type of the interrupt : master source ?
 	bit	4, c
-	jp	nz, kscheduler.local_timer
+	jr	nz, kscheduler.local_timer
 .irq_acknowledge:
 	ld	a, b
 	rla
@@ -83,6 +81,7 @@ kinterrupt:
 	call	c, KERNEL_IRQ_HANDLER_128
 	rra
 .irq_generic:
+	jr	z, .irq_generic_exit
 	ld	c, a
 	ld	hl, kthread_queue_retire
 	ld	a, (hl)
@@ -90,14 +89,10 @@ kinterrupt:
 ; z = no thread to awake
 	jr	z, .irq_generic_exit
 	ld	b, a
-; c = irq where we need to resume thread
-	ld	a, c
-	or	a, a
-	jr	z, .irq_generic_exit
 	inc	hl
 	ld	iy, (hl)
 .irq_generic_loop:
-	ld	c, (iy+KERNEL_THREAD_IRQ)
+	ld	a, (iy+KERNEL_THREAD_IRQ)
 	tst	a, c
 	call	nz, kthread.resume_from_IRQ
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
@@ -126,24 +121,6 @@ kscheduler:
 	push	ix
 	push	iy
 	jr	.schedule
-
-.local_timer_process:
-; don't touch bc and iy that's all
-; remove the timer from the queue
-	ld	hl, klocal_timer_queue
-	call	klocal_timer.remove
-; switch based on what we should do
-	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY)
-	or	a, a
-	ret	z
-	dec	a
-	jr	z, .local_timer_signal
-	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
-	jp	(hl)
-.local_timer_signal:
-	ld	c, (iy+KERNEL_THREAD_PID)
-	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNO)
-	jp	kill
 	
 .local_timer:
 ; schedule jiffies timer first
@@ -256,3 +233,21 @@ kscheduler:
 	ex	af, af'
 	ei
 	ret
+
+.local_timer_process:
+; don't touch bc and iy that's all
+; remove the timer from the queue
+	ld	hl, klocal_timer_queue
+	call	klocal_timer.remove
+; switch based on what we should do
+	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY)
+	or	a, a
+	ret	z
+	dec	a
+	jr	z, .local_timer_signal
+	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
+	jp	(hl)
+.local_timer_signal:
+	ld	c, (iy+KERNEL_THREAD_PID)
+	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNO)
+	jp	kill

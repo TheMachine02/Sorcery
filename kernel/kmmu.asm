@@ -1,7 +1,7 @@
 define	KERNEL_MMU_USED_BIT                7
 define	KERNEL_MMU_USED_MASK             128
-define	KERNEL_MMU_PAGE_SIZE            2048
-define	KERNEL_MMU_MAP              0xD1A900
+define	KERNEL_MMU_PAGE_SIZE            1024
+define	KERNEL_MMU_MAP              0xD00F00
 define	KERNEL_MMU_RAM              0xD00000
 define	KERNEL_MMU_RAM_SIZE         0x040000
 
@@ -16,23 +16,24 @@ define	KERNEL_MEMORY_BLOCK_SIZE        12
 define	KERNEL_MEMORY_MALLOC_THRESHOLD  64 
 
 assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) < 257
+assert KERNEL_MMU_PAGE_SIZE/256 = 4
 
 kmmu:
 .init:
 ; setup memory protection
-; 0xD18800 to 0xD1A8FF
+; 0xD00000 to 0xD00FFF
 	tstdi
 	ld	a, 0x00
 	out0	(0x20), a
-	ld	a, 0x88
+	ld	a, 0x00
 	out0	(0x21), a
-	ld	a, 0xD1
+	ld	a, 0xD0
 	out0	(0x22), a
 	ld	a, 0xFF
 	out0	(0x23), a
-	ld	a, 0xA8
+	ld	a, 0x0F
 	out0	(0x24), a
-	ld	a, $D1
+	ld	a, 0xD0
 	out0	(0x25), a
 ; setup previleged executable code
 	ld	a, 0x03
@@ -76,8 +77,6 @@ kmmu:
 	rra
 	srl	h
 	rra
-	srl	h
-	rra
 	pop	hl
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
@@ -108,7 +107,6 @@ kmmu:
 	or	a, a
 	sbc	hl, hl
 	ld	h, a
-	add	hl, hl
 	add	hl, hl
 	add	hl, hl
 	ld	a, c
@@ -144,8 +142,6 @@ kmmu:
 	sub	a, KERNEL_MMU_RAM shr 16
 	ld	h, a
 	ld	a, l
-	srl	h
-	rra
 	srl	h
 	rra
 	srl	h
@@ -201,7 +197,6 @@ kmmu:
 	ld	h, d
 	add	hl, hl
 	add	hl, hl
-	add	hl, hl
 	ld	bc, KERNEL_MMU_RAM
 	add	hl, bc
 	pop	de
@@ -233,8 +228,6 @@ kmmu:
 	sub	a, KERNEL_MMU_RAM shr 16
 	ld	h, a
 	ld	a, l
-	srl	h
-	rra
 	srl	h
 	rra
 	srl	h
@@ -289,14 +282,12 @@ kmmu:
 .zero_page:
 ; hl is MAP adress
 ; REGSAFE
-	push	de
 	push	bc
 	push	hl
 	ld	e, l
 	or	a, a
 	sbc	hl, hl
 	ld	h, e
-	add	hl, hl
 	add	hl, hl
 	add	hl, hl
 	ld	de, KERNEL_MMU_RAM
@@ -307,141 +298,15 @@ kmmu:
 	ldir
 	pop	hl
 	pop	bc
-	pop	de
 	ret
-    
+	    
 .MEMORY_PAGE:
- db RESERVED ; 0xD00000
- db 0    ; 0xD00800
- db 0    ; 0xD01000
- db 0    ; 0xD01800
- db 0    ; 0xD02000
- db 0    ; 0xD02800
- db 0    ; 0xD03000
- db 0    ; 0xD03800
- db 0    ; 0xD04000
- db 0    ; 0xD04800
- db 0    ; 0xD05000
- db 0    ; 0xD05800
- db 0    ; 0xD06000
- db 0    ; 0xD06800
- db 0    ; 0xD07000
- db 0    ; 0xD07800
- db 0    ; 0xD08000
- db 0    ; 0xD08800
- db 0    ; 0xD09000
- db 0    ; 0xD09800
- db 0    ; 0xD0A000
- db 0    ; 0xD0A800
- db 0    ; 0xD0B000
- db 0    ; 0xD0B800
- db 0    ; 0xD0C000
- db 0    ; 0xD0C800
- db 0    ; 0xD0D000
- db 0    ; 0xD0D800
- db 0    ; 0xD0E000
- db 0    ; 0xD0E800
- db 0    ; 0xD0F000
- db 0    ; 0xD0F800
-
- db 0    ; 0xD10000
- db 0    ; 0xD10800
- db 0    ; 0xD11000
- db 0    ; 0xD11800
- db 0    ; 0xD12000
- db 0    ; 0xD12800
- db 0    ; 0xD13000
- db 0    ; 0xD13800
- db 0    ; 0xD14000
- db 0    ; 0xD14800
- db 0    ; 0xD15000
- db 0    ; 0xD15800
- db 0    ; 0xD16000
- db 0    ; 0xD16800
- db RESERVED ; 0xD17000
- db 0    ; 0xD17800
- db 0    ; 0xD18000
- db RESERVED ; 0xD18800 /* kernel cache memory */
- db RESERVED ; 0xD19000
- db RESERVED ; 0xD19800
- db RESERVED ; 0xD1A000
- db RESERVED ; 0xD1A800
- db 0    ; 0xD1B000
- db 0    ; 0xD1B800
- db 0    ; 0xD1C000
- db 0    ; 0xD1C800
- db 0    ; 0xD1D000
- db 0    ; 0xD1D800
- db 0    ; 0xD1E000
- db 0    ; 0xD1E800
- db 0    ; 0xD1F000
- db 0    ; 0xD1F800
-
- db 0    ; 0xD20000
- db 0    ; 0xD20800
- db 0    ; 0xD21000
- db 0    ; 0xD21800
- db 0    ; 0xD22000
- db 0    ; 0xD22800
- db 0    ; 0xD23000
- db 0    ; 0xD23800
- db 0    ; 0xD24000
- db 0    ; 0xD24800
- db 0    ; 0xD25000
- db 0    ; 0xD25800
- db 0    ; 0xD26000
- db 0    ; 0xD26800
- db 0    ; 0xD27000
- db 0    ; 0xD27800
- db 0    ; 0xD28000
- db 0    ; 0xD28800
- db 0    ; 0xD29000
- db 0    ; 0xD29800
- db 0    ; 0xD2A000
- db 0    ; 0xD2A800
- db 0    ; 0xD2B000
- db 0    ; 0xD2B800
- db 0    ; 0xD2C000
- db 0    ; 0xD2C800
- db 0    ; 0xD2D000
- db 0    ; 0xD2D800
- db 0    ; 0xD2E000
- db 0    ; 0xD2E800
- db 0    ; 0xD2F000
- db 0    ; 0xD2F800
-
- db 0    ; 0xD30000
- db 0    ; 0xD30800
- db 0    ; 0xD31000
- db 0    ; 0xD31800
- db 0    ; 0xD32000
- db 0    ; 0xD32800
- db 0    ; 0xD33000
- db 0    ; 0xD33800
- db 0    ; 0xD34000
- db 0    ; 0xD34800
- db 0    ; 0xD35000
- db 0    ; 0xD35800
- db 0    ; 0xD36000
- db 0    ; 0xD36800
- db 0    ; 0xD37000
- db 0    ; 0xD37800
- db 0    ; 0xD38000
- db 0    ; 0xD38800
- db 0    ; 0xD39000
- db 0    ; 0xD39800
- db 0    ; 0xD3A000
- db 0    ; 0xD3A800
- db 0    ; 0xD3B000
- db 0    ; 0xD3B800
- db 0    ; 0xD3C000
- db 0    ; 0xD3C800
- db 0    ; 0xD3D000
- db 0    ; 0xD3D800
- db 0    ; 0xD3E000
- db 0    ; 0xD3E800
- db 0    ; 0xD3F000
- db 0    ; 0xD3F800
+ db 4  dup RESERVED
+ db 60 dup 0x00
+ db 28 dup 0x00
+ db RESERVED ; 0xD17000 > stupid interrupt check (one day, with some boot patch ..)
+ db 35 dup 0x00
+ db 128 dup 0x00
 
 kmalloc:
 ; Memory allocation routine
@@ -492,10 +357,6 @@ kmalloc:
 	rr	l
 	jr	nc, $+3
 	inc	hl
-	srl	h
-	rr	l
-	jr	nc, $+3
-	inc	hl
 	ld	b, l
 	pop	hl
 	ld	hl, KERNEL_MMU_RAM
@@ -511,9 +372,7 @@ kmalloc:
 ; b * KERNEL_MMU_PAGE_SIZE/256 > bc
 	or	a, a
 	sbc	hl, hl
-assert KERNEL_MMU_PAGE_SIZE/256 = 8
 	ld	h, b
-	add	hl, hl
 	add	hl, hl
 	add	hl, hl
 	ld	bc, -KERNEL_MEMORY_BLOCK_SIZE

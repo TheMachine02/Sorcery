@@ -361,7 +361,7 @@ kthread:
 	ei
 	ld	l, (iy+KERNEL_THREAD_TIMER_COUNT)
 ; times in jiffies left to sleep
-	ld	h, KERNEL_TIME_JIFFIES_TO_MS
+	ld	h, TIME_JIFFIES_TO_MS
 	mlt	hl
 	add	hl, hl
 	add	hl, hl
@@ -504,7 +504,7 @@ task_switch_stopped:
 task_switch_sleep_ms:
 ; do  a * (32768/154/1000)
 	ld	h, a
-	ld	l, KERNEL_TIME_MS_TO_JIFFIES
+	ld	l, TIME_MS_TO_JIFFIES
 	mlt	hl
 	ld	a, l
 	or	a, a

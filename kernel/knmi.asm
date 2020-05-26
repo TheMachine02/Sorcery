@@ -1,4 +1,4 @@
-define KERNEL_REGISTER_DUMP KERNEL_THREAD+KERNEL_THREAD_HEADER	; pseudo heap space
+define KERNEL_REGISTER_DUMP KERNEL_THREAD + 0x20	; pseudo heap space
 define KERNEL_REGISTER_IX   0
 define KERNEL_REGISTER_IY   3
 define KERNEL_REGISTER_HL   6
@@ -11,7 +11,6 @@ define KERNEL_REGISTER_AF   21
 ; address 0220A8
 knmi:
 .service:
-	di
 	ld	(KERNEL_REGISTER_DUMP), ix
 	ld	ix, KERNEL_REGISTER_DUMP
 	ld	(ix+KERNEL_REGISTER_IY), iy
@@ -22,9 +21,7 @@ knmi:
 	ld	(ix+KERNEL_REGISTER_PC),hl
 	ld	(KERNEL_REGISTER_DUMP+KERNEL_REGISTER_SP), sp
 ; grab a usable stack.
-;	ld	sp, (KERNEL_STACK) ; (note that idle thread reside within kernel stack, usually at the adress KERNEL_STACK)
-; let's use the thread stack for now
-; shady boot interrupt, curse YOU !
+	ld	sp, (KERNEL_STACK) ; (note that idle thread reside within kernel stack, usually at the adress KERNEL_STACK, but that's totally fine)
 	push	af
 	pop	hl
 	ld	(ix+KERNEL_REGISTER_AF), hl
@@ -33,8 +30,7 @@ knmi:
 	res	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
 ; suspend all thread : we NEED that, cause else, everything will just resume easily... and the offending thread might *CRASH* hard
 ; so suspend thread, kill offended thread as a response, and get all thread running again...
-
-;	* todo*
+; place ourselves in uninterruptible state maybe ?
 	call    kinterrupt.init
 	call	kvideo.init
 	call    kkeyboard.init
@@ -81,6 +77,9 @@ knmi:
 ;	call	ksignal.raise
 	ei
 	retn
+	
+.stack_overflow:
+	ret
 
 .WATCHDOG_ERROR_STRING:
  db "[***] kernel panic : WATCHDOG_VIOLATION",0
