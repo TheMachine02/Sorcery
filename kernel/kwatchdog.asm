@@ -16,7 +16,7 @@ define	KERNEL_WATCHDOG_BIT_CLOCK     4
 
 kwatchdog:
 .init:
-    tstdi
+	di
 	ld	hl, KERNEL_WATCHDOG_CTRL
 	ld	a, 20		; 32768Hz, trigger NMI
 	ld	(hl), a
@@ -30,7 +30,7 @@ kwatchdog:
 ; and start the timer	
 	ld	hl, KERNEL_WATCHDOG_CTRL
 	set	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
-	retei
+	ret
 
 .stop:
 	ld	hl, KERNEL_WATCHDOG_CLR

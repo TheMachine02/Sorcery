@@ -22,13 +22,6 @@ macro tstei
 	ei
 end macro
 
-macro retei
-	pop	af
-	ret	po
-	ei
-	ret
-end macro
-
 kspin_lock:
 
 .acquire:

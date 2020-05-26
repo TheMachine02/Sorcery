@@ -29,9 +29,11 @@ ktimer:
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
 	ld	hl, .irq_handler
+	pop	af
 	ld	a, DRIVER_HRTIMER1_IRQ
-	call	kirq.request
-	retei
+	jp	po, kirq.request
+	ei
+	jp	kirq.request
 
 .irq_handler:
 	push	af

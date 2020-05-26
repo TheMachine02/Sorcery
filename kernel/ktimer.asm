@@ -27,6 +27,7 @@ define	klocal_timer_current		0xD00301
 klocal_timer:
 
 .init:
+	di
 	ld	hl, klocal_timer_queue
 	ld	de, NULL
 	ld	(hl), e
@@ -37,7 +38,7 @@ klocal_timer:
 .create:
 	tstdi
 	ld	iy, (kthread_current)
-	ld	hl, .callback_default
+	ld	hl, .notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
 	ld	hl, klocal_timer_queue
@@ -56,7 +57,7 @@ klocal_timer:
 	tstei
 	ret
 
-.callback_default:
+.notify_default:
 ; please note, timer_next is still valid per timer queue
 	jp	kthread.resume
 	

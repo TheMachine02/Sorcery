@@ -58,10 +58,12 @@ krtc:
 ; reset lock
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
+	pop	af
 	ld	hl, .irq_handler
 	ld	a, DRIVER_RTC_IRQ
-	call	kirq.request
-	retei
+	jp	po, kirq.request
+	ei
+	jp	kirq.request
 
 .irq_handler:
 	push	af

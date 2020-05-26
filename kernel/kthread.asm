@@ -89,7 +89,10 @@ kthread:
 	inc	hl
 	ld	de, KERNEL_THREAD_IDLE
 	ld	(kthread_pid_bitmap), de
-	retei
+	pop	af
+	ret	po
+	ei
+	ret
 
 .yield=kscheduler.yield
 	
@@ -525,10 +528,10 @@ task_yield = kthread.yield
 	
 task_add_timer:
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
-	ld	a, SIGEV_SIGNAL
+	ld	a, SIGEV_THREAD
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
-	ld	a, SIGCONT
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNO), a
+	ld	hl, klocal_timer.notify_default
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	ld	hl, klocal_timer_queue	
 	jp	klocal_timer.insert
 

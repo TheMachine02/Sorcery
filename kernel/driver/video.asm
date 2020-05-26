@@ -75,9 +75,11 @@ kvideo:
 ; IRQ handle
 	call	.irq_lock_reset
 	ld	hl, .irq_handler
+	pop	af
 	ld	a, DRIVER_VIDEO_IRQ
-	call	kirq.request
-	retei
+	jp	po, kirq.request
+	ei
+	jp	kirq.request
 
 .irq_handler:
 	ld	hl, DRIVER_VIDEO_ICR
@@ -139,14 +141,14 @@ kvideo:
 	jp	kthread.wait_on_IRQ
 
 .clear:
-	ld.atomic de, (DRIVER_VIDEO_BUFFER)
+	ld	de, (DRIVER_VIDEO_BUFFER)
 	ld	hl, 0xE40000
 	ld	bc, 76800
 	ldir
 	ret
 	
 .clear_color:
-	ld.atomic de, (DRIVER_VIDEO_BUFFER)
+	ld	de, (DRIVER_VIDEO_BUFFER)
 	or	a, a
 	sbc	hl, hl
 	add	hl, de
@@ -161,7 +163,7 @@ kvideo:
 	mlt	de
 	add	hl, de
 	add	hl, de
-	ld.atomic de, (DRIVER_VIDEO_BUFFER)
+	ld	de, (DRIVER_VIDEO_BUFFER)
 	add	hl, de
 	ret
 
@@ -170,7 +172,7 @@ kvideo:
 	mlt	de
 	add	hl, de
 	add	hl, de
-	ld.atomic de, (DRIVER_VIDEO_BUFFER)
+	ld	de, (DRIVER_VIDEO_BUFFER)
 	add	hl, de
 	ld	a,(DRIVER_VIDEO_FONT_PALETTE)
 	ld	iyl, a

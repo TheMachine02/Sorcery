@@ -22,19 +22,16 @@ define	SCHED_FIFO				1
 
 kinterrupt:
 .init:
-	tstdi
+	di
 	im	1
+	ld	de, KERNEL_INTERRUPT_TIMER_OS
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
-	ld	(hl), KERNEL_INTERRUPT_TIMER_OS
-	inc	hl
-	ld	(hl), 0
-	ld	hl, KERNEL_INTERRUPT_SIGNAL_LATCH
-	ld	(hl), KERNEL_INTERRUPT_TIMER_OS
-	inc	hl
-	ld	(hl), 0
+	ld	(hl), de
+	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and 0xFF
+	ld	(hl), de
 ; also reset handler table
-	call	kirq.init
-	retei
+	jp	kirq.init
+
 .ret:
 .rst10:
 .rst18:
@@ -124,7 +121,7 @@ kscheduler:
 	ld	hl, klocal_timer_queue
 	ld	a, (hl)
 	or	a, a
-	jr	z, .clock_state
+	jr	z, .local_timer_exit
 	inc	hl
 ; this is first thread with a timer
 	ld	iy, (hl)
@@ -134,6 +131,9 @@ kscheduler:
 	call	z, .local_timer_process
 	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
 	djnz	.local_timer_queue
+.local_timer_exit:
+
+if CONFIG_USE_DOWNCLOCKING
 ; proof-of-concept
 .clock_state:
 	ld	a, (kcstate_timer)
@@ -146,12 +146,14 @@ kscheduler:
 	xor	a, a
 .clock_state_exit:
 	ld	(kcstate_timer), a
-	
+end if
+
 .schedule:
 	ld	hl, kthread_need_reschedule
 	xor	a, a
 	ld	(hl), a
 	inc	hl
+; read kthread_current
 	ld	iy, (hl)
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
@@ -168,7 +170,7 @@ kscheduler:
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
 ; check if current thread is active : if yes, grab next_thread
-; idle is marked as NOT ACTIVE, NULL is NOT ACTIVE
+; idle is marked as INTERRUPTIBLE, ie non active
 ; if not active, grab kthread_queue_active_current thread
 ; if queue empty, schedule idle thread
 ; schedule on the active list now ;
@@ -182,8 +184,10 @@ kscheduler:
 	or	a, a
 	jr	nz, .dispatch
 ; schedule the idle thread
-	ld	a, (kthread_queue_retire_size)
-	or	a, a
+	inc	hl
+	inc	hl
+	inc	hl
+	or	a, (hl)
 ; panic if NO thread
 	jp	z, kinterrupt.nmi
 	ld	ix, KERNEL_THREAD_IDLE

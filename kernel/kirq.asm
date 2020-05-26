@@ -19,7 +19,7 @@ define	KERNEL_IRQ_HANDLER_128		0xD0012C
 
 kirq:
 .init:
-	tstdi
+	di
 	ld	hl, KERNEL_IRQ_HANDLER
 	ld	bc, 4
 	ld 	de, .handler
@@ -29,7 +29,7 @@ kirq:
 	add	hl, bc
 	dec	a
 	jr	nz, .init_handler
-	retei
+	ret
 
 .handler:
 	ret

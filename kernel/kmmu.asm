@@ -22,7 +22,7 @@ kmmu:
 .init:
 ; setup memory protection
 ; 0xD00000 to 0xD00FFF
-	tstdi
+	di
 	ld	a, 0x00
 	out0	(0x20), a
 	ld	a, 0x00
@@ -50,7 +50,7 @@ kmmu:
 	ld	de, KERNEL_MMU_MAP
 	ld	bc, 256
 	ldir
-	retei
+	ret
 
 .map_page:
 	push	bc
@@ -307,9 +307,9 @@ if CONFIG_USE_BOOT_PATCH
 else
 .MEMORY_PAGE:
  db 4  dup RESERVED
- db 88 dup 0x00
+ db 89 dup 0x00
  db RESERVED ; 0xD17000 > stupid interrupt check (one day, with some boot patch ..)
- db 163 dup 0x00
+ db 162 dup 0x00
 end if
 
 kmalloc:

@@ -49,7 +49,19 @@ kinit:
 	ei
 	halt
 	jr $-2
-    
+
+kuname:	
+	ld	hl, .KERNEL_NAME
+	ret
+	
+.KERNEL_NAME:
+ db CONFIG_KERNEL_NAME, 0
+	
+; Exemple area ;
+; Static compiled thread an such ;
+; Kernel only init and pass to init thread, so a proper OS will go there ;
+	
+	
 THREAD_INIT_TEST:
 ; load frozen elf16 example
 ;	ld	hl, elf_frozen_example
@@ -64,7 +76,7 @@ THREAD_INIT_TEST:
 	ld	bc, 0
 .loop:
 	push	bc
-	ld.atomic de, (DRIVER_VIDEO_BUFFER)
+	ld	de, (DRIVER_VIDEO_BUFFER)
 	ld	bc, 320*26
 	ld	hl, 0xE40000
 	ldir
@@ -84,7 +96,7 @@ THREAD_INIT_TEST:
 	
 	call	kvideo.swap
 	
-	ld	hl, 50	; 250 ms is nice
+	ld	hl, 250	; 250 ms is nice
 	call	kthread.sleep
 ; we were waked by spining thread !
 	pop	bc
@@ -97,15 +109,15 @@ TEST_THREAD_C:
 	call	kmalloc
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
-	ld	hl, 50	; 10 ms is nice
+	ld	hl, 32	; 32 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
 ;db	0xDD, 0xFF
 ; need to catch rst 00h for that !
-;	ld	hl, 0xAA55AA
-;	ld	a, SIGCONT
-;	ld	c, 1
-;	call	kill
+	ld	hl, 0xAA55AA
+	ld	a, SIGCONT
+	ld	c, 1
+	call	kill
 	jr	.spin
 	pop ix
 	ret
