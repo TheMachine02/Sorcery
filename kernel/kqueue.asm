@@ -1,7 +1,7 @@
 
-define	KERNEL_QUEUE_ID                        0x00
-define	KERNEL_QUEUE_NEXT                      0x01
-define	KERNEL_QUEUE_PREVIOUS                  0x04
+define	KERNEL_QUEUE_ID                        $00
+define	KERNEL_QUEUE_NEXT                      $01
+define	KERNEL_QUEUE_PREVIOUS                  $04
 
 kqueue:
 

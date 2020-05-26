@@ -20,9 +20,9 @@ else
 end if
 
 ; timer queue
-define	klocal_timer_queue		0xD00300
-define 	klocal_timer_size		0xD00300
-define	klocal_timer_current		0xD00301
+define	klocal_timer_queue		$D00300
+define 	klocal_timer_size		$D00300
+define	klocal_timer_current		$D00301
  
 klocal_timer:
 

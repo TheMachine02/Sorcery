@@ -3,36 +3,36 @@
 ; Atomic is UTERLY important while writing to it
 ; you can read pid, ppid, irq (but it will not be a *safe value, meaning it can change the next instruction
 ; for safety dont touch anything here except PID and PPID ;
-define	KERNEL_THREAD_HEADER			0x00
-define	KERNEL_THREAD_PID			0x00
-define	KERNEL_THREAD_NEXT			0x01
-define	KERNEL_THREAD_PREVIOUS			0x04
-define	KERNEL_THREAD_PPID			0x07
-define	KERNEL_THREAD_IRQ			0x08
-define	KERNEL_THREAD_STATUS			0x09
+define	KERNEL_THREAD_HEADER			$00
+define	KERNEL_THREAD_PID			$00
+define	KERNEL_THREAD_NEXT			$01
+define	KERNEL_THREAD_PREVIOUS			$04
+define	KERNEL_THREAD_PPID			$07
+define	KERNEL_THREAD_IRQ			$08
+define	KERNEL_THREAD_STATUS			$09
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
-define	KERNEL_THREAD_STACK_LIMIT		0x0A
-define	KERNEL_THREAD_STACK			0x0D
-define	KERNEL_THREAD_HEAP			0x10
-define	KERNEL_THREAD_TIME			0x13
-define	KERNEL_THREAD_ERRNO			0x16
-define	KERNEL_THREAD_SIGNAL			0x17
-define	KERNEL_THREAD_SIGNAL_CODE		0x17
-define	KERNEL_THREAD_SIGNAL_MESSAGE		0x18
-define  KERNEL_THREAD_SIGNAL_MASK		0x1B
-define	KERNEL_THREAD_TIMER			0x1F
-define	KERNEL_THREAD_TIMER_COUNT		0x1F
-define	KERNEL_THREAD_TIMER_NEXT		0x20
-define	KERNEL_THREAD_TIMER_PREVIOUS		0x23
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	0x26
-define	KERNEL_THREAD_TIMER_EV_SIGNO		0x27
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	0x28
-define	KERNEL_THREAD_DESCRIPTOR_TABLE		0x2F
-; up to 0x80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
+define	KERNEL_THREAD_STACK_LIMIT		$0A
+define	KERNEL_THREAD_STACK			$0D
+define	KERNEL_THREAD_HEAP			$10
+define	KERNEL_THREAD_TIME			$13
+define	KERNEL_THREAD_ERRNO			$16
+define	KERNEL_THREAD_SIGNAL			$17
+define	KERNEL_THREAD_SIGNAL_CODE		$17
+define	KERNEL_THREAD_SIGNAL_MESSAGE		$18
+define  KERNEL_THREAD_SIGNAL_MASK		$1B
+define	KERNEL_THREAD_TIMER			$1F
+define	KERNEL_THREAD_TIMER_COUNT		$1F
+define	KERNEL_THREAD_TIMER_NEXT		$20
+define	KERNEL_THREAD_TIMER_PREVIOUS		$23
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$26
+define	KERNEL_THREAD_TIMER_EV_SIGNO		$27
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$28
+define	KERNEL_THREAD_DESCRIPTOR_TABLE		$2F
+; up to $80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 24 descriptors usables ;
 
-define	KERNEL_THREAD_HEADER_SIZE		0x80
+define	KERNEL_THREAD_HEADER_SIZE		$80
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
 define	KERNEL_THREAD_DESCRIPTOR_TABLE_SIZE	24
@@ -42,22 +42,22 @@ define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1    ; can be waked up by signal
 define	TASK_STOPPED				2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 
-define  KERNEL_THREAD_ONCE_INIT			0xFE
+define  KERNEL_THREAD_ONCE_INIT			$FE
 
-define	kthread_queue_active			0xD00100
-define	kthread_queue_active_size		0xD00100
-define	kthread_queue_active_current		0xD00101
+define	kthread_queue_active			$D00100
+define	kthread_queue_active_size		$D00100
+define	kthread_queue_active_current		$D00101
 
-define	kthread_queue_retire			0xD00104
-define	kthread_queue_retire_size		0xD00104
-define	kthread_queue_retire_current		0xD00105
+define	kthread_queue_retire			$D00104
+define	kthread_queue_retire_size		$D00104
+define	kthread_queue_retire_current		$D00105
 
-define	kthread_need_reschedule			0xD00108
-define	kthread_current				0xD00109
+define	kthread_need_reschedule			$D00108
+define	kthread_current				$D00109
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
-define	kthread_pid_bitmap			0xD00200
+define	kthread_pid_bitmap			$D00200
 
 kthread:
 .init:
@@ -82,14 +82,14 @@ kthread:
 	ldir
 	ld	hl, kthread_pid_bitmap
 ; permission of thread (thread 0 is all mighty) >> or maybe process ID in the futur and THREAD_PID being TID
-	ld	(hl), 0x01
+	ld	(hl), $01
 	inc	hl
 	ld	de, KERNEL_THREAD_IDLE
 	ld	(hl), de
 	inc	hl
 	inc	hl
 	inc	hl
-	ld	(hl), 0x00
+	ld	(hl), $00
 	ld	de, kthread_pid_bitmap+5
 	ld	bc, 251
 	ldir
@@ -181,7 +181,7 @@ kthread:
 	ld	l, a
 	ld	de, kthread_pid_bitmap
 	add	hl, de
-	ld	(hl), 0xFF
+	ld	(hl), $FF
 	inc	hl
 	ld	(hl), iy
 ; write parent pid    
@@ -245,7 +245,7 @@ kthread:
 	cp	a, TASK_INTERRUPTIBLE
 	jr	nz, .resume_from_IRQ_exit
 	call	task_switch_running
-	ld	a, 0xFF
+	ld	a, $FF
 	ld	(kthread_need_reschedule), a
 .resume_from_IRQ_exit:
 	pop	af
@@ -287,7 +287,7 @@ kthread:
 ; if a=2 , nc, if a=255, nc, else c
 	jr	nz, .resume_exit_atomic
 	call	task_switch_running
-	ld	a, 0xFF
+	ld	a, $FF
 	ld	(kthread_need_reschedule), a
 .resume_exit_atomic:
 	tstei
@@ -316,12 +316,12 @@ kthread:
 	di
 	ld	sp, (KERNEL_STACK)
 ; first disable stack protector (load the kernel_stack stack protector)
-	ld	a, 0xA0
-	out0	(0x3A), a
-	ld	a, 0x00
-	out0	(0x3B), a
-	ld	a, 0xD0
-	out0	(0x3C), a
+	ld	a, $B0
+	out0	($3A), a
+	ld	a, $00
+	out0	($3B), a
+	ld	a, $D0
+	out0	($3C), a
 	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_PID)
 	push	hl
@@ -419,7 +419,7 @@ kthread:
 	jr	.heap_size_loop
 .heap_size_break:
 ; clean out the upper bit
-	ld	bc, 0x800000
+	ld	bc, $800000
 	add	hl, bc
 	jr	nc, $-1
 	pop	bc
@@ -470,14 +470,14 @@ kthread:
 	ret
 	
 .IHEADER:
-	db	0x00		; ID 0 reserved
+	db	$00		; ID 0 reserved
 	dl	NULL		; No next
 	dl	NULL		; No prev
 	db	NULL		; No PPID
-	db	0xFF		; IRQ all
+	db	$FF		; IRQ all
 	db	TASK_INTERRUPTIBLE	; Status
-	dl	0xD000E0	; Stack will be writed at first unschedule
-	dl	0xD000A0	; Stack limit
+	dl	$D000E0	; Stack will be writed at first unschedule
+	dl	$D000A0	; Stack limit
 	dl	NULL		; No true heap for idle thread
 	dl	NULL		; No friend
 	db	NULL

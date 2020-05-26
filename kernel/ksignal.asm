@@ -182,7 +182,7 @@ kill:
 	jq	z, .raise_frame
 	push	ix
 	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
-	ld	bc, 0x00033A
+	ld	bc, $00033A
 	otimr
 	ld	ix, (hl)
 	or	a, a
@@ -195,7 +195,7 @@ kill:
 	ld	b, a
 	ld	c, 0
 	ld	(ix-33), bc
-	ld	l, 0xFF		; pe set
+	ld	l, $FF		; pe set
 	ld	(ix-3), hl
 	ld	(ix-6), de
 	ld	l, a
@@ -209,7 +209,7 @@ kill:
 	ld	(iy+KERNEL_THREAD_STACK), hl
 	ld	ix, (kthread_current)
 	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
-	ld	bc, 0x00033A
+	ld	bc, $00033A
 	otimr
 	ld	b, a
 	pop	ix

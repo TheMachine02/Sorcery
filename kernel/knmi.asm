@@ -1,4 +1,4 @@
-define KERNEL_REGISTER_DUMP KERNEL_THREAD + 0x20	; pseudo heap space
+define KERNEL_REGISTER_DUMP KERNEL_HEAP
 define KERNEL_REGISTER_IX   0
 define KERNEL_REGISTER_IY   3
 define KERNEL_REGISTER_HL   6
@@ -40,7 +40,7 @@ knmi:
 	jr	nz, .watchdog_violation
 .reboot:
 	ld	a, 00010000b
-	out0	(0x00), a
+	out0	($00), a
 	nop
 	nop
 	rst	00h

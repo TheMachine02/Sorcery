@@ -1,11 +1,11 @@
 define	KERNEL_MMU_USED_BIT                7
 define	KERNEL_MMU_USED_MASK             128
 define	KERNEL_MMU_PAGE_SIZE            1024
-define	KERNEL_MMU_MAP              0xD00F00
-define	KERNEL_MMU_RAM              0xD00000
-define	KERNEL_MMU_RAM_SIZE         0x040000
+define	KERNEL_MMU_MAP              $D00F00
+define	KERNEL_MMU_RAM              $D00000
+define	KERNEL_MMU_RAM_SIZE         $040000
 
-define	RESERVED 0xFF
+define	RESERVED $FF
 
 define	KERNEL_MEMORY_BLOCK_DATA         0
 define	KERNEL_MEMORY_BLOCK_FREE         2
@@ -21,26 +21,26 @@ assert KERNEL_MMU_PAGE_SIZE/256 = 4
 kmmu:
 .init:
 ; setup memory protection
-; 0xD00000 to 0xD00FFF
+; $D00000 to $D00FFF
 	di
-	ld	a, 0x00
-	out0	(0x20), a
-	ld	a, 0x00
-	out0	(0x21), a
-	ld	a, 0xD0
-	out0	(0x22), a
-	ld	a, 0xFF
-	out0	(0x23), a
-	ld	a, 0x0F
-	out0	(0x24), a
-	ld	a, 0xD0
-	out0	(0x25), a
+	ld	a, $00
+	out0	($20), a
+	ld	a, $00
+	out0	($21), a
+	ld	a, $D0
+	out0	($22), a
+	ld	a, $FF
+	out0	($23), a
+	ld	a, $0F
+	out0	($24), a
+	ld	a, $D0
+	out0	($25), a
 ; setup previleged executable code
-	ld	a, 0x03
-	out0	(0x1F), a
-	ld	a, 0x00
-	out0	(0x1D), a
-	out0	(0x1E), a
+	ld	a, $03
+	out0	($1F), a
+	ld	a, $00
+	out0	($1D), a
+	out0	($1E), a
 	ld	hl, KERNEL_MMU_RAM + 256
 	ld	de, KERNEL_MMU_RAM + 1 + 256
 	ld	(hl), 0
@@ -293,7 +293,7 @@ kmmu:
 	ld	de, KERNEL_MMU_RAM
 	add	hl, de
 	ex	de, hl
-	ld	hl, 0xE40000
+	ld	hl, $E40000
 	ld	bc, KERNEL_MMU_PAGE_SIZE
 	ldir
 	pop	hl
@@ -303,13 +303,13 @@ kmmu:
 if CONFIG_USE_BOOT_PATCH
 .MEMORY_PAGE:
  db 4 dup RESERVED
- db 252 dup 0x00
+ db 252 dup $00
 else
 .MEMORY_PAGE:
  db 4  dup RESERVED
- db 89 dup 0x00
- db RESERVED ; 0xD17000 > stupid interrupt check (one day, with some boot patch ..)
- db 162 dup 0x00
+ db 89 dup $00
+ db RESERVED ; $D17000 > stupid interrupt check (one day, with some boot patch ..)
+ db 162 dup $00
 end if
 
 kmalloc:
@@ -458,7 +458,7 @@ kmalloc:
 ; 	pop	ix
 ; ; try to mask the adress, ie >= D00000
 ; 	ex	de, hl
-; 	ld	hl, 0x300000
+; 	ld	hl, $300000
 ; 	add	hl, de
 ; 	jr	nc, .realloc_error
 ; ; check if adress is valid
@@ -483,7 +483,7 @@ kmalloc:
 ; ; 	ld	de, (iy+KERNEL_MEMORY_BLOCK_DATA)
 ; ; 	add	hl, de
 ; ; clean out the *used* mask
-; ; 	ld	de, 0x800000
+; ; 	ld	de, $800000
 ; ; 	add	hl, de
 ; ; 	or	a, a
 ; ; 	sbc	hl, bc	; if nc, we are good ! merge ix and iy, return ix+12
@@ -531,7 +531,7 @@ kfree:
 	push	hl
 ; try to mask the adress, ie >= D00000
 	ex	de, hl
-	ld	hl, 0x300000
+	ld	hl, $300000
 	add	hl, de
 	jr	nc, .free_exit
 ; check if adress is valid

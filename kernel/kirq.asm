@@ -7,15 +7,15 @@ define	KERNEL_IRQ_LCD			32
 define	KERNEL_IRQ_RTC			64
 define	KERNEL_IRQ_USB			128
 
-define	KERNEL_IRQ_HANDLER   		0xD00110
-define	KERNEL_IRQ_HANDLER_001		0xD00110
-define	KERNEL_IRQ_HANDLER_002		0xD00114
-define	KERNEL_IRQ_HANDLER_004		0xD00118
-define	KERNEL_IRQ_HANDLER_008		0xD0011C
-define	KERNEL_IRQ_HANDLER_016		0xD00120
-define	KERNEL_IRQ_HANDLER_032		0xD00124
-define	KERNEL_IRQ_HANDLER_064		0xD00128
-define	KERNEL_IRQ_HANDLER_128		0xD0012C
+define	KERNEL_IRQ_HANDLER   		$D00110
+define	KERNEL_IRQ_HANDLER_001		$D00110
+define	KERNEL_IRQ_HANDLER_002		$D00114
+define	KERNEL_IRQ_HANDLER_004		$D00118
+define	KERNEL_IRQ_HANDLER_008		$D0011C
+define	KERNEL_IRQ_HANDLER_016		$D00120
+define	KERNEL_IRQ_HANDLER_032		$D00124
+define	KERNEL_IRQ_HANDLER_064		$D00128
+define	KERNEL_IRQ_HANDLER_128		$D0012C
 
 kirq:
 .init:
@@ -50,7 +50,7 @@ kirq:
 ; check the interrupt routine is in *RAM*
 	push	de
 	call	.extract_line
-	ld	(hl), 0xC3
+	ld	(hl), $C3
 	inc	hl
 	ld	(hl), de
 	ex	de, hl
@@ -61,7 +61,7 @@ kirq:
 .extract_line:
 	push	bc
 	push	af
-	ld	b, 0xFF
+	ld	b, $FF
 .extract_bit:
 	inc	b
 	rra
