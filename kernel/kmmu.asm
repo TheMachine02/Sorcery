@@ -122,7 +122,7 @@ kmmu:
 	ld	a, (bc)
 	pop	bc
 
-; try map b memory block (each are 2048)
+; try map b memory block (each are 1024)
 .map_block_thread:
 ; void*, thread_id, block_count
 ; REGSAFE

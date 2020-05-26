@@ -75,20 +75,24 @@ kthread:
 	ld	(kthread_current), de
 	xor	a, a
 	ld	(kthread_need_reschedule), a
-; copy idle thread (ie, kernel thread. Stack is kernel stackh, code is init kernel)
+; copy idle thread (ie, kernel thread. Stack is kernel stack, code is init kernel)
 	ld	hl, .IHEADER
 	ld	de, KERNEL_THREAD
 	ld	bc, .IHEADER_END - .IHEADER
 	ldir
 	ld	hl, kthread_pid_bitmap
-	ld	de, kthread_pid_bitmap+1
-	ld	(hl), 0
-	ld	bc, 255
-	ldir
-	ld	(hl), 0x01  ; permission ring 1 (thread 0 is all mighty)
+; permission of thread (thread 0 is all mighty) >> or maybe process ID in the futur and THREAD_PID being TID
+	ld	(hl), 0x01
 	inc	hl
 	ld	de, KERNEL_THREAD_IDLE
-	ld	(kthread_pid_bitmap), de
+	ld	(hl), de
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	(hl), 0x00
+	ld	de, kthread_pid_bitmap+5
+	ld	bc, 251
+	ldir
 	pop	af
 	ret	po
 	ei
@@ -105,8 +109,8 @@ kthread:
 ; restore register and pop all the stack
 	exx
 	tstei
+	lea	iy, ix+0
 	pop	ix
-	pop	iy
 	pop	af
 	scf
 	sbc	hl, hl
@@ -121,7 +125,6 @@ kthread:
 ; HL, BC, DE copied from current context to the new thread
 ; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
 	push	af
-	push	iy
 	push	ix
 	tstdi
 ; save hl, de, bc registers
@@ -130,12 +133,17 @@ kthread:
 	call	.reserve_pid
 	jr	c, .create_no_pid
 	ld	hl, KERNEL_MMU_RAM
-	ld	b, KERNEL_THREAD_STACK_SIZE/KERNEL_MMU_PAGE_SIZE + KERNEL_THREAD_HEAP_SIZE/KERNEL_MMU_PAGE_SIZE
+	ld	b, KERNEL_THREAD_STACK_SIZE/KERNEL_MMU_PAGE_SIZE
 	call	kmmu.map_block_thread
 	jr	c, .create_no_mem
 ; hl is adress    
 	push	hl
 	pop	iy
+	ld	b, KERNEL_THREAD_HEAP_SIZE/KERNEL_MMU_PAGE_SIZE
+	call	kmmu.map_block_thread
+	jr	c, .create_no_mem
+	push	hl
+	ex	(sp), ix
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
@@ -153,12 +161,9 @@ kthread:
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
 ; heap ;
-	lea	hl, iy + 0
-	add	hl, de
+	lea	hl, ix + 0
 	ld	(iy+KERNEL_THREAD_HEAP), hl
-	push	hl
-	ex	(sp), ix
-	ld	de, KERNEL_MMU_PAGE_SIZE - KERNEL_MEMORY_BLOCK_SIZE
+	ld	de, KERNEL_THREAD_HEAP_SIZE - KERNEL_MEMORY_BLOCK_SIZE
 	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), de
 	ld	de, NULL
 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), de
@@ -205,8 +210,8 @@ kthread:
 	ld	(iy-21), bc
 	ld	(iy-24), de
 	tstei
+	lea	iy, ix+0
 	pop	ix
-	pop	iy
 	pop	af
 	or	a, a
 	sbc	hl, hl
