@@ -1,14 +1,14 @@
 define	KERNEL_SPIN_LOCK         0
 define	KERNEL_SPIN_LOCK_SIZE    1
 define	KERNEL_SPIN_LOCK_BIT     0
-define	KERNEL_SPIN_LOCK_MAGIC   0xFE
+define	KERNEL_SPIN_LOCK_MAGIC   $FE
 
 define	KERNEL_MUTEX             0
 define	KERNEL_MUTEX_SIZE        2
 define	KERNEL_MUTEX_LOCK        0
 define	KERNEL_MUTEX_LOCK_BIT    0
 define	KERNEL_MUTEX_OWNER       1
-define	KERNEL_MUTEX_MAGIC       0xFE
+define	KERNEL_MUTEX_MAGIC       $FE
 
 macro tstdi
 	ld	a, i

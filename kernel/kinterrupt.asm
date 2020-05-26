@@ -1,11 +1,11 @@
-define	KERNEL_INTERRUPT_STATUS_RAW		0xF00000
-define	KERNEL_INTERRUPT_ENABLE_MASK		0xF00004
-define	KERNEL_INTERRUPT_ACKNOWLEDGE		0xF00008
-define	KERNEL_INTERRUPT_SIGNAL_LATCH		0xF0000C
-define	KERNEL_INTERRUPT_STATUS_MASKED		0xF00014
-define	KERNEL_INTERRUPT_REVISION		0xF00050
-define	KERNEL_INTERRUPT_REVISION_BASE		0x010900
-define	KERNEL_INTERRUPT_EARLY_SWITCH		0xD177BA
+define	KERNEL_INTERRUPT_STATUS_RAW		$F00000
+define	KERNEL_INTERRUPT_ENABLE_MASK		$F00004
+define	KERNEL_INTERRUPT_ACKNOWLEDGE		$F00008
+define	KERNEL_INTERRUPT_SIGNAL_LATCH		$F0000C
+define	KERNEL_INTERRUPT_STATUS_MASKED		$F00014
+define	KERNEL_INTERRUPT_REVISION		$F00050
+define	KERNEL_INTERRUPT_REVISION_BASE		$010900
+define	KERNEL_INTERRUPT_EARLY_SWITCH		$D177BA
 
 define	KERNEL_INTERRUPT_ON			00000001b
 define	KERNEL_INTERRUPT_TIMER1			00000010b
@@ -27,7 +27,7 @@ kinterrupt:
 	ld	de, KERNEL_INTERRUPT_TIMER_OS
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
 	ld	(hl), de
-	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and 0xFF
+	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and $FF
 	ld	(hl), de
 ; also reset handler table
 	jp	kirq.init
@@ -46,7 +46,7 @@ kinterrupt:
 ; read interrupt sources
 	ld	hl, KERNEL_INTERRUPT_STATUS_MASKED
 	ld	bc, (hl)
-	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and 0xFF
+	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
 	ld	(hl), bc
 ; check type of the interrupt : master source ?
 	bit	4, c
@@ -55,7 +55,7 @@ kinterrupt:
 	ld	a, b
 	rla
 	rla
-	and	0xF0
+	and	$F0
 	or	a, c
 	rra
 	call	c, KERNEL_IRQ_HANDLER_001
@@ -159,9 +159,9 @@ end if
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	de, (hl)
 	ld	l, KERNEL_WATCHDOG_RST mod 256
-	ld	(hl), 0xB9
+	ld	(hl), $B9
 	inc	hl
-	ld	(hl), 0x5A
+	ld	(hl), $5A
 ; mark timing used (24 bits count)
 	ld	hl, KERNEL_WATCHDOG_MAX_TIME + 1
 	sbc	hl, de
@@ -214,7 +214,7 @@ end if
 	ld	(iy+KERNEL_THREAD_STACK), hl
 .context_restore:
 	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
-	ld	bc, 0x00033A
+	ld	bc, $00033A
 	otimr
 	ld	hl, (hl)
 	ld	sp, hl
