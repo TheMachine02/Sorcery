@@ -1,8 +1,16 @@
+define CONFIG_KERNEL_NAME		"sorcery.0.0.1"
+
+; special code modifier ;
 define	CONFIG_USE_BOOT_PATCH		0
+define	CONFIG_USE_DOWNCLOCKING		0
+
+; clock settings ;
 define	CONFIG_CRYSTAL_DIVISOR		2
 ; 0 = div 74
 ; 1 = div 154
-; 2 = div 218
+; 2 = div 218 (or about 150Hz)
 ; 3 = div 314
+
+; syscall ;
 define	CONFIG_STATIC_SYSCALL		1
 define	CONFIG_STATIC_LIBRARY		0
