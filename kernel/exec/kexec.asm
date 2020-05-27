@@ -83,8 +83,8 @@ kexec:
 ; section_size
 	push	hl
 	pop	ix
-	ld	hl, 1024
-	call	kmalloc
+	ld	hl, KERNEL_MMU_RAM
+	call	kmmu.map_page
 	jp	c, kthread.exit
 	ld	(kexec_section_ptr), hl
 	lea	iy, ix + 0
@@ -110,7 +110,7 @@ kexec:
 .section_rw_zero:
 ; save iy too, but malloc doesn't destroy iy
 	ld	hl, (ix+ELF_SECTION_SIZE)
-	call	kmalloc
+	call	.section_alloc
 	jp	c, kthread.exit
 ; adress of the section for the program execution = hl (there IS NO REALLOCATION DATA for RW_ZERO type)
 	ex	de, hl
@@ -118,7 +118,7 @@ kexec:
 .section_rw:    
 	push	bc
 	ld	hl, (ix+ELF_SECTION_SIZE)
-	call	kmalloc
+	call	.section_alloc
 	jp	c, kthread.exit
 	ex	de, hl
 	ld	bc, (ix+ELF_SECTION_OFFSET)
@@ -201,10 +201,35 @@ kexec:
 	djnz	.section_realloc_loop
 	ld	hl, (kexec_section_ptr)
 	ld	iy, (hl)
-	call	kfree
+	call	kmmu.unmap_page
 	ld	ix, NULL
 	lea	hl, ix+0
 	lea	de, ix+0
 	lea	bc, ix+0
 	xor	a, a
 	jp	(iy)
+.section_alloc:
+	push	bc
+	dec	sp
+	push	hl
+	ld	a, l
+	inc	sp
+	ex	(sp), hl
+; we need to round UP here	
+	or	a, a
+	jr	z, $+3
+	inc	hl
+	srl	h
+	rr	l
+	jr	nc, $+3
+	inc	hl
+	srl	h
+	rr	l
+	jr	nc, $+3
+	inc	hl
+	ld	b, l
+	pop	hl
+	ld	hl, KERNEL_MMU_RAM
+	call	kmmu.map_block	
+	pop	bc
+	ret

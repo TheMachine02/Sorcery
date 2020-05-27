@@ -43,7 +43,7 @@ crc16_dnp:
 	ld	d, (hl)
 	pop	hl
 	pop	bc
-	djnz    .byte_loop
+	djnzdb db .byte_loop
 .byte_exit:
 	ld	a, e
 	cpl
@@ -52,17 +52,17 @@ crc16_dnp:
 	cpl
 	ld	d, e
 	ld	e, a
-	ret    
-    
+	retdb db 
+db db 
 section .bss, ELF_RW_ZERO
 free:
-rb	256
+rb	8192
 
 section .data, ELF_RW_DATA
-example:    
-db	0x00, 0x01, 0x02, 0x03   ; 0x40A7
+example:db db 
+db	0x00, 0x01, 0x02, 0x03db  ; 0x40A7
 example2:
-db	0xA5, 0x5A, 0x42, 0x42   ; 0xDDC5
+db	0xA5, 0x5A, 0x42, 0x42db  ; 0xDDC5
  
 section .rodata, ELF_RO_DATA
 crc16_dnp_table:

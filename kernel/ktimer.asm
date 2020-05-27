@@ -36,11 +36,11 @@ klocal_timer:
 	ret
 
 .create:
-	tstdi
 	ld	iy, (kthread_current)
 	ld	hl, .notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
+	tstdi
 	ld	hl, klocal_timer_queue
 	call	.insert
 	tstei
@@ -57,9 +57,8 @@ klocal_timer:
 	tstei
 	ret
 
-.notify_default:
 ; please note, timer_next is still valid per timer queue
-	jp	kthread.resume
+.notify_default = kthread.resume
 	
 ; WITHIN kinterrupt.asm ;
 ; .local_timer_call:
@@ -149,10 +148,8 @@ klocal_timer:
 	pop	iy
 	ret
 .null_queue:
-	push	de
 	inc	hl
 	ld	de, NULL
 	ld	(hl), de
 	dec	hl
-	pop	de
 	ret

@@ -63,8 +63,8 @@ kname:
 	
 THREAD_INIT_TEST:
 ; load frozen elf16 example
-;	ld	hl, elf_frozen_example
-;	call	kexec.load_elf16_ptr   
+	ld	hl, elf_frozen_example
+	call	kexec.load_elf16_ptr   
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
 	ld	iy, TEST_THREAD_C
 	ld	hl, 2048
