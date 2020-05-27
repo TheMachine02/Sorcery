@@ -1,6 +1,6 @@
 # Sorcery
 
-## A preempted multitasked libre kernel for the ez80
+## A libre preemptive multitasking kernel for the ez80
 
 What does than mean ? Sorcery can execute up to 64 concurrent tasks sharing the same adress space (RAM space + flash space). Library a dynamically loaded in RAM and shared across thread. It implements POSIX-like (it won't be fully compatible) threading with signal, real-time scheduling, hardware and software interrupt, per thread timer. There is no difference between a thread and a process, a process is simply a thread whose code as been reallocated at startup.
 Context switchs is around 4000 cycles, 150 times per second, using a simple round robin scheduling without (yet?) priority.
