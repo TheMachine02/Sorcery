@@ -101,6 +101,7 @@ kthread:
 .yield=kscheduler.yield
 	
 .create_no_mem:
+	call	kmmu.unmap_block
 .create_no_pid:
 	ld	l, EAGAIN
 .create_errno:

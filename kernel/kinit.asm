@@ -67,7 +67,7 @@ THREAD_INIT_TEST:
 ;	call	kexec.load_elf16_ptr   
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
 	ld	iy, TEST_THREAD_C
-	ld	hl, 65536
+	ld	hl, 2048
 	call	kthread.create
 
 ; video lock for me
@@ -97,6 +97,7 @@ THREAD_INIT_TEST:
 	
 	ld	hl, 250	; 250 ms is nice
 	call	kthread.sleep
+	
 ; we were waked by spining thread !
 	pop	bc
 	inc	bc
@@ -108,7 +109,7 @@ TEST_THREAD_C:
 	call	kmalloc
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
-	ld	hl, 32	; 32 ms is nice
+	ld	hl, 16	; 16 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF

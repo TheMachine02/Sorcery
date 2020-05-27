@@ -23,6 +23,7 @@ kmmu:
 ; setup memory protection
 ; $D00000 to $D00FFF
 	di
+if CONFIG_USE_BOOT_PATCH=1
 	ld	a, $00
 	out0	($20), a
 	ld	a, $00
@@ -35,6 +36,20 @@ kmmu:
 	out0	($24), a
 	ld	a, $D0
 	out0	($25), a
+else
+	ld	a, $7D
+	out0 (0x20), a
+	ld	a, $88
+	out0 (0x21), a
+	ld	a, $D1
+	out0 (0x22), a
+	ld	a, $7C
+	out0 (0x23), a
+	ld	a, $88
+	out0 (0x24), a
+	ld	a, $D1
+	out0 (0x25), a
+end if
 ; setup previleged executable code
 	ld	a, $03
 	out0	($1F), a
@@ -254,6 +269,7 @@ kmmu:
 	ld	a, (hl)
 	jr	.unmap_block_jump
     
+assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 = 0
 .unmap_block_thread:
 ; unmap all block of the current thread
 ; marking block as free doesn't require atomic, since we check if we own them.
@@ -261,10 +277,10 @@ kmmu:
 ; mark free ONLY after clearing it, to avoid data left out
 ; REGSAFE, return a = current thread
 	push	hl
-	push	bc
+;	push	bc
 .unmap_block_jump:
 	or	a, KERNEL_MMU_USED_MASK
-	ld	b, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256
+;	ld	b, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256
 	ld	hl, KERNEL_MMU_MAP
 .unmap_block_loop:
 	cp	a, (hl)
@@ -272,16 +288,15 @@ kmmu:
 	call	.zero_page
 	ld	(hl), 0
 .unmap_block_skip:
-	inc	hl
-	djnz	.unmap_block_loop
+	inc	l
+	jr	nz, .unmap_block_loop
 	xor	a, KERNEL_MMU_USED_MASK
-	pop	bc
+;	pop	bc
 	pop	hl
 	ret
     
 .zero_page:
 ; hl is MAP adress
-; REGSAFE
 	push	bc
 	push	hl
 	ld	e, l
