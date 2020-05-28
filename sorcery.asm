@@ -1,5 +1,6 @@
 include	'include/ez80.inc'
 include	'include/asm-errno.inc'
+include	'include/asm-signal.inc'
 include	'include/tiformat.inc'
 format	ti executable 'SORCERY'
 include	'include/os.inc'
@@ -42,10 +43,12 @@ include	'kernel/kmmu.asm'
  rb	$0220A8-$
 include	'kernel/knmi.asm'
 include	'kernel/kflash.asm'
+;include	'kernel/kvfs.asm'
 
-
+include	'kernel/fpu/udiv.asm'
 include	'kernel/exec/kexec.asm'
 include	'kernel/crypto/kcrc.asm'
+
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'

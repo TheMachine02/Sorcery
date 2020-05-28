@@ -1,25 +1,3 @@
-define	SIGHUP		1           ; Hangup / death control ; TERM
-define	SIGINT		2           ; Interrupt keyboard     ; TERM
-define	SIGQUIT		3           ; Quit                   ; CORE
-define	SIGILL		4           ; Illegal instruction    ; CORE
-define	SIGTRAP		5           ; Trace/breakpoint trap  ; CORE
-define	SIGABRT		6           ; abort signal (abort)   ; CORE
-define	SIGFPE		8           ; Floatpoint exception   ; CORE
-define	SIGKILL		9           ; KILL                   ; TERM (unblockable)
-define	SIGUSR1		10          ; User                   ; TERM
-define	SIGSEGV		11          ; Segmentation fault     ; CORE
-define	SIGUSR2		12          ; User                   ; TERM
-define	SIGPIPE		13          ; Broken pipe            ; TERM
-define	SIGALRM		14          ; timer signal (alarm)   ; TERM
-define	SIGTERM		15          ; Termination signal     ; TERM
-define	SIGCHLD		17          ; child stopped (unused) ; IGN
-define	SIGCONT		18          ; continue               ; CONT
-define	SIGSTOP		19          ; Stop process           ; STOP (unblockable)
-define	SIGTSTP		20          ; Stop typed at term     ; STOP
-define	SIGTTIN		21          ; Terminal input         ; STOP
-define	SIGTTOU		22          ; Terminal output        ; STOP
-define	SIGSYS		23          ; Bad syscall            ; CORE
-
 ksignal:
 ; void	handler(int sig, void *ucontext)
 ; sp+6 *ucontext
@@ -30,8 +8,8 @@ ksignal:
 ; hl = data, a = signal code, iy is thread
 ; stack is context to restore
 ; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
-	ld	(iy+KERNEL_THREAD_SIGNAL_CODE), a
-	ld	(iy+KERNEL_THREAD_SIGNAL_MESSAGE), hl
+	ld	(iy+KERNEL_THREAD_EV_SIG), a
+	ld	(iy+KERNEL_THREAD_EV_SIG_POINTER), hl
 	dec	a
 	ld	c, a
 	ld	b, 3
@@ -91,7 +69,7 @@ ksignal:
 	sbc	hl, hl
 	push	iy
 	ld	iy, (kthread_current)
-	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	ld	l, (iy+KERNEL_THREAD_EV_SIG)
 	pop	iy
 	ret
 	
@@ -103,7 +81,7 @@ ksignal:
 	sbc	hl, hl
 	push	iy
 	ld	iy, (kthread_current)
-	ld	l, (iy+KERNEL_THREAD_SIGNAL_CODE)
+	ld	l, (iy+KERNEL_THREAD_EV_SIG)
 	pop	iy
 	ret
 	
