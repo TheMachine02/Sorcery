@@ -18,17 +18,20 @@ kwatchdog:
 .init:
 	di
 	ld	hl, KERNEL_WATCHDOG_CTRL
-	ld	a, 20		; 32768Hz, trigger NMI
+; 32768Hz, trigger NMI
+	ld	a, 00010100b
 	ld	(hl), a
-	ld	de, KERNEL_WATCHDOG_LOAD
+	ex	de, hl
+	ld	e, KERNEL_WATCHDOG_LOAD and $FF
 	ld	hl, .RESET_DATA
 	ld	bc, 6
 	ldir
 ; now, reset the status register too
-	ld	hl, KERNEL_WATCHDOG_CLR
+	ex	de, hl
+	ld	l, KERNEL_WATCHDOG_CLR and $FF
 	set	0, (hl)
 ; and start the timer	
-	ld	hl, KERNEL_WATCHDOG_CTRL
+	ld	l, KERNEL_WATCHDOG_CTRL and $FF
 	set	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
 	ret
 
@@ -36,7 +39,7 @@ kwatchdog:
 	ld	hl, KERNEL_WATCHDOG_CLR
 	set	0, (hl)
 ; and stop the timer	
-	ld	hl, KERNEL_WATCHDOG_CTRL
+	ld	l, KERNEL_WATCHDOG_CTRL and $FF
 	res	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
 	ret
 

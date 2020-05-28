@@ -47,6 +47,8 @@ include	'kernel/kflash.asm'
 
 include	'kernel/fpu/idiv.asm'
 include	'kernel/exec/kexec.asm'
+include	'kernel/exec/kso.asm'
+include	'kernel/exec/kelf.asm'
 include	'kernel/crypto/kcrc.asm'
 
 include	'kernel/driver/video.asm'
