@@ -45,7 +45,7 @@ include	'kernel/knmi.asm'
 include	'kernel/kflash.asm'
 ;include	'kernel/kvfs.asm'
 
-include	'kernel/fpu/udiv.asm'
+include	'kernel/fpu/idiv.asm'
 include	'kernel/exec/kexec.asm'
 include	'kernel/crypto/kcrc.asm'
 

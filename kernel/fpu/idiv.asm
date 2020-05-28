@@ -1,17 +1,24 @@
-udiv:
+macro div hl, bc
+	call	udiv.16
+end macro
 
+udiv:
+if CONFIG_FPU_FAULT = 1
 .fault:
 	ld	a, SIGFPE
 	call	raise
 	pop	af
 	ret
+end if
 
 .16:
 ; hl = hl / bc, de = hl mod bc, return a 16 bits results (bc is 16 bits, hl is 16 bits)
 	push	af
+if CONFIG_FPU_FAULT = 1
 	ld	a, c
 	or	a, b
 	jr	z, .fault
+end if
 	xor	a, a
 	sbc	hl, hl
 	ld	h, d
