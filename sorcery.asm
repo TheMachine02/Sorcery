@@ -53,3 +53,7 @@ include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
+
+
+elf_frozen_example:
+file	'executable.hex'

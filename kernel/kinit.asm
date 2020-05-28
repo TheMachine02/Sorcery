@@ -121,6 +121,3 @@ TEST_THREAD_C:
 	jr	.spin
 	pop ix
 	ret
-    
-elf_frozen_example:
-include	'frozen.asm'
