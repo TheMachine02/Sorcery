@@ -70,6 +70,9 @@ THREAD_INIT_TEST:
 	ld	hl, 2048
 	call	kthread.create
 
+	ld	a, SIGCONT
+	call	ksignal.procmask_single
+	
 ; video lock for me
 	call	kvideo.irq_lock
 	ld	bc, 0
@@ -98,7 +101,7 @@ THREAD_INIT_TEST:
 	ld	hl, 250	; 250 ms is nice
 	call	kthread.sleep
 	
-; we were waked by spining thread !
+; we were not waked by spining thread ! (masked signal)
 	pop	bc
 	inc	bc
 	jr	.loop

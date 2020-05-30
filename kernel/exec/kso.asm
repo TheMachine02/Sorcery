@@ -41,3 +41,13 @@ kso:
 	scf
 	sbc	hl, hl
 	ret
+
+; .load_elf16:
+; ; give the name and try to find it on path (/lib/ and LD_LIBRARY)
+; 	ld	ix, .FROZEN_LIBTEST
+; 	call	.load_elf16_ptr
+; ; iy = first section or jump table section
+; 	ret
+; 	
+; .FROZEN_LIBTEST:
+; include 'libtest.so'

@@ -1,3 +1,6 @@
+; structure sigset
+; 4 bytes data, mask
+
 ksignal:
 ; void	handler(int sig, void *ucontext)
 ; sp+6 *ucontext
@@ -8,6 +11,7 @@ ksignal:
 ; hl = data, a = signal code, iy is thread
 ; stack is context to restore
 ; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
+; try to mask signal
 	ld	(iy+KERNEL_THREAD_EV_SIG), a
 	ld	(iy+KERNEL_THREAD_EV_SIG_POINTER), hl
 	dec	a
@@ -73,7 +77,7 @@ ksignal:
 	pop	iy
 	ret
 	
-.timedwait:
+.timed_wait:
 ; sleep for a duration, can be waked by signal
 ; todo : clean signal after read
 	call	kthread.sleep
@@ -85,9 +89,57 @@ ksignal:
 	pop	iy
 	ret
 	
-; change thread signal list ; 
-.procmask: 
-    ret	
+; change thread signal list ;
+; mark signal (reg A) to be blocked
+.procmask_single:
+	ld	iy, (kthread_current)
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK
+	tst	a, 11111000b	; > 8
+	jr	z, $+3
+	inc	hl
+	tst	a, 11110000b	; > 16
+	jr	z, $+3
+	inc	hl
+	tst	a, 11100000b
+	jr	z, $+3
+	inc	hl
+	and	00000111b
+	inc	a
+	ld	b, a
+	xor	a, a
+	scf
+	rla
+	djnz	$-1
+	xor	a, (hl)
+	ld	(hl), a
+	ret
+
+.procmask:
+; hl is a 4 bytes sigset structure, with signal set to be either reset or set
+; do a XOR with signal mask
+	ld	iy, (kthread_current)
+	lea	de, iy+KERNEL_THREAD_SIGNAL_MASK
+	tstei
+	ld	a, (de)
+	xor	a, (hl)
+	ld	(de), a
+	inc	hl
+	inc	de
+	ld	a, (de)
+	xor	a, (hl)
+	ld	(de), a
+	inc	hl
+	inc	de
+	ld	a, (de)
+	xor	a, (hl)
+	ld	(de), a
+	inc	hl
+	inc	de
+	ld	a, (de)
+	xor	a, (hl)
+	ld	(de), a
+	tstdi
+	ret
 	
 abort:
 	ld	a, SIGABRT
@@ -148,15 +200,46 @@ kill:
 	jq	nc, .no_permission
 ; check the signal to send
 	ld	a, b
+	ld	c, a
 	or	a, a
 	jq	z, .no_signal
-; so now, I have iy = thread to signal, still the signal in a, data in de
+; iy is still thread to signal, a is signal
+	cp	a, SIGSTOP
+	jr	z, .unblockable
+	cp	a, SIGKILL
+	jp	z, .unblockable
+; is the signal blocked ?
+; y/n
+; else jump to default function
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK
+	tst	a, 11111000b	; > 8
+	jr	z, $+3
+	inc	hl
+	tst	a, 11110000b	; > 16
+	jr	z, $+3
+	inc	hl
+	tst	a, 11100000b
+	jr	z, $+3
+	inc	hl
+	and	00000111b
+	inc	a
+	ld	b, a
+	xor	a, a
+	scf
+	rla
+	djnz	$-1
+; tst (hl) and a bitmask
+	and	a, (hl)
+; this mean it is set in (hl)
+	jr	nz, .blocked
+.unblockable:
+; so now, I have iy = thread to signal, still the signal in c, data in de
 ; push the context on the thread stack
-	ld	a, b
+; restore signal in a
+	ld	a, c
 	ld	hl, (kthread_current)
 	lea	bc, iy+0
 	sbc	hl, bc
-	ld	b, a	; save a pls
 	jq	z, .raise_frame
 	push	ix
 	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
@@ -196,6 +279,7 @@ kill:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
 	call	nz, task_switch_running
+.blocked:
 	tstei
 	ld	a, b
 	or	a, a
@@ -227,7 +311,6 @@ kill:
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
 	pop	hl	; this is the raise() interrupt status
-	ld	a, b
 	pop	de
 	pop	bc
 	ex	(sp), ix

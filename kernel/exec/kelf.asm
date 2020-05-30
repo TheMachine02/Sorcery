@@ -6,6 +6,7 @@ define	ELF_RW_DATA		2
 define	ELF_RW_INSTR		2
 define	ELF_RO_DATA		3
 define	ELF_RW_ZERO		4
+define	ELF_DYNAMIC		5
 ; header size ;
 define	ELF_HEADER_SIZE		6
 ; section ;
@@ -38,7 +39,8 @@ kelf:
 	push	hl
 	pop	ix
 	ld	hl, KERNEL_MMU_RAM
-	call	kmmu.map_page
+	ld	a, $00
+	call	kmmu.map_page_thread
 	jp	c, kthread.exit
 	ld	(kexec_section_ptr), hl
 	lea	iy, ix + 0
@@ -69,7 +71,7 @@ kelf:
 ; adress of the section for the program execution = hl (there IS NO REALLOCATION DATA for RW_ZERO type)
 	ex	de, hl
 	jr	.section_continue
-.section_rw:    
+.section_rw:
 	push	bc
 	ld	hl, (ix+ELF_SECTION_SIZE)
 	call	.section_alloc
@@ -155,7 +157,8 @@ kelf:
 	djnz	.section_realloc_loop
 	ld	hl, (kexec_section_ptr)
 	ld	iy, (hl)
-	jp	kmmu.unmap_page
+	ld	a, $00
+	jp	kmmu.unmap_page_thread
 .section_alloc:
 	push	bc
 	dec	sp
