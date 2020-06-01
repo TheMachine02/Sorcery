@@ -1,11 +1,11 @@
-define	KERNEL_MMU_USED_BIT                7
-define	KERNEL_MMU_USED_MASK             128
-define	KERNEL_MMU_PAGE_SIZE            1024
-define	KERNEL_MMU_MAP              $D00F00
-define	KERNEL_MMU_RAM              $D00000
-define	KERNEL_MMU_RAM_SIZE         $040000
-
-define	RESERVED $FF
+define	KERNEL_MMU_PAGE_FREE		128
+define	KERNEL_MMU_PAGE_FREE_BIT	7
+define	KERNEL_MMU_PAGE_SIZE		1024
+define	KERNEL_MMU_MAP			$D00F00
+define	KERNEL_MMU_RAM			$D00000
+define	KERNEL_MMU_RAM_SIZE		$040000
+; belonging to thread 0 or kernel *special* thread
+define	RESERVED			$00
 
 define	KERNEL_MEMORY_BLOCK_DATA         0
 define	KERNEL_MEMORY_BLOCK_FREE         2
@@ -15,8 +15,7 @@ define	KERNEL_MEMORY_BLOCK_PTR          9
 define	KERNEL_MEMORY_BLOCK_SIZE        12
 define	KERNEL_MEMORY_MALLOC_THRESHOLD  64 
 
-assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) < 257
-assert KERNEL_MMU_PAGE_SIZE/256 = 4
+assert KERNEL_MMU_PAGE_SIZE = 1024
 
 kmmu:
 .init:
@@ -53,12 +52,11 @@ end if
 ; setup previleged executable code
 	ld	a, $03
 	out0	($1F), a
-	ld	a, $00
+	xor	a, a
 	out0	($1D), a
 	out0	($1E), a
-	ld	hl, KERNEL_MMU_RAM + 256
-	ld	de, KERNEL_MMU_RAM + 1 + 256
-	ld	(hl), 0
+	ld	hl, $E40000
+	ld	de, KERNEL_MMU_RAM + 256
 	ld	bc, KERNEL_MMU_RAM_SIZE - 256
 	ldir
 	ld	hl, .MEMORY_PAGE
@@ -96,14 +94,15 @@ end if
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
 	cpl
-	add	a, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 + 1
+;	add	a, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 + 1
+	inc	a
 	ld	b, a
 ; !! critical code section !!
 	tstdi
 	ld	a, c
 .map_page_loop:
-	bit	KERNEL_MMU_USED_BIT,(hl)
-	jr	z, .map_page_mark
+	bit	KERNEL_MMU_PAGE_FREE_BIT,(hl)
+	jr	nz, .map_page_mark
 	inc	hl
 	djnz	.map_page_loop
 	tstei
@@ -115,7 +114,6 @@ end if
 	scf
 	ret
 .map_page_mark:
-	or	a, KERNEL_MMU_USED_MASK
 	ld	(hl), a
 	tstei
 	ld	a, l
@@ -128,7 +126,6 @@ end if
 	ld	bc, KERNEL_MMU_RAM
 	add	hl, bc
 	pop	bc
-	xor	a, KERNEL_MMU_USED_MASK
 	ret
 
 .map_block:
@@ -165,7 +162,8 @@ end if
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
 	cpl
-	add	a, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 + 1
+;	add	a, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 + 1
+	inc	a
 	ld	b, a
 ; critical code section ;
 	tstdi
@@ -175,8 +173,8 @@ end if
 	inc	e
 	ld	d, l
 .map_block_loop:
-	bit	KERNEL_MMU_USED_BIT,(hl)
-	jr	z, .map_block_advance
+	bit	KERNEL_MMU_PAGE_FREE_BIT,(hl)
+	jr	nz, .map_block_advance
 	ld	c, e
 	inc	d
 .map_block_advance:
@@ -198,7 +196,6 @@ end if
 	ld	l, d
 	ld	b, e
 	dec	b	; we need to reduce this by one !
-	or	a, KERNEL_MMU_USED_MASK
 .map_block_mark_loop:
 	ld	(hl), a
 	inc	hl
@@ -207,7 +204,7 @@ end if
 	ld	b, a
 	tstei
 	ld	a, b
-	xor	a, KERNEL_MMU_USED_MASK
+	or	a, a
 	sbc	hl, hl
 	ld	h, d
 	add	hl, hl
@@ -233,7 +230,6 @@ end if
 	push	hl
 	push	bc
 .unmap_page_jump:
-	or	a, KERNEL_MMU_USED_MASK
 	ld	c, a
 	dec	sp
 	push	hl
@@ -255,9 +251,8 @@ end if
 	jr	nz, .unmap_skip
 ; need to zero out all the page
 	call	.zero_page
-	ld	(hl), 0
+	ld	(hl), KERNEL_MMU_PAGE_FREE
 .unmap_skip:
-	xor	a, KERNEL_MMU_USED_MASK
 	pop	bc
 	pop	hl
 	ret
@@ -269,7 +264,6 @@ end if
 	ld	a, (hl)
 	jr	.unmap_block_jump
     
-assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 = 0
 .unmap_block_thread:
 ; unmap all block of the current thread
 ; marking block as free doesn't require atomic, since we check if we own them.
@@ -277,21 +271,16 @@ assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 = 0
 ; mark free ONLY after clearing it, to avoid data left out
 ; REGSAFE, return a = current thread
 	push	hl
-;	push	bc
 .unmap_block_jump:
-	or	a, KERNEL_MMU_USED_MASK
-;	ld	b, (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256
 	ld	hl, KERNEL_MMU_MAP
 .unmap_block_loop:
 	cp	a, (hl)
 	jr	nz, .unmap_block_skip
 	call	.zero_page
-	ld	(hl), 0
+	ld	(hl), KERNEL_MMU_PAGE_FREE
 .unmap_block_skip:
 	inc	l
 	jr	nz, .unmap_block_loop
-	xor	a, KERNEL_MMU_USED_MASK
-;	pop	bc
 	pop	hl
 	ret
     
@@ -318,13 +307,13 @@ assert (KERNEL_MMU_RAM_SIZE / KERNEL_MMU_PAGE_SIZE) mod 256 = 0
 if CONFIG_USE_BOOT_PATCH
 .MEMORY_PAGE:
  db 4 dup RESERVED
- db 252 dup $00
+ db 252 dup KERNEL_MMU_PAGE_FREE
 else
 .MEMORY_PAGE:
  db 4  dup RESERVED
- db 89 dup $00
- db RESERVED ; $D17000 > stupid interrupt check (one day, with some boot patch ..)
- db 162 dup $00
+ db 89 dup KERNEL_MMU_PAGE_FREE
+ db RESERVED ; $D177AE > stupid interrupt check (one day, with some boot patch ..)
+ db 162 dup KERNEL_MMU_PAGE_FREE
 end if
 
 kmalloc:

@@ -44,6 +44,7 @@ kinit:
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
+	jp	c, kinterrupt.nmi
 ; nice idle thread code
 	ei
 	halt
