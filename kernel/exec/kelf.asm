@@ -39,7 +39,7 @@ kelf:
 	push	hl
 	pop	ix
 	ld	hl, KERNEL_MMU_RAM
-	ld	a, $00
+	xor	a, a	; map from thread 0 (ie, kernel)
 	call	kmmu.map_page_thread
 	jp	c, kthread.exit
 	ld	(kexec_section_ptr), hl
@@ -157,7 +157,7 @@ kelf:
 	djnz	.section_realloc_loop
 	ld	hl, (kexec_section_ptr)
 	ld	iy, (hl)
-	ld	a, $00
+	xor	a, a
 	jp	kmmu.unmap_page_thread
 .section_alloc:
 	push	bc

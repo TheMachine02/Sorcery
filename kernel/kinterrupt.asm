@@ -17,9 +17,6 @@ define	KERNEL_INTERRUPT_LCD			00001000b
 define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
-define	SCHED_RR				0
-define	SCHED_FIFO				1
-
 kinterrupt:
 .init:
 	di
@@ -94,9 +91,10 @@ kinterrupt:
 ; reschedule if kthread_need_reschedule is set
 ; set by kthread.resume
 .irq_generic_exit:
-	ld	a, (kthread_need_reschedule)
-	or	a, a
-	jr	nz, kscheduler.schedule
+	ld	hl, kthread_need_reschedule
+	ld	a, $FF
+	xor	a, (hl)
+	jr	z, kscheduler.schedule_entry
 .resume:
 	pop	iy
 	pop	ix
@@ -151,6 +149,7 @@ end if
 .schedule:
 	ld	hl, kthread_need_reschedule
 	xor	a, a
+.schedule_entry:
 	ld	(hl), a
 	inc	hl
 ; read kthread_current

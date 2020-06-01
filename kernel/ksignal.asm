@@ -11,7 +11,6 @@ ksignal:
 ; hl = data, a = signal code, iy is thread
 ; stack is context to restore
 ; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
-; try to mask signal
 	ld	(iy+KERNEL_THREAD_EV_SIG), a
 	ld	(iy+KERNEL_THREAD_EV_SIG_POINTER), hl
 	dec	a

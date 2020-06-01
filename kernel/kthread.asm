@@ -293,8 +293,6 @@ kthread:
 	ld	a, (iy+KERNEL_THREAD_STATUS)    ; this read need to be atomic !
 	cp	a, TASK_INTERRUPTIBLE
 ; can't wake TASK_READY (0) and TASK_STOPPED (2)
-; range -1 > 1
-; if a=2 , nc, if a=255, nc, else c
 	jr	nz, .resume_exit_atomic
 	call	task_switch_running
 	ld	a, $FF
