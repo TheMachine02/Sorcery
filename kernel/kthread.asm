@@ -26,6 +26,7 @@ define	KERNEL_THREAD_TIMER			$20
 define	KERNEL_THREAD_TIMER_COUNT		$20
 define	KERNEL_THREAD_TIMER_NEXT		$21
 define	KERNEL_THREAD_TIMER_PREVIOUS		$24
+define	KERNEL_THREAD_TIMER_SIGEVENT		$27
 define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$27
 define	KERNEL_THREAD_TIMER_EV_SIGNO		$28
 define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$29
@@ -373,7 +374,9 @@ kthread:
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
 	di
-	call	task_delete_timer
+	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
+	or	a, a
+	call	nz, klocal_timer.remove
 	ei
 	ld	l, (iy+KERNEL_THREAD_TIMER_COUNT)
 ; times in jiffies left to sleep
@@ -527,8 +530,13 @@ task_switch_sleep_ms:
 	or	a, a
 	jr	z, $+3
 	inc	h
-	ld	a, h
-	call	task_add_timer
+; add timer
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), h
+	ld	a, SIGEV_THREAD
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	hl, klocal_timer.notify_default
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
+	call	klocal_timer.insert
 	
 ; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:
@@ -546,12 +554,10 @@ task_add_timer:
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
 	ld	hl, klocal_timer.notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
-	ld	hl, klocal_timer_queue	
 	jp	klocal_timer.insert
 
 task_delete_timer:
 	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
 	or	a, a
 	ret	z	; can't disable, already disabled!
-	ld	hl, klocal_timer_queue
 	jp	klocal_timer.remove

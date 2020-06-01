@@ -237,7 +237,6 @@ end if
 .local_timer_process:
 ; don't touch bc and iy that's all
 ; remove the timer from the queue
-	ld	hl, klocal_timer_queue
 	call	klocal_timer.remove
 ; switch based on what we should do
 	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY)
