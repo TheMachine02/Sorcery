@@ -59,6 +59,7 @@ define	kthread_queue_retire_current		$D00105
 
 define	kthread_need_reschedule			$D00108
 define	kthread_current				$D00109
+assert kthread_current = kthread_need_reschedule + 1
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
@@ -76,10 +77,11 @@ kthread:
 	ld	(hl), e
 	inc	hl
 	ld	(hl), de
+	ld	hl, kthread_need_reschedule
+	ld	(hl), e
+	inc	hl
 	ld	de, KERNEL_THREAD
-	ld	(kthread_current), de
-	xor	a, a
-	ld	(kthread_need_reschedule), a
+	ld	(hl), de
 ; copy idle thread (ie, kernel thread. Stack is kernel stack, code is init kernel)
 	ld	hl, .IHEADER
 	ld	de, KERNEL_THREAD
@@ -125,7 +127,7 @@ kthread:
 .create:
 ; Create a thread
 ; REGSAFE and ERRNO compliant
-; void thread_create(void* thread_entry, void* thread_arg)
+; int thread_create(void* thread_entry, void* thread_arg)
 ; register IY is entry, register HL is send to the stack for void* thread_arg
 ; error -1 and c set, 0 and nc otherwise, ERRNO set
 ; HL, BC, DE copied from current context to the new thread
@@ -154,15 +156,14 @@ kthread:
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 ; sig mask ;
-	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), 0
-	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+1), 0
-	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+2), 0
+	ld	de, NULL
+	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+3), 0
 ; timer ;
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), 0
 ; stack limit set first ;
 	lea	hl, iy + 4
-	ld	de, KERNEL_THREAD_HEADER_SIZE
+	ld	e, KERNEL_THREAD_HEADER_SIZE
 	add	hl, de
 ; please note write affect memory, so do a + 4 to be safe    
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
@@ -394,20 +395,25 @@ kthread:
 .get_pid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getpid()
-; return value is register A
-	push	hl
+; return value is register hl
+	push	af
 	ld	hl, (kthread_current)
 	ld	a, (hl)
-	pop	hl
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	pop	af
 	ret
     
 .get_ppid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getppid()
-; return value is register A
+; return value is register hl
 	push	iy
 	ld	iy, (kthread_current)
-	ld	a, (iy+KERNEL_THREAD_PPID)
+	or	a, a
+	sbc	hl, hl
+	ld	l, (iy+KERNEL_THREAD_PPID)
 	pop	iy
 	ret
 	

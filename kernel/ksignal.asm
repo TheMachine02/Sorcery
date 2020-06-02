@@ -196,17 +196,17 @@ kill:
 	ld	a, c
 ; permission of the (current thread-1) < signaled thread (if equal)
 	cp	a, (hl)
-	jq	nc, .no_permission
+	jp	nc, .no_permission
 ; check the signal to send
 	ld	a, b
 	ld	c, a
 	or	a, a
-	jq	z, .no_signal
+	jp	z, .no_signal
 ; iy is still thread to signal, a is signal
 	cp	a, SIGSTOP
 	jr	z, .unblockable
 	cp	a, SIGKILL
-	jp	z, .unblockable
+	jr	z, .unblockable
 ; is the signal blocked ?
 ; y/n
 ; else jump to default function
@@ -239,7 +239,7 @@ kill:
 	ld	hl, (kthread_current)
 	lea	bc, iy+0
 	sbc	hl, bc
-	jq	z, .raise_frame
+	jr	z, .raise_frame
 	push	ix
 	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
 	ld	bc, $00033A
@@ -287,25 +287,6 @@ kill:
 	pop	bc
 	pop	iy
 	ret
-.no_thread:
-	ld	a, ESRCH
-	jr	.errno
-.no_permission:
-	ld	a, EPERM
-	jr	.errno
-.no_signal:
-	ld	a, EINVAL
-.errno:
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_ERRNO), a
-	tstei
-	ld	a, b
-	scf
-	sbc	hl, hl
-	pop	de
-	pop	bc
-	pop	iy
-	ret
 .raise_frame:
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
@@ -329,7 +310,26 @@ kill:
 	push	ix
 	ld	ix, ksignal.handler
 	jp	(ix)
-	
+.no_thread:
+	ld	a, ESRCH
+	jr	.errno
+.no_permission:
+	ld	a, EPERM
+	jr	.errno
+.no_signal:
+	ld	a, EINVAL
+.errno:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), a
+	tstei
+	ld	a, b
+	scf
+	sbc	hl, hl
+	pop	de
+	pop	bc
+	pop	iy
+	ret
+
 ; sig return will need to cleanup stack, and there is a lot to do, it should NEVER be called
 _sigreturn:
 ; return adress

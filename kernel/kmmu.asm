@@ -4,16 +4,17 @@ define	KERNEL_MMU_PAGE_SIZE		1024
 define	KERNEL_MMU_MAP			$D00F00
 define	KERNEL_MMU_RAM			$D00000
 define	KERNEL_MMU_RAM_SIZE		$040000
+define	KERNEL_MMU_PAGE_ZERO		$E30800
 ; belonging to thread 0 or kernel *special* thread
 define	RESERVED			$00
 
-define	KERNEL_MEMORY_BLOCK_DATA         0
-define	KERNEL_MEMORY_BLOCK_FREE         2
-define	KERNEL_MEMORY_BLOCK_PREV         3
-define	KERNEL_MEMORY_BLOCK_NEXT         6
-define	KERNEL_MEMORY_BLOCK_PTR          9
-define	KERNEL_MEMORY_BLOCK_SIZE        12
-define	KERNEL_MEMORY_MALLOC_THRESHOLD  64 
+define	KERNEL_MEMORY_BLOCK_DATA	0
+define	KERNEL_MEMORY_BLOCK_FREE	2
+define	KERNEL_MEMORY_BLOCK_PREV	3
+define	KERNEL_MEMORY_BLOCK_NEXT	6
+define	KERNEL_MEMORY_BLOCK_PTR		9
+define	KERNEL_MEMORY_BLOCK_SIZE	12
+define	KERNEL_MEMORY_MALLOC_THRESHOLD	64 
 
 assert KERNEL_MMU_PAGE_SIZE = 1024
 
@@ -59,9 +60,12 @@ end if
 	ld	de, KERNEL_MMU_RAM + 256
 	ld	bc, KERNEL_MMU_RAM_SIZE - 256
 	ldir
+	ld	de, KERNEL_MMU_PAGE_ZERO
+	ld	bc, KERNEL_MMU_PAGE_SIZE
+	ldir	
 	ld	hl, .MEMORY_PAGE
 	ld	de, KERNEL_MMU_MAP
-	ld	bc, 256
+	inc	b
 	ldir
 	ret
 
@@ -176,7 +180,7 @@ end if
 	bit	KERNEL_MMU_PAGE_FREE_BIT,(hl)
 	jr	nz, .map_block_advance
 	ld	c, e
-	inc	d
+	ld	d, l
 .map_block_advance:
 	dec	c
 	jr	z, .map_block_mark
@@ -194,6 +198,7 @@ end if
 ; found my blocks, mark them as used
 .map_block_mark:
 	ld	l, d
+	inc	l
 	ld	b, e
 	dec	b	; we need to reduce this by one !
 .map_block_mark_loop:
@@ -205,6 +210,7 @@ end if
 	tstei
 	ld	a, b
 	or	a, a
+; should never be zero
 	sbc	hl, hl
 	ld	h, d
 	add	hl, hl
@@ -248,11 +254,8 @@ end if
 	ld	l, a
 	ld	a, c
 	cp	a, (hl)
-	jr	nz, .unmap_skip
 ; need to zero out all the page
-	call	.zero_page
-	ld	(hl), KERNEL_MMU_PAGE_FREE
-.unmap_skip:
+	call	z, .zero_page
 	pop	bc
 	pop	hl
 	ret
@@ -275,10 +278,7 @@ end if
 	ld	hl, KERNEL_MMU_MAP
 .unmap_block_loop:
 	cp	a, (hl)
-	jr	nz, .unmap_block_skip
-	call	.zero_page
-	ld	(hl), KERNEL_MMU_PAGE_FREE
-.unmap_block_skip:
+	call	z, .zero_page
 	inc	l
 	jr	nz, .unmap_block_loop
 	pop	hl
@@ -289,7 +289,6 @@ end if
 	push	bc
 	push	hl
 	ld	e, l
-	or	a, a
 	sbc	hl, hl
 	ld	h, e
 	add	hl, hl
@@ -302,18 +301,19 @@ end if
 	ldir
 	pop	hl
 	pop	bc
+	ld	(hl), KERNEL_MMU_PAGE_FREE
 	ret
 
 if CONFIG_USE_BOOT_PATCH
 .MEMORY_PAGE:
- db 4 dup RESERVED
- db 252 dup KERNEL_MMU_PAGE_FREE
+ db 4	dup RESERVED
+ db 252	dup KERNEL_MMU_PAGE_FREE
 else
 .MEMORY_PAGE:
- db 4  dup RESERVED
- db 89 dup KERNEL_MMU_PAGE_FREE
+ db 4	dup RESERVED
+ db 89	dup KERNEL_MMU_PAGE_FREE
  db RESERVED ; $D177AE > stupid interrupt check (one day, with some boot patch ..)
- db 162 dup KERNEL_MMU_PAGE_FREE
+ db 162	dup KERNEL_MMU_PAGE_FREE
 end if
 
 kmalloc:
