@@ -11,25 +11,26 @@ define	KERNEL_THREAD_PPID			$07
 define	KERNEL_THREAD_IRQ			$08
 define	KERNEL_THREAD_STATUS			$09
 define	KERNEL_THREAD_PRIORITY			$0A
+define	KERNEL_THREAD_QUANTUM			$0B
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
-define	KERNEL_THREAD_STACK_LIMIT		$0B
-define	KERNEL_THREAD_STACK			$0E
-define	KERNEL_THREAD_HEAP			$11
-define	KERNEL_THREAD_TIME			$14
-define	KERNEL_THREAD_ERRNO			$17
-define	KERNEL_THREAD_SIGNAL			$18
-define	KERNEL_THREAD_EV_SIG			$18
-define	KERNEL_THREAD_EV_SIG_POINTER		$19
-define  KERNEL_THREAD_SIGNAL_MASK		$1C
-define	KERNEL_THREAD_TIMER			$20
-define	KERNEL_THREAD_TIMER_COUNT		$20
-define	KERNEL_THREAD_TIMER_NEXT		$21
-define	KERNEL_THREAD_TIMER_PREVIOUS		$24
-define	KERNEL_THREAD_TIMER_SIGEVENT		$27
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$27
-define	KERNEL_THREAD_TIMER_EV_SIGNO		$28
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$29
+define	KERNEL_THREAD_STACK_LIMIT		$0C
+define	KERNEL_THREAD_STACK			$0F
+define	KERNEL_THREAD_HEAP			$12
+define	KERNEL_THREAD_TIME			$15
+define	KERNEL_THREAD_ERRNO			$18
+define	KERNEL_THREAD_SIGNAL			$19
+define	KERNEL_THREAD_EV_SIG			$19
+define	KERNEL_THREAD_EV_SIG_POINTER		$1A
+define  KERNEL_THREAD_SIGNAL_MASK		$1D
+define	KERNEL_THREAD_TIMER			$21
+define	KERNEL_THREAD_TIMER_COUNT		$21
+define	KERNEL_THREAD_TIMER_NEXT		$22
+define	KERNEL_THREAD_TIMER_PREVIOUS		$25
+define	KERNEL_THREAD_TIMER_SIGEVENT		$28
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$28
+define	KERNEL_THREAD_TIMER_EV_SIGNO		$29
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2A
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$2F
 ; up to $80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 24 descriptors usables ;
@@ -39,27 +40,42 @@ define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	27
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
+define	KERNEL_THREAD_QUEUE_SIZE		20
 
 define	TASK_READY				0
-define	TASK_INTERRUPTIBLE			1    ; can be waked up by signal
-define	TASK_STOPPED				2    ; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
+define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
+define	TASK_STOPPED				2	; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
+define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
-define	SCHED_PRIO_MIN				63
+define	SCHED_PRIO_MIN				12
 
 define  KERNEL_THREAD_ONCE_INIT			$FE
 
-define	kthread_queue_active			$D00100
-define	kthread_queue_active_size		$D00100
-define	kthread_queue_active_current		$D00101
+; multilevel priority queue ;
+define	kthread_mqueue_0			$D00400
+define	kthread_mqueue_0_size			$D00400
+define	kthread_mqueue_0_current		$D00401
+define	kthread_mqueue_1			$D00404
+define	kthread_mqueue_1_size			$D00404
+define	kthread_mqueue_1_current		$D00405
+define	kthread_mqueue_2			$D00408
+define	kthread_mqueue_2_size			$D00408
+define	kthread_mqueue_2_current		$D00409
+define	kthread_mqueue_3			$D0040C
+define	kthread_mqueue_3_size			$D0040C
+define	kthread_mqueue_3_current		$D0040D
+; retire queue ;
+define	kthread_queue_retire			$D00410
+define	kthread_queue_retire_size		$D00410
+define	kthread_queue_retire_current		$D00411
 
-define	kthread_queue_retire			$D00104
-define	kthread_queue_retire_size		$D00104
-define	kthread_queue_retire_current		$D00105
+define	kthread_need_reschedule			$D00100
+define	kthread_current				$D00101
 
-define	kthread_need_reschedule			$D00108
-define	kthread_current				$D00109
+; please respect these for kinterrupt optimizations ;
 assert kthread_current = kthread_need_reschedule + 1
+assert kthread_need_reschedule and $FF = 0
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
@@ -68,15 +84,11 @@ define	kthread_pid_bitmap			$D00200
 kthread:
 .init:
 	tstdi
-	ld	de, NULL
-	ld	hl, kthread_queue_active
-	ld	(hl), e
-	inc	hl
-	ld	(hl), de
-	ld	hl, kthread_queue_retire
-	ld	(hl), e
-	inc	hl
-	ld	(hl), de
+	ld	hl, kthread_mqueue_0
+	ld	(hl), 0
+	ld	de, kthread_mqueue_0 + 1
+	ld	bc, KERNEL_THREAD_QUEUE_SIZE - 1
+	ldir
 	ld	hl, kthread_need_reschedule
 	ld	(hl), e
 	inc	hl
@@ -154,7 +166,9 @@ kthread:
 	ex	(sp), ix
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_IRQ), 0
+	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+	ld	(iy+KERNEL_THREAD_QUANTUM), 1
 ; sig mask ;
 	ld	de, NULL
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
@@ -202,8 +216,9 @@ kthread:
 	ld	(iy+KERNEL_THREAD_PPID), a
 ; setup the queue
 ; insert the thread to the ready queue
-	ld	hl, kthread_queue_active
-	call   kqueue.insert
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	call   kqueue.insert_current
 ; setup the stack \o/
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	iy, de
@@ -345,7 +360,8 @@ kthread:
 ; need to free IRQ locked and mutex locked to thread
 ; de = next thread to be active
 ; remove from active
-	ld	hl, kthread_queue_active
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 ; find next to schedule
 	ld	a, (hl)
@@ -488,12 +504,13 @@ kthread:
 	
 .IHEADER:
 	db	$00		; ID 0 reserved
-	dl	NULL		; No next
-	dl	NULL		; No prev
+	dl	KERNEL_THREAD_IDLE	; No next
+	dl	KERNEL_THREAD_IDLE	; No prev
 	db	NULL		; No PPID
 	db	$FF		; IRQ all
-	db	TASK_INTERRUPTIBLE	; Status
+	db	TASK_IDLE	; Status
 	db	SCHED_PRIO_MIN
+	db	8	; quantum
 	dl	$D000E0	; Stack will be writed at first unschedule
 	dl	$D000A0	; Stack limit
 	dl	NULL		; No true heap for idle thread
@@ -513,18 +530,20 @@ task_switch_running:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	hl, kthread_queue_retire
 	call	kqueue.remove
-	ld	l, kthread_queue_active and $FF
-	jp	kqueue.insert
+;	ld	l, kthread_queue_active and $FF
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	jp	kqueue.insert_current
 
 ; from TASK_READY to TASK_STOPPED
 ; may break if not in this state before
 ; need to be fully atomic
 task_switch_stopped:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
-	ld	hl, kthread_queue_active
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jp	kqueue.insert
+	jp	kqueue.insert_current
 
 ; sleep	'a' ms, granularity of about 4,7 ms
 task_switch_sleep_ms:
@@ -547,10 +566,11 @@ task_switch_sleep_ms:
 ; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
-	ld	hl, kthread_queue_active
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jp	kqueue.insert
+	jp	kqueue.insert_current
 	
 task_yield = kthread.yield
 	

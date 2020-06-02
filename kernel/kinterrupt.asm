@@ -47,7 +47,7 @@ kinterrupt:
 	ld	(hl), bc
 ; check type of the interrupt : master source ?
 	bit	4, c
-	jr	nz, kscheduler.local_timer
+	jp	nz, kscheduler.local_timer
 .irq_acknowledge:
 	ld	a, b
 	rla
@@ -92,9 +92,11 @@ kinterrupt:
 ; set by kthread.resume
 .irq_generic_exit:
 	ld	hl, kthread_need_reschedule
-	ld	a, $FF
-	xor	a, (hl)
-	jr	z, kscheduler.schedule_entry
+	sra	(hl)
+	ld	(hl), l
+	inc	hl
+	ld	iy, (hl)
+	jp	c, kscheduler.schedule
 .resume:
 	pop	iy
 	pop	ix
@@ -112,7 +114,23 @@ kscheduler:
 	exx
 	push	ix
 	push	iy
-	jr	.schedule
+	ld	hl, kthread_need_reschedule
+	ld	(hl), l
+	inc	hl
+	ld	iy, (hl)
+	lea	hl, iy+KERNEL_THREAD_STATUS
+; hl =status
+	ld	a, (hl)
+	or	a, a
+	jq	z, .schedule
+	inc	hl
+; hl = priority
+	ld	a, (hl)
+	sub	a, 4
+	jr	nc, $+3
+	xor	a, a
+	ld	(hl), a
+	jr	.local_time_compute
 	
 .local_timer:
 ; schedule jiffies timer first
@@ -146,14 +164,42 @@ if CONFIG_USE_DOWNCLOCKING
 	ld	(kcstate_timer), a
 end if
 
-.schedule:
+.local_time_quantum:
 	ld	hl, kthread_need_reschedule
-	xor	a, a
-.schedule_entry:
-	ld	(hl), a
+	sra	(hl)
+	ld	(hl), l
 	inc	hl
-; read kthread_current
 	ld	iy, (hl)
+	jr	c, .schedule
+; do we have idle thread ?
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	inc	a
+	jr	z, .schedule
+	dec	(iy+KERNEL_THREAD_QUANTUM)
+	jr	nz, kinterrupt.resume
+; lower thread priority and move queue
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	call	kqueue.remove
+	ld	a, l
+	add	a, 4
+	cp	a, SCHED_PRIO_MIN+1
+	jr	c, $+4
+	ld	a, SCHED_PRIO_MIN
+	ld	(iy+KERNEL_THREAD_PRIORITY), a
+	ld	l, a
+	call	kqueue.insert_end
+	ld	a, (iy+KERNEL_THREAD_PRIORITY)
+.local_time_compute:
+	srl	a
+	cp	a, 6
+	jr	nz, $+4
+	ld	a, 8
+	or	a, a
+	jr	nz, $+3
+	inc	a
+	ld	(iy+KERNEL_THREAD_QUANTUM), a
+.schedule:
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	de, (hl)
@@ -168,29 +214,31 @@ end if
 	add	hl, de
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
-; check if current thread is active : if yes, grab next_thread
-; idle is marked as INTERRUPTIBLE, ie non active
-; if not active, grab kthread_queue_active_current thread
-; if queue empty, schedule idle thread
-; schedule on the active list now ;
-	ld	ix, (iy+KERNEL_THREAD_NEXT)
-	or	a, (iy+KERNEL_THREAD_STATUS)
-	jr	z, .dispatch
-	ld	hl, kthread_queue_active
-	ld	a, (hl)
+.dispatch:
+	ld	de, 4
+	xor	a, a
+	ld	hl, kthread_mqueue_0
+	or	a, (hl)
+	jr	nz, .dispatch_queue
+	add	hl, de
+	or	a, (hl)
+	jr	nz, .dispatch_queue
+	add	hl, de
+	or	a, (hl)
+	jr	nz, .dispatch_queue
+	add	hl, de
+	or	a, (hl)
+	jr	nz, .dispatch_queue
+	add	hl, de
+	or	a, (hl)
+	jp	z, kinterrupt.nmi
+; schedule the idle thread
+	ld	ix, KERNEL_THREAD_IDLE
+	jr	.dispatch_thread
+.dispatch_queue:
 	inc	hl
 	ld	ix, (hl)
-	or	a, a
-	jr	nz, .dispatch
-; schedule the idle thread
-	inc	hl
-	inc	hl
-	inc	hl
-	or	a, (hl)
-; panic if NO thread
-	jp	z, kinterrupt.nmi
-	ld	ix, KERNEL_THREAD_IDLE
-.dispatch:
+.dispatch_thread:	
 ; iy is previous thread, ix is the new thread, let's switch them
 ; are they the same ?
 	lea	hl, iy+0
