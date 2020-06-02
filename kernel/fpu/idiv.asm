@@ -1,8 +1,4 @@
-macro div hl, bc
-	call	udiv.16
-end macro
-
-udiv:
+div:
 if CONFIG_FPU_FAULT = 1
 .fault:
 	ld	a, SIGFPE

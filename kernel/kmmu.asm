@@ -5,6 +5,7 @@ define	KERNEL_MMU_MAP			$D00F00
 define	KERNEL_MMU_RAM			$D00000
 define	KERNEL_MMU_RAM_SIZE		$040000
 define	KERNEL_MMU_PAGE_ZERO		$E30800
+define	KERNEL_MMU_RESERVED_SIZE	4
 ; belonging to thread 0 or kernel *special* thread
 define	RESERVED			$00
 
@@ -95,6 +96,10 @@ end if
 	srl	h
 	rra
 	pop	hl
+	ld	b, KERNEL_MMU_RESERVED_SIZE
+	cp	a, b
+	jr	nc, $+3
+	ld	b, a
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
 	cpl
@@ -163,6 +168,10 @@ end if
 	srl	h
 	rra
 	pop	hl
+	ld	b, KERNEL_MMU_RESERVED_SIZE
+	cp	a, b
+	jr	nc, $+3
+	ld	b, a
 	ld	hl, KERNEL_MMU_MAP
 	ld	l, a
 	cpl
@@ -275,7 +284,7 @@ end if
 ; REGSAFE, return a = current thread
 	push	hl
 .unmap_block_jump:
-	ld	hl, KERNEL_MMU_MAP
+	ld	hl, KERNEL_MMU_MAP + KERNEL_MMU_RESERVED_SIZE
 .unmap_block_loop:
 	cp	a, (hl)
 	call	z, .zero_page
