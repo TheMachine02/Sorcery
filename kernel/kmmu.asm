@@ -197,8 +197,8 @@ end if
 	ret
 ; found my blocks, mark them as used
 .map_block_mark:
+	inc	d
 	ld	l, d
-	inc	l
 	ld	b, e
 	dec	b	; we need to reduce this by one !
 .map_block_mark_loop:
