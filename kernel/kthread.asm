@@ -364,13 +364,29 @@ kthread:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 ; find next to schedule
-	ld	a, (hl)
-	or	a, a
+; ie dispatch method from schedule
+; b = 16 - l / 4
+	ld	a, 16
+	sub	a, l
+	rrca
+	rrca
+	ld	b, a
+	ld	de, KERNEL_QUEUE_SIZE
+	xor	a, a
+.exit_dispatch_loop:
+	or	a, (hl)
+	jr	nz, .exit_dispatch_thread
+	add	hl, de
+	djnz	.exit_dispatch_loop
+	or	a, (hl)
+	jp	z, kinterrupt.nmi
+; schedule the idle thread
+	ld	ix, KERNEL_THREAD_IDLE
+	jr	.exit_unmap
+.exit_dispatch_thread:
 	inc	hl
 	ld	ix, (hl)
-	jr	nz, .exit_idle
-	ld	ix, KERNEL_THREAD_IDLE
-.exit_idle:
+.exit_unmap:
 ; unmap the memory of the thread
 ; this also unmap the stack
 	call	kmmu.unmap_block
