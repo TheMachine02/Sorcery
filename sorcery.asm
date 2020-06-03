@@ -15,10 +15,13 @@ include 'config'
 	os_rom
 ;-------------------------------------------------------------------------------
 
+Sorcery:
 include 'sorcery_certificate.asm'
-	db	$5a,$a5,$ff,$00
-	jp	$030000
-KERNEL_JUMP_TABLE:
+; we'll set as occupying 4 sectors - or 256KB
+.start:
+	db	$5a,$a5,$ff,$04
+	jp	_endos
+.syscall:
 	jp	kinit
 	jp	kinterrupt.service
 ; 020110
@@ -59,3 +62,8 @@ include	'kernel/driver/keyboard.asm'
 
 elf_frozen_example:
 file	'executable.hex'
+
+
+; rb	$060000 - $
+org $060000
+_endos:

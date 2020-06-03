@@ -50,18 +50,15 @@ kinit:
 	halt
 	jr $-2
 
-kname:	
-	ld	hl, .KERNEL_NAME
+kname:
+	ld	hl, Sorcery.name
 	ret
-	
-.KERNEL_NAME:
- db CONFIG_KERNEL_NAME, 0
-	
+
 ; Exemple area ;
 ; Static compiled thread an such ;
 ; Kernel only init and pass to init thread, so a proper OS will go there ;
-	
-	
+
+
 THREAD_INIT_TEST:
 ; load frozen elf16 example
 	ld	hl, elf_frozen_example

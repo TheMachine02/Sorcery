@@ -1,4 +1,4 @@
-define CONFIG_KERNEL_NAME		"sorcery.0.0.1"
+define CONFIG_KERNEL_NAME		"Sorcery.0.0.1"
 
 ; special code modifier ;
 define	CONFIG_USE_BOOT_PATCH		0
