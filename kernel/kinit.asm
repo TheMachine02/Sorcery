@@ -10,6 +10,7 @@ define	KERNEL_CRYSTAL_CTLR		$00
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 
 define	NULL 0
+define	KERNEL_DEV_NULL			$E40000
 
 kinit:
 ; boot 5.0.1 stupidity power ++
@@ -28,16 +29,15 @@ kinit:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
-; faster flash acess please    
-	ld	a, $03
-	ld	($E00005), a
 ; general system init
 	call	kpower.init
 	call	kmmu.init
+	call	kflash.init
 	call	kwatchdog.init
 	call	klocal_timer.init
 	call	kinterrupt.init
 	call	kthread.init
+	call	kmsg.init
 ; driver init, nice
 	call	kvideo.init
 	call	kkeyboard.init

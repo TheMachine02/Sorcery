@@ -1,124 +1,128 @@
-define	KERNEL_INFO			1
-define	KERNEL_WARNING		2
-define	KERNEL_ERROR		4
+define	KERNEL_INFO				$1
+define	KERNEL_WARNING				$2
+define	KERNEL_ERROR				$4
+define	KERNEL_MESSAGE_BUFFER_SIZE		$000400
+define	KERNEL_MESSAGE_BUFFER_ADDRESS		$D00800
+define	KERNEL_MESSAGE_BUFFER_END		$D00C00
 
-define	BUFFER_SIZE			0x000800 ; 2048
-define	BUFFER_ADDR			0xD20000 ; à changer
+; The first three bytes stand for the offset of the next location to write a kernel message.
+define	kmsg_current_offset			$D00800
 
-; The first three bytes of the tmpfs file stand for the offset of the next location to write a kernel message.
-
-
-init_printk:
-	; il faut initialiser un espace mémoire rempli de 0 de taille BUFFER_SIZE pour écrire les messages à l'interieur
-
-printk:
-	;***************************************************************
-	;* INPUT
-	;*	- A : Kernel message type :
-	;*			KERNEL_INFO, KERNEL_WARNING or KERNEL_ERROR.
-	;*	- BC : address of the 0-terminated string.
-	;* OUTPUT
-	;*	- A and the message pointed by HL are copied into BUFFER_ADDR (circularly).
-	;***************************************************************
-	push bc
-	ld ix,BUFFER_ADDR
-	ld hl,(ix)
-	lea de,ix+0
-	add hl,de
-	ex de,hl
-	ld bc,BUFFER_SIZE
-	add hl,bc
-	pop bc
-	ex de,hl
-
-	ld (hl),a
-	inc hl
-.mainloop:
-	push hl
-	or a
-	sbc hl,de
-	pop hl
-	jq c,.noproblemo
-	lea hl,ix+3
-.noproblemo:
-	ld a,(bc)
-	ld (hl),a
-	inc hl
-	inc bc
-	or a
-	jq nz,.mainloop
-	; last check
-	ex de,hl
-	or a
-	sbc hl,de
-	jq c,.noproblemo2
-	lea de,ix+3
-.noproblemo2:
-	ld (ix),de
+kmsg:
+.init:
+; initialize the circular buffer
+	ld	hl, KERNEL_MESSAGE_BUFFER_ADDRESS
+	ld	bc, KERNEL_MESSAGE_BUFFER_SIZE
+	ld	de, KERNEL_DEV_NULL
+	ldir
+	ret
+	
+.printk:
+;***************************************************************
+;* INPUT
+;*	- A : Kernel message type :
+;*			KERNEL_INFO, KERNEL_WARNING or KERNEL_ERROR.
+;*	- BC : address of the 0-terminated string.
+;* OUTPUT
+;*	- A and the message pointed by HL are copied into BUFFER_ADDR (circularly).
+;***************************************************************
+; writing to the memory buffer should be atomic
+	tstdi
+	push	bc
+	ld	ix, KERNEL_MESSAGE_BUFFER_ADDRESS
+	ld	hl, (ix)
+	lea	de, ix+0
+	add	hl, de
+	ex	de, hl
+	ld	bc, KERNEL_MESSAGE_BUFFER_SIZE
+	add	hl, bc
+	pop	bc
+	ex	de, hl
+	ld 	(hl), a
+	inc	hl
+.printk_loop:
+	push	hl
+	or	a, a
+	sbc	hl, de
+	pop	hl
+	jr	c, .printk_buffer_free0
+	lea	hl, ix+3
+.printk_buffer_free0:
+	ld	a, (bc)
+	ld	(hl), a
+	inc	hl
+	inc	bc
+	or	a, a
+	jr	nz, .printk_loop
+; last check
+	ex	de, hl
+	or	a, a
+	sbc	hl, de
+	jr	c, .printk_buffer_free1
+	lea	de, ix+3
+.printk_buffer_free1:
+	ld	(ix), de
+	tstei
 	ret
 
 
 demsg:
-	;***************************************************************
-	;* Use this to display information stored by printk.
-	;***************************************************************
-	ld ix,BUFFER_ADDR
-	ld bc,(ix)
-	lea de, ix+3
-	add ix,bc
-	lea hl,ix+0
-	xor a
-	cp (hl)
-	jq z,.buffer_not_full
-
-	ld bc,BUFFER_ADDR+BUFFER_SIZE
-.loopingForNext0B:
-	inc hl
-	push hl
-	or a
-	sbc hl,bc
-	pop hl
-	jq c,.noproblemo
-	sbc hl,hl
-	add hl,de
+;***************************************************************
+;* Use this to display information stored by printk.
+;***************************************************************
+	ld	ix, KERNEL_MESSAGE_BUFFER_ADDRESS
+	ld	bc, (ix)
+	lea	de, ix+3
+	add	ix,bc
+	lea	hl,ix+0
+	xor	a, a
+	cp	a, (hl)
+	jr	z, .buffer_not_full
+	ld	bc, KERNEL_MESSAGE_BUFFER_END
+.loop_for_next_0B:
+	inc	hl
+	push	hl
+	or	a, a
+	sbc	hl,bc
+	pop	hl
+	jr	c, .noproblemo
+	sbc	hl,hl
+	add	hl,de
 .noproblemo:
-	cp (hl)
-	jq nz,.loopingForNext0B
-	inc hl
-
-.display_loop:
-	ld a,(hl)
-	; DO SOMETHING ACCORDING TO THE MESSAGE TYPE VALUE
-	;	-> different colors ?
-	inc hl
-	push de
-	push ix
-	call displaySTR ; à remplacer -> système de feed avec la console ? (faire attention, le buffer est circulaire)
-	pop ix
-	pop de
-
-	inc hl
-	push hl
-	lea de,ix+0
-	or a
-	sbc hl,de
-	pop hl
-	jq nz,.display_loop
+	cp	a, (hl)
+	jr	nz, .loop_for_next_0B
+	inc	hl
+.loop:
+	ld	a, (hl)
+; DO SOMETHING ACCORDING TO THE MESSAGE TYPE VALUE
+;	-> different colors ?
+	inc	hl
+	push	de
+	push	ix
+;	call	displaySTR ; à remplacer -> système de feed avec la console ? (faire attention, le buffer est circulaire)
+	pop	ix
+	pop	de
+	inc	hl
+	push	hl
+	lea	de,ix+0
+	or	a, a
+	sbc	hl,de
+	pop	hl
+	jr	nz, .loop
 	ret
 
 .buffer_not_full:
-	; A=0
-	ld bc,BUFFER_ADDR+BUFFER_SIZE
-.loopingForNextNon0B:
-	inc hl
-	push hl
-	or a
-	sbc hl,bc
-	pop hl
-	jq c,.noproblemo2
-	sbc hl,hl
-	add hl,de
+	ld	bc, KERNEL_MESSAGE_BUFFER_END
+.loop_for_next_non0B:
+	inc	hl
+	push	hl
+	or	a, a
+	sbc	hl,bc
+	pop	hl
+	jr	c, .noproblemo2
+	sbc	hl,hl
+	add	hl,de
 .noproblemo2:
-	cp (hl)
-	jq z,.loopingForNextNon0B
-	jq .display_loop
+	cp	a, (hl)
+	jr	z, .loop_for_next_non0B
+	jr	.loop

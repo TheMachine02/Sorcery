@@ -42,6 +42,7 @@ include	'kernel/ksignal.asm'
 include	'kernel/kqueue.asm'
 include	'kernel/ktimer.asm'
 include	'kernel/katomic.asm'
+include	'kernel/kmsg.asm'
 include	'kernel/kmmu.asm'
  rb	$0220A8-$
 include	'kernel/knmi.asm'
