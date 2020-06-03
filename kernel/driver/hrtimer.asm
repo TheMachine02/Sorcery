@@ -46,9 +46,8 @@ ktimer:
 	bit	DRIVER_HRTIMER1_IRQ_LOCK_SET, (hl)
 	ret	z
 	ld	iy, (DRIVER_HRTIMER1_IRQ_LOCK_THREAD)
-	call	kthread.resume_from_IRQ
 	ccf
-	ret
+	jp	kthread.resume_from_IRQ
 	
 .irq_lock:
 	di
