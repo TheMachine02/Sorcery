@@ -33,6 +33,8 @@ kso:
 	dec	hl
 	dec	hl
 	dec	hl
+	xor	a, a
+	ld	(kelf_section_owner), a
 	call	kelf.load_section
 ; iy = first section or jump table
 	ret

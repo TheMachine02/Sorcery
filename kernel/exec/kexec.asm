@@ -50,6 +50,9 @@ kexec:
 	ret
 	
 .load_program:
+	ld	de, (kthread_current)
+	ld	a, (de)
+	ld	(kelf_section_owner), a
 	call	kelf.load_section
 	ld	ix, NULL
 	lea	hl, ix+0

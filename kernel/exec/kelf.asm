@@ -27,7 +27,8 @@ define	ELF_MAG3		3
 define	ELF_TYPE		4
 define	ELF_VERSION		5
 
-define	kexec_section_ptr	0xD0000D
+define	kelf_section_ptr	$D0000D
+define	kelf_section_owner	$D0000C
 
 kelf:
 .load_section:
@@ -39,10 +40,10 @@ kelf:
 	push	hl
 	pop	ix
 	ld	hl, KERNEL_MMU_RAM
-	xor	a, a	; map from thread 0 (ie, kernel)
+	ld	a, (kelf_section_owner)
 	call	kmmu.map_page_thread
 	jp	c, kthread.exit
-	ld	(kexec_section_ptr), hl
+	ld	(kelf_section_ptr), hl
 	lea	iy, ix + 0
 	lea	ix, ix+ELF_HEADER_SIZE+1
 	ld	b, (ix-1)   ; section count
@@ -74,15 +75,19 @@ kelf:
 	or	a, a
 	sbc	hl, de
 	jr	z, .section_empty
-	ld	hl, (kexec_section_ptr)
+	ld	hl, (kelf_section_ptr)
 	push	hl
+	ld	a, (kelf_section_owner)
+	push	af
 	ld	de, (ix+ELF_SECTION_OFFSET)
 	lea	hl, iy+1    ; beware offset of count of reallocation
 	add	hl, de
 ; hl = string of the name
 	call	kso.load_elf
+	pop	af
+	ld	(kelf_section_owner), a
 	pop	hl
-	ld	(kexec_section_ptr), hl
+	ld	(kelf_section_ptr), hl
 	lea	de, iy+0
 .section_empty:
 	pop	ix
@@ -137,7 +142,7 @@ kelf:
 	lea	de, iy+0
 	lea	ix, iy+ELF_HEADER_SIZE + 1
 	ld	b, (ix-1)   ; section count
-	ld	hl, (kexec_section_ptr)
+	ld	hl, (kelf_section_ptr)
 .section_realloc_loop:
 	ld	iy, (ix+ELF_SECTION_OFFSET)
 	add	iy, de
@@ -162,7 +167,7 @@ kelf:
 	ld	l, a
 	add	hl, hl
 	add	hl, hl
-	ld	de, (kexec_section_ptr)
+	ld	de, (kelf_section_ptr)
 	add	hl, de
 	ld	hl, (hl)
 	pop	de
@@ -183,9 +188,9 @@ kelf:
 	inc	hl
 	lea	ix, ix+ELF_SECTION_HEADER_SIZE
 	djnz	.section_realloc_loop
-	ld	hl, (kexec_section_ptr)
+	ld	hl, (kelf_section_ptr)
 	ld	iy, (hl)
-	xor	a, a
+	ld	a, (kelf_section_owner)
 	jp	kmmu.unmap_page_thread
 .section_alloc:
 	push	bc
@@ -209,6 +214,7 @@ kelf:
 	ld	b, l
 	pop	hl
 	ld	hl, KERNEL_MMU_RAM
-	call	kmmu.map_block	
+	ld	a, (kelf_section_owner)
+	call	kmmu.map_block_thread
 	pop	bc
 	ret
