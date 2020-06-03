@@ -29,11 +29,16 @@ define	ELF_TYPE		4
 define	ELF_VERSION		5
 
 section_allocsize = 0
+lib_count = -1
+virtual
+	elf.dynamic_name::
+end virtual
 
 macro elf? type*
 	virtual
 		elf.section_header::
 	end virtual
+	
 	org 0
 	elf_ident         db 0x8F, 'E', 'L', 'F'
 	elf_type          db type
@@ -51,6 +56,15 @@ elf.start:
 	elf.section_headerbyte:
 	elf_shnum         db (lengthof elf.section_header0)/8
 	db elf.section_header0
+	
+	postpone
+		section dynamic, ELF_DYNAMIC
+		elf_dynamic=$
+		virtual elf.dynamic_name
+			load elf.dynamic_name0: $-$$ from $$
+		end virtual
+		db elf.dynamic_name0
+	end postpone
 end macro
 
 macro private
@@ -87,19 +101,6 @@ macro private
 		db reloc_data
 		section_index = section_index + 1
 		
-	lib_count = -1
-	lib_base=$
-	macro library? lib_name
-		local count
-		count=0
-		macro export? arg
-			arg=(count*4) + lib_base + (lib_count*65536)
-			count = count + 1
-		end macro
-		db lib_name, 0
-		lib_count = lib_count + 1
-	end macro
-
 	end macro
 	macro @ez80.word @value*
 		local value, addr
@@ -120,3 +121,16 @@ macro private
 end macro
 private
 purge private
+
+macro library? lib_name
+	local count
+	count=0
+	macro export? arg
+		arg=(count*4) + elf_dynamic + (lib_count*65536)
+		count = count + 1
+	end macro
+	virtual elf.dynamic_name
+		db lib_name, 0
+	end virtual
+	lib_count = lib_count + 1
+end macro

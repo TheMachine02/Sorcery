@@ -64,6 +64,8 @@ include	'kernel/driver/keyboard.asm'
 elf_frozen_example:
 file	'executable.hex'
 
+elf_frozen_library:
+file	'libtest.hex'
 
 ; rb	$060000 - $
 org $060000

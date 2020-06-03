@@ -55,6 +55,8 @@ kelf:
 	jr	z, .section_rw_zero
 	cp	a, ELF_RW_DATA
 	jr	z, .section_rw
+	cp	a, ELF_DYNAMIC
+	jr	z, .section_dynamic
 ; ELF_RO_DATA / ELF_RO_INSTR
 .section_ro:
 	ld	de, (ix+ELF_SECTION_OFFSET)
@@ -62,6 +64,30 @@ kelf:
 	add	hl, de
 ; adress of the section for the program execution = hl (there IS NO REALLOCATION DATA for RO type)
 	ex	de, hl
+	jr	.section_continue
+.section_dynamic:
+	push	bc
+	push	iy
+	push	ix
+	ld	hl, (ix+ELF_SECTION_SIZE)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .section_empty
+	ld	hl, (kexec_section_ptr)
+	push	hl
+	ld	de, (ix+ELF_SECTION_OFFSET)
+	lea	hl, iy+1    ; beware offset of count of reallocation
+	add	hl, de
+; hl = string of the name
+	call	kso.load_elf
+	pop	hl
+	ld	(kexec_section_ptr), hl
+	lea	de, iy+0
+.section_empty:
+	pop	ix
+	pop	iy
+	pop	bc
 	jr	.section_continue
 .section_rw_zero:
 ; save iy too, but malloc doesn't destroy iy
@@ -102,7 +128,9 @@ kelf:
 	inc	hl
 	inc	hl
 	lea	ix, ix+ELF_SECTION_HEADER_SIZE
-	djnz	.section_parse
+;	djnz	.section_parse
+	dec	b
+	jp	nz, .section_parse
 ; I have section loaded, now I need to realloc stuff.
 .section_realloc:
 ; so parse back the section table, jump to realloc table

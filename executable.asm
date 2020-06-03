@@ -1,10 +1,14 @@
 include 'include/ez80.inc'
 include 'include/asm-elf.inc'
 
+library "libtest.so"
+export draw_black
+
 elf ELF_EXEC
 
 section .text, ELF_RW_INSTR
 loop:
+	call	draw_black
 	ld	de, 0
 	ld	b, 4
 	ld	hl, example
@@ -16,6 +20,7 @@ loop:
 	call	crc16_dnp.byte
 	
 	jr	loop
+		
 crc16_dnp:
 .byte:
 ; b is size, hl is mem, de is crc, return de = crc
