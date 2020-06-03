@@ -68,7 +68,7 @@ THREAD_INIT_TEST:
 	ld	hl, 2048
 	call	kthread.create
 
-	ld	a, SIGCONT
+	ld	a, SIGUSR1
 	call	ksignal.procmask_single
 	
 ; video lock for me

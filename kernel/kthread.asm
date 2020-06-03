@@ -265,9 +265,9 @@ kthread:
 	push	af
 	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
 	ld	a, (iy+KERNEL_THREAD_IRQ)
-	ld	(iy+KERNEL_THREAD_IRQ), 0
 	or	a, a
 	jr	z, .resume_from_IRQ_exit
+	ld	(iy+KERNEL_THREAD_IRQ), 0
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_INTERRUPTIBLE
 	jr	nz, .resume_from_IRQ_exit
@@ -299,13 +299,13 @@ kthread:
 ; wake thread (adress iy)
 ; insert in place in the RR list
 ; return iy = kqueue_current
-	push	af
 	push	hl
 	lea	hl, iy+0
 	add	hl, de
 	or	a, a
 	sbc	hl, de
 	jr	z, .resume_exit
+	push	af
 	tstdi
 	ld	a, (iy+KERNEL_THREAD_STATUS)    ; this read need to be atomic !
 	cp	a, TASK_INTERRUPTIBLE
@@ -316,9 +316,9 @@ kthread:
 	ld	(kthread_need_reschedule), a
 .resume_exit_atomic:
 	tstei
+	pop	af
 .resume_exit:
 	pop	hl
-	pop	af
 	ret
 
 .once:
@@ -532,7 +532,7 @@ task_switch_running:
 	call	kqueue.remove
 ;	ld	l, kthread_queue_active and $FF
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
-	jp	kqueue.insert_current
+	jr	kqueue.insert_current
 
 ; from TASK_READY to TASK_STOPPED
 ; may break if not in this state before
@@ -543,7 +543,7 @@ task_switch_stopped:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jp	kqueue.insert_current
+	jr	kqueue.insert_current
 
 ; sleep	'a' ms, granularity of about 4,7 ms
 task_switch_sleep_ms:
@@ -570,20 +570,6 @@ task_switch_interruptible:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jp	kqueue.insert_current
+	jr	kqueue.insert_current
 	
 task_yield = kthread.yield
-	
-task_add_timer:
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
-	ld	a, SIGEV_THREAD
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
-	ld	hl, klocal_timer.notify_default
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
-	jp	klocal_timer.insert
-
-task_delete_timer:
-	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
-	or	a, a
-	ret	z	; can't disable, already disabled!
-	jp	klocal_timer.remove

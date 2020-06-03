@@ -271,7 +271,6 @@ end if
 
 .unmap_block:
 	push	hl
-	push	bc
 	ld	hl, (kthread_current)
 	ld	a, (hl)
 	jr	.unmap_block_jump

@@ -137,3 +137,17 @@ klocal_timer:
 	ld	de, NULL
 	ld	(hl), de
 	ret
+
+task_add_timer:
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
+	ld	a, SIGEV_THREAD
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	hl, klocal_timer.notify_default
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
+	jr	klocal_timer.insert
+
+task_delete_timer:
+	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
+	or	a, a
+	ret	z	; can't disable, already disabled!
+	jr	klocal_timer.remove
