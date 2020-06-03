@@ -126,11 +126,12 @@ kscheduler:
 	inc	hl
 ; hl = priority
 	ld	a, (hl)
-	sub	a, 4
+	sub	a, KERNEL_QUEUE_SIZE
 	jr	nc, $+3
 	xor	a, a
 	ld	(hl), a
-	jr	.local_time_compute
+	inc	hl
+	jr	.local_quantum_compute
 	
 .local_timer:
 ; schedule jiffies timer first
@@ -164,7 +165,7 @@ if CONFIG_USE_DOWNCLOCKING
 	ld	(kcstate_timer), a
 end if
 
-.local_time_quantum:
+.local_quantum:
 	ld	hl, kthread_need_reschedule
 	sra	(hl)
 	ld	(hl), l
@@ -172,25 +173,32 @@ end if
 	ld	iy, (hl)
 	jr	c, .schedule
 ; do we have idle thread ?
-	ld	a, (iy+KERNEL_THREAD_STATUS)
+	lea	hl, iy+KERNEL_THREAD_STATUS
+	ld	a, (hl)
 	inc	a
 	jr	z, .schedule
-	dec	(iy+KERNEL_THREAD_QUANTUM)
+	inc	hl
+	inc	hl
+	dec	(hl)
 	jr	nz, kinterrupt.resume
 ; lower thread priority and move queue
-	ld	hl, kthread_mqueue_0
-	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	dec	hl
+	ld	de, kthread_mqueue_0
+	ld	e, (hl)
+	ex	de, hl
 	call	kqueue.remove
 	ld	a, l
-	add	a, 4
+	add	a, KERNEL_QUEUE_SIZE
 	cp	a, SCHED_PRIO_MIN+1
 	jr	c, $+4
 	ld	a, SCHED_PRIO_MIN
-	ld	(iy+KERNEL_THREAD_PRIORITY), a
+	ld	(de), a
 	ld	l, a
 	call	kqueue.insert_end
-	ld	a, (iy+KERNEL_THREAD_PRIORITY)
-.local_time_compute:
+	ld	a, l
+	ex	de, hl
+	inc	hl
+.local_quantum_compute:
 	srl	a
 	cp	a, 6
 	jr	nz, $+4
@@ -198,7 +206,7 @@ end if
 	or	a, a
 	jr	nz, $+3
 	inc	a
-	ld	(iy+KERNEL_THREAD_QUANTUM), a
+	ld	(hl), a
 .schedule:
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
@@ -215,7 +223,7 @@ end if
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
 .dispatch:
-	ld	de, 4
+	ld	de, KERNEL_QUEUE_SIZE
 	xor	a, a
 	ld	hl, kthread_mqueue_0
 	or	a, (hl)
