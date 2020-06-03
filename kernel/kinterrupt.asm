@@ -199,13 +199,15 @@ end if
 	ex	de, hl
 	inc	hl
 .local_quantum_compute:
-	srl	a
-	cp	a, 6
-	jr	nz, $+4
-	ld	a, 8
-	or	a, a
-	jr	nz, $+3
+; exponential quantum
+	rrca
+	rrca
 	inc	a
+	ld	b, a
+	xor	a, a
+	scf
+	rla
+	djnz	$-1
 	ld	(hl), a
 .schedule:
 ; reset watchdog

@@ -40,7 +40,9 @@ define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	27
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
-define	KERNEL_THREAD_QUEUE_SIZE		20
+define	KERNEL_THREAD_MQUEUE_COUNT		5
+define	KERNEL_THREAD_MQUEUE_SIZE		20
+define  KERNEL_THREAD_ONCE_INIT			$FE
 
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
@@ -49,8 +51,6 @@ define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
 define	SCHED_PRIO_MIN				12
-
-define  KERNEL_THREAD_ONCE_INIT			$FE
 
 ; multilevel priority queue ;
 define	kthread_mqueue_0			$D00400
@@ -87,7 +87,7 @@ kthread:
 	ld	hl, kthread_mqueue_0
 	ld	(hl), 0
 	ld	de, kthread_mqueue_0 + 1
-	ld	bc, KERNEL_THREAD_QUEUE_SIZE - 1
+	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
 	ldir
 	ld	hl, kthread_need_reschedule
 	ld	(hl), e
@@ -461,6 +461,8 @@ kthread:
 .heap_size_loop:
 	ld	bc, (ix+KERNEL_MEMORY_BLOCK_DATA)
 	add	hl, bc
+	ld	bc, KERNEL_MEMORY_BLOCK_SIZE
+	add	hl, bc
 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
 	or	a, a
 	jr	z, .heap_size_break
@@ -519,24 +521,23 @@ kthread:
 	ret
 	
 .IHEADER:
-	db	$00		; ID 0 reserved
+	db	$00			; ID 0 reserved
 	dl	KERNEL_THREAD_IDLE	; No next
 	dl	KERNEL_THREAD_IDLE	; No prev
-	db	NULL		; No PPID
-	db	$FF		; IRQ all
-	db	TASK_IDLE	; Status
-	db	SCHED_PRIO_MIN
-	db	8	; quantum
-	dl	$D000E0	; Stack will be writed at first unschedule
-	dl	$D000A0	; Stack limit
-	dl	NULL		; No true heap for idle thread
-	dl	NULL		; No friend
-	db	NULL
-	db	NULL
-	dl	NULL
-	dl	NULL
-	dl	NULL
-; descriptor table, initialised to NULL anyway when mapping page...
+	db	NULL			; No PPID
+	db	$FF			; IRQ all
+	db	TASK_IDLE		; Status
+	db	SCHED_PRIO_MIN		; Special anyway
+	db	$FF			; quantum
+	dl	$D000E0			; Stack will be writed at first unschedule
+	dl	$D000A0			; Stack limit
+	dl	NULL			; No true heap for idle thread
+	dl	NULL			; No friend
+	db	NULL			; Errno
+	db	NULL			; Sig
+	dl	NULL			; Sig
+	dw	NULL, NULL		; Sig mask 
+; rest is useless for idle thread
 .IHEADER_END:
 
 ; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
@@ -546,7 +547,6 @@ task_switch_running:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	hl, kthread_queue_retire
 	call	kqueue.remove
-;	ld	l, kthread_queue_active and $FF
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	jr	kqueue.insert_current
 
