@@ -51,9 +51,9 @@ klocal_timer:
 ; EV_SIGNO		$1
 ; EV_NOTIFY_FUNCTION	$2
 ; pass NULL for default callback, ie resume thread
-; a is timer count
+; de is timer count
 	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 	add	hl, de
 	or	a, a
 	sbc	hl, de
@@ -77,8 +77,9 @@ klocal_timer:
 .delete:
 ; delete (or disarm) the current timer of the thread
 	ld	iy, (kthread_current)
-	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
-	or	a, a
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, l
+	or	a, h
 	ret	z
 	tstdi
 	call	.remove
@@ -139,7 +140,7 @@ klocal_timer:
 	ret
 
 task_add_timer:
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), a
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	a, SIGEV_THREAD
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
 	ld	hl, klocal_timer.notify_default
@@ -147,7 +148,8 @@ task_add_timer:
 	jr	klocal_timer.insert
 
 task_delete_timer:
-	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
-	or	a, a
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, l
+	or	a, h
 	ret	z	; can't disable, already disabled!
 	jr	klocal_timer.remove

@@ -144,7 +144,11 @@ kscheduler:
 	ld	iy, (hl)
 	ld	b, a
 .local_timer_queue:
-	dec	(iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	dec	hl
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	a, h
+	or	a, l
 	call	z, .local_timer_process
 	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
 	djnz	.local_timer_queue
@@ -248,7 +252,7 @@ end if
 .dispatch_queue:
 	inc	hl
 	ld	ix, (hl)
-.dispatch_thread:	
+.dispatch_thread:
 ; iy is previous thread, ix is the new thread, let's switch them
 ; are they the same ?
 	lea	hl, iy+0

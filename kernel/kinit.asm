@@ -95,7 +95,7 @@ THREAD_INIT_TEST:
 	
 	call	kvideo.swap
 	
-	ld	hl, 250	; 250 ms is nice
+	ld	hl, 1000	; 250 ms is nice
 	call	kthread.sleep
 	
 ; we were not waked by spining thread ! (masked signal)
@@ -115,7 +115,7 @@ TEST_THREAD_C:
 ;db	$DD, $FF
 ; need to catch rst 00h for that !
 	ld	hl, $AA55AA
-	ld	a, SIGCONT
+	ld	a, SIGUSR1
 	ld	c, 1
 	call	kill
 	jr	.spin

@@ -25,12 +25,13 @@ define	KERNEL_THREAD_EV_SIG_POINTER		$1A
 define  KERNEL_THREAD_SIGNAL_MASK		$1D
 define	KERNEL_THREAD_TIMER			$21
 define	KERNEL_THREAD_TIMER_COUNT		$21
-define	KERNEL_THREAD_TIMER_NEXT		$22
-define	KERNEL_THREAD_TIMER_PREVIOUS		$25
-define	KERNEL_THREAD_TIMER_SIGEVENT		$28
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$28
-define	KERNEL_THREAD_TIMER_EV_SIGNO		$29
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2A
+define	KERNEL_THREAD_TIMER_NEXT		$24
+define	KERNEL_THREAD_TIMER_PREVIOUS		$27
+define	KERNEL_THREAD_TIMER_SIGEVENT		$2A
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$2A
+define	KERNEL_THREAD_TIMER_EV_SIGNO		$2B
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2C
+; 2F free
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$2F
 ; up to $80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 24 descriptors usables ;
@@ -174,7 +175,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+3), 0
 ; timer ;
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), 0
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 ; stack limit set first ;
 	lea	hl, iy + 4
 	ld	e, KERNEL_THREAD_HEADER_SIZE
@@ -401,26 +402,37 @@ kthread:
 	di
 	push	iy
 	ld	iy, (kthread_current)
-	ld	a, l	; uint8 only
 	call	task_switch_sleep_ms
 	call	task_yield
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
 	di
-	ld	a, (iy+KERNEL_THREAD_TIMER_COUNT)
-	or	a, a
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, l
+	or	a, h
 	call	nz, klocal_timer.remove
 	ei
-	ld	l, (iy+KERNEL_THREAD_TIMER_COUNT)
+	push	de
+	ld	e, (iy+KERNEL_THREAD_TIMER_COUNT)
 ; times in jiffies left to sleep
+	ld	d, TIME_JIFFIES_TO_MS
+	mlt	de
+	ex	de, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ex	de, hl
+	xor	a, a
+	ld	e, d
+	ld	d, a
+	ld	l, (iy+KERNEL_THREAD_TIMER_COUNT)
 	ld	h, TIME_JIFFIES_TO_MS
 	mlt	hl
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	xor	a, a
-	ld	l, h
-	ld	h, a
+	add	hl, de
+	pop	de
 	pop	iy
 	ret
 	
@@ -561,18 +573,25 @@ task_switch_stopped:
 	ld	l, kthread_queue_retire and $FF
 	jr	kqueue.insert_current
 
-; sleep	'a' ms, granularity of about 4,7 ms
+; sleep	'hl' ms, granularity of about 4,7 ms
 task_switch_sleep_ms:
-; do  a * (32768/154/1000)
-	ld	h, a
-	ld	l, TIME_MS_TO_JIFFIES
-	mlt	hl
-	ld	a, l
+; do  hl * (32768/154/1000)
+	push	bc
+	ld	b, l
+	ld	c, TIME_MS_TO_JIFFIES
+	mlt	bc
+	ld	a, c
 	or	a, a
 	jr	z, $+3
-	inc	h
+	inc	b
+	ld	c, b
+	ld	b, 0
+	ld	l, TIME_MS_TO_JIFFIES
+	mlt	hl
+	add	hl, bc
+	pop	bc
 ; add timer
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), h
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	a, SIGEV_THREAD
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
 	ld	hl, klocal_timer.notify_default
