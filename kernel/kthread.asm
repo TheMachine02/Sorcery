@@ -356,7 +356,7 @@ kthread:
 ; also send HL as exit code
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
-	call	kill
+	call	ksignal.kill
 ; need to free IRQ locked and mutex locked to thread
 ; de = next thread to be active
 ; remove from active
@@ -462,7 +462,7 @@ kthread:
 	pop	iy
 	ret
 	
-.heap_size:
+.get_heap_size:
 ; parse all block
 	push	ix
 	push	bc

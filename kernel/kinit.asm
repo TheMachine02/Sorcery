@@ -117,7 +117,7 @@ TEST_THREAD_C:
 	ld	hl, $AA55AA
 	ld	a, SIGUSR1
 	ld	c, 1
-	call	kill
+	call	ksignal.kill
 	jr	.spin
 	pop ix
 	ret

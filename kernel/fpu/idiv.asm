@@ -2,7 +2,7 @@ div:
 if CONFIG_FPU_FAULT = 1
 .fault:
 	ld	a, SIGFPE
-	call	raise
+	call	ksignal.raise
 	pop	af
 	ret
 end if

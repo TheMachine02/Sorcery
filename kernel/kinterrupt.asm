@@ -308,7 +308,7 @@ end if
 .local_timer_signal:
 	ld	c, (iy+KERNEL_THREAD_PID)
 	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNO)
-	jp	kill
+	jp	ksignal.kill
 .local_timer_thread:
 ; callback
 	push	iy

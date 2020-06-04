@@ -140,10 +140,10 @@ ksignal:
 	tstdi
 	ret
 	
-abort:
+.abort:
 	ld	a, SIGABRT
 	
-raise:
+.raise:
 ; Raise signal to current thread
 ; REGSAFE and ERRNO compliant
 ; int raise(int sig)
@@ -156,7 +156,7 @@ raise:
 	ld	c, (hl)
 	pop	hl
 	
-kill:
+.kill:
 ; Send signal to an other thread
 ; REGSAFE and ERRNO compliant
 ; int kill(pid_t pid, int sig)
@@ -186,7 +186,7 @@ kill:
 	ld	l, a
 	ld	a, (hl)
 	or	a, a
-	jq	z, .no_thread
+	jq	z, .kill_no_thread
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
@@ -196,17 +196,17 @@ kill:
 	ld	a, c
 ; permission of the (current thread-1) < signaled thread (if equal)
 	cp	a, (hl)
-	jp	nc, .no_permission
+	jp	nc, .kill_no_permission
 ; check the signal to send
 	ld	a, b
 	ld	c, a
 	or	a, a
-	jp	z, .no_signal
+	jp	z, .kill_no_signal
 ; iy is still thread to signal, a is signal
 	cp	a, SIGSTOP
-	jr	z, .unblockable
+	jr	z, .kill_unblockable
 	cp	a, SIGKILL
-	jr	z, .unblockable
+	jr	z, .kill_unblockable
 ; is the signal blocked ?
 ; y/n
 ; else jump to default function
@@ -230,8 +230,8 @@ kill:
 ; tst (hl) and a bitmask
 	and	a, (hl)
 ; this mean it is set in (hl)
-	jr	nz, .blocked
-.unblockable:
+	jr	nz, .kill_blocked
+.kill_unblockable:
 ; so now, I have iy = thread to signal, still the signal in c, data in de
 ; push the context on the thread stack
 ; restore signal in a
@@ -239,7 +239,7 @@ kill:
 	ld	hl, (kthread_current)
 	lea	bc, iy+0
 	sbc	hl, bc
-	jr	z, .raise_frame
+	jr	z, .kill_raise_frame
 	push	ix
 	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
 	ld	bc, $00033A
@@ -262,7 +262,7 @@ kill:
 	ld	(ix-9), hl
 	ld	hl, _sigreturn
 	ld	(ix-12), hl
-	ld	hl, ksignal.handler
+	ld	hl, .handler
 	ld	(ix-15), hl
 ; adjust stack position
 	lea	hl, ix-33
@@ -278,7 +278,7 @@ kill:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
 	call	nz, task_switch_running
-.blocked:
+.kill_blocked:
 	tstei
 	ld	a, b
 	or	a, a
@@ -287,7 +287,7 @@ kill:
 	pop	bc
 	pop	iy
 	ret
-.raise_frame:
+.kill_raise_frame:
 ; so now, I have iy = thread to signal, still the signal in a, data in de
 ; push the context on the thread stack
 	pop	hl	; this is the raise() interrupt status
@@ -308,17 +308,17 @@ kill:
 	push	hl	; signal
 	ld	ix, _sigreturn
 	push	ix
-	ld	ix, ksignal.handler
+	ld	ix, .handler
 	jp	(ix)
-.no_thread:
+.kill_no_thread:
 	ld	a, ESRCH
-	jr	.errno
-.no_permission:
+	jr	.kill_errno
+.kill_no_permission:
 	ld	a, EPERM
-	jr	.errno
-.no_signal:
+	jr	.kill_errno
+.kill_no_signal:
 	ld	a, EINVAL
-.errno:
+.kill_errno:
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_ERRNO), a
 	tstei

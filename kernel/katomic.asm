@@ -58,7 +58,7 @@ kmutex:
 	sbc	hl, hl
 	ret
 
-.trylock:
+.try_lock:
 	push	de
 	ld	e, EBUSY
 	sra	(hl)
