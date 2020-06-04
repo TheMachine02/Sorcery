@@ -112,7 +112,6 @@ kqueue:
 	ld	(hl), ix
 	pop	ix
 	pop	hl
-	or	a, a
 	pop	de
 	ret
 .null_queue:

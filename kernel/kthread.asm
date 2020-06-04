@@ -84,7 +84,7 @@ define	kthread_pid_bitmap			$D00200
 
 kthread:
 .init:
-	tstdi
+	di
 	ld	hl, kthread_mqueue_0
 	ld	(hl), 0
 	ld	de, kthread_mqueue_0 + 1
@@ -113,9 +113,6 @@ kthread:
 	ld	de, kthread_pid_bitmap+5
 	ld	bc, 251
 	ldir
-	pop	af
-	ret	po
-	ei
 	ret
 
 .yield=kscheduler.yield
@@ -263,20 +260,24 @@ kthread:
 .resume_from_IRQ:
 ; resume a thread waiting IRQ
 ; interrupt should be DISABLED when calling this routine
-	push	af
+; save a
+	ld	b, a
 	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
-	ld	a, (iy+KERNEL_THREAD_IRQ)
+	lea	hl, iy+KERNEL_THREAD_IRQ
+	ld	a, (hl)
 	or	a, a
 	jr	z, .resume_from_IRQ_exit
-	ld	(iy+KERNEL_THREAD_IRQ), 0
-	ld	a, (iy+KERNEL_THREAD_STATUS)
+	ld	(hl), 0
+	inc	hl
+	ld	a, (hl)
 	cp	a, TASK_INTERRUPTIBLE
 	jr	nz, .resume_from_IRQ_exit
 	call	task_switch_running
 	ld	a, $FF
 	ld	(kthread_need_reschedule), a
 .resume_from_IRQ_exit:
-	pop	af
+; restore a
+	ld	a, b
 	lea	iy, ix+0
 ; return ix = iy = previous thread in the thread queue
 	ret
@@ -298,28 +299,26 @@ kthread:
 	
 .resume:
 ; wake thread (adress iy)
-; insert in place in the RR list
-; return iy = kqueue_current
-	push	hl
+; destroy hl, a (probably more)
 	lea	hl, iy+0
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .resume_exit
+	ret	z
+	ld	a, i
 	push	af
-	tstdi
-	ld	a, (iy+KERNEL_THREAD_STATUS)    ; this read need to be atomic !
-	cp	a, TASK_INTERRUPTIBLE
+; this read need to be atomic !
+	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; can't wake TASK_READY (0) and TASK_STOPPED (2)
-	jr	nz, .resume_exit_atomic
+	cp	a, TASK_INTERRUPTIBLE
+	jr	nz, .resume_exit
 	call	task_switch_running
 	ld	a, $FF
 	ld	(kthread_need_reschedule), a
-.resume_exit_atomic:
-	tstei
-	pop	af
 .resume_exit:
-	pop	hl
+	pop	af
+	ret	po
+	ei
 	ret
 
 .once:
@@ -401,6 +400,8 @@ kthread:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
 	di
 	push	iy
+	push	de
+	push	af
 	ld	iy, (kthread_current)
 	call	task_switch_sleep_ms
 	call	task_yield
@@ -412,7 +413,6 @@ kthread:
 	or	a, h
 	call	nz, klocal_timer.remove
 	ei
-	push	de
 	ld	e, (iy+KERNEL_THREAD_TIMER_COUNT)
 ; times in jiffies left to sleep
 	ld	d, TIME_JIFFIES_TO_MS
@@ -432,6 +432,7 @@ kthread:
 	add	hl, hl
 	add	hl, hl
 	add	hl, de
+	pop	af
 	pop	de
 	pop	iy
 	ret
@@ -568,20 +569,18 @@ task_switch_stopped:
 ; sleep	'hl' ms, granularity of about 4,7 ms
 task_switch_sleep_ms:
 ; do  hl * (32768/154/1000)
-	push	bc
-	ld	b, l
-	ld	c, TIME_MS_TO_JIFFIES
-	mlt	bc
-	ld	a, c
+	ld	e, l
+	ld	d, TIME_MS_TO_JIFFIES
+	mlt	de
+	ld	a, e
 	or	a, a
 	jr	z, $+3
-	inc	b
-	ld	c, b
-	ld	b, 0
+	inc	d
+	ld	e, d
+	ld	d, 0
 	ld	l, TIME_MS_TO_JIFFIES
 	mlt	hl
-	add	hl, bc
-	pop	bc
+	add	hl, de
 ; add timer
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	a, SIGEV_THREAD
