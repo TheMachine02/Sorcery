@@ -297,7 +297,6 @@ end if
 	ret
 
 .local_timer_process:
-; don't touch bc and iy that's all
 ; remove the timer from the queue
 	call	klocal_timer.remove
 ; switch based on what we should do
@@ -305,10 +304,22 @@ end if
 	or	a, a
 	ret	z
 	dec	a
-	jr	z, .local_timer_signal
-	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
-	jp	(hl)
+	jr	nz, .local_timer_thread
 .local_timer_signal:
 	ld	c, (iy+KERNEL_THREAD_PID)
 	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNO)
 	jp	kill
+.local_timer_thread:
+; callback
+	push	iy
+	push	bc
+	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_VALUE)
+	push	hl	; push it on the stack	
+	call	.local_timer_call
+	pop	hl
+	pop	bc
+	pop	iy
+	ret
+.local_timer_call:
+	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
+	jp	(hl)

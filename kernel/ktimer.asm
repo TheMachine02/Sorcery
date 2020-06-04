@@ -3,10 +3,11 @@ define 	SIGEV_SIGNAL		1
 define	SIGEV_THREAD		2
 
 define	SIGEVENT		$0
-define	SIGEVENT_SIZE		$5
+define	SIGEVENT_SIZE		$8
 define	SIGEV_SIGNOTIFY		$0
 define	SIGEV_SIGNO		$1
 define	SIGEV_NOTIFY_FUNCTION	$2
+define	SIGEV_VALUE		$5
 
 ; (div/32768)*1000*16
 ; (32768/div)/1000*256
@@ -50,8 +51,10 @@ klocal_timer:
 ; EV_SIGNOTIFY		$0
 ; EV_SIGNO		$1
 ; EV_NOTIFY_FUNCTION	$2
+; EV_VALUE		$5
 ; pass NULL for default callback, ie resume thread
 ; de is timer count
+; bc is ev value
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 	add	hl, de

@@ -31,15 +31,15 @@ define	KERNEL_THREAD_TIMER_SIGEVENT		$2A
 define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$2A
 define	KERNEL_THREAD_TIMER_EV_SIGNO		$2B
 define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2C
-; 2F free
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$2F
-; up to $80, table is 81 bytes or 27 descriptor, 3 reserved as stdin, stdout, stderr ;
-; 24 descriptors usables ;
+define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$32
+; up to $80, table is 78 bytes or 26 descriptor, 3 reserved as stdin, stdout, stderr ;
+; 23 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$80
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	27
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	26
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
@@ -552,15 +552,7 @@ kthread:
 ; rest is useless for idle thread
 .IHEADER_END:
 
-; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
-; may break if not in this state before
-; need to be fully atomic
-task_switch_running:
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
-	ld	hl, kthread_queue_retire
-	call	kqueue.remove
-	ld	l, (iy+KERNEL_THREAD_PRIORITY)
-	jr	kqueue.insert_current
+task_yield = kthread.yield
 
 ; from TASK_READY to TASK_STOPPED
 ; may break if not in this state before
@@ -606,5 +598,14 @@ task_switch_interruptible:
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
 	jr	kqueue.insert_current
-	
-task_yield = kthread.yield
+
+; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
+; may break if not in this state before
+; need to be fully atomic
+task_switch_running:
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+	ld	hl, kthread_queue_retire
+	call	kqueue.remove
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+assert kqueue.insert_current = $
+;	jr	kqueue.insert_current
