@@ -33,6 +33,7 @@ define	KERNEL_THREAD_TIMER_EV_SIGNO		$2B
 define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2C
 define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
 define	KERNEL_THREAD_NICE			$32
+define	KERNEL_THREAD_ATTRIBUTE			$33
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$35
 ; up to $80, table is 75 bytes or 25 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 23 descriptors usables ;
@@ -44,11 +45,14 @@ define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	25
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
-define  KERNEL_THREAD_ONCE_INIT			$FE
+
+define  THREAD_ONCE_INIT			$FE
+define	THREAD_JOIGNABLE			0
 
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
 define	TASK_STOPPED				2	; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
+define	TASK_ZOMBIE				3
 define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
@@ -171,6 +175,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
 	ld	(iy+KERNEL_THREAD_NICE), 0
+	ld	(iy+KERNEL_THREAD_ATTRIBUTE), 0
 ; sig mask ;
 	ld	de, NULL
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
@@ -326,6 +331,30 @@ kthread:
 	ei
 	ret
 
+.join:
+; hl = pthread_id
+	di
+	ld	de, kthread_pid_bitmap + 1
+	add	hl, de
+	ld	iy, (hl)
+; check status
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_ZOMBIE
+	jr	z, .join_exit
+.join_block:
+	call	task_yield
+	di
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_ZOMBIE
+	jr	nz, .join_block
+.join_exit:
+	di
+	call	task_switch_running
+	ld	iy, (iy+KERNEL_THREAD_STACK)
+	ld	hl, (iy-12)
+	ei
+	ret
+	
 .once:
 ; int pthread_once(pthread_once_t *once_control, void (*init_routine) (void));   
 ; de point to the init routine, hl point to *once_control, destroy all reg based on the init routine
@@ -343,7 +372,20 @@ kthread:
 .core:
 
 .exit:
+; signal parent thread of the end of the child thread
+; also send HL as exit code
+	ld	c, (iy+KERNEL_THREAD_PPID)
+	ld	a, SIGCHLD
+	call	ksignal.kill
 	di
+	ld	iy, (kthread_current)
+	bit	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
+	jr	z, .continue_exit
+	push	hl
+	call	task_switch_zombie
+	pop	hl
+	call	task_yield
+.continue_exit:
 	ld	sp, (KERNEL_STACK)
 ; first disable stack protector (load the kernel_stack stack protector)
 	ld	a, $B0
@@ -352,16 +394,8 @@ kthread:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
-	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_PID)
-	push	hl
 	call	.free_pid
-	pop	hl
-; signal parent thread of the end of the child thread
-; also send HL as exit code
-	ld	c, (iy+KERNEL_THREAD_PPID)
-	ld	a, SIGCHLD
-	call	ksignal.kill
 ; need to free IRQ locked and mutex locked to thread
 ; de = next thread to be active
 ; remove from active
@@ -559,6 +593,17 @@ kthread:
 .IHEADER_END:
 
 task_yield = kthread.yield
+
+; from TASK_READY to TASK_STOPPED
+; may break if not in this state before
+; need to be fully atomic
+task_switch_zombie:
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_ZOMBIE
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	call	kqueue.remove
+	ld	l, kthread_queue_retire and $FF
+	jr	kqueue.insert_current
 
 ; from TASK_READY to TASK_STOPPED
 ; may break if not in this state before
