@@ -190,6 +190,9 @@ ksignal:
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_ZOMBIE
+	jp	z, .kill_no_thread
 ; b = signal, iy = thread adress
 ; push on the thread stack all the context
 ; todo check permission here (first byte of bitmap is permission level)    
@@ -244,29 +247,32 @@ ksignal:
 	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
 	ld	bc, $00033A
 	otimr
-	ld	ix, (hl)
-	or	a, a
+	ld	ix, 0
+	add	ix, sp
+	ld	hl, (hl)
+	ld	sp, hl
 	sbc	hl, hl
-	ld	(ix-18), hl
-	ld	(ix-21), iy
-	ld	(ix-24), de
-	ld	(ix-27), hl
-	ld	(ix-30), hl
-	ld	b, a
-	ld	c, 0
-	ld	(ix-33), bc
-	ld	l, $FF		; pe set
-	ld	(ix-3), hl
-	ld	(ix-6), de
+	ld	l, $FF
+	push	hl
+	push	de
 	ld	l, a
-	ld	(ix-9), hl
+	push	hl
 	ld	hl, _sigreturn
-	ld	(ix-12), hl
+	push	hl
 	ld	hl, .handler
-	ld	(ix-15), hl
-; adjust stack position
-	lea	hl, ix-33
+	push	hl
+	sbc	hl, hl
+	push	hl
+	push	iy
+	push	de
+	push	hl
+	push	hl
+	ld	h, a
+	push	hl
+	sbc	hl, hl
+	add	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
+	ld	sp, ix
 	ld	ix, (kthread_current)
 	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
 	ld	bc, $00033A
@@ -274,7 +280,7 @@ ksignal:
 	ld	b, a
 	pop	ix
 ; change state of the thread based on the context
-; if state is RUNNING, make it running 
+; if state is not RUNNING, make it running 
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	or	a, a
 	call	nz, task_switch_running
