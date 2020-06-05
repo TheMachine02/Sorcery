@@ -15,15 +15,19 @@ define	SIGEV_VALUE		$5
 if CONFIG_CRYSTAL_DIVISOR = 3
 	define	TIME_JIFFIES_TO_MS		153
 	define	TIME_MS_TO_JIFFIES		27
+	define	TIME_S_TO_JIFFIES		104
 else if CONFIG_CRYSTAL_DIVISOR = 2
 	define	TIME_JIFFIES_TO_MS		106
 	define	TIME_MS_TO_JIFFIES		38
+	define	TIME_S_TO_JIFFIES		150
 else if CONFIG_CRYSTAL_DIVISOR = 1
 	define	TIME_JIFFIES_TO_MS		75
 	define	TIME_MS_TO_JIFFIES		54
-else
+	define	TIME_S_TO_JIFFIES		213
+else if CONFIG_CRYSTAL_DIVISOR = 0
 	define	TIME_JIFFIES_TO_MS		36
-	define	TIME_JIFFIES_TO_MS		113
+	define	TIME_MS_TO_JIFFIES		113
+	define	TIME_S_TO_JIFFIES		222
 end if
 
 ; timer queue
@@ -88,7 +92,41 @@ klocal_timer:
 	call	.remove
 	tstei
 	ret
-	
+
+.alarm:
+	ld	iy, (kthread_current)
+	ld	de, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, e
+	or	a, d
+	jr	nz, .alarm_disarm
+; convert second to jiffies
+	ld	e, TIME_S_TO_JIFFIES
+	ld	d, l
+	mlt	de
+	ld	l, TIME_S_TO_JIFFIES
+	mlt	hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, de
+if CONFIG_CRYSTAL_DIVISOR = 0
+	add	hl, hl
+end if
+; add timer
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	a, SIGEV_SIGNAL
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	a, SIGALRM
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNO), a
+	jr	.insert
+.alarm_disarm:
+	jr	.remove
+
 .insert:
 ; iy is node to insert
 ; hl is queue pointer (count, queue_current)
@@ -141,7 +179,7 @@ klocal_timer:
 	ld	de, NULL
 	ld	(hl), de
 	ret
-
+	
 task_add_timer:
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	a, SIGEV_THREAD

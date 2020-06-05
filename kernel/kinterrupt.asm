@@ -127,8 +127,12 @@ kscheduler:
 ; hl = priority
 	ld	a, (hl)
 	sub	a, KERNEL_QUEUE_SIZE
-	jr	nc, $+3
+	add	a, (iy+KERNEL_THREAD_NICE)
+	jp	p, $+5
 	xor	a, a
+	cp	a, SCHED_PRIO_MIN+1
+	jr	c, $+4
+	ld	a, SCHED_PRIO_MIN
 	ld	(hl), a
 	inc	hl
 	jr	.local_quantum_compute
@@ -193,9 +197,12 @@ end if
 	call	kqueue.remove
 	ld	a, l
 	add	a, KERNEL_QUEUE_SIZE
+	add	a, (iy+KERNEL_THREAD_NICE)
+	jp	p, $+5
+	xor	a, a
 	cp	a, SCHED_PRIO_MIN+1
 	jr	c, $+4
-	ld	a, SCHED_PRIO_MIN
+	ld	a, SCHED_PRIO_MIN	
 	ld	(de), a
 	ld	l, a
 	call	kqueue.insert_end

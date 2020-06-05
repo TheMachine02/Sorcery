@@ -60,6 +60,9 @@ kname:
 
 
 THREAD_INIT_TEST:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_NICE), NICE_PRIO_MAX
+
 ; load frozen elf example
 	call	kexec.load_elf
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
@@ -69,7 +72,7 @@ THREAD_INIT_TEST:
 
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
-	
+		
 ; video lock for me
 	call	kvideo.irq_lock
 	ld	bc, 0
@@ -95,7 +98,7 @@ THREAD_INIT_TEST:
 	
 	call	kvideo.swap
 	
-	ld	hl, 1000	; 250 ms is nice
+	ld	hl, 1000	; 1000 ms is nice
 	call	kthread.sleep
 	
 ; we were not waked by spining thread ! (masked signal)

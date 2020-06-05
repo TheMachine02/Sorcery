@@ -32,14 +32,15 @@ define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$2A
 define	KERNEL_THREAD_TIMER_EV_SIGNO		$2B
 define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2C
 define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$32
-; up to $80, table is 78 bytes or 26 descriptor, 3 reserved as stdin, stdout, stderr ;
+define	KERNEL_THREAD_NICE			$32
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$35
+; up to $80, table is 75 bytes or 25 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 23 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$80
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	26
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	25
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
@@ -52,6 +53,8 @@ define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
 define	SCHED_PRIO_MIN				12
+define	NICE_PRIO_MIN				8
+define	NICE_PRIO_MAX				-8
 
 ; multilevel priority queue ;
 define	kthread_mqueue_0			$D00400
@@ -167,6 +170,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
+	ld	(iy+KERNEL_THREAD_NICE), 0
 ; sig mask ;
 	ld	de, NULL
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de

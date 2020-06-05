@@ -7,7 +7,7 @@ define	CONFIG_USE_RAM_CACHE		1
 define	CONFIG_FPU_FAULT		1
 
 ; clock settings ;
-define	CONFIG_CRYSTAL_DIVISOR		2
+define	CONFIG_CRYSTAL_DIVISOR		3
 ; 0 = div 74
 ; 1 = div 154
 ; 2 = div 218 (or about 150 Hz)
