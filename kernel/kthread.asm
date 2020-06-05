@@ -266,7 +266,6 @@ kthread:
 ; interrupt should be DISABLED when calling this routine
 ; save a
 	ld	b, a
-	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
 	lea	hl, iy+KERNEL_THREAD_IRQ
 	ld	a, (hl)
 	or	a, a
@@ -276,14 +275,16 @@ kthread:
 	ld	a, (hl)
 	cp	a, TASK_INTERRUPTIBLE
 	jr	nz, .resume_from_IRQ_exit
+	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
 	call	task_switch_running
 	ld	a, $FF
 	ld	(kthread_need_reschedule), a
+	lea	iy, ix+0
 .resume_from_IRQ_exit:
 ; restore a
 	ld	a, b
-	lea	iy, ix+0
 ; return ix = iy = previous thread in the thread queue
+	or	a, a
 	ret
 	
 .suspend:

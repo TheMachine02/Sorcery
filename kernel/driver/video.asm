@@ -90,7 +90,6 @@ kvideo:
 	ret	z
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
 ; reset the carry flag, IRQ doesn't need thread to be waked
-	ccf
 	jp	kthread.resume_from_IRQ
 
 .irq_lock:

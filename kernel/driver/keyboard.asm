@@ -63,7 +63,6 @@ kkeyboard:
 	bit	DRIVER_KEYBOARD_IRQ_LOCK_SET, (hl)
 	ret	z
 	ld	iy, (DRIVER_KEYBOARD_IRQ_LOCK_THREAD)
-	ccf
 	jp	kthread.resume_from_IRQ
 		
 .irq_lock:
