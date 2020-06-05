@@ -61,12 +61,14 @@ kname:
 
 THREAD_INIT_TEST:
 	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_NICE), NICE_PRIO_MAX
-
 ; load frozen elf example
-	call	kexec.load_elf
+;	call	kexec.load_elf	; thread  2
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
-	ld	iy, TEST_THREAD_C
+	ld	iy, TEST_THREAD_C ; thread 2
+	ld	hl, 2048
+	call	kthread.create
+
+	ld	iy, TEST_THREAD_C_DEATH ; thread 3
 	ld	hl, 2048
 	call	kthread.create
 
@@ -101,6 +103,9 @@ THREAD_INIT_TEST:
 	ld	hl, 1000	; 1000 ms is nice
 	call	kthread.sleep
 	
+	ld	hl, 3
+	call	kthread.join
+	
 ; we were not waked by spining thread ! (masked signal)
 	pop	bc
 	inc	bc
@@ -118,9 +123,20 @@ TEST_THREAD_C:
 ;db	$DD, $FF
 ; need to catch rst 00h for that !
 	ld	hl, $AA55AA
-	ld	a, SIGUSR1
+	ld	a, SIGCONT
 	ld	c, 1
 	call	ksignal.kill
 	jr	.spin
 	pop ix
 	ret
+
+TEST_THREAD_C_DEATH:
+	call __frameset0
+	
+	ld	iy, (kthread_current)
+	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
+	
+	ld	hl, 3000
+	call	kthread.sleep
+	ld	hl, 0
+	jp	kthread.exit	

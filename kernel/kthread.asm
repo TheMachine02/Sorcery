@@ -34,6 +34,7 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2C
 define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
 define	KERNEL_THREAD_NICE			$32
 define	KERNEL_THREAD_ATTRIBUTE			$33
+define	KERNEL_THREAD_JOINED			$34	; joined thread waiting for exit()
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$35
 ; up to $80, table is 75 bytes or 25 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 23 descriptors usables ;
@@ -207,10 +208,9 @@ kthread:
 ; map the thread to be transparent to the scheduler
 ; iy is thread adress, a is still PID    
 ; map the pid
-	or	a, a
+	add	a, a
+	add	a, a
 	sbc	hl, hl
-	add	a, a
-	add	a, a
 	ld	l, a
 	ld	de, kthread_pid_bitmap
 	add	hl, de
@@ -332,29 +332,75 @@ kthread:
 	ret
 
 .join:
-; hl = pthread_id
+; hl = pthread_id, de pointer to pointer to exit value
+	push	ix
+	add	hl, hl
+	add	hl, hl
+	ld	bc, kthread_pid_bitmap
+	add	hl, bc
 	di
-	ld	de, kthread_pid_bitmap + 1
-	add	hl, de
-	ld	iy, (hl)
+	ld	a, (hl)
+	or	a, a
+	jr	z, .join_no_thread
+	inc	hl
+	ld	ix, (hl)
+	bit	THREAD_JOIGNABLE, (ix+KERNEL_THREAD_ATTRIBUTE)
+	jr	z, .join_detached
+	ld	a, (ix+KERNEL_THREAD_JOINED)
+	or	a, a
+	jr	nz, .join_watching
+	ld	iy, (kthread_current)
+	lea	hl, ix+0
+	lea	bc, iy+0
+	or	a, a
+	sbc	hl, bc
+	jr	z, .join_itself
+	ld	a, (bc)
+	ld	(ix+KERNEL_THREAD_JOINED), a
 ; check status
-	ld	a, (iy+KERNEL_THREAD_STATUS)
+	ld	a, (ix+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
 	jr	z, .join_exit
 .join_block:
+	call	task_switch_interruptible	; we may be waked by signal, etc
 	call	task_yield
 	di
-	ld	a, (iy+KERNEL_THREAD_STATUS)
+	ld	a, (ix+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
 	jr	nz, .join_block
 .join_exit:
+	push	de
+	lea	iy, ix+0
 	di
 	call	task_switch_running
 	ld	iy, (iy+KERNEL_THREAD_STACK)
-	ld	hl, (iy-12)
+	ld	de, (iy-12)
 	ei
+	pop	hl
+	ld	(hl), de
+	or	a, a
+	sbc	hl, hl
+	pop	ix
 	ret
-	
+.join_no_thread:
+	ld	a, ESRCH
+	jr	.join_errno
+.join_itself:
+	ld	a, EDEADLK
+	jr	.join_errno
+.join_detached:
+.join_watching:
+	ld	a, EINVAL
+	jr	.join_errno
+.join_errno:
+	ei
+	ld	(iy+KERNEL_THREAD_ERRNO), a
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	pop	ix
+	ret
+
 .once:
 ; int pthread_once(pthread_once_t *once_control, void (*init_routine) (void));   
 ; de point to the init routine, hl point to *once_control, destroy all reg based on the init routine
@@ -374,18 +420,41 @@ kthread:
 .exit:
 ; signal parent thread of the end of the child thread
 ; also send HL as exit code
-	ld	c, (iy+KERNEL_THREAD_PPID)
-	ld	a, SIGCHLD
-	call	ksignal.kill
 	di
 	ld	iy, (kthread_current)
 	bit	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 	jr	z, .continue_exit
+; if we have a thread * currently * watching, wake it up
 	push	hl
+	ld	a, (iy+KERNEL_THREAD_JOINED)
+	or	a, a
+	jr	z, .exit_make_zombie_bunny
+	add	a, a
+	add	a, a
+	sbc	hl, hl
+	ld	l, a
+	ld	bc, kthread_pid_bitmap
+	add	hl, bc
+	ld	a, (hl)
+; sanity check ;
+	or	a, a
+	jr	z, .exit_make_zombie_bunny
+	push	iy
+	inc	hl
+	ld	iy, (hl)
+; should be sleeping if joined, but anyway, extra check
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_INTERRUPTIBLE
+	call	z, task_switch_running
+	pop	iy
+.exit_make_zombie_bunny:
 	call	task_switch_zombie
 	pop	hl
 	call	task_yield
 .continue_exit:
+	ld	c, (iy+KERNEL_THREAD_PPID)
+	ld	a, SIGCHLD
+	call	ksignal.kill
 	ld	sp, (KERNEL_STACK)
 ; first disable stack protector (load the kernel_stack stack protector)
 	ld	a, $B0
@@ -558,11 +627,10 @@ kthread:
 ; free a pid
 ; this should probably be in critical code section if you don't want BAD STUFF TO HAPPEN
 ; kinda reserved to ASM
-	or	a, a
+	add	a, a
 	ret	z   ; don't you dare free pid 0 !
+	add	a, a
 	sbc	hl, hl
-	add	a, a
-	add	a, a
 	ld	l, a
 	ld	de, kthread_pid_bitmap
 	add	hl, de
