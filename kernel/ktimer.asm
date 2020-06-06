@@ -163,6 +163,7 @@ end if
 	or	a, a
 	jr	z, .null_queue
 	dec	(hl)
+	jr	z, .null_queue
 	push	iy
 	push	ix
 	ld	ix, (iy+KERNEL_THREAD_TIMER_NEXT)

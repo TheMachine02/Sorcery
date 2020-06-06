@@ -85,11 +85,10 @@ kqueue:
 ; iy is node to remove
 ; update queue_current to NULL if count=0 or if the node removed is current, to the next node
 ; hl is queue pointer (count, queue_current)
+; node MUST belong to the queue
 	push	de
-	ld	a, (hl)
-	or	a, a
-	jr	z, .null_queue
 	dec	(hl)
+	jr	z, .null_queue
 	push	hl
 	push	ix
 	inc	hl
