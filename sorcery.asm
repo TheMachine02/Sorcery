@@ -124,6 +124,7 @@ include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
 
+include	'kernel/compress/lz4.asm'
 
 elf_frozen_example:
 file	'executable.hex'

@@ -74,7 +74,7 @@ THREAD_INIT_TEST:
 
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
-		
+	
 ; video lock for me
 	call	kvideo.irq_lock
 	ld	bc, 0
