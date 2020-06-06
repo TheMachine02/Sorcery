@@ -26,23 +26,24 @@ define  KERNEL_THREAD_SIGNAL_MASK		$1D
 define	KERNEL_THREAD_TIMER			$21
 define	KERNEL_THREAD_TIMER_COUNT		$21
 define	KERNEL_THREAD_TIMER_NEXT		$24
-define	KERNEL_THREAD_TIMER_PREVIOUS		$27
-define	KERNEL_THREAD_TIMER_SIGEVENT		$2A
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$2A
-define	KERNEL_THREAD_TIMER_EV_SIGNO		$2B
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2C
-define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
-define	KERNEL_THREAD_NICE			$32
-define	KERNEL_THREAD_ATTRIBUTE			$33
-define	KERNEL_THREAD_JOINED			$34	; joined thread waiting for exit()
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$35
-; up to $80, table is 75 bytes or 25 descriptor, 3 reserved as stdin, stdout, stderr ;
-; 23 descriptors usables ;
+define	KERNEL_THREAD_TIMER_OWNER		$27
+define	KERNEL_THREAD_TIMER_PREVIOUS		$2A
+define	KERNEL_THREAD_TIMER_SIGEVENT		$2D
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$2D
+define	KERNEL_THREAD_TIMER_EV_SIGNO		$2E
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$2F
+define	KERNEL_THREAD_TIMER_EV_VALUE		$32
+define	KERNEL_THREAD_NICE			$35
+define	KERNEL_THREAD_ATTRIBUTE			$36
+define	KERNEL_THREAD_JOINED			$37	; joined thread waiting for exit()
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
+; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
+; 61 descriptors usables ;
 
-define	KERNEL_THREAD_HEADER_SIZE		$80
+define	KERNEL_THREAD_HEADER_SIZE		$100
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	25
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	64
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
@@ -183,10 +184,13 @@ kthread:
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+3), 0
 ; timer ;
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
+	ld	(iy+KERNEL_THREAD_TIMER_OWNER), iy
 ; stack limit set first ;
 	lea	hl, iy + 4
-	ld	e, KERNEL_THREAD_HEADER_SIZE
-	add	hl, de
+;	ld	e, KERNEL_THREAD_HEADER_SIZE
+;	add	hl, de
+; we are block aligned. Do +256
+	inc	h
 ; please note write affect memory, so do a + 4 to be safe    
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 ; stack ;
@@ -423,7 +427,7 @@ kthread:
 	di
 	ld	iy, (kthread_current)
 	bit	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
-	jr	z, .continue_exit
+	jr	z, .exit_clean
 ; if we have a thread * currently * watching, wake it up
 	push	hl
 	ld	a, (iy+KERNEL_THREAD_JOINED)
@@ -451,7 +455,7 @@ kthread:
 	call	task_switch_zombie
 	pop	hl
 	call	task_yield
-.continue_exit:
+.exit_clean:
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	ksignal.kill
@@ -517,11 +521,15 @@ kthread:
 ; this one is risky with interrupts, so disable them the time to do it
 	di
 	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	push	hl
 	ld	a, l
 	or	a, h
 	call	nz, klocal_timer.remove
+	ld	hl, NULL
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	pop	hl
 	ei
-	ld	e, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	e, l
 ; times in jiffies left to sleep
 	ld	d, TIME_JIFFIES_TO_MS
 	mlt	de
@@ -533,8 +541,7 @@ kthread:
 	xor	a, a
 	ld	e, d
 	ld	d, a
-	ld	l, (iy+KERNEL_THREAD_TIMER_COUNT)
-	ld	h, TIME_JIFFIES_TO_MS
+	ld	l, TIME_JIFFIES_TO_MS
 	mlt	hl
 	add	hl, hl
 	add	hl, hl

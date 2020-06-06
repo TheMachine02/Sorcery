@@ -1,13 +1,25 @@
-define	SIGEV_NONE		0
-define 	SIGEV_SIGNAL		1
-define	SIGEV_THREAD		2
+define	SIGEV_NONE			0
+define 	SIGEV_SIGNAL			1
+define	SIGEV_THREAD			2
 
-define	SIGEVENT		$0
-define	SIGEVENT_SIZE		$8
-define	SIGEV_SIGNOTIFY		$0
-define	SIGEV_SIGNO		$1
-define	SIGEV_NOTIFY_FUNCTION	$2
-define	SIGEV_VALUE		$5
+define	SIGEVENT			$0
+define	SIGEVENT_SIZE			$8
+define	SIGEV_SIGNOTIFY			$0
+define	SIGEV_SIGNO			$1
+define	SIGEV_NOTIFY_FUNCTION		$2
+define	SIGEV_VALUE			$5
+
+define	TIMER				$0
+define	TIMER_COUNT			$0
+define	TIMER_NEXT			$1
+define	TIMER_PREVIOUS			$4
+define	TIMER_OWNER			$7
+define	TIMER_SIGEVENT			$A
+define	TIMER_EV_SIGNOTIFY		$A
+define	TIMER_EV_SIGNO			$B
+define	TIMER_EV_NOTIFY_FUNCTION	$C
+define	TIMER_EV_VALUE			$F
+define	TIMER_SIZE			18
 
 ; (div/32768)*1000*16
 ; (32768/div)/1000*256
@@ -60,6 +72,11 @@ klocal_timer:
 ; de is timer count
 ; bc is ev value
 	ld	iy, (kthread_current)
+	di
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, h
+	or	a, l
+	jr	nz, .create_failed
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 	add	hl, de
 	or	a, a
@@ -76,25 +93,43 @@ klocal_timer:
 	ld	hl, .notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 .create_arm:
-	tstdi
 	call	.insert
-	tstei
+	ei
+	or	a, a
+	sbc	hl, hl
+	ret
+.create_failed:
+	ei
+	ld	a, EINVAL
+	ld	(iy+KERNEL_THREAD_ERRNO), a
+	scf
+	sbc	hl, hl
 	ret
 	
 .delete:
 ; delete (or disarm) the current timer of the thread
 	ld	iy, (kthread_current)
+	di
 	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
 	ld	a, l
 	or	a, h
-	ret	z
-	tstdi
+	jr	z, .delete_errno
 	call	.remove
-	tstei
+	ld	hl, NULL
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ei
 	ret
-
+.delete_errno:
+	ei
+	ld	a, EINVAL
+	ld	(iy+KERNEL_THREAD_ERRNO), a
+	scf
+	sbc	hl, hl
+	ret
+	
 .alarm:
 	ld	iy, (kthread_current)
+	di
 	ld	de, (iy+KERNEL_THREAD_TIMER_COUNT)
 	ld	a, e
 	or	a, d
@@ -123,10 +158,16 @@ end if
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
 	ld	a, SIGALRM
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNO), a
-	jr	.insert
+	call	.insert
+	ei
+	ret
 .alarm_disarm:
-	jr	.remove
-
+	call	.remove
+	ld	hl, NULL
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ei
+	ret
+	
 .insert:
 ; iy is node to insert
 ; hl is queue pointer (count, queue_current)
@@ -157,11 +198,12 @@ end if
 	ld	(iy+KERNEL_THREAD_TIMER_NEXT), iy
 	ret
 
+; please, be sure of what you remove
 .remove:
 	ld	hl, klocal_timer_queue
-	ld	a, (hl)
-	or	a, a
-	jr	z, .null_queue
+; 	ld	a, (hl)
+; 	or	a, a
+; 	jr	z, .null_queue
 	dec	(hl)
 	jr	z, .null_queue
 	push	iy
@@ -180,7 +222,8 @@ end if
 	ld	de, NULL
 	ld	(hl), de
 	ret
-	
+
+; those two should be atomic function
 task_add_timer:
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	a, SIGEV_THREAD
@@ -194,4 +237,6 @@ task_delete_timer:
 	ld	a, l
 	or	a, h
 	ret	z	; can't disable, already disabled!
+	ld	hl, NULL
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	jr	klocal_timer.remove
