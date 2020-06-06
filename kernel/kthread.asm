@@ -26,8 +26,8 @@ define  KERNEL_THREAD_SIGNAL_MASK		$1D
 define	KERNEL_THREAD_TIMER			$21
 define	KERNEL_THREAD_TIMER_COUNT		$21
 define	KERNEL_THREAD_TIMER_NEXT		$24
-define	KERNEL_THREAD_TIMER_OWNER		$27
-define	KERNEL_THREAD_TIMER_PREVIOUS		$2A
+define	KERNEL_THREAD_TIMER_PREVIOUS		$27
+define	KERNEL_THREAD_TIMER_OWNER		$2A
 define	KERNEL_THREAD_TIMER_SIGEVENT		$2D
 define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$2D
 define	KERNEL_THREAD_TIMER_EV_SIGNO		$2E
@@ -524,7 +524,9 @@ kthread:
 	push	hl
 	ld	a, l
 	or	a, h
+	lea	iy, iy+KERNEL_THREAD_TIMER
 	call	nz, klocal_timer.remove
+	lea	iy, iy-KERNEL_THREAD_TIMER
 	ld	hl, NULL
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	pop	hl
@@ -712,7 +714,9 @@ task_switch_sleep_ms:
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
 	ld	hl, klocal_timer.notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
+	lea	iy, iy+KERNEL_THREAD_TIMER
 	call	klocal_timer.insert
+	lea	iy, iy-KERNEL_THREAD_TIMER
 	
 ; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:

@@ -11,15 +11,15 @@ define	SIGEV_VALUE			$5
 
 define	TIMER				$0
 define	TIMER_COUNT			$0
-define	TIMER_NEXT			$1
-define	TIMER_PREVIOUS			$4
-define	TIMER_OWNER			$7
-define	TIMER_SIGEVENT			$A
-define	TIMER_EV_SIGNOTIFY		$A
-define	TIMER_EV_SIGNO			$B
-define	TIMER_EV_NOTIFY_FUNCTION	$C
-define	TIMER_EV_VALUE			$F
-define	TIMER_SIZE			18
+define	TIMER_NEXT			$3
+define	TIMER_PREVIOUS			$6
+define	TIMER_OWNER			$9
+define	TIMER_SIGEVENT			$C
+define	TIMER_EV_SIGNOTIFY		$C
+define	TIMER_EV_SIGNO			$D
+define	TIMER_EV_NOTIFY_FUNCTION	$E
+define	TIMER_EV_VALUE			$11
+define	TIMER_SIZE			20
 
 ; (div/32768)*1000*16
 ; (32768/div)/1000*256
@@ -182,20 +182,20 @@ end if
 	inc	hl
 	ld	ix, (hl)
 	ld	(hl), iy
-	ld	hl, (ix+KERNEL_THREAD_TIMER_NEXT)
-	ld	(iy+KERNEL_THREAD_TIMER_PREVIOUS), ix
-	ld	(iy+KERNEL_THREAD_TIMER_NEXT), hl
-	ld	(ix+KERNEL_THREAD_TIMER_NEXT), iy
+	ld	hl, (ix+TIMER_NEXT)
+	ld	(iy+TIMER_PREVIOUS), ix
+	ld	(iy+TIMER_NEXT), hl
+	ld	(ix+TIMER_NEXT), iy
 	push	hl
 	pop	ix
-	ld	(ix+KERNEL_THREAD_TIMER_PREVIOUS), iy
+	ld	(ix+TIMER_PREVIOUS), iy
 	pop	ix
 	ret
 .create_queue:
 	inc	hl
 	ld	(hl), iy
-	ld	(iy+KERNEL_THREAD_TIMER_PREVIOUS), iy
-	ld	(iy+KERNEL_THREAD_TIMER_NEXT), iy
+	ld	(iy+TIMER_PREVIOUS), iy
+	ld	(iy+TIMER_NEXT), iy
 	ret
 
 ; please, be sure of what you remove
@@ -208,10 +208,10 @@ end if
 	jr	z, .null_queue
 	push	iy
 	push	ix
-	ld	ix, (iy+KERNEL_THREAD_TIMER_NEXT)
-	ld	iy, (iy+KERNEL_THREAD_TIMER_PREVIOUS)
-	ld	(ix+KERNEL_THREAD_TIMER_PREVIOUS), iy
-	ld	(iy+KERNEL_THREAD_TIMER_NEXT), ix
+	ld	ix, (iy+TIMER_NEXT)
+	ld	iy, (iy+TIMER_PREVIOUS)
+	ld	(ix+TIMER_PREVIOUS), iy
+	ld	(iy+TIMER_NEXT), ix
 	inc	hl
 	ld	(hl), iy
 	pop	ix
@@ -222,21 +222,3 @@ end if
 	ld	de, NULL
 	ld	(hl), de
 	ret
-
-; those two should be atomic function
-task_add_timer:
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	ld	a, SIGEV_THREAD
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
-	ld	hl, klocal_timer.notify_default
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
-	jr	klocal_timer.insert
-
-task_delete_timer:
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
-	ld	a, l
-	or	a, h
-	ret	z	; can't disable, already disabled!
-	ld	hl, NULL
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	jr	klocal_timer.remove

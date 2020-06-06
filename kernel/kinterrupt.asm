@@ -148,13 +148,13 @@ kscheduler:
 	ld	iy, (hl)
 	ld	b, a
 .local_timer_queue:
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	hl, (iy+TIMER_COUNT)
 	dec	hl
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	(iy+TIMER_COUNT), hl
 	ld	a, h
 	or	a, l
 	call	z, .local_timer_process
-	ld	iy, (iy+KERNEL_THREAD_TIMER_NEXT)
+	ld	iy, (iy+TIMER_NEXT)
 	djnz	.local_timer_queue
 .local_timer_exit:
 
@@ -307,20 +307,21 @@ end if
 ; remove the timer from the queue
 	call	klocal_timer.remove
 ; switch based on what we should do
-	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY)
+	ld	a, (iy+TIMER_EV_SIGNOTIFY)
 	or	a, a
 	ret	z
 	dec	a
 	jr	nz, .local_timer_thread
 .local_timer_signal:
-	ld	c, (iy+KERNEL_THREAD_PID)
-	ld	a, (iy+KERNEL_THREAD_TIMER_EV_SIGNO)
+	ld	hl, (iy+TIMER_OWNER)
+	ld	c, (hl)
+	ld	a, (iy+TIMER_EV_SIGNO)
 	jp	ksignal.kill
 .local_timer_thread:
 ; callback
 	push	iy
 	push	bc
-	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_VALUE)
+	ld	hl, (iy+TIMER_EV_VALUE)
 	push	hl	; push it on the stack	
 	call	.local_timer_call
 	pop	hl
@@ -328,5 +329,6 @@ end if
 	pop	iy
 	ret
 .local_timer_call:
-	ld	hl, (iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION)
+	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
+	ld	iy, (iy+TIMER_OWNER)
 	jp	(hl)
