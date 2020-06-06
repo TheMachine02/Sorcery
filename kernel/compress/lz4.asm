@@ -29,27 +29,15 @@
 
 ; Available functions:
 ; LZ4_decompress
-; - decompresses files, packed with lz4 command line tool, preferably with options -Sx -B4
+; - decompresses files, packed with lz4
 ; input parameters:
 ; HL - pointer to the buffer with compressed source data
 ; DE - pointer to the destination buffer for decompressed data
 ; on exit:
 ; A  - contains exit code: 
 ; 	0 - decompression successful
-;	1 - compressed size is bigger than 64kb
 ;	2 - unsupported version of lz4 compression format
-; HL - the number of decompressed bytes
 ; Contents of AF,BC,DE,HL are not preserved.
-; LZ4_decompress_raw
-; - decompresses raw LZ4 compressed data 
-; input parameters:
-; HL - pointer to the buffer with compressed source data
-; DE - pointer to the destination buffer for decompressed data
-; BC - size of the compressed data
-; on exit:
-; A  - exit code: 
-; 	0 - decompression successful
-; HL - the number of decompressed bytes
 
 define	LZ4_VERSION4		4
 define	LZ4_VERSION3		3
@@ -142,22 +130,16 @@ lz4:
 	inc	hl
 	inc	hl
 	inc	hl
-; check if compressed size is in 24 bits
-	ld	a, (hl)
-	or	a, a
-	jr	nz, .decompress_error
 	inc	hl
 
 ; decompress raw lz4 data packet
 ; on entry hl - start of packed buffer, de - destination buffer, bc - size of packed data
 .decompress_raw:
-	push	de							; store original destination pointer
+	push	de
+	ex	(sp), ix
 	push	hl							; store start of compressed data source
 	add	hl, bc       				; calculate end address of compressed block
-	push	hl							; move end address of compressed data to bc
-	pop	bc	
-	pop	hl							; restore start of compressed data source
-	push	bc							; store end address of compessed data
+	ex	hl, (sp)
 	ld	bc, 0
 ; get decompression token
 .get_token:
@@ -176,10 +158,9 @@ lz4:
 	ld	c, a							; set the count for calculation
 	cp	a, $0F							; if literal size <15
 	jr	nz, .copy_literals		; copy literal, else
-; calculate total literal size by adding contents of following bytes
-	push	de							; store destination
+; ; calculate total literal size by adding contents of following bytes
 	ex	de, hl
-; a = size of literal to copy, de=pointer to data to be added
+; ; a = size of literal to copy, de=pointer to data to be added
 	sbc	hl, hl
 	ld	l, a			; set hl with size of literal to copy 
 .calc_loop:
@@ -189,39 +170,38 @@ lz4:
 	add	hl, bc						; add it to the total literal length
 	inc	a						; if literal=255
 	jr	z, .calc_loop				; continue calculating the total literal size
-; store total literal size to copy in bc
+; ; store total literal size to copy in bc
 	push	hl
 	pop	bc	
 	ex	de, hl						; hl now contains current compressed data pointer  
-	pop	de							; restore destination to de 
 .copy_literals:
+	lea	de, ix+0
+	add	ix, bc
 	ldir								; copy literal to destination
 .skip_calc:
 ; check for end of compressed data
 	pop	af
-	pop	bc							; restore end address of compressed data 
-	sbc	hl, bc						; check if we reached the end of compressed data buffer
-	add	hl, bc
+	pop	de							; restore end address of compressed data 
+	sbc	hl, de						; check if we reached the end of compressed data buffer
+	add	hl, de
 	jr	z, .decompress_success				; decompression finished
-	push	bc							; store end address of compressed data
-
+	push	de							; store end address of compressed data
 ; Copy Matches
 	and	a, $0F							; token can be max 15 - mask out unimportant bits. resets also c flag for sbc later
 ; get the offset
-	inc.s	bc	; rest bcu
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)							; bc now contains the offset
 	inc	hl
 	push	hl							; store current compressed data pointer
-	push	de							; store destination pointer
-
+	lea	de, ix+0
 	ex	de, hl
 	sbc	hl, bc   					; calculate from the offset the new decompressed data source to copy from
 ; hl contains new copy source, de source ptr
 	ld	b, 0     					; load bc with the token
+	add	a, 4
 	ld	c, a
-	cp	a, $0F							; if matchlength <15
+	cp	a, $13							; if matchlength <15
 	jr	nz, .copy_matches				; copy matches. else 
 
 ; calculate total matchlength by adding additional bytes
@@ -236,26 +216,18 @@ lz4:
 	add	hl, bc						; add it to the total match length
 	inc	a						; if matchlength=255
 	jr	z, .calc_loop2				; continue calculating the total match length		
-	push	hl
-	pop	bc		; store total matchlength to copy in bc
-	pop	hl							; restore current decompressed data source
-	pop	iy							; set stack to proper position by restoring destination pointer temporarily into af  
+	ex	(sp), hl
+	pop	bc		; store total matchlength to copy in bc ; restore current decompressed data source
 	ex	de, hl
 	ex	(sp),hl						; update current compressed data pointer on the stack to the new value from de
 	ex	de, hl 
-	push	iy							; restore stack
-
 .copy_matches:
-	pop	de							; restore destination pointer
-	inc	bc							; add base length of 4 to get the correct size of matchlength 
-	inc	bc
-	inc	bc
-	inc	bc
+	lea	de, ix+0
+	add	ix, bc
 	ldir								; copy match
 	pop	hl							; restore current compressed data source
 	jr	.get_token				; continue decompression
 .decompress_success:
-	pop	hl							; store destination pointer 
-	sbc	hl, de						; calculate the number of decompressed bytes 
+	pop	ix
 	xor	a, a							; clear exit code
 	ret

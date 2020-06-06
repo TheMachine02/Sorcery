@@ -75,6 +75,10 @@ THREAD_INIT_TEST:
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
 	
+	ld	hl, lz4_frozen
+	ld	de, $D40000
+	call	lz4.decompress	
+	
 ; video lock for me
 	call	kvideo.irq_lock
 	ld	bc, 0

@@ -132,6 +132,9 @@ file	'executable.hex'
 elf_frozen_library:
 file	'libtest.hex'
 
+lz4_frozen:
+file	'kernel/kthread.asm.lz4'
+
 ; rb	$060000 - $
 org $060000
 _endos:
