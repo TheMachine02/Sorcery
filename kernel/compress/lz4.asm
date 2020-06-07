@@ -3,6 +3,7 @@
 ; All rights reserved. 
 ; LZ4 implementation for z80 and compatible processors - Copyright (c) 2013-2015 Piotr Drapich
 ; All rights reserved.
+; Heavily modified and ported to ez80 by TheMachine02
 ;
 ; Redistribution and use in source and binary forms, with or without modification, 
 ; are permitted provided that the following conditions are met: 
@@ -25,19 +26,6 @@
 ; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 ; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 
-; Ported to ez80 by TheMachine02
-
-; Available functions:
-; LZ4_decompress
-; - decompresses files, packed with lz4
-; input parameters:
-; HL - pointer to the buffer with compressed source data
-; DE - pointer to the destination buffer for decompressed data
-; on exit:
-; A  - contains exit code: 
-; 	0 - decompression successful
-;	2 - unsupported version of lz4 compression format
-; Contents of AF,BC,DE,HL are not preserved.
 
 define	LZ4_VERSION4		4
 define	LZ4_VERSION3		3
@@ -46,6 +34,7 @@ define	LZ4_VERSION2		2
 lz4:
 
 .decompress:
+; hl : src, de : dest
 ; check the magic number
 	ld	bc, 0
 	ld	a, (hl)
@@ -101,7 +90,7 @@ lz4:
 .no_preset_dictionary:
 	ld	a, (hl)
 	inc	hl
-; strip reserved bits (and #70) and check if block max size is set to 64kb (4)
+; strip reserved bits (and $70)
 	and	$40
 	jr	z, .version_not_supported
 ; skip header checksum
@@ -132,102 +121,82 @@ lz4:
 	inc	hl
 	inc	hl
 
-; decompress raw lz4 data packet
-; on entry hl - start of packed buffer, de - destination buffer, bc - size of packed data
 .decompress_raw:
-	push	de
-	ex	(sp), ix
-	push	hl							; store start of compressed data source
-	add	hl, bc       				; calculate end address of compressed block
+	push	hl
+	add	hl, bc
 	ex	hl, (sp)
 	ld	bc, 0
-; get decompression token
-.get_token:
-	xor	a, a 							; reset c flag for sbc later
-	ld	a, (hl)						; read token
+	jr	.get_token
+
+.matches:
+	push	bc
+	inc.s	bc
+	and	a, $0F
+	ld	c, (hl)
 	inc	hl
-	push	af							; store token
+	ld	b, (hl)
+	inc	hl
+	
+	push	de
+	ex	de, hl
+	sbc	hl, bc
+	ex	de, hl
+	
+	ld	b, 0
+	add	a, 4
+	ld	c, a
+	
+	cp	a, $13
+	jr	nz, .matches_copy
+	ld	ix, 0
+	ld	ixl, c
+.matches_lisc:
+	ld	c, (hl)
+	inc	hl
+	add	ix, bc
+	inc	c
+	jr	z, .matches_lisc
+	lea	bc, ix+0
+.matches_copy:
+	ex	(sp), hl
+	ex	de, hl
+	ldir
+	pop	hl
+.get_token:
+	xor	a, a
+	ld	a, (hl)
+	inc	hl
+	push	af
+.literals:
 ; unpack 4 high bits to get the length of literal
 	rlca
 	rlca
 	rlca
 	rlca
 ; copy literals
-	and	a, $0F							; token can be max 15 - mask out unimportant bits
-	jr	z, .skip_calc   			; there is no literals, skip calculation of literal size
-	ld	c, a							; set the count for calculation
-	cp	a, $0F							; if literal size <15
-	jr	nz, .copy_literals		; copy literal, else
-; ; calculate total literal size by adding contents of following bytes
-	ex	de, hl
-; ; a = size of literal to copy, de=pointer to data to be added
-	sbc	hl, hl
-	ld	l, a			; set hl with size of literal to copy 
-.calc_loop:
-	ld	a, (de)						; get additional literal size to add 
-	inc	de
-	ld	c, a							; set bc to the length of literal
-	add	hl, bc						; add it to the total literal length
-	inc	a						; if literal=255
-	jr	z, .calc_loop				; continue calculating the total literal size
-; ; store total literal size to copy in bc
-	push	hl
-	pop	bc	
-	ex	de, hl						; hl now contains current compressed data pointer  
-.copy_literals:
-	lea	de, ix+0
-	add	ix, bc
-	ldir								; copy literal to destination
-.skip_calc:
-; check for end of compressed data
-	pop	af
-	pop	de							; restore end address of compressed data 
-	sbc	hl, de						; check if we reached the end of compressed data buffer
-	add	hl, de
-	jr	z, .decompress_success				; decompression finished
-	push	de							; store end address of compressed data
-; Copy Matches
-	and	a, $0F							; token can be max 15 - mask out unimportant bits. resets also c flag for sbc later
-; get the offset
+	and	a, $0F
+	jr	z, .literals_null
+	ld	c, a
+	cp	a, $0F
+	jr	nz, .literals_copy
+	ld	ix, 0
+	ld	ixl, c
+.literals_lisc:
 	ld	c, (hl)
 	inc	hl
-	ld	b, (hl)							; bc now contains the offset
-	inc	hl
-	push	hl							; store current compressed data pointer
-	lea	de, ix+0
-	ex	de, hl
-	sbc	hl, bc   					; calculate from the offset the new decompressed data source to copy from
-; hl contains new copy source, de source ptr
-	ld	b, 0     					; load bc with the token
-	add	a, 4
-	ld	c, a
-	cp	a, $13							; if matchlength <15
-	jr	nz, .copy_matches				; copy matches. else 
-
-; calculate total matchlength by adding additional bytes
-	push	hl							; store current decompressed data source
-; a = size of match to copy, de= pointer to data to be added
-	sbc	hl, hl     					; set hl with initial matchlength to copy
-	ld	l, a
-.calc_loop2:
-	ld	a, (de)						; get additional matchlength to add
-	inc	de
-	ld	c, a							; set bc to the matchlength
-	add	hl, bc						; add it to the total match length
-	inc	a						; if matchlength=255
-	jr	z, .calc_loop2				; continue calculating the total match length		
-	ex	(sp), hl
-	pop	bc		; store total matchlength to copy in bc ; restore current decompressed data source
-	ex	de, hl
-	ex	(sp),hl						; update current compressed data pointer on the stack to the new value from de
-	ex	de, hl 
-.copy_matches:
-	lea	de, ix+0
 	add	ix, bc
-	ldir								; copy match
-	pop	hl							; restore current compressed data source
-	jr	.get_token				; continue decompression
+	inc	c
+	jr	z, .literals_lisc
+	lea	bc, ix+0
+.literals_copy:
+	ldir
+.literals_null:
+
+; check for end of compressed data
+	pop	af
+	pop	bc
+	sbc	hl, bc
+	add	hl, bc
+	jr	nz, .matches
 .decompress_success:
-	pop	ix
-	xor	a, a							; clear exit code
 	ret
