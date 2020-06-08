@@ -375,7 +375,6 @@ kthread:
 .join_exit:
 	push	de
 	lea	iy, ix+0
-	di
 	call	task_switch_running
 	ld	iy, (iy+KERNEL_THREAD_STACK)
 	ld	de, (iy-12)
@@ -395,7 +394,6 @@ kthread:
 .join_detached:
 .join_watching:
 	ld	a, EINVAL
-	jr	.join_errno
 .join_errno:
 	ei
 	ld	(iy+KERNEL_THREAD_ERRNO), a

@@ -71,13 +71,16 @@ THREAD_INIT_TEST:
 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
 	ld	hl, 2048
 	call	kthread.create
-
+	
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
 	
 	ld	hl, lz4_frozen
 	ld	de, $D40000
 	call	lz4.decompress	
+
+	ld	hl, 3
+	call	kthread.join
 	
 ; video lock for me
 	call	kvideo.irq_lock
@@ -106,9 +109,6 @@ THREAD_INIT_TEST:
 	
 	ld	hl, 1000	; 1000 ms is nice
 	call	kthread.sleep
-	
-	ld	hl, 3
-	call	kthread.join
 	
 ; we were not waked by spining thread ! (masked signal)
 	pop	bc
@@ -143,4 +143,4 @@ TEST_THREAD_C_DEATH:
 	ld	hl, 3000
 	call	kthread.sleep
 	ld	hl, 0
-	jp	kthread.exit	
+	jp	kthread.exit
