@@ -69,8 +69,9 @@ include 'sorcery_certificate.asm'
 	jp	ksignal.procmask_single
 	jp	ksignal.procmask
 ; timer
-	jp	klocal_timer.create
-	jp	klocal_timer.delete
+	jp	klocal_timer.itset		; setitimer ;
+	jp	klocal_timer.itreset		; resitimer ;
+	jp	klocal_timer.itget		; getitimer ;
 ; mmu syscall
 	jp	kmmu.map_page
 	jp	kmmu.map_page_thread

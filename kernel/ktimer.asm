@@ -61,7 +61,10 @@ klocal_timer:
 ; please note, timer_next is still valid per timer queue
 .notify_default = kthread.resume
 
-.create:
+; it timer * attached to thread, used by sleep() and alarm() ;
+
+.itset:
+; will be better to actually create a structure, so multiple timer could be attached to a thread
 ; create a timer attached to the current thread
 ; hl as a seig_ev structure (
 ; EV_SIGNOTIFY		$0
@@ -72,33 +75,34 @@ klocal_timer:
 ; de is timer count
 ; bc is ev value
 	ld	iy, (kthread_current)
+	lea	iy, iy+KERNEL_THREAD_TIMER
 	di
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	hl, (iy+TIMER_COUNT)
 	ld	a, h
 	or	a, l
-	jr	nz, .create_failed
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
+	jr	nz, .itcreate_failed
+	ld	(iy+TIMER_COUNT), de
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .create_default
-	lea	de, iy+KERNEL_THREAD_TIMER_SIGEVENT
+	jr	z, .itcreate_default
+	lea	de, iy+TIMER_SIGEVENT
 	ld	bc, SIGEVENT_SIZE
 	ldir
-	jr	.create_arm
-.create_default:
+	jr	.itcreate_arm
+.itcreate_default:
 ; direct thread waking is the *faster* method than a costly SIGCONT
 	ld	a, SIGEV_THREAD
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	(iy+TIMER_EV_SIGNOTIFY), a
 	ld	hl, .notify_default
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
-.create_arm:
+	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
+.itcreate_arm:
 	call	.insert
 	ei
 	or	a, a
 	sbc	hl, hl
 	ret
-.create_failed:
+.itcreate_failed:
 	ei
 	ld	a, EINVAL
 	ld	(iy+KERNEL_THREAD_ERRNO), a
@@ -106,20 +110,21 @@ klocal_timer:
 	sbc	hl, hl
 	ret
 	
-.delete:
+.itreset:
 ; delete (or disarm) the current timer of the thread
 	ld	iy, (kthread_current)
+	lea	iy, iy+KERNEL_THREAD_TIMER
 	di
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	hl, (iy+TIMER_COUNT)
 	ld	a, l
 	or	a, h
-	jr	z, .delete_errno
+	jr	z, .itreset_errno
 	call	.remove
 	ld	hl, NULL
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	(iy+TIMER_COUNT), hl
 	ei
 	ret
-.delete_errno:
+.itreset_errno:
 	ei
 	ld	a, EINVAL
 	ld	(iy+KERNEL_THREAD_ERRNO), a
@@ -127,10 +132,16 @@ klocal_timer:
 	sbc	hl, hl
 	ret
 	
+.itget:
+	ld	iy, (kthread_current)
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ret
+
 .alarm:
 	ld	iy, (kthread_current)
+	lea	iy, iy+KERNEL_THREAD_TIMER
 	di
-	ld	de, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	de, (iy+TIMER_COUNT)
 	ld	a, e
 	or	a, d
 	jr	nz, .alarm_disarm
@@ -153,18 +164,18 @@ if CONFIG_CRYSTAL_DIVISOR = 0
 	add	hl, hl
 end if
 ; add timer
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	(iy+TIMER_COUNT), hl
 	ld	a, SIGEV_SIGNAL
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	(iy+TIMER_EV_SIGNOTIFY), a
 	ld	a, SIGALRM
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNO), a
+	ld	(iy+TIMER_EV_SIGNO), a
 	call	.insert
 	ei
 	ret
 .alarm_disarm:
 	call	.remove
 	ld	hl, NULL
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	(iy+TIMER_COUNT), hl
 	ei
 	ret
 	
