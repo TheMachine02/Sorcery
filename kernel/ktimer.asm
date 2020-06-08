@@ -61,10 +61,9 @@ klocal_timer:
 ; please note, timer_next is still valid per timer queue
 .notify_default = kthread.resume
 
-; it timer * attached to thread, used by sleep() and alarm() ;
+; it timer attached to thread, used by sleep() and alarm() ;
 
 .itset:
-; will be better to actually create a structure, so multiple timer could be attached to a thread
 ; create a timer attached to the current thread
 ; hl as a seig_ev structure (
 ; EV_SIGNOTIFY		$0
@@ -77,32 +76,34 @@ klocal_timer:
 	ld	iy, (kthread_current)
 	lea	iy, iy+KERNEL_THREAD_TIMER
 	di
+.create:
+; iy = timer structure
 	ld	hl, (iy+TIMER_COUNT)
 	ld	a, h
 	or	a, l
-	jr	nz, .itcreate_failed
+	jr	nz, .create_failed
 	ld	(iy+TIMER_COUNT), de
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .itcreate_default
+	jr	z, .create_default
 	lea	de, iy+TIMER_SIGEVENT
 	ld	bc, SIGEVENT_SIZE
 	ldir
-	jr	.itcreate_arm
-.itcreate_default:
+	jr	.create_arm
+.create_default:
 ; direct thread waking is the *faster* method than a costly SIGCONT
 	ld	a, SIGEV_THREAD
 	ld	(iy+TIMER_EV_SIGNOTIFY), a
 	ld	hl, .notify_default
 	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
-.itcreate_arm:
+.create_arm:
 	call	.insert
 	ei
 	or	a, a
 	sbc	hl, hl
 	ret
-.itcreate_failed:
+.create_failed:
 	ei
 	ld	a, EINVAL
 	ld	(iy+KERNEL_THREAD_ERRNO), a
@@ -114,17 +115,18 @@ klocal_timer:
 ; delete (or disarm) the current timer of the thread
 	ld	iy, (kthread_current)
 	lea	iy, iy+KERNEL_THREAD_TIMER
+.delete:
 	di
 	ld	hl, (iy+TIMER_COUNT)
 	ld	a, l
 	or	a, h
-	jr	z, .itreset_errno
+	jr	z, .reset_errno
 	call	.remove
 	ld	hl, NULL
 	ld	(iy+TIMER_COUNT), hl
 	ei
 	ret
-.itreset_errno:
+.reset_errno:
 	ei
 	ld	a, EINVAL
 	ld	(iy+KERNEL_THREAD_ERRNO), a
