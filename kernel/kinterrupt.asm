@@ -126,7 +126,7 @@ kscheduler:
 	inc	hl
 ; hl = priority
 	ld	a, (hl)
-	sub	a, KERNEL_QUEUE_SIZE
+	sub	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
 	jp	p, $+5
 	xor	a, a
@@ -196,7 +196,7 @@ end if
 	ex	de, hl
 	call	kqueue.remove
 	ld	a, l
-	add	a, KERNEL_QUEUE_SIZE
+	add	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
 	jp	p, $+5
 	xor	a, a
@@ -236,7 +236,7 @@ end if
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
 .dispatch:
-	ld	de, KERNEL_QUEUE_SIZE
+	ld	de, QUEUE_SIZE
 	xor	a, a
 	ld	hl, kthread_mqueue_0
 	or	a, (hl)

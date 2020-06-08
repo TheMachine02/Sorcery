@@ -1,8 +1,3 @@
-define	KERNEL_SPIN_LOCK         0
-define	KERNEL_SPIN_LOCK_SIZE    1
-define	KERNEL_SPIN_LOCK_BIT     0
-define	KERNEL_SPIN_LOCK_MAGIC   $FE
-
 define	KERNEL_MUTEX             0
 define	KERNEL_MUTEX_SIZE        2
 define	KERNEL_MUTEX_LOCK        0
@@ -22,17 +17,6 @@ macro tstei
 	ei
 end macro
 
-kspin_lock:
-
-.acquire:
-	sra	(hl)
-	jr	c, .acquire
-	ret
-    
-.release:
-.init:
-	ld	(hl), KERNEL_SPIN_LOCK_MAGIC
-	ret
     
 kmutex:
 ; POSIX errorcheck mutex implementation

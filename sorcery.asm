@@ -32,11 +32,6 @@ include 'sorcery_certificate.asm'
 	jp	kinterrupt.nmi
 ; system
 	jp	kname
-; spin lock syscall
-	jp	kspin_lock.init
-	jp	kspin_lock.acquire
-	jp	kspin_lock.release
-	jp	kspin_lock.init
 ; mutex syscall
 	jp	kmutex.init
 	jp	kmutex.try_lock

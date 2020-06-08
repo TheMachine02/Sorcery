@@ -483,7 +483,7 @@ kthread:
 	rrca
 	rrca
 	ld	b, a
-	ld	de, KERNEL_QUEUE_SIZE
+	ld	de, QUEUE_SIZE
 	xor	a, a
 .exit_dispatch_loop:
 	or	a, (hl)

@@ -1,10 +1,10 @@
-define	KERNEL_QUEUE_ID			$00
-define	KERNEL_QUEUE_NEXT		$01
-define	KERNEL_QUEUE_PREVIOUS		$04
+define	QUEUE_ID		$00
+define	QUEUE_NEXT		$01
+define	QUEUE_PREVIOUS		$04
 ; queue data ;
-define	KERNEL_QUEUE_SIZE		$04
-define	KERNEL_QUEUE_QSIZE		$00
-define	KERNEL_QUEUE_QCURRENT		$01
+define	QUEUE_SIZE		$04
+define	QUEUE_COUNT		$00
+define	QUEUE_CURRENT		$01
 
 kqueue:
 
@@ -20,7 +20,7 @@ kqueue:
 	ld	a, (hl)
 	inc	(hl)
 	or	a, a
-	jr	z, .create_queue
+	jr	z, .create
 	push	ix
 ; prev_node.next = new_node
 ; next_node.prev = new_node
@@ -31,23 +31,23 @@ kqueue:
 	inc	hl
 	ld	ix, (hl)
 ; ix = prev_node
-	ld	hl, (ix+KERNEL_QUEUE_NEXT)
+	ld	hl, (ix+QUEUE_NEXT)
 ; de = next_node
-	ld	(iy+KERNEL_QUEUE_PREVIOUS), ix
-	ld	(iy+KERNEL_QUEUE_NEXT), hl
-	ld	(ix+KERNEL_QUEUE_NEXT), iy
-; (de+KERNEL_QUEUE_PREVIOUS)=iy
+	ld	(iy+QUEUE_PREVIOUS), ix
+	ld	(iy+QUEUE_NEXT), hl
+	ld	(ix+QUEUE_NEXT), iy
+; (de+QUEUE_PREVIOUS)=iy
 	ex	(sp), hl
 	pop	ix
-	ld	(ix+KERNEL_QUEUE_PREVIOUS), iy
+	ld	(ix+QUEUE_PREVIOUS), iy
 	pop	ix
 	ret
-.create_queue:
+.create:
 	inc	hl
 	ld	(hl), iy
 	dec	hl
-	ld	(iy+KERNEL_QUEUE_PREVIOUS), iy
-	ld	(iy+KERNEL_QUEUE_NEXT), iy
+	ld	(iy+QUEUE_PREVIOUS), iy
+	ld	(iy+QUEUE_NEXT), iy
 	ret
 
 .insert_end:
@@ -59,7 +59,7 @@ kqueue:
 	ld	a, (hl)
 	inc	(hl)
 	or	a, a
-	jr	z, .create_queue
+	jr	z, .create
 	push	ix
 ; prev_node.next = new_node
 ; next_node.prev = new_node
@@ -69,15 +69,15 @@ kqueue:
 	push	hl
 	inc	hl
 	ld	ix, (hl)
-	ld	ix, (ix+KERNEL_QUEUE_PREVIOUS)
+	ld	ix, (ix+QUEUE_PREVIOUS)
 	ld	hl, (hl)
-	ld	(iy+KERNEL_QUEUE_PREVIOUS), ix
-	ld	(iy+KERNEL_QUEUE_NEXT), hl
-	ld	(ix+KERNEL_QUEUE_NEXT), iy
-; (de+KERNEL_QUEUE_PREVIOUS)=iy
+	ld	(iy+QUEUE_PREVIOUS), ix
+	ld	(iy+QUEUE_NEXT), hl
+	ld	(ix+QUEUE_NEXT), iy
+; (de+QUEUE_PREVIOUS)=iy
 	ex	(sp), hl
 	pop	ix
-	ld	(ix+KERNEL_QUEUE_PREVIOUS), iy
+	ld	(ix+QUEUE_PREVIOUS), iy
 	pop	ix
 	ret
 	
@@ -86,14 +86,14 @@ kqueue:
 ; update queue_current to NULL if count=0 or if the node removed is current, to the next node
 ; hl is queue pointer (count, queue_current)
 ; node MUST belong to the queue
-	push	de
 	dec	(hl)
-	jr	z, .null_queue
+	ret	z
+	push	de
 	push	hl
 	push	ix
 	inc	hl
 	push	hl
-	ld	ix, (iy+KERNEL_QUEUE_NEXT)
+	ld	ix, (iy+QUEUE_NEXT)
 ; if iy = (hl) : make (hl) be ix
 	lea	de, iy+0
 	ld	hl, (hl)
@@ -103,21 +103,72 @@ kqueue:
 ; we had the node set as current
 	ld	(hl), ix
 .remove_other_node:
-	ld	hl, (iy+KERNEL_QUEUE_PREVIOUS)
+	ld	hl, (iy+QUEUE_PREVIOUS)
 ; next_node.prev=prev_node
 ; prev_node.next=next_node
-	ld	(ix+KERNEL_QUEUE_PREVIOUS), hl
+	ld	(ix+QUEUE_PREVIOUS), hl
 	inc	hl
 	ld	(hl), ix
 	pop	ix
 	pop	hl
 	pop	de
 	ret
-.null_queue:
+	
+define	LIST_NEXT		$00
+
+; queue data ;
+define	LIST_SIZE		$07
+define	LIST_COUNT		$00
+define	LIST_HEAD		$01
+define	LIST_START		$04
+
+klist:
+
+.append:
+; hl is list, iy is node, append to the end
+	ld	a, (hl)
+	inc	(hl)
+	or	a, a
+	jr	z, .create
+	push	hl
 	inc	hl
-	ld	de, NULL
-	ld	(hl), de
-	dec	hl
-	pop	de
+	ld	hl, (hl)
+	ld	(hl), iy
+	pop	hl
 	ret
- 
+	
+.create:
+	ld	(hl), 1
+	inc	hl
+	ld	(hl), iy
+	inc	hl
+	inc	hl
+	inc	hl	
+	ld	(hl), iy
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	hl
+	ret
+
+.retire:
+; retire the first node >> iy
+; hl is list
+	ld	a, (hl)
+	dec	a
+	ret	c
+	ld	(hl), a
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	iy, (hl)
+	push	de
+	ld	de, (iy+LIST_NEXT)
+	ld	(hl), de
+	pop	de
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	hl
+	ret
