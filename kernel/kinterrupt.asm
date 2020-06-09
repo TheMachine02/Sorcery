@@ -313,7 +313,7 @@ end if
 	dec	a
 	jr	nz, .local_timer_thread
 .local_timer_signal:
-	ld	hl, (iy+TIMER_OWNER)
+	ld	hl, (iy+TIMER_EV_NOTIFY_THREAD)
 	ld	c, (hl)
 	ld	a, (iy+TIMER_EV_SIGNO)
 	jp	ksignal.kill
@@ -321,7 +321,7 @@ end if
 ; callback
 	push	iy
 	push	bc
-	ld	hl, (iy+TIMER_EV_VALUE)
+	lea	hl, iy+TIMER_EV_VALUE
 	push	hl	; push it on the stack	
 	call	.local_timer_call
 	pop	hl
@@ -330,5 +330,5 @@ end if
 	ret
 .local_timer_call:
 	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
-	ld	iy, (iy+TIMER_OWNER)
+	ld	iy, (iy+TIMER_EV_NOTIFY_THREAD)
 	jp	(hl)

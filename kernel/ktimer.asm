@@ -2,24 +2,27 @@ define	SIGEV_NONE			0
 define 	SIGEV_SIGNAL			1
 define	SIGEV_THREAD			2
 
+define	SIGEVENT_SIZE			12
 define	SIGEVENT			$0
-define	SIGEVENT_SIZE			$8
 define	SIGEV_SIGNOTIFY			$0
 define	SIGEV_SIGNO			$1
 define	SIGEV_NOTIFY_FUNCTION		$2
-define	SIGEV_VALUE			$5
+define	SIGEV_NOTIFY_THREAD		$5
+define	SIGEV_VALUE			$8
+; uint8_t + prt
 
 define	TIMER				$0
 define	TIMER_COUNT			$0
 define	TIMER_NEXT			$3
 define	TIMER_PREVIOUS			$6
-define	TIMER_OWNER			$9
-define	TIMER_SIGEVENT			$C
-define	TIMER_EV_SIGNOTIFY		$C
-define	TIMER_EV_SIGNO			$D
-define	TIMER_EV_NOTIFY_FUNCTION	$E
+define	TIMER_SIGEVENT			$9
+define	TIMER_EV_SIGNOTIFY		$9
+define	TIMER_EV_SIGNO			$A
+define	TIMER_EV_NOTIFY_FUNCTION	$B
+define	TIMER_EV_NOTIFY_THREAD		$E
 define	TIMER_EV_VALUE			$11
-define	TIMER_SIZE			20
+; uint8_t + prt
+define	TIMER_SIZE			21
 
 ; (div/32768)*1000*16
 ; (32768/div)/1000*256
