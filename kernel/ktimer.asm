@@ -75,9 +75,9 @@ klocal_timer:
 ; bc is ev value
 	ld	iy, (kthread_current)
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	di
 .create:
 ; iy = timer structure
+	di
 	ld	hl, (iy+TIMER_COUNT)
 	ld	a, h
 	or	a, l
