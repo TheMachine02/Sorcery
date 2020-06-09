@@ -97,6 +97,7 @@ kqueue:
 ; if iy = (hl) : make (hl) be ix
 	lea	de, iy+0
 	ld	hl, (hl)
+	or	a, a		; silly carry
 	sbc	hl, de
 	pop	hl
 	jr	nz, .remove_other_node
@@ -153,11 +154,12 @@ klist:
 
 .retire:
 ; retire the first node >> iy
+; return z if none to retire, else, iy is the node retired
 ; hl is list
 	ld	a, (hl)
-	dec	a
-	ret	c
-	ld	(hl), a
+	or	a, a
+	ret	z
+	dec	(hl)
 	inc	hl
 	inc	hl
 	inc	hl
@@ -171,4 +173,5 @@ klist:
 	dec	hl
 	dec	hl
 	dec	hl
+	or	a, a
 	ret
