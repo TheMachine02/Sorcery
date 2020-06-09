@@ -36,6 +36,7 @@ define	KERNEL_THREAD_TIMER_EV_VALUE		$32
 define	KERNEL_THREAD_NICE			$35
 define	KERNEL_THREAD_ATTRIBUTE			$36
 define	KERNEL_THREAD_JOINED			$37	; joined thread waiting for exit()
+define	KERNEL_THREAD_LIST			$38
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 61 descriptors usables ;
@@ -59,8 +60,8 @@ define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
 define	SCHED_PRIO_MIN				12
-define	NICE_PRIO_MIN				8
-define	NICE_PRIO_MAX				-8
+define	NICE_PRIO_MIN				12
+define	NICE_PRIO_MAX				-12
 
 ; multilevel priority queue ;
 define	kthread_mqueue_0			$D00400
@@ -444,7 +445,7 @@ kthread:
 	push	iy
 	inc	hl
 	ld	iy, (hl)
-; should be sleeping if joined, but anyway, extra check
+; should be sleeping if joined, but anyway, extra check	
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_INTERRUPTIBLE
 	call	z, task_switch_running

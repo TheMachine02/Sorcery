@@ -59,27 +59,37 @@ kname:
 ; Kernel only init and pass to init thread, so a proper OS will go there ;
 
 
+define	global_mutex		$D00170		; that's just a test
+define	global_exit_value	$D00180
+
 THREAD_INIT_TEST:
-	ld	iy, (kthread_current)
+	ld	hl, global_mutex
+	call	kmutex.init
+	
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
 	ld	iy, TEST_THREAD_C ; thread 2
-	ld	hl, 2048
 	call	kthread.create
 
 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
-	ld	hl, 2048
 	call	kthread.create
 	
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
 	
+	ld	hl, global_mutex
+	call	kmutex.lock
+	
 	ld	hl, lz4_frozen
 	ld	de, $D40000
-	call	lz4.decompress	
+	call	lz4.decompress
 
+	ld	hl, global_mutex
+	call	kmutex.unlock
+	
 	ld	hl, 3
+	ld	de, global_exit_value
 	call	kthread.join
 	
 ; video lock for me
@@ -118,18 +128,24 @@ THREAD_INIT_TEST:
 TEST_THREAD_C:
 	call __frameset0
 	ld hl, (ix+6)
-	call	kmalloc
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
+	ld	hl, global_mutex
+	call	kmutex.lock
+	
 	ld	hl, 16	; 16 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF
-; need to catch rst 00h for that !
+; need to catch rst 00h for that !	
 	ld	hl, $AA55AA
 	ld	a, SIGCONT
 	ld	c, 1
 	call	ksignal.kill
+;	
+	ld	hl, global_mutex
+	call	kmutex.unlock
+
 	jr	.spin
 	pop ix
 	ret
@@ -142,5 +158,6 @@ TEST_THREAD_C_DEATH:
 	
 	ld	hl, 3000
 	call	kthread.sleep
+
 	ld	hl, 0
 	jp	kthread.exit
