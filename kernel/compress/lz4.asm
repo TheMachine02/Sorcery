@@ -122,51 +122,53 @@ lz4:
 	inc	hl
 
 .decompress_raw:
+if CONFIG_USE_LZ4_STRICT = 1
 	push	hl
 	add	hl, bc
 	ex	hl, (sp)
+end if
 	ld	bc, 0
 	jr	.get_token
 
 .matches:
+if CONFIG_USE_LZ4_STRICT = 1
 	push	bc
 	inc.s	bc
-	and	a, $0F
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
 	inc	hl
+end if
+	ld	a, ixl
+	and	a, $0F
+	add	a, 4
 	
 	push	de
 	ex	de, hl
 	sbc	hl, bc
 	ex	de, hl
 	
-	ld	b, 0
-	add	a, 4
-	ld	c, a
-	
+	ld	b, 0	
 	cp	a, $13
 	jr	nz, .matches_copy
-	ld	ix, 0
-	ld	ixl, c
 .matches_lisc:
 	ld	c, (hl)
 	inc	hl
-	add	ix, bc
+	add	a, c
+	jr	nc, $+3
+	inc	b
 	inc	c
 	jr	z, .matches_lisc
-	lea	bc, ix+0
 .matches_copy:
+	ld	c, a
 	ex	(sp), hl
 	ex	de, hl
 	ldir
 	pop	hl
 .get_token:
-	xor	a, a
 	ld	a, (hl)
 	inc	hl
-	push	af
+	ld	ixl, a
 .literals:
 ; unpack 4 high bits to get the length of literal
 	rlca
@@ -176,27 +178,35 @@ lz4:
 ; copy literals
 	and	a, $0F
 	jr	z, .literals_null
-	ld	c, a
 	cp	a, $0F
 	jr	nz, .literals_copy
-	ld	ix, 0
-	ld	ixl, c
 .literals_lisc:
 	ld	c, (hl)
 	inc	hl
-	add	ix, bc
+	add	a, c
+	jr	nc, $+3
+	inc	b
 	inc	c
 	jr	z, .literals_lisc
-	lea	bc, ix+0
 .literals_copy:
+	ld	c, a
 	ldir
 .literals_null:
-
+if CONFIG_USE_LZ4_STRICT = 1
 ; check for end of compressed data
-	pop	af
 	pop	bc
+	or	a, a
 	sbc	hl, bc
 	add	hl, bc
 	jr	nz, .matches
+else
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+	ld	a, c
+	or	a, b
+	jr	nz, .matches
+end if
 .decompress_success:
 	ret
