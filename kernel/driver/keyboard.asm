@@ -25,22 +25,16 @@ kkeyboard:
 .init:
 	tstdi
 	ld	hl, DRIVER_KEYBOARD_CTRL
-	ld	a, DRIVER_KEYBOARD_CONTINUOUS_SCAN
-	ld	(hl), a
-	xor	a, a
+	ld	(hl), DRIVER_KEYBOARD_CONTINUOUS_SCAN
+	ld	de, 0x08080f
 	inc	l
-	ld	(hl), 15
+	ld	(hl), e
 	inc	l
-	ld	(hl), a
+	ld	(hl), h
 	inc	l
-	ld	(hl), 15
-	inc	l
-	ld	a, 8
-	ld	(hl), a
-	inc	l
-	ld	(hl), a
+	ld	(hl), de
 ; enable interrupt chip side
-	ld	hl, DRIVER_KEYBOARD_IMSC
+	ld	l, 0x0c
 	ld	(hl), 2
 ; lock reset
 	call	.irq_lock_reset
