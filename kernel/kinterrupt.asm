@@ -122,7 +122,7 @@ kscheduler:
 ; hl =status
 	ld	a, (hl)
 	or	a, a
-	jq	z, .schedule
+	jr	z, .schedule
 	inc	hl
 ; hl = priority
 	ld	a, (hl)
@@ -223,51 +223,49 @@ end if
 .schedule:
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
-	ld	de, (hl)
+	ld	bc, (hl)
 	ld	l, KERNEL_WATCHDOG_RST mod 256
 	ld	(hl), $B9
 	inc	hl
 	ld	(hl), $5A
 ; mark timing used (24 bits count)
-	ld	hl, KERNEL_WATCHDOG_MAX_TIME + 1
-	sbc	hl, de
-	ld	de, (iy+KERNEL_THREAD_TIME)
-	add	hl, de
+	ld	hl, (iy+KERNEL_THREAD_TIME)
+	add	hl, bc
+	ld	bc, -KERNEL_WATCHDOG_MAX_TIME-1
+	add	hl, bc
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
 .dispatch:
-	ld	de, QUEUE_SIZE
+	ld	bc, QUEUE_SIZE
 	xor	a, a
 	ld	hl, kthread_mqueue_0
 	or	a, (hl)
 	jr	nz, .dispatch_queue
-	add	hl, de
+	add	hl, bc
 	or	a, (hl)
 	jr	nz, .dispatch_queue
-	add	hl, de
+	add	hl, bc
 	or	a, (hl)
 	jr	nz, .dispatch_queue
-	add	hl, de
+	add	hl, bc
 	or	a, (hl)
 	jr	nz, .dispatch_queue
-	add	hl, de
+	add	hl, bc
 	or	a, (hl)
 	jp	z, kinterrupt.nmi
 ; schedule the idle thread
-	ld	ix, KERNEL_THREAD_IDLE
+	ld	de, KERNEL_THREAD_IDLE
 	jr	.dispatch_thread
 .dispatch_queue:
 	inc	hl
-	ld	ix, (hl)
+	ld	de, (hl)
 .dispatch_thread:
 ; iy is previous thread, ix is the new thread, let's switch them
 ; are they the same ?
 	lea	hl, iy+0
-	lea	de, ix+0
 	sbc	hl, de
 	jr	z, .context_restore_minimal
 ; same one, just quit and restore fast
-	ld	(kthread_current), de	; mark new current
 ; save state of the current thread
 	exx
 	ex	af,af'
@@ -280,8 +278,12 @@ end if
 	sbc	hl, hl
 	add	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
+	exx
 .context_restore:
-	lea	hl, ix+KERNEL_THREAD_STACK_LIMIT
+	ex	de, hl
+	ld	(kthread_current), hl	; mark new current
+	ld	c, KERNEL_THREAD_STACK_LIMIT
+	add	hl, bc
 	ld	bc, $00033A
 	otimr
 	ld	hl, (hl)

@@ -462,7 +462,6 @@ kthread:
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	ksignal.kill
-	ld	sp, (KERNEL_STACK)
 ; first disable stack protector (load the kernel_stack stack protector)
 	ld	a, $B0
 	out0	($3A), a
@@ -470,10 +469,11 @@ kthread:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
+	ld	sp, (KERNEL_STACK)
 	ld	a, (iy+KERNEL_THREAD_PID)
 	call	.free_pid
 ; need to free IRQ locked and mutex locked to thread
-; de = next thread to be active
+; TODO ;
 ; remove from active
 	ld	hl, kthread_mqueue_0
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
@@ -481,33 +481,33 @@ kthread:
 ; find next to schedule
 ; ie dispatch method from schedule
 ; b = 16 - l / 4
-	ld	a, 16
-	sub	a, l
-	rrca
-	rrca
-	ld	b, a
-	ld	de, QUEUE_SIZE
-	xor	a, a
-.exit_dispatch_loop:
-	or	a, (hl)
-	jr	nz, .exit_dispatch_thread
-	add	hl, de
-	djnz	.exit_dispatch_loop
-	or	a, (hl)
-	jp	z, kinterrupt.nmi
-; schedule the idle thread
-	ld	ix, KERNEL_THREAD_IDLE
-	jr	.exit_unmap
-.exit_dispatch_thread:
-	inc	hl
-	ld	ix, (hl)
-.exit_unmap:
+	push	hl
 ; unmap the memory of the thread
 ; this also unmap the stack
 	call	kmmu.unmap_block
 ; that will reset everything belonging to the thread
-; I have my next thread
-	ld	(kthread_current), ix
+	pop	hl
+	ld	a, 16
+	sub	a, l
+	rrca
+	rrca
+	ld	d, a
+	ld	bc, QUEUE_SIZE
+	xor	a, a
+.exit_dispatch_loop:
+	or	a, (hl)
+	jr	nz, .exit_dispatch_thread
+	add	hl, bc
+	dec	d
+	jr	nz, .exit_dispatch_loop
+	or	a, (hl)
+	jp	z, kinterrupt.nmi
+; schedule the idle thread
+	ld	de, KERNEL_THREAD_IDLE
+	jp	kscheduler.context_restore
+.exit_dispatch_thread:
+	inc	hl
+	ld	de, (hl)
 ; go into the thread directly, without schedule (pop all stack and discard current context)
 	jp	kscheduler.context_restore
    	

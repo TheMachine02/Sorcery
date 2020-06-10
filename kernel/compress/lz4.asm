@@ -139,7 +139,7 @@ if CONFIG_USE_LZ4_STRICT = 1
 	ld	b, (hl)
 	inc	hl
 end if
-	ld	a, ixl
+	ld	a, iyl
 	and	a, $0F
 	add	a, 4
 	
@@ -168,7 +168,7 @@ end if
 .get_token:
 	ld	a, (hl)
 	inc	hl
-	ld	ixl, a
+	ld	iyl, a
 .literals:
 ; unpack 4 high bits to get the length of literal
 	rlca
