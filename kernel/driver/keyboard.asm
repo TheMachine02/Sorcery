@@ -26,7 +26,7 @@ kkeyboard:
 	tstdi
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	ld	(hl), DRIVER_KEYBOARD_CONTINUOUS_SCAN
-	ld	de, 0x08080f
+	ld	de, $08080F
 	inc	l
 	ld	(hl), e
 	inc	l
@@ -34,7 +34,7 @@ kkeyboard:
 	inc	l
 	ld	(hl), de
 ; enable interrupt chip side
-	ld	l, 0x0c
+	ld	l, DRIVER_KEYBOARD_IMSC and $FF
 	ld	(hl), 2
 ; lock reset
 	call	.irq_lock_reset
