@@ -40,7 +40,14 @@ define	KERNEL_THREAD_EV_SIG_POINTER		$2F
 define	KERNEL_THREAD_NICE			$31
 define	KERNEL_THREAD_ATTRIBUTE			$32
 define	KERNEL_THREAD_JOINED			$33	; joined thread waiting for exit()
+; priority waiting list
 define	KERNEL_THREAD_LIST			$34
+define	KERNEL_THREAD_LIST_PRIORITY		$37
+; io waiting queue
+define	KERNEL_THREAD_IO			$38
+define	KERNEL_THREAD_IO_NEXT			$39
+define	KERNEL_THREAD_IO_PREV			$3C
+; free $0F
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 61 descriptors usables ;
@@ -279,7 +286,7 @@ kthread:
 ; resume a thread waiting IRQ
 ; interrupt should be DISABLED when calling this routine
 ; save a
-	ld	b, a
+	ld	e, a
 	lea	hl, iy+KERNEL_THREAD_IRQ
 	ld	a, (hl)
 	or	a, a
@@ -296,7 +303,7 @@ kthread:
 	lea	iy, ix+0
 .resume_from_IRQ_exit:
 ; restore a
-	ld	a, b
+	ld	a, e
 ; return ix = iy = previous thread in the thread queue
 	or	a, a
 	ret
