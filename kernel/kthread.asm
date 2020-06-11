@@ -45,8 +45,6 @@ define	KERNEL_THREAD_LIST_PRIORITY		$34
 define	KERNEL_THREAD_LIST			$35
 ; io waiting queue
 define	KERNEL_THREAD_IO			$38
-define	KERNEL_THREAD_IO_NEXT			$39
-define	KERNEL_THREAD_IO_PREV			$3C
 ; free $0F
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
@@ -335,9 +333,12 @@ kthread:
 	push	af
 ; this read need to be atomic !
 	ld	a, (iy+KERNEL_THREAD_STATUS)
-; can't wake TASK_READY (0) and TASK_STOPPED (2)
+; can't wake TASK_READY (0) and TASK_STOPPED (2) and TASK_ZOMBIE (3)
 	cp	a, TASK_INTERRUPTIBLE
+	jr	z, .resume_wake
+	cp	a, TASK_UNINTERRUPTIBLE
 	jr	nz, .resume_exit
+.resume_wake:
 	call	task_switch_running
 	ld	a, $FF
 	ld	(kthread_need_reschedule), a
