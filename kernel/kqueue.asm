@@ -116,7 +116,7 @@ kqueue:
 	ret
 	
 define	LIST_NEXT		$00
-
+define	LIST_PRIORITY		$03
 ; queue data ;
 define	LIST_SIZE		$07
 define	LIST_COUNT		$00

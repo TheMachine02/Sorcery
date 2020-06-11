@@ -70,7 +70,7 @@ kinterrupt:
 	call	c, KERNEL_IRQ_HANDLER_064
 	rra
 	call	c, KERNEL_IRQ_HANDLER_128
-	rra
+	rr	a	; final one to set zero flag
 .irq_generic:
 	jr	z, .irq_generic_exit
 	ld	c, a

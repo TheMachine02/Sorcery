@@ -156,8 +156,7 @@ TEST_THREAD_C_DEATH:
 	ld	iy, (kthread_current)
 	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 	
-	ld	hl, 3000
-	call	kthread.sleep
-
+	call	kkeyboard.wait_key
+	
 	ld	hl, 0
 	jp	kthread.exit
