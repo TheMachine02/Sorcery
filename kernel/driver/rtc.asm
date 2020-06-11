@@ -152,10 +152,7 @@ krtc:
 .up_time:
 ; those read aren't atomic, so up_time isn't precise... but fast
 	ld	b, 60
-	or	a, a				; si (DRIVER_RTC_COUNTER_SECOND+1) 
-	sbc	hl, hl				; et (DRIVER_RTC_COUNTER_SECOND+2)
-	ld	a, (DRIVER_RTC_COUNTER_SECOND)	; sont toujours à zéro, on peut se permettre un
-	ld	l, a				; simple "ld hl, (DRIVER_RTC_COUNTER_SECOND)"
+	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
 	ld	a, (DRIVER_RTC_COUNTER_MINUTE)
 	ld	e, a
 	ld	d, b
