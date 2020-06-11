@@ -166,9 +166,9 @@ if CONFIG_USE_DOWNCLOCKING
 	cp	a, KERNEL_CSTATE_SAMPLING
 	jr	nz, .clock_state_exit
 	call	kcstate.idle_adjust
-	ld	hl, 0
-	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
 	xor	a, a
+	sbc	hl, hl
+	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
 .clock_state_exit:
 	ld	(kcstate_timer), a
 end if
@@ -323,8 +323,7 @@ end if
 ; callback
 	push	iy
 	push	bc
-	lea	hl, iy+TIMER_EV_VALUE
-	push	hl	; push it on the stack	
+	pea	iy+TIMER_EV_VALUE	; push it on the stack	
 	call	.local_timer_call
 	pop	hl
 	pop	bc
