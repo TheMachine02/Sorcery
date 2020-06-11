@@ -17,11 +17,10 @@ define	KERNEL_WATCHDOG_BIT_CLOCK     4
 kwatchdog:
 .init:
 	di
-	ld	hl, KERNEL_WATCHDOG_CTRL
+	ld	de, KERNEL_WATCHDOG_CTRL
 ; 32768Hz, trigger NMI
 	ld	a, 00010100b
-	ld	(hl), a
-	ex	de, hl
+	ld	(de), a
 	ld	e, KERNEL_WATCHDOG_LOAD and $FF
 	ld	hl, .RESET_DATA
 	ld	bc, 6

@@ -108,7 +108,7 @@ kthread:
 .init:
 	di
 	ld	hl, kthread_mqueue_0
-	ld	(hl), 0
+	ld	(hl), l
 	ld	de, kthread_mqueue_0 + 1
 	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
 	ldir
@@ -131,9 +131,9 @@ kthread:
 	inc	hl
 	inc	hl
 	inc	hl
-	ld	(hl), $00
+	ld	(hl), c
 	ld	de, kthread_pid_map+5
-	ld	bc, 251
+	ld	c, 251
 	ldir
 	ret
 
@@ -184,41 +184,40 @@ kthread:
 	jr	c, .create_no_mem
 	push	hl
 	ex	(sp), ix
+	ld	de, NULL
 	ld	(iy+KERNEL_THREAD_PID), a
-	ld	(iy+KERNEL_THREAD_IRQ), 0
+	ld	(iy+KERNEL_THREAD_IRQ), e
 	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
-	ld	(iy+KERNEL_THREAD_NICE), 0
-	ld	(iy+KERNEL_THREAD_ATTRIBUTE), 0
+	ld	(iy+KERNEL_THREAD_NICE), e
+	ld	(iy+KERNEL_THREAD_ATTRIBUTE), e
 ; sig mask ;
-	ld	de, NULL
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
-	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+3), 0
+	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+3), e
 ; timer ;
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; stack limit set first ;
 	lea	hl, iy + 4
-;	ld	e, KERNEL_THREAD_HEADER_SIZE
-;	add	hl, de
+							;	ld	e, KERNEL_THREAD_HEADER_SIZE
+							;	add	hl, de
 ; we are block aligned. Do +256
 	inc	h
 ; please note write affect memory, so do a + 4 to be safe    
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
-; stack ;
-	lea	hl, iy - 27
-	ld	de, KERNEL_THREAD_STACK_SIZE
-	add	hl, de
-	ld	(iy+KERNEL_THREAD_STACK), hl
-; heap ;
-	lea	hl, ix + 0
-	ld	(iy+KERNEL_THREAD_HEAP), hl
-	ld	de, KERNEL_THREAD_HEAP_SIZE - KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), de
-	ld	de, NULL
+; heap (début)
 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), de
 	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), de
+; stack ;
+	lea	hl, iy - 27
+	ld	d,$10					; ld	de, KERNEL_THREAD_STACK_SIZE
+	add	hl, de
+	ld	(iy+KERNEL_THREAD_STACK), hl
+; heap (suite)
+	ld	(iy+KERNEL_THREAD_HEAP), ix
+	ld	de, KERNEL_THREAD_HEAP_SIZE - KERNEL_MEMORY_BLOCK_SIZE
+	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), de
 	lea	de, ix+KERNEL_MEMORY_BLOCK_SIZE
 	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), de
 	pop	ix
@@ -249,7 +248,7 @@ kthread:
 	ld	hl, .exit
 	ld	(iy-6), hl
 	ld	(iy-9), ix
-	ld	de, NULL
+	ld	d,e			; ld	de, NULL
 	ld	(iy-12), de		; ix [NULL] > int argc, char *argv[]
 	ld	(iy-15), de		; iy [NULL] > in the future
 	ld	(iy-27), de		; af [NULL] > TODO
