@@ -66,7 +66,7 @@ kvideo:
 	ld	hl, DRIVER_VIDEO_VRAM + DRIVER_VIDEO_FRAMEBUFFER_SIZE
 	ld	(DRIVER_VIDEO_BUFFER), hl
 ; setup timings
-	ld	de, DRIVER_VIDEO_TIMING0 + 1
+	ld	hl, DRIVER_VIDEO_TIMING0 + 1
 	ld	de, .LCD_TIMINGS
 	ld	c, 8
 	ldir
