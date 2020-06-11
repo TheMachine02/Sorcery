@@ -67,6 +67,7 @@ define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
 define	TASK_STOPPED				2	; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
 define	TASK_ZOMBIE				3
+define	TASK_UNINTERRUPTIBLE			4
 define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
@@ -275,7 +276,7 @@ kthread:
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_IRQ), a
 ; the process to write the thread state and change the queue should be always a critical section
-	call	task_switch_interruptible
+	call	task_switch_uninterruptible
 	pop	hl
 	pop	iy
 ; switch away from current thread to a new active thread
@@ -294,7 +295,7 @@ kthread:
 	ld	(hl), 0
 	inc	hl
 	ld	a, (hl)
-	cp	a, TASK_INTERRUPTIBLE
+	cp	a, TASK_UNINTERRUPTIBLE
 	jr	nz, .resume_from_IRQ_exit
 	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
 	call	task_switch_running
@@ -681,7 +682,18 @@ kthread:
 
 task_yield = kthread.yield
 
-; from TASK_READY to TASK_STOPPED
+; from TASK_READY to TASK_UNINTERRUPTIBLE
+; may break if not in this state before
+; need to be fully atomic
+task_switch_uninterruptible:
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_UNINTERRUPTIBLE
+	ld	hl, kthread_mqueue_0
+	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	call	kqueue.remove
+	ld	l, kthread_queue_retire and $FF
+	jr	kqueue.insert_current
+
+; from TASK_READY to TASK_ZOMBIE
 ; may break if not in this state before
 ; need to be fully atomic
 task_switch_zombie:

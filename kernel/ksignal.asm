@@ -24,19 +24,8 @@ ksignal:
 
 .handler_stop:
 	di
-; thread is in active queue, TASK_READY state
-; stop it anyway
 	jp	task_switch_stopped
-	
-.handler_continue:
-; we currently have a running thread. Just check if it was waiting for IRQ request too, if so, we will yield
-; else wake it up completely
-	di
-	ld	a, (iy+KERNEL_THREAD_IRQ)	; this read need to be atomic
-	or	a, a
-	ret	z
-	jp	task_switch_interruptible
-	
+		
 .handler_return:
 	ret
 
@@ -58,7 +47,7 @@ ksignal:
  dl	kthread.exit
  dl	.handler_return
  dl	.handler_return
- dl	.handler_continue
+ dl	.handler_return		; sigcont
  dl	.handler_stop
  dl	.handler_stop
  dl	.handler_stop
@@ -139,7 +128,7 @@ ksignal:
 	ld	(de), a
 	tstdi
 	ret
-	
+
 .abort:
 	ld	a, SIGABRT
 	
@@ -186,7 +175,7 @@ ksignal:
 	ld	l, a
 	ld	a, (hl)
 	or	a, a
-	jq	z, .kill_no_thread
+	jp	z, .kill_no_thread
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
@@ -207,9 +196,9 @@ ksignal:
 	jp	z, .kill_no_signal
 ; iy is still thread to signal, a is signal
 	cp	a, SIGSTOP
-	jr	z, .kill_unblockable
+	jp	z, .kill_signal_stop
 	cp	a, SIGKILL
-	jr	z, .kill_unblockable
+	jp	z, .kill_signal_kill
 ; is the signal blocked ?
 ; y/n
 ; else jump to default function
@@ -233,12 +222,14 @@ ksignal:
 ; tst (hl) and a bitmask
 	and	a, (hl)
 ; this mean it is set in (hl)
-	jr	nz, .kill_blocked
-.kill_unblockable:
+	jr	nz, .kill_clean
+	ld	a, c
+	cp	a, SIGCONT
+	jp	z, .kill_signal_cont
+.kill_generic:
 ; so now, I have iy = thread to signal, still the signal in c, data in de
 ; push the context on the thread stack
 ; restore signal in a
-	ld	a, c
 	ld	hl, (kthread_current)
 	lea	bc, iy+0
 	sbc	hl, bc
@@ -280,11 +271,12 @@ ksignal:
 	ld	b, a
 	pop	ix
 ; change state of the thread based on the context
-; if state is not RUNNING, make it running 
+; if state is not RUNNING, make it running
+; note : if signal is SIGCONT, we have already wake the thread
 	ld	a, (iy+KERNEL_THREAD_STATUS)
-	or	a, a
-	call	nz, task_switch_running
-.kill_blocked:
+	cp	a, TASK_INTERRUPTIBLE
+	call	z, task_switch_running
+.kill_clean:
 	tstei
 	ld	a, b
 	or	a, a
@@ -316,6 +308,28 @@ ksignal:
 	push	ix
 	ld	ix, .handler
 	jp	(ix)
+.kill_signal_cont:
+	push	af
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_STOPPED
+	call	z, task_switch_running
+	pop	af
+	jp	.kill_generic
+.kill_signal_stop:
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+; if running or interruptible > switch to stopped
+; if stopped, idle or zombie : don't touch
+	and	11111110b
+	call	z, task_switch_stopped
+	jp	.kill_clean
+.kill_signal_kill:
+; kill anything
+	call	task_switch_running
+	ld	iy, (iy+KERNEL_THREAD_STACK)
+; insert shamelessly thread exit routine
+	ld	hl, kthread.exit
+	ld	(iy+18), hl
+	jp	.kill_clean
 .kill_no_thread:
 	ld	a, ESRCH
 	jr	.kill_errno
