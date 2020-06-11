@@ -47,13 +47,19 @@ krtc:
 
 .init:
 	tstdi
-	xor	a, a
-	ld	(DRIVER_RTC_WRITE_SECOND), a
-	ld	(DRIVER_RTC_WRITE_MINUTE), a
-	ld	(DRIVER_RTC_WRITE_HOUR), a
-	sbc	hl, hl
-	ld	(DRIVER_RTC_WRITE_DAY), hl
-	ld	hl, DRIVER_RTC_CTRL
+	ld	hl, DRIVER_RTC_WRITE_SECOND
+	ld	(hl), h
+	ld	l, DRIVER_RTC_WRITE_MINUTE and $FF
+	ld	(hl), h
+	ld	l, DRIVER_RTC_WRITE_HOUR and $FF
+	ld	(hl), h
+	ld	l, DRIVER_RTC_WRITE_DAY and $FF
+	ld	(hl), h
+	inc	l
+	ld	(hl), h
+	inc	l
+	ld	(hl), h
+	ld	l, DRIVER_RTC_CTRL and $FF
 	ld	(hl), DRIVER_RTC_DEFAULT
 ; reset lock
 	call	.irq_lock_reset
