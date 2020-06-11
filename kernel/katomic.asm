@@ -1,12 +1,11 @@
 define	KERNEL_MUTEX			0
-define	KERNEL_MUTEX_SIZE		9
+define	KERNEL_MUTEX_SIZE		6
 define	KERNEL_MUTEX_LOCK		0
 define	KERNEL_MUTEX_LOCK_BIT		0
 define	KERNEL_MUTEX_OWNER		1
 define	KERNEL_MUTEX_LIST		2
 define	KERNEL_MUTEX_LIST_COUNT		2
 define	KERNEL_MUTEX_LIST_HEAD		3
-define	KERNEL_MUTEX_LIST_START		6
 
 define	KERNEL_MUTEX_MAGIC	$FE
 
@@ -79,15 +78,18 @@ kmutex:
 	jr	nc, .lock_write
 ; can't be acquired, already locked by us ?
 	inc	hl
-	ld	a, (iy+0)
+	ld	a, (iy+KERNEL_THREAD_PID)
 	cp	a, (hl)
 	ld	e, EDEADLK
 	jr	z, .errno
-; no, try again :
+; no, try again
+; we should dynamically boost thread priority owning the mutex based on the priority of waiting thread
+; TODO
 .lock_sleep:
 ; let's sleep
 	di
 	inc	hl
+	ld	c, (iy+KERNEL_THREAD_PRIORITY)
 	lea	iy, iy+KERNEL_THREAD_LIST
 	call	klist.append
 	lea	iy, iy-KERNEL_THREAD_LIST

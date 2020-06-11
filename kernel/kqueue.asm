@@ -114,41 +114,57 @@ kqueue:
 	pop	hl
 	pop	de
 	ret
-	
-define	LIST_NEXT		$00
-define	LIST_PRIORITY		$03
+
+define	LIST_PRIORITY		$00
+define	LIST_NEXT		$01
 ; queue data ;
-define	LIST_SIZE		$07
+define	LIST_SIZE		$04
 define	LIST_COUNT		$00
 define	LIST_HEAD		$01
-define	LIST_START		$04
 
 klist:
+; priority list
 
 .append:
-; hl is list, iy is node, append to the end
+; hl is list, iy is node, c is node priority (0 is highest priority)
+	ld	(iy+LIST_PRIORITY), c
 	ld	a, (hl)
 	inc	(hl)
 	or	a, a
 	jr	z, .create
 	push	hl
+; parse from LIST_START to find where to insert our node
 	inc	hl
-	ld	hl, (hl)
-	ld	(hl), iy
+	ld	ix, (hl)
+	ld	b, a
+	ld	a, c
+; compare ix priority to priority (register c)
+	cp	a, (ix+LIST_PRIORITY)
+	jr	c, .append_head
+	djnz	.append_end
+.append_parse:
+	ld	hl, (ix+LIST_NEXT)
+	cp	a, (hl)
+	jr	c, .append_end
+	ld	ix, (ix+LIST_NEXT)
+	djnz	.append_parse
+.append_end:
+; node should be next of ix
+	ld	hl, (ix+LIST_NEXT)
+	ld	(ix+LIST_NEXT), iy
+	ld	(iy+LIST_NEXT), hl
 	pop	hl
 	ret
-	
+.append_head:
+; head = node, node next = previous_head
+	ld	(hl), iy
+	ld	(iy+LIST_NEXT), ix
+	pop	hl
+	ret
+
 .create:
-	ld	(hl), 1
 	inc	hl
 	ld	(hl), iy
-	inc	hl
-	inc	hl
-	inc	hl	
-	ld	(hl), iy
-	dec	hl
-	dec	hl
-	dec	hl
 	dec	hl
 	ret
 
@@ -160,18 +176,11 @@ klist:
 	or	a, a
 	ret	z
 	dec	(hl)
-	inc	hl
-	inc	hl
-	inc	hl
+	push	hl
 	inc	hl
 	ld	iy, (hl)
-	push	de
-	ld	de, (iy+LIST_NEXT)
-	ld	(hl), de
-	pop	de
-	dec	hl
-	dec	hl
-	dec	hl
-	dec	hl
+	ld	hl, (iy+LIST_NEXT)
+	ld	(hl), hl
+	pop	hl
 	or	a, a
 	ret

@@ -173,7 +173,7 @@ ksignal:
 	ld	a, (hl)
 	add	a, a
 	add	a, a
-	ld	hl, kthread_pid_bitmap
+	ld	hl, kthread_pid_map
 	ld	l, a
 ; let's start the critical section right now
 	tstdi

@@ -41,8 +41,8 @@ define	KERNEL_THREAD_NICE			$31
 define	KERNEL_THREAD_ATTRIBUTE			$32
 define	KERNEL_THREAD_JOINED			$33	; joined thread waiting for exit()
 ; priority waiting list
-define	KERNEL_THREAD_LIST			$34
-define	KERNEL_THREAD_LIST_PRIORITY		$37
+define	KERNEL_THREAD_LIST_PRIORITY		$34
+define	KERNEL_THREAD_LIST			$35
 ; io waiting queue
 define	KERNEL_THREAD_IO			$38
 define	KERNEL_THREAD_IO_NEXT			$39
@@ -101,7 +101,7 @@ assert kthread_need_reschedule and $FF = 0
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
-define	kthread_pid_bitmap			$D00200
+define	kthread_pid_map			$D00200
 
 kthread:
 .init:
@@ -121,7 +121,7 @@ kthread:
 	ld	de, KERNEL_THREAD
 	ld	bc, .IHEADER_END - .IHEADER
 	ldir
-	ld	hl, kthread_pid_bitmap
+	ld	hl, kthread_pid_map
 ; permission of thread (thread 0 is all mighty) >> or maybe process ID in the futur and THREAD_PID being TID
 	ld	(hl), $01
 	inc	hl
@@ -131,7 +131,7 @@ kthread:
 	inc	hl
 	inc	hl
 	ld	(hl), $00
-	ld	de, kthread_pid_bitmap+5
+	ld	de, kthread_pid_map+5
 	ld	bc, 251
 	ldir
 	ret
@@ -228,7 +228,7 @@ kthread:
 	add	a, a
 	sbc	hl, hl
 	ld	l, a
-	ld	de, kthread_pid_bitmap
+	ld	de, kthread_pid_map
 	add	hl, de
 	ld	(hl), $FF
 	inc	hl
@@ -352,7 +352,7 @@ kthread:
 	push	ix
 	add	hl, hl
 	add	hl, hl
-	ld	bc, kthread_pid_bitmap
+	ld	bc, kthread_pid_map
 	add	hl, bc
 	di
 	ld	a, (hl)
@@ -447,7 +447,7 @@ kthread:
 	add	a, a
 	sbc	hl, hl
 	ld	l, a
-	ld	bc, kthread_pid_bitmap
+	ld	bc, kthread_pid_map
 	add	hl, bc
 	ld	a, (hl)
 ; sanity check ;
@@ -623,7 +623,7 @@ kthread:
 ; find a free pid
 ; this should be called in an atomic / critical code section to be sure it will still be free when used
 ; kinda reserved to ASM
-	ld	hl, kthread_pid_bitmap
+	ld	hl, kthread_pid_map
 	ld	de, 4
 	ld	b, 64
 	xor	a, a
@@ -651,7 +651,7 @@ kthread:
 	add	a, a
 	sbc	hl, hl
 	ld	l, a
-	ld	de, kthread_pid_bitmap
+	ld	de, kthread_pid_map
 	add	hl, de
 	ld	de, NULL
 	ld	(hl), e

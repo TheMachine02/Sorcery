@@ -97,6 +97,10 @@ THREAD_INIT_TEST:
 	ld	bc, 0
 .loop:
 	push	bc
+	
+	ld	hl, global_mutex
+	call	kmutex.lock
+	
 	ld	de, (DRIVER_VIDEO_BUFFER)
 	ld	bc, 320*26
 	ld	hl, $E40000
@@ -115,6 +119,9 @@ THREAD_INIT_TEST:
 	ld	e, 13
 	call	kvideo.put_hex
 	
+	ld	hl, global_mutex
+	call	kmutex.unlock
+		
 	call	kvideo.swap
 	
 	ld	hl, 1000	; 1000 ms is nice
@@ -130,14 +137,15 @@ TEST_THREAD_C:
 	ld hl, (ix+6)
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
-	ld	hl, global_mutex
-	call	kmutex.lock
 	
 	ld	hl, 16	; 16 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF
-; need to catch rst 00h for that !	
+; need to catch rst 00h for that !
+	ld	hl, global_mutex
+	call	kmutex.lock
+
 	ld	hl, $AA55AA
 	ld	a, SIGCONT
 	ld	c, 1
