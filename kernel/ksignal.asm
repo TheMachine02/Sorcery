@@ -24,7 +24,18 @@ ksignal:
 
 .handler_stop:
 	di
-	jp	task_switch_stopped
+	call	task_switch_stopped
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	tstei
+	pop	af
+	pop	de
+	pop	bc
+	pop	hl
+	pop	iy
+	pop	ix
+	jp	task_yield
 		
 .handler_return:
 	ret
@@ -359,13 +370,6 @@ _sigreturn:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	di
-; if this result is non zero, we already have interrupt disabled, plus, it will be scheduled away if an interrupt fire
-; If it is zero, well we continue anyway
-	ld	iy, (kthread_current)
-	ld	a, (iy+KERNEL_THREAD_STATUS)
-	or	a, a
-	jr	nz, .yield
 ; restore interrupt status (from a schedule = always on, from raise() passed)
 	tstei
 	pop	af
@@ -375,12 +379,3 @@ _sigreturn:
 	pop	iy
 	pop	ix
 	ret
-.yield:
-	tstei
-	pop	af
-	pop	de
-	pop	bc
-	pop	hl
-	pop	iy
-	pop	ix
-	jp	task_yield
