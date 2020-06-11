@@ -47,13 +47,19 @@ krtc:
 
 .init:
 	tstdi
-	xor	a, a
-	ld	(DRIVER_RTC_WRITE_SECOND), a
-	ld	(DRIVER_RTC_WRITE_MINUTE), a
-	ld	(DRIVER_RTC_WRITE_HOUR), a
-	sbc	hl, hl
-	ld	(DRIVER_RTC_WRITE_DAY), hl
-	ld	hl, DRIVER_RTC_CTRL
+	ld	hl, DRIVER_RTC_WRITE_SECOND
+	ld	(hl), h
+	ld	l, DRIVER_RTC_WRITE_MINUTE and $FF
+	ld	(hl), h
+	ld	l, DRIVER_RTC_WRITE_HOUR and $FF
+	ld	(hl), h
+	ld	l, DRIVER_RTC_WRITE_DAY and $FF
+	ld	(hl), h
+	inc	l
+	ld	(hl), h
+	inc	l
+	ld	(hl), h
+	ld	l, DRIVER_RTC_CTRL and $FF
 	ld	(hl), DRIVER_RTC_DEFAULT
 ; reset lock
 	call	.irq_lock_reset
@@ -145,24 +151,24 @@ krtc:
 
 .up_time:
 ; those read aren't atomic, so up_time isn't precise... but fast
-	or	a, a
-	sbc	hl, hl
-	ld	a, (DRIVER_RTC_COUNTER_SECOND)
-	ld	l, a
+	ld	b, 60
+	or	a, a				; si (DRIVER_RTC_COUNTER_SECOND+1) 
+	sbc	hl, hl				; et (DRIVER_RTC_COUNTER_SECOND+2)
+	ld	a, (DRIVER_RTC_COUNTER_SECOND)	; sont toujours à zéro, on peut se permettre un
+	ld	l, a				; simple "ld hl, (DRIVER_RTC_COUNTER_SECOND)"
 	ld	a, (DRIVER_RTC_COUNTER_MINUTE)
 	ld	e, a
-	ld	d, 60
+	ld	d, b
 	mlt	de
 	add	hl, de
 	ld	a, (DRIVER_RTC_COUNTER_HOUR)
 	ld	e, a
-	ld	d, 60
+	ld	d, b
 	mlt	de
-	ld	b, 60
 	ld	c, e
+	ld	e, b
 	mlt	bc
 	add	hl, bc
-	ld	e, 60
 	mlt	de
 	ex	de, hl
 	add	hl, hl

@@ -53,10 +53,10 @@ kvideo:
 	ld	de, DRIVER_VIDEO_PALETTE+496
 	ld	bc, 16
 	ldir
-	ld	a, 248
-	ld	(DRIVER_VIDEO_FONT_PALETTE), a
-	xor	a, a
-	ld	(DRIVER_VIDEO_BLIT_PALETTE), a
+	ld	hl, DRIVER_VIDEO_FONT_PALETTE
+	ld	(hl), 248
+	inc	l
+	ld	(hl), c
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
@@ -66,9 +66,9 @@ kvideo:
 	ld	hl, DRIVER_VIDEO_VRAM + DRIVER_VIDEO_FRAMEBUFFER_SIZE
 	ld	(DRIVER_VIDEO_BUFFER), hl
 ; setup timings
-	ld	de, DRIVER_VIDEO_TIMING0 + 1
+	ld	hl, DRIVER_VIDEO_TIMING0 + 1
 	ld	de, .LCD_TIMINGS
-	ld	bc, 8
+	ld	c, 8
 	ldir
 ; clear the LCD
 	call	.clear
