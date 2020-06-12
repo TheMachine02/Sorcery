@@ -13,11 +13,10 @@ ksignal:
 ; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
 	ld	(iy+KERNEL_THREAD_EV_SIG), a
 	ld	(iy+KERNEL_THREAD_EV_SIG_POINTER), hl
-	dec	a
 	ld	c, a
 	ld	b, 3
 	mlt	bc
-	ld	hl, .HANDLER_JUMP
+	ld	hl, .HANDLER_JUMP-3
 	add	hl, bc
 	ld	hl, (hl)
 	jp	(hl)
