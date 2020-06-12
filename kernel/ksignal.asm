@@ -329,12 +329,19 @@ ksignal:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; if running or interruptible > switch to stopped
 ; if stopped, idle or zombie : don't touch
-	and	11111110b
+	tst	11111110b
+	jp	nz, .kill_clean
+	dec	a	; interruptible
 	call	z, task_switch_stopped
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
 	jp	.kill_clean
 .kill_signal_kill:
 ; kill anything
-	call	task_switch_running
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_ZOMBIE
+	jp	z, .kill_clean
+	or	a, a
+	call	nz, task_switch_running
 	ld	iy, (iy+KERNEL_THREAD_STACK)
 ; insert shamelessly thread exit routine
 	ld	hl, kthread.exit
