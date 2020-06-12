@@ -171,13 +171,13 @@ end if
 	ld	iyl, a
 .literals:
 ; unpack 4 high bits to get the length of literal
+	and	a, $F0
+	jr	z, .literals_null
 	rlca
 	rlca
 	rlca
 	rlca
 ; copy literals
-	and	a, $0F
-	jr	z, .literals_null
 	cp	a, $0F
 	jr	nz, .literals_copy
 .literals_lisc:
@@ -192,8 +192,8 @@ end if
 	ld	c, a
 	ldir
 .literals_null:
-if CONFIG_USE_LZ4_STRICT = 1
 ; check for end of compressed data
+if CONFIG_USE_LZ4_STRICT = 1
 	pop	bc
 	or	a, a
 	sbc	hl, bc
