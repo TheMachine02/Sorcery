@@ -96,20 +96,17 @@ klocal_timer:
 	jr	.create_arm
 .create_default:
 ; direct thread waking is the *faster* method than a costly SIGCONT
-	ld	a, SIGEV_THREAD
-	ld	(iy+TIMER_EV_SIGNOTIFY), a
+	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_THREAD
 	ld	hl, .notify_default
 	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
 .create_arm:
-	call	.insert
-	ei
-	or	a, a
+	call	.insert			; will meet "or a, a" (line 190)
+	ei				; so, Carry=0
 	sbc	hl, hl
 	ret
 .create_failed:
 	ei
-	ld	a, EINVAL
-	ld	(iy+KERNEL_THREAD_ERRNO), a
+	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
 	scf
 	sbc	hl, hl
 	ret
@@ -122,17 +119,16 @@ klocal_timer:
 	di
 	ld	hl, (iy+TIMER_COUNT)
 	ld	a, l
-	or	a, h
+	or	a, h				; Carry=0
 	jr	z, .reset_errno
-	call	.remove
-	ld	hl, NULL
+	call	.remove				; won't modify Carry
+	sbc	hl, hl
 	ld	(iy+TIMER_COUNT), hl
 	ei
 	ret
 .reset_errno:
 	ei
-	ld	a, EINVAL
-	ld	(iy+KERNEL_THREAD_ERRNO), a
+	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
 	scf
 	sbc	hl, hl
 	ret
@@ -153,8 +149,8 @@ klocal_timer:
 ; convert second to jiffies
 	ld	e, TIME_S_TO_JIFFIES
 	ld	d, l
+	ld	l, e
 	mlt	de
-	ld	l, TIME_S_TO_JIFFIES
 	mlt	hl
 	add	hl, hl
 	add	hl, hl
@@ -170,16 +166,14 @@ if CONFIG_CRYSTAL_DIVISOR = 0
 end if
 ; add timer
 	ld	(iy+TIMER_COUNT), hl
-	ld	a, SIGEV_SIGNAL
-	ld	(iy+TIMER_EV_SIGNOTIFY), a
-	ld	a, SIGALRM
-	ld	(iy+TIMER_EV_SIGNO), a
+	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_SIGNAL
+	ld	(iy+TIMER_EV_SIGNO), SIGALRM
 	call	.insert
 	ei
 	ret
-.alarm_disarm:
-	call	.remove
-	ld	hl, NULL
+.alarm_disarm:				; Carry=0 thx to "or a, d" line 148
+	call	.remove			; then not modified by .remove
+	sbc	hl, hl			; = "ld	hl, NULL"
 	ld	(iy+TIMER_COUNT), hl
 	ei
 	ret
@@ -192,10 +186,10 @@ end if
 	ld	hl, klocal_timer_queue
 	ld	a, (hl)
 	inc	(hl)
+	inc	hl
 	or	a, a
 	jr	z, .create_queue
 	push	ix
-	inc	hl
 	ld	ix, (hl)
 	ld	(hl), iy
 	ld	hl, (ix+TIMER_NEXT)
@@ -208,7 +202,6 @@ end if
 	pop	ix
 	ret
 .create_queue:
-	inc	hl
 	ld	(hl), iy
 	ld	(iy+TIMER_PREVIOUS), iy
 	ld	(iy+TIMER_NEXT), iy
@@ -217,10 +210,11 @@ end if
 ; please, be sure of what you remove
 .remove:
 	ld	hl, klocal_timer_queue
-; 	ld	a, (hl)
-; 	or	a, a
-; 	jr	z, .null_queue
+						; 	ld	a, (hl)
+						; 	or	a, a
+						; 	jr	z, .null_queue
 	dec	(hl)
+	inc	hl
 	jr	z, .null_queue
 	push	iy
 	push	ix
@@ -228,13 +222,11 @@ end if
 	ld	iy, (iy+TIMER_PREVIOUS)
 	ld	(ix+TIMER_PREVIOUS), iy
 	ld	(iy+TIMER_NEXT), ix
-	inc	hl
 	ld	(hl), iy
 	pop	ix
 	pop	iy
 	ret
 .null_queue:
-	inc	hl
 	ld	de, NULL
 	ld	(hl), de
 	ret
