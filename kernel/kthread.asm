@@ -467,6 +467,8 @@ kthread:
 	pop	hl
 	call	task_yield
 .exit_clean:
+; interrupts should be definitely stopped here !
+	di
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	ksignal.kill
