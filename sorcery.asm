@@ -73,20 +73,20 @@ include 'sorcery_certificate.asm'
 	jp	klocal_timer.itreset		; resitimer ;
 	jp	klocal_timer.itget		; getitimer ;
 ; mmu syscall
-	jp	kmmu.map_page
-	jp	kmmu.map_page_thread
-	jp	kmmu.map_block
-	jp	kmmu.map_block_thread
-	jp	kmmu.unmap_page
-	jp	kmmu.unmap_page_thread
-	jp	kmmu.unmap_block
-	jp	kmmu.unmap_block_thread
-	jp	kmmu.zero_page
+; 	jp	kmmu.map_page
+; 	jp	kmmu.map_page_thread
+; 	jp	kmmu.map_block
+; 	jp	kmmu.map_block_thread
+; 	jp	kmmu.unmap_page
+; 	jp	kmmu.unmap_page_thread
+; 	jp	kmmu.unmap_block
+; 	jp	kmmu.unmap_block_thread
+; 	jp	kmmu.zero_page
 	jp	kmalloc
 	jp	kfree
 ; printk
-	jp	kmsg.printk
-	jp	kmsg.dmesg
+; 	jp	kmsg.printk
+; 	jp	kmsg.dmesg
 ; power	
 	jp	kpower.get_battery_charging_status
 	jp	kcstate.get_clock
@@ -110,9 +110,9 @@ include	'kernel/kflash.asm'
 ;include	'kernel/kvfs.asm'
 
 include	'kernel/fpu/idiv.asm'
-include	'kernel/exec/kexec.asm'
-include	'kernel/exec/kso.asm'
-include	'kernel/exec/kelf.asm'
+; include	'kernel/exec/kexec.asm'
+; include	'kernel/exec/kso.asm'
+; include	'kernel/exec/kelf.asm'
 include	'kernel/crypto/kcrc.asm'
 
 include	'kernel/driver/video.asm'

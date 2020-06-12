@@ -213,13 +213,14 @@ end if
 	dec	(hl)
 	inc	hl
 	ret	z
-	push	iy
 	push	ix
 	ld	ix, (iy+TIMER_NEXT)
-	ld	iy, (iy+TIMER_PREVIOUS)
-	ld	(ix+TIMER_PREVIOUS), iy
-	ld	(iy+TIMER_NEXT), ix
-	ld	(hl), iy
+	ld	(hl), ix
+	ld	hl, (iy+TIMER_PREVIOUS)
+	ld	(ix+TIMER_PREVIOUS), hl
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	(hl), ix
 	pop	ix
-	pop	iy
 	ret

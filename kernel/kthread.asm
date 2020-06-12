@@ -740,8 +740,7 @@ task_switch_sleep_ms:
 	add	hl, de
 ; add timer
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	ld	a, SIGEV_THREAD
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), a
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
 	ld	hl, klocal_timer.notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
