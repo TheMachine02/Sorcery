@@ -43,6 +43,7 @@ define	KERNEL_THREAD_JOINED			$33	; joined thread waiting for exit()
 ; priority waiting list
 define	KERNEL_THREAD_LIST_PRIORITY		$34
 define	KERNEL_THREAD_LIST			$35
+
 ; io waiting queue
 define	KERNEL_THREAD_IO			$38
 ; free $0F
@@ -102,6 +103,10 @@ assert kthread_need_reschedule and $FF = 0
 ; 64 x 4 bytes, D00200 to D00300
 define	kthread_pid_map			$D00200
 
+kmm:
+.thread_unmap = kmmu.unmap_block_thread
+.thread_map = kmmu.map_block_thread
+
 kthread:
 .init:
 	di
@@ -138,7 +143,7 @@ kthread:
 .yield=kscheduler.yield
 	
 .create_no_mem:
-	call	kmmu.unmap_block_thread
+	call	kmm.thread_unmap
 .create_no_pid:
 	ld	l, EAGAIN
 .create_errno:
@@ -172,13 +177,13 @@ kthread:
 	jr	c, .create_no_pid
 	ld	hl, KERNEL_MMU_RAM
 	ld	b, KERNEL_THREAD_STACK_SIZE/KERNEL_MMU_PAGE_SIZE
-	call	kmmu.map_block_thread
+	call	kmm.thread_map
 	jr	c, .create_no_mem
 ; hl is adress    
 	push	hl
 	pop	iy
 	ld	b, KERNEL_THREAD_HEAP_SIZE/KERNEL_MMU_PAGE_SIZE
-	call	kmmu.map_block_thread
+	call	kmm.thread_map
 	jr	c, .create_no_mem
 	push	hl
 	ex	(sp), ix
@@ -494,7 +499,8 @@ kthread:
 	push	hl
 ; unmap the memory of the thread
 ; this also unmap the stack
-	call	kmmu.unmap_block
+	ld	a, (iy+KERNEL_THREAD_PID)
+	call	kmm.thread_unmap
 ; that will reset everything belonging to the thread
 	pop	hl
 	ld	a, 16
@@ -717,7 +723,7 @@ task_switch_stopped:
 	ld	l, kthread_queue_retire and $FF
 	jr	kqueue.insert_current
 
-; sleep	'hl' ms, granularity of about 4,7 ms
+; sleep	'hl' ms, granularity of about 9 ms
 task_switch_sleep_ms:
 ; do  hl * (32768/154/1000)
 	ld	e, l

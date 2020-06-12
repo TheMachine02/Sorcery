@@ -66,18 +66,15 @@ kqueue:
 ; new_node.prev = prev_node
 ; new_node.next = next_node
 ; queue_current = iy
-	push	hl
 	inc	hl
 	ld	ix, (hl)
 	ld	ix, (ix+QUEUE_PREVIOUS)
-	ld	hl, (hl)
 	ld	(iy+QUEUE_PREVIOUS), ix
-	ld	(iy+QUEUE_NEXT), hl
 	ld	(ix+QUEUE_NEXT), iy
-; (de+QUEUE_PREVIOUS)=iy
-	ex	(sp), hl
-	pop	ix
+	ld	ix, (hl)
+	ld	(iy+QUEUE_NEXT), ix
 	ld	(ix+QUEUE_PREVIOUS), iy
+	dec	hl
 	pop	ix
 	ret
 	

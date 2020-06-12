@@ -210,12 +210,9 @@ end if
 ; please, be sure of what you remove
 .remove:
 	ld	hl, klocal_timer_queue
-						; 	ld	a, (hl)
-						; 	or	a, a
-						; 	jr	z, .null_queue
 	dec	(hl)
 	inc	hl
-	jr	z, .null_queue
+	ret	z
 	push	iy
 	push	ix
 	ld	ix, (iy+TIMER_NEXT)
@@ -225,8 +222,4 @@ end if
 	ld	(hl), iy
 	pop	ix
 	pop	iy
-	ret
-.null_queue:
-	ld	de, NULL
-	ld	(hl), de
 	ret
