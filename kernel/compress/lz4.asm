@@ -171,13 +171,13 @@ end if
 	ld	iyl, a
 .literals:
 ; unpack 4 high bits to get the length of literal
+	and	a, $F0
+	jr	z, .literals_null
 	rlca
 	rlca
 	rlca
 	rlca
 ; copy literals
-	and	a, $0F
-	jr	z, .literals_null
 	cp	a, $0F
 	jr	nz, .literals_copy
 .literals_lisc:
