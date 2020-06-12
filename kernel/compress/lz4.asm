@@ -130,6 +130,26 @@ end if
 	ld	bc, 0
 	jr	.get_token
 
+.literals_copy:
+	ld	c, a
+	ldir
+.literals_null:
+; check for end of compressed data
+if CONFIG_USE_LZ4_STRICT = 1
+	pop	bc
+	or	a, a
+	sbc	hl, bc
+	add	hl, bc
+else
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	ld	a, c
+	or	a, b
+end if
+.decompress_success:
+	ret	z
+	inc	hl
 .matches:
 if CONFIG_USE_LZ4_STRICT = 1
 	push	bc
@@ -155,7 +175,7 @@ end if
 	ld	c, (hl)
 	inc	hl
 	add	a, c
-	jr	nc, $+3
+	jr	nc, .matches_copy
 	inc	b
 	inc	c
 	jr	z, .matches_lisc
@@ -184,29 +204,8 @@ end if
 	ld	c, (hl)
 	inc	hl
 	add	a, c
-	jr	nc, $+3
+	jr	nc, .literals_copy
 	inc	b
 	inc	c
-	jr	z, .literals_lisc
-.literals_copy:
-	ld	c, a
-	ldir
-.literals_null:
-; check for end of compressed data
-if CONFIG_USE_LZ4_STRICT = 1
-	pop	bc
-	or	a, a
-	sbc	hl, bc
-	add	hl, bc
-	jr	nz, .matches
-else
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
-	inc	hl
-	ld	a, c
-	or	a, b
-	jr	nz, .matches
-end if
-.decompress_success:
-	ret
+	jr	nz, .literals_copy
+	jr	.literals_lisc
