@@ -31,7 +31,7 @@ kinit:
 	out0	($3C), a
 ; general system init
 	call	kpower.init
-	call	kmmu.init
+	call	kmm.init
 	call	kflash.init
 	call	kwatchdog.init
 	call	klocal_timer.init
@@ -46,9 +46,10 @@ kinit:
 	call	kthread.create
 	jp	c, kinterrupt.nmi
 ; nice idle thread code
+.arch_sleep:
 	ei
 	halt
-	jr $-2
+	jr	.arch_sleep
 
 kname:
 	ld	hl, Sorcery.name
@@ -87,13 +88,14 @@ THREAD_INIT_TEST:
 
 	ld	hl, global_mutex
 	call	kmutex.unlock
-	
+
 	ld	hl, 3
 	ld	de, global_exit_value
 	call	kthread.join
 	
 ; video lock for me
-	call	kvideo.irq_lock
+; 	call	kvideo.irq_lock
+
 	ld	bc, 0
 .loop:
 	push	bc
@@ -101,11 +103,7 @@ THREAD_INIT_TEST:
 	ld	hl, global_mutex
 	call	kmutex.lock
 	
-	ld	de, (DRIVER_VIDEO_BUFFER)
-	ld	bc, 320*26
-	ld	hl, $E40000
-	ldir
-; 	call  kvideo.clear
+	call	kvideo.clear
 	ld	hl, 0
 	ld	e, 0
 	pop	bc
@@ -121,7 +119,7 @@ THREAD_INIT_TEST:
 	
 	ld	hl, global_mutex
 	call	kmutex.unlock
-		
+	
 	call	kvideo.swap
 	
 	ld	hl, 1000	; 1000 ms is nice

@@ -52,8 +52,8 @@ define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; 61 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$100
-define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
-define	KERNEL_THREAD_HEAP_SIZE			4096
+define	KERNEL_THREAD_STACK_SIZE		1024	; 3964 bytes usable
+define	KERNEL_THREAD_HEAP_SIZE			1024
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	64
 define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 define	KERNEL_THREAD_MQUEUE_COUNT		5
@@ -102,10 +102,6 @@ assert kthread_need_reschedule and $FF = 0
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
 define	kthread_pid_map			$D00200
-
-kmm:
-.thread_unmap = kmmu.unmap_block_thread
-.thread_map = kmmu.map_block_thread
 
 kthread:
 .init:
@@ -175,14 +171,15 @@ kthread:
 	lea	ix, iy+0
 	call	.reserve_pid
 	jr	c, .create_no_pid
-	ld	hl, KERNEL_MMU_RAM
-	ld	b, KERNEL_THREAD_STACK_SIZE/KERNEL_MMU_PAGE_SIZE
+	ld	b, 0
+	ld	c, KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE
 	call	kmm.thread_map
 	jr	c, .create_no_mem
 ; hl is adress    
 	push	hl
 	pop	iy
-	ld	b, KERNEL_THREAD_HEAP_SIZE/KERNEL_MMU_PAGE_SIZE
+	ld	b, 0
+	ld	c, KERNEL_THREAD_HEAP_SIZE/KERNEL_MM_PAGE_SIZE
 	call	kmm.thread_map
 	jr	c, .create_no_mem
 	push	hl
@@ -332,7 +329,7 @@ kthread:
 	or	a, a
 	sbc	hl, de
 	ret	z
-	ld	a, i
+	ld	hl, i
 	push	af
 ; this read need to be atomic !
 	ld	a, (iy+KERNEL_THREAD_STATUS)

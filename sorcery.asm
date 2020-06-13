@@ -103,7 +103,7 @@ include	'kernel/ksignal.asm'
 include	'kernel/ktimer.asm'
 include	'kernel/katomic.asm'
 include	'kernel/kmsg.asm'
-include	'kernel/kmmu.asm'
+include	'kernel/kmm.asm'
  rb	$0220A8-$
 include	'kernel/knmi.asm'
 include	'kernel/kflash.asm'

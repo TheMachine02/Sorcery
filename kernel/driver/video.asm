@@ -49,6 +49,10 @@ kvideo:
 
 .init:
 	tstdi
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	hl, KERNEL_MM_NULL
+	ld	bc, 512
+	ldir
 	ld	hl, .PALETTE_WHITE
 	ld	de, DRIVER_VIDEO_PALETTE+496
 	ld	bc, 16
@@ -140,7 +144,7 @@ kvideo:
 
 .clear:
 	ld	de, (DRIVER_VIDEO_BUFFER)
-	ld	hl, 0xE40000
+	ld	hl, KERNEL_MM_NULL
 	ld	bc, 76800
 	ldir
 	ret
