@@ -286,7 +286,60 @@ end if
 	dec	c
 	jr	z, .page_map_fast
 ; map c page from b page to thread a
-
+	ld	e, c
+	ld	hl, i
+	push	af
+	di
+	ld	a, b
+	add	a, c
+	jp	c, .segfault_critical
+	ld	hl, kmm_ptlb_map
+	ld	l, b
+	ld	a, b
+	cpl
+	ld	bc, 0
+	ld	c, a
+	inc	bc
+	ld	a, KERNEL_MM_PAGE_FREE_MASK
+.page_map_parse:
+; fast search for free page
+	cpir
+	jp	po, .page_map_no_free
+; else check we have at least c page free
+	ld	d, e
+.map_page_lenght:
+	cpi
+	jr	nz, .page_map_parse
+	dec	d
+	jr	nz, .map_page_lenght
+; e is lenght, hl is last adress + 1
+	dec	hl
+	ld	a, l
+	sub	a, e
+	ld	l, a
+; hl = start of the map, for e+1
+	inc	e
+	ld	b, e
+	ld	c, l	; save l for latter
+	pop	af
+	push	af
+.map_page_owner:
+	ld	(hl), 0
+	inc	h
+	ld	(hl), a
+	dec	h
+	inc	hl
+	djnz	.map_page_owner
+	pop	af
+	jp	po, $+5
+	ei
+	or	a, a
+	sbc	hl, hl
+	ld	h, c
+	add	hl, hl
+	add	hl, hl
+	ld	bc, KERNEL_MM_RAM
+	add	hl, bc
 	ret
 
 .page_map_fast:
@@ -366,16 +419,15 @@ end if
 ; destroy hl, bc, a
 	dec	c
 	jr	z, .page_unmap_fast
-	inc	c
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
-	dec	a
 	add	a, c
 	jp	c, .segfault
 ; okay nice. Now, we will unmap page
 ; hl = first page
 ; check permission first
+	inc	c
 	ld	b, c
 	ld	de, (kthread_current)
 	ld	a, (de)
