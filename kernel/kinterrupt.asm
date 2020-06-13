@@ -25,6 +25,9 @@ kinterrupt:
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and $FF
+	ld	a, e
+	or	a, KERNEL_INTERRUPT_ON
+	ld	e, a
 	ld	(hl), de
 ; also reset handler table
 	jp	kirq.init

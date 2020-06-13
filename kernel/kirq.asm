@@ -105,14 +105,6 @@ kirq:
 	ld	a, (hl)
 	or	a, b
 	ld	(hl), a
-	ld	hl, KERNEL_INTERRUPT_SIGNAL_LATCH
-	ld	a, (hl)
-	or	a, c
-	ld	(hl), a
-	inc	hl
-	ld	a, (hl)
-	or	a, b
-	ld	(hl), a
 	tstei
 	pop	af
 	pop	bc
@@ -140,14 +132,6 @@ kirq:
 	tstdi
 ; this is the first byte
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
-	ld	a, (hl)
-	and	a, c
-	ld	(hl), a
-	inc	hl
-	ld	a, (hl)
-	and	a, b
-	ld	(hl), a
-	ld	hl, KERNEL_INTERRUPT_SIGNAL_LATCH
 	ld	a, (hl)
 	and	a, c
 	ld	(hl), a
