@@ -309,6 +309,7 @@ end if
 	ld	d, e
 .map_page_lenght:
 	cpi
+	jp	po, .page_map_no_free
 	jr	nz, .page_map_parse
 	dec	d
 	jr	nz, .map_page_lenght
