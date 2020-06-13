@@ -171,15 +171,13 @@ kthread:
 	lea	ix, iy+0
 	call	.reserve_pid
 	jr	c, .create_no_pid
-	ld	b, 0
-	ld	c, KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE
+	ld	bc, KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE
 	call	kmm.thread_map
 	jr	c, .create_no_mem
 ; hl is adress    
 	push	hl
 	pop	iy
-	ld	b, 0
-	ld	c, KERNEL_THREAD_HEAP_SIZE/KERNEL_MM_PAGE_SIZE
+	ld	bc, KERNEL_THREAD_HEAP_SIZE/KERNEL_MM_PAGE_SIZE
 	call	kmm.thread_map
 	jr	c, .create_no_mem
 	push	hl
@@ -390,7 +388,7 @@ kthread:
 	lea	iy, ix+0
 	call	task_switch_running
 	ld	iy, (iy+KERNEL_THREAD_STACK)
-	ld	de, (iy-12)
+	ld	de, (iy+9)	; this is hl
 	ei
 	pop	hl
 	ld	(hl), de

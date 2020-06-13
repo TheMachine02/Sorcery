@@ -154,7 +154,7 @@ end if
 	jp	po, .segfault
 	ei
 .segfault:
-; e = fault page
+	ld	hl, (kthread_current)
 	ld	c, (hl)
 	ld	a, SIGSEGV
 	call	ksignal.kill

@@ -18,8 +18,11 @@ ksignal:
 	mlt	bc
 	ld	hl, .HANDLER_JUMP-3
 	add	hl, bc
-	ld	hl, (hl)
-	jp	(hl)
+	ld	ix, (hl)
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	jp	(ix)
 
 .handler_stop:
 	di
@@ -242,6 +245,7 @@ ksignal:
 ; restore signal in a
 	ld	hl, (kthread_current)
 	lea	bc, iy+0
+	or	a, a
 	sbc	hl, bc
 	jr	z, .kill_raise_frame
 	push	ix

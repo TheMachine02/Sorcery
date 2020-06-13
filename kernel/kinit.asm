@@ -92,7 +92,7 @@ THREAD_INIT_TEST:
 	ld	hl, 3
 	ld	de, global_exit_value
 	call	kthread.join
-	
+
 ; video lock for me
 ; 	call	kvideo.irq_lock
 
@@ -163,6 +163,10 @@ TEST_THREAD_C_DEATH:
 	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 	
 	call	kkeyboard.wait_key
+
+; let's try a segfault, shall we ?
+	ld	bc, 4*256 + 1
+	call	kmm.page_unmap
 	
 	ld	hl, 0
 	jp	kthread.exit
