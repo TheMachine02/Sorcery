@@ -48,11 +48,11 @@ kinit:
 ; nice idle thread code
 .arch_sleep:
 	ei
-	halt
+	slp
 	jr	.arch_sleep
 
 kname:
-	ld	hl, Sorcery.name
+	ld	bc, Sorcery.name
 	ret
 
 ; Exemple area ;
@@ -99,23 +99,34 @@ THREAD_INIT_TEST:
 	ld	bc, 0
 .loop:
 	push	bc
-	
 	ld	hl, global_mutex
 	call	kmutex.lock
-	
 	call	kvideo.clear
+; printing kernel name ;
+	call	kname
 	ld	hl, 0
 	ld	e, 0
+	call	kvideo.put_string
+; print the small counter ;
+	ld	hl, 0
+	ld	e, 13
 	pop	bc
 	push	bc
 	call	kvideo.put_int
-	
+; clock clock ;
+	ld	bc, global_running_string
+	ld	hl, 0
+	ld	e, 26
+	call	kvideo.put_string
 	call	kcstate.get_clock
+	ld	hl, global_frequency_table
 	ld	bc, 0
 	ld	c, a
-	ld	hl, 0
-	ld	e, 13
-	call	kvideo.put_hex
+	add	hl, bc
+	ld	c, (hl)
+	ld	hl, 102
+	ld	e, 26
+	call	kvideo.put_int
 	
 	ld	hl, global_mutex
 	call	kmutex.unlock
@@ -129,7 +140,12 @@ THREAD_INIT_TEST:
 	pop	bc
 	inc	bc
 	jr	.loop
-    
+
+global_running_string:
+ db "Frequency (Mhz) :", 0
+global_frequency_table:
+ db 6,12,24,48
+ 
 TEST_THREAD_C:
 	call __frameset0
 	ld hl, (ix+6)
