@@ -47,30 +47,26 @@ kmm:
 ; setup memory protection
 	di
 if CONFIG_USE_BOOT_PATCH=1
-	ld	a, $00
+	xor	a, a
 	out0	($20), a
-	ld	a, $00
 	out0	($21), a
-	ld	a, $D0
-	out0	($22), a
-	ld	a, $FF
+	dec	a
 	out0	($23), a
 	ld	a, $0F
 	out0	($24), a
 	ld	a, $D0
+	out0	($22), a
 	out0	($25), a
 else
 	ld	a, $7D
 	out0 (0x20), a
-	ld	a, $88
-	out0 (0x21), a
-	ld	a, $D1
-	out0 (0x22), a
-	ld	a, $7C
+	dec	a
 	out0 (0x23), a
 	ld	a, $88
+	out0 (0x21), a
 	out0 (0x24), a
 	ld	a, $D1
+	out0 (0x22), a
 	out0 (0x25), a
 end if
 ; setup previleged executable code (end of the OS)
@@ -481,12 +477,12 @@ end if
 	ld	bc, KERNEL_MM_PAGE_SIZE
 	ldir
 	pop	hl
-	pop	bc
 ; write first free_mask, so the page will be considered as free even if hell break loose and the thread is killed between the two following write
 	ld	(hl), KERNEL_MM_PAGE_FREE_MASK
 	inc	h
-	ld	(hl), NULL
+	ld	(hl), c
 	dec	h
+	pop	bc
 	ret
 
 mmap:
@@ -582,7 +578,6 @@ kmalloc:
 .malloc_mark_block:
 ; thresold to slipt the block. If the size left is >= 64 bytes, then slipt
 	ld	bc, KERNEL_MEMORY_MALLOC_THRESHOLD
-	or	a, a
 	sbc	hl, bc
 	jr	nc, .malloc_split_block
 ; no split, so just return current block \o/ mark it used
@@ -721,7 +716,7 @@ kfree:
 	jr	nc, .free_exit
 ; check if adress is valid
 	ld	hl, (ix-3)
-	or	a, a
+	xor	a, a
 	sbc	hl, de
 	jr	nz, .free_exit	; invalid adress, return quietly
 ; else, free the block and try to merge with prev & next
@@ -730,8 +725,7 @@ kfree:
 	lea	ix, ix-KERNEL_MEMORY_BLOCK_SIZE
 	res	7, (ix+KERNEL_MEMORY_BLOCK_FREE)
 	ld	iy, (ix+KERNEL_MEMORY_BLOCK_PREV)
-	ld	a, (ix+KERNEL_MEMORY_BLOCK_PREV+2)
-	or	a, a
+	or	a, (ix+KERNEL_MEMORY_BLOCK_PREV+2)
 	jr	z, .free_merge_pblock
 	bit	7, (iy+KERNEL_MEMORY_BLOCK_FREE)
 	jr	nz, .free_merge_pblock	
