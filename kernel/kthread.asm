@@ -203,8 +203,6 @@ kthread:
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; stack limit set first ;
 	lea	hl, iy + 4
-							;	ld	e, KERNEL_THREAD_HEADER_SIZE
-							;	add	hl, de
 ; we are block aligned. Do +256
 	inc	h
 ; please note write affect memory, so do a + 4 to be safe    
@@ -214,7 +212,7 @@ kthread:
 	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), de
 ; stack ;
 	lea	hl, iy - 27
-	ld	d,$10					; ld	de, KERNEL_THREAD_STACK_SIZE
+	ld	d, KERNEL_THREAD_STACK_SIZE/256
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
 ; heap (suite)
@@ -244,7 +242,7 @@ kthread:
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_0
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
-	call   kqueue.insert_current
+	call   kqueue.insert_head
 ; setup the stack \o/
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	iy, de
@@ -699,7 +697,7 @@ task_switch_uninterruptible:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jr	kqueue.insert_current
+	jr	kqueue.insert_head
 
 ; from TASK_READY to TASK_ZOMBIE
 ; may break if not in this state before
@@ -710,7 +708,7 @@ task_switch_zombie:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jr	kqueue.insert_current
+	jr	kqueue.insert_head
 
 ; from TASK_READY to TASK_STOPPED
 ; may break if not in this state before
@@ -721,7 +719,7 @@ task_switch_stopped:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jr	kqueue.insert_current
+	jr	kqueue.insert_head
 
 ; sleep	'hl' ms, granularity of about 9 ms
 task_switch_sleep_ms:
@@ -754,7 +752,7 @@ task_switch_interruptible:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jr	kqueue.insert_current
+	jr	kqueue.insert_head
 
 ; from TASK_STOPPED, TASK_INTERRUPTIBLE, TASK_UNINTERRUPTIBLE to TASK_READY
 ; may break if not in this state before
@@ -764,5 +762,5 @@ task_switch_running:
 	ld	hl, kthread_queue_retire
 	call	kqueue.remove
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
-assert kqueue.insert_current = $
-;	jr	kqueue.insert_current
+assert kqueue.insert_head = $
+;	jr	kqueue.insert_head

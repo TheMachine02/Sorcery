@@ -43,8 +43,8 @@ include 'sorcery_certificate.asm'
 	jp	kirq.enable
 	jp	kirq.disable
 ; queue function
-	jp	kqueue.insert_current
-	jp	kqueue.insert_end
+	jp	kqueue.insert_head
+	jp	kqueue.insert_tail
 	jp	kqueue.remove
 ; thread
 	jp	kthread.yield

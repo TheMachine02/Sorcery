@@ -11,14 +11,15 @@ kqueue:
 ; those routine destroy a
 ; all other register are preserved
 
-.insert_current:
+.insert_head:
 ; iy is node to insert
 ; hl is queue pointer (count, queue_current)
-; insert after current pointer is queue is non null, update current to node else
+; insert after current pointer if queue is non null, update current to node else
 ; inplace insert of the node
 ; return 
 	ld	a, (hl)
 	inc	(hl)
+	inc	hl
 	or	a, a
 	jr	z, .create
 	push	ix
@@ -26,38 +27,33 @@ kqueue:
 ; next_node.prev = new_node
 ; new_node.prev = prev_node
 ; new_node.next = next_node
-; queue_current = iy
-	push	hl
-	inc	hl
 	ld	ix, (hl)
-; ix = prev_node
-	ld	hl, (ix+QUEUE_NEXT)
-; de = next_node
-	ld	(iy+QUEUE_PREVIOUS), ix
-	ld	(iy+QUEUE_NEXT), hl
-	ld	(ix+QUEUE_NEXT), iy
-; (de+QUEUE_PREVIOUS)=iy
-	ex	(sp), hl
-	pop	ix
+	ld	ix, (ix+QUEUE_NEXT)
+	ld	(iy+QUEUE_NEXT), ix
 	ld	(ix+QUEUE_PREVIOUS), iy
+	ld	ix, (hl)
+	ld	(iy+QUEUE_PREVIOUS), ix
+	ld	(ix+QUEUE_NEXT), iy
+	dec	hl
 	pop	ix
 	ret
+	
 .create:
-	inc	hl
 	ld	(hl), iy
 	dec	hl
 	ld	(iy+QUEUE_PREVIOUS), iy
 	ld	(iy+QUEUE_NEXT), iy
 	ret
 
-.insert_end:
+.insert_tail:
 ; iy is node to insert
 ; hl is queue pointer (count, queue_current)
-; insert after current pointer is queue is non null, update current to node else
+; insert before current pointer if queue is non null, update current to node else
 ; inplace insert of the node
 ; return 
 	ld	a, (hl)
 	inc	(hl)
+	inc	hl
 	or	a, a
 	jr	z, .create
 	push	ix
@@ -65,8 +61,6 @@ kqueue:
 ; next_node.prev = new_node
 ; new_node.prev = prev_node
 ; new_node.next = next_node
-; queue_current = iy
-	inc	hl
 	ld	ix, (hl)
 	ld	ix, (ix+QUEUE_PREVIOUS)
 	ld	(iy+QUEUE_PREVIOUS), ix
@@ -86,20 +80,21 @@ kqueue:
 	dec	(hl)
 	ret	z
 	push	de
-	push	hl
+	push	bc
 	push	ix
 	inc	hl
-	push	hl
 	ld	ix, (iy+QUEUE_NEXT)
 ; if iy = (hl) : make (hl) be ix
-	lea	de, iy+0
-	ld	hl, (hl)
+	lea	bc, iy+0
+	ld	de, (hl)
+	ex	de, hl
 	or	a, a		; silly carry
-	sbc	hl, de
-	pop	hl
+	sbc	hl, bc
 	jr	nz, .remove_other_node
 ; we had the node set as current
+	ex	de, hl
 	ld	(hl), ix
+	ex	de, hl
 .remove_other_node:
 	ld	hl, (iy+QUEUE_PREVIOUS)
 ; next_node.prev=prev_node
@@ -107,8 +102,10 @@ kqueue:
 	ld	(ix+QUEUE_PREVIOUS), hl
 	inc	hl
 	ld	(hl), ix
+	ex	de, hl
+	dec	hl
 	pop	ix
-	pop	hl
+	pop	bc
 	pop	de
 	ret
 

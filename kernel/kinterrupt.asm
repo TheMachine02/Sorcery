@@ -205,7 +205,7 @@ end if
 	ld	a, SCHED_PRIO_MIN	
 	ld	(de), a
 	ld	l, a
-	call	kqueue.insert_end
+	call	kqueue.insert_tail
 	ld	a, l
 	ex	de, hl
 	inc	hl
