@@ -230,8 +230,9 @@ end if
 	ld	(hl), $5A
 ; mark timing used (24 bits count)
 	ld	hl, (iy+KERNEL_THREAD_TIME)
-	add	hl, bc
-	ld	bc, -KERNEL_WATCHDOG_HEARTBEAT-1
+	or	a, a
+	sbc	hl, bc
+	ld	bc, KERNEL_WATCHDOG_HEARTBEAT+1
 	add	hl, bc
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
