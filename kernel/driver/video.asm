@@ -51,11 +51,10 @@ kvideo:
 	tstdi
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	hl, KERNEL_MM_NULL
-	ld	bc, 512
+	ld	bc, 496
 	ldir
 	ld	hl, .PALETTE_WHITE
-	ld	de, DRIVER_VIDEO_PALETTE+496
-	ld	bc, 16
+	ld	c, 16
 	ldir
 	ld	hl, DRIVER_VIDEO_FONT_PALETTE
 	ld	(hl), 248
