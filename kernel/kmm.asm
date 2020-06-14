@@ -6,17 +6,18 @@ define	KERNEL_MM_PAGE_SIZE		1024
 define	KERNEL_MM_PAGE_FREE_MASK	128
 define	KERNEL_MM_PAGE_CACHE_MASK	64
 define	KERNEL_MM_PAGE_SHARED_MASK	32
-define	KERNEL_MM_PAGE_LOCK_MASK	16
-define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	8
-define	KERNEL_MM_PAGE_DIRTY_MASK	4
+define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	16
+define	KERNEL_MM_PAGE_DIRTY_MASK	8
+define	KERNEL_MM_PAGE_LOCK_MASK	7
+define	KERNEL_MM_PAGE_MAX_READER	6	; 7 is reserved for write lock
 
 ; bit
 define	KERNEL_MM_PAGE_FREE		7
 define	KERNEL_MM_PAGE_CACHE		6
 define	KERNEL_MM_PAGE_SHARED		5
-define	KERNEL_MM_PAGE_LOCK		4
-define	KERNEL_MM_PAGE_UNEVICTABLE	3
-define	KERNEL_MM_PAGE_DIRTY		2
+define	KERNEL_MM_PAGE_UNEVICTABLE	4
+define	KERNEL_MM_PAGE_DIRTY		3
+define	KERNEL_MM_PAGE_LOCK		0	; bit 0 to bit 2
 
 ; physical device
 define	KERNEL_MM_RAM			$D00000
@@ -115,7 +116,7 @@ end if
 	ld	a, (de)
 	rla
 ; KERNEL_MM_FREE
-	jr	nc, .segfault_permission
+	jr	c, .segfault_permission
 	ld	hl, (kthread_current)
 	and	(KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_SHARED_MASK) shl 1
 	ret	nz
@@ -164,8 +165,12 @@ end if
 ; Say, I WISH YOU THE BEST
 	ret
  
-.page_lock:
-; lock the page
+; if lock for read, multiple thread can read it
+; if lock for write, no one can lock for read or write
+; unlock read, does unlock if every thread finished reading
+ 
+.page_lock_read:
+; lock the page for read. Support concurrent read
 ; b = page
 ; everyone can lock cache page as it is mandatory for read / write
 ; you can only lock your own page or shared page or cache page
@@ -180,50 +185,124 @@ end if
 	ld	e, b
 	ld	a, (de)
 	rla
-	jp	nc, .segfault_critical
+	jp	c, .segfault_critical
 	ld	hl, (kthread_current)
 	and	(KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_SHARED_MASK) shl 1
-	jr	nz, .page_lock_rw
+	jr	nz, .page_lock_r
 	inc	d
 	ld	a, (de)
 	dec	d
 	cp	a, (hl)
 	jp	nz, .segfault_critical
-.page_lock_rw:
+.page_lock_r:
 ; check for lock
 	ex	de, hl
-	bit	KERNEL_MM_PAGE_LOCK, (hl)
-	jr	z, .page_lock_set
+	ld	a, (hl)
+	and	KERNEL_MM_PAGE_LOCK_MASK
+; are we locked for write ?
+	cp	a, KERNEL_MM_PAGE_LOCK_MASK
+	jr	z, .page_lock_r_entry
+	cp	a, KERNEL_MM_PAGE_MAX_READER
+	jr	nz, .page_lock_set_r
 ; let's wait for the page to relinquish the lock
+.page_lock_r_entry:
 	ex	de, hl
 	ld	bc, KERNEL_THREAD_IO
 	add	hl, bc
 	ld	(hl), e
-; hl = thread
-	ex	de, hl
+	or	a, a
+	sbc	hl, bc
+; hl = thread > iy
 	push	hl
 	ex	(sp), iy
-.page_lock_wait:
+	ex	de, hl
+.page_lock_wait_r:
 	push	hl
 	call	task_switch_uninterruptible
 	call	task_yield
 	pop	hl
 	di
-	bit	KERNEL_MM_PAGE_LOCK, (hl)
-	jr	nz, .page_lock_wait
-.page_lock_set:
+	ld	a, (hl)
+	and	KERNEL_MM_PAGE_LOCK_MASK
+	cp	a, KERNEL_MM_PAGE_MAX_READER
+	jr	z, .page_lock_wait_r
 	pop	iy
+.page_lock_set_r:
 ; sanity check again
 	bit	KERNEL_MM_PAGE_FREE, (hl)
 	jr	nz, .segfault_critical
-	set	KERNEL_MM_PAGE_LOCK, (hl)
+	inc	(hl)
 	pop	af
 	ret	po
 	ei
 	ret
-	
-.page_unlock:
-; unlock the page and notify waiting thread
+ 
+.page_lock_write:
+; lock the page for write, all read must be finished to be locked for write. No one can read while locked for write.
+; b = page
+; everyone can lock cache page as it is mandatory for read / write
+; you can only lock your own page or shared page or cache page
+; can't lock free page
+; please note that this routine will use interrupt to wait
+; destroy bc, hl, de
+	ld	hl, i
+	push	af
+	di
+; page_perm_rw
+	ld	de, kmm_ptlb_map
+	ld	e, b
+	ld	a, (de)
+	rla
+	jp	c, .segfault_critical
+	ld	hl, (kthread_current)
+	and	(KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_SHARED_MASK) shl 1
+	jr	nz, .page_lock_w
+	inc	d
+	ld	a, (de)
+	dec	d
+	cp	a, (hl)
+	jp	nz, .segfault_critical
+.page_lock_w:
+; check for lock
+	ex	de, hl
+	ld	a, (hl)
+	and	KERNEL_MM_PAGE_LOCK_MASK
+	jr	z, .page_lock_set_w
+; let's wait for the page to relinquish the lock
+	ex	de, hl
+	ld	bc, KERNEL_THREAD_IO
+	add	hl, bc
+	ld	(hl), e
+	or	a, a
+	sbc	hl, bc
+; hl = thread
+	push	hl
+	ex	(sp), iy
+	ex	de, hl
+.page_lock_wait_w:
+	push	hl
+	call	task_switch_uninterruptible
+	call	task_yield
+	pop	hl
+	di
+	ld	a, (hl)
+	and	KERNEL_MM_PAGE_LOCK_MASK
+	jr	nz, .page_lock_wait_w
+	pop	iy
+.page_lock_set_w:
+; sanity check again
+	bit	KERNEL_MM_PAGE_FREE, (hl)
+	jp	nz, .segfault_critical
+	ld	a, KERNEL_MM_PAGE_LOCK_MASK
+	or	a, (hl)
+	ld	(hl), a
+	pop	af
+	ret	po
+	ei
+	ret
+
+.page_unlock_read:
+; unlock the page and notify waiting thread if necessary
 ; b = page
 ; destroy bc, hl, de
 	ld	hl, i
@@ -234,25 +313,78 @@ end if
 	ld	e, b
 	ld	a, (de)
 	rla
-	jp	nc, .segfault_critical
+	jp	c, .segfault_critical
 	ld	hl, (kthread_current)
 	and	(KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_SHARED_MASK) shl 1
-	jr	nz, .page_unlock_rw
+	jr	nz, .page_unlock_r
 	inc	d
 	ld	a, (de)
 	dec	d
 	cp	a, (hl)
 	jp	nz, .segfault_critical
-.page_unlock_rw:
+.page_unlock_r:
 	ex	de, hl
 ; lock lifted
-	res	KERNEL_MM_PAGE_LOCK, (hl)
-; notify waiting thread
+	ld	a, KERNEL_MM_PAGE_LOCK_MASK
+	and	a, (hl)
+	cp	a, KERNEL_MM_PAGE_LOCK_MASK
+; lock for write
+	jp	z, .segfault_critical
+	
+; notify if = MAX_READER or if = zero
+	or	a, a
+	jp	z, .segfault_critical
+	dec	(hl)
+	jr	z, .page_unlock_shared
+	cp	a, KERNEL_MM_PAGE_MAX_READER
+	jr	z, .page_unlock_shared
+	pop	af
+	ret	po
+	ei
+	ret
+	
+.page_unlock_write:
+; unlock the page and notify waiting thread if necessary
+; b = page
+; destroy bc, hl, de
+	ld	hl, i
+	push	af
+	di
+; page_perm_rw
+	ld	de, kmm_ptlb_map
+	ld	e, b
+	ld	a, (de)
+	rla
+	jp	c, .segfault_critical
+	ld	hl, (kthread_current)
+	and	(KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_SHARED_MASK) shl 1
+	jr	nz, .page_unlock_w
+	inc	d
+	ld	a, (de)
+	dec	d
+	cp	a, (hl)
+	jp	nz, .segfault_critical
+.page_unlock_w:
+	ex	de, hl
+; lock lifted
+	ld	a, (hl)
+	ld	d, KERNEL_MM_PAGE_LOCK_MASK
+	and	a, d
+	cp	a, d
+; it wasn't locked for write ? WAIT WHAT
+	jp	nz, .segfault_critical
+; lift the lock
+	ld	a, (hl)
+	xor	a, d
+	ld	(hl), a
+
+.page_unlock_shared:
+; notify waiting thread, assume lock was lifted
 	ld	hl, kthread_queue_retire
 	ld	a, (hl)
 	or	a, a
 	jr	z, .page_unlock_exit
-	push	iy		; save iy
+	push	iy
 	ld	b, a
 	inc	hl
 	ld	iy, (hl)
