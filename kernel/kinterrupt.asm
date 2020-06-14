@@ -17,6 +17,8 @@ define	KERNEL_INTERRUPT_LCD			00001000b
 define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
+define	KERNEL_INTERRUPT_CACHE			$D00A00
+
 kinterrupt:
 .init:
 	di
@@ -29,6 +31,12 @@ kinterrupt:
 	or	a, KERNEL_INTERRUPT_ON
 	ld	e, a
 	ld	(hl), de
+if CONFIG_USE_CACHED_ISR = 1
+	ld	hl, interrupt_flash_base
+	ld	de, KERNEL_INTERRUPT_CACHE
+	ld	bc, interrupt_size
+	ldir
+end if	
 ; also reset handler table
 	jp	kirq.init
 
@@ -40,6 +48,11 @@ kinterrupt:
 .rst30:
     ret
 .nmi = knmi.service
+
+if CONFIG_USE_CACHED_ISR = 1
+	interrupt_flash_base=$
+	org	KERNEL_INTERRUPT_CACHE
+end if
 
 .service:
 	pop	hl
@@ -337,3 +350,8 @@ end if
 	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
 	ld	iy, (iy+TIMER_EV_NOTIFY_THREAD)
 	jp	(hl)
+
+if CONFIG_USE_CACHED_ISR = 1
+	interrupt_size= $ -  KERNEL_INTERRUPT_CACHE
+	org	interrupt_flash_base + interrupt_size
+end if
