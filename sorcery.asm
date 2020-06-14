@@ -106,7 +106,8 @@ include	'kernel/kmsg.asm'
 include	'kernel/kmm.asm'
  rb	$0220A8-$
 include	'kernel/knmi.asm'
-include	'kernel/kflash.asm'
+include	'kernel/dev/flash.asm'
+;include	'kernel/dev/zram.asm'
 ;include	'kernel/kvfs.asm'
 
 include	'kernel/fpu/idiv.asm'
