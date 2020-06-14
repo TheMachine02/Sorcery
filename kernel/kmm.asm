@@ -232,6 +232,16 @@ end if
 	bit	KERNEL_MM_PAGE_FREE, (hl)
 	jr	nz, .segfault_critical
 	inc	(hl)
+; we have locked the page, increase reference count if cache page
+	ld	a, (hl)
+	and	KERNEL_MM_PAGE_CACHE_MASK
+	jr	z, .page_lock_r_exit
+	inc	h
+	inc	(hl)
+	jr	nz, .page_lock_r_exit
+; case = overflow
+	dec	(hl)
+.page_lock_r_exit:
 	pop	af
 	ret	po
 	ei
@@ -296,6 +306,15 @@ end if
 	ld	a, KERNEL_MM_PAGE_LOCK_MASK
 	or	a, (hl)
 	ld	(hl), a
+; we have locked the page, increase reference count if cache page
+	and	KERNEL_MM_PAGE_CACHE_MASK
+	jr	z, .page_lock_w_exit
+	inc	h
+	inc	(hl)
+	jr	nz, .page_lock_w_exit
+; case = overflow
+	dec	(hl)
+.page_lock_w_exit:
 	pop	af
 	ret	po
 	ei
@@ -330,7 +349,6 @@ end if
 	cp	a, KERNEL_MM_PAGE_LOCK_MASK
 ; lock for write
 	jp	z, .segfault_critical
-	
 ; notify if = MAX_READER or if = zero
 	or	a, a
 	jp	z, .segfault_critical
@@ -420,7 +438,6 @@ end if
 	ld	e, c
 	ld	hl, i
 	push	af
-	di
 	ld	a, b
 	add	a, c
 	jp	c, .segfault_critical
@@ -432,6 +449,7 @@ end if
 	ld	c, a
 	inc	bc
 	ld	a, KERNEL_MM_PAGE_FREE_MASK
+	di
 .page_map_parse:
 ; fast search for free page
 	cpir
@@ -480,7 +498,6 @@ end if
 ; get kmm_ptlb_map adress
 	ld	hl, i
 	push	af
-	di
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
@@ -489,6 +506,7 @@ end if
 	ld	c, a
 	inc	bc
 	ld	a, KERNEL_MM_PAGE_FREE_MASK
+	di
 ; fast search for free page
 	cpir
 	jp	po, .page_map_no_free
