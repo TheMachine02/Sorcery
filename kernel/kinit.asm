@@ -99,9 +99,10 @@ THREAD_INIT_TEST:
 	ld	bc, 0
 .loop:
 	push	bc
-	ld	hl, global_mutex
-	call	kmutex.lock
-	call	kvideo.clear
+	ld	de, (DRIVER_VIDEO_BUFFER)
+	ld	hl, KERNEL_MM_NULL
+	ld	bc, 320*39
+	ldir	
 ; printing kernel name ;
 	call	kname
 	ld	hl, 0
@@ -127,9 +128,6 @@ THREAD_INIT_TEST:
 	ld	hl, 102
 	ld	e, 26
 	call	kvideo.put_int
-	
-	ld	hl, global_mutex
-	call	kmutex.unlock
 	
 	call	kvideo.swap
 	

@@ -170,11 +170,10 @@ klist:
 	or	a, a
 	ret	z
 	dec	(hl)
-	push	hl
 	inc	hl
 	ld	iy, (hl)
-	ld	hl, (iy+LIST_NEXT)
-	ld	(hl), hl
-	pop	hl
+	ld	bc, (iy+LIST_NEXT)
+	ld	(hl), bc
+	dec	hl
 	or	a, a
 	ret

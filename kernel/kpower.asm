@@ -6,7 +6,7 @@ define	KERNEL_POWER_PWM		$B024
 
 kpower:
 .init:
-	ld	a, $03
+	ld	a, $01
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 	ret
 

@@ -40,6 +40,9 @@ define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
 
 ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
 define	kmm_ptlb_map			$D00E00
+; memory region for mapping cache page to virtual inode
+; 2 bytes per inode
+define	kmm_cache_map			$D00C00
 
 kmm:
 
