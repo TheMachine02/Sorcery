@@ -109,7 +109,7 @@ include	'kernel/kslab.asm'
 include	'kernel/knmi.asm'
 include	'kernel/dev/flash.asm'
 include	'kernel/dev/ramfs.asm'
-;include	'kernel/kvfs.asm'
+include	'kernel/kvfs.asm'
 
 include	'kernel/fpu/idiv.asm'
 ; include	'kernel/exec/kexec.asm'

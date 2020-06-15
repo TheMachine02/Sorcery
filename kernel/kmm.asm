@@ -426,15 +426,15 @@ end if
 .page_map:
 ; register b is page index wanted, return hl = adress or -1 if error
 ; register c is page count wanted
-; register e is flags
 ; destroy bc, destroy a, destroy de
 	ld	hl, (kthread_current)
+	or	a, a
 	ld	a, (hl)
 .thread_map:
 	dec	c
-	jr	z, .page_map_fast
-; map c page from b page to thread a
 	ld	e, c
+	jr	z, .page_map_single
+; map c page from b page to thread a
 	ld	hl, i
 	push	af
 	ld	a, b
@@ -497,7 +497,10 @@ end if
 	jr	z, .page_map_found
 	jp	.page_map_no_free
 
-.page_map_fast:
+.page_map_flags:
+	ld	e, KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK
+	xor	a, a
+.page_map_single:
 ; register b is page index wanted, return hl = adress or -1 if error, e is flag (SHARED or not)
 ; destroy bc, destroy hl
 ; get kmm_ptlb_map adress
@@ -516,7 +519,7 @@ end if
 	cpir
 	jp	po, .page_map_no_free
 	dec	hl
-	ld	(hl), 0
+	ld	(hl), e
 	inc	h
 	pop	af
 	ld	(hl), a
@@ -644,6 +647,160 @@ end if
 	pop	bc
 	ret
 
+.cache_page_map:
+; register b is page index wanted, return hl = adress or -1 if error
+; destroy bc, destroy hl
+; interrupt should be disabled
+; get kmm_ptlb_map adress
+	di
+	ld	hl, kmm_ptlb_map
+	ld	bc, 256
+	ld	a, KERNEL_MM_PAGE_FREE_MASK
+; fast search for free page
+	cpir
+	jp	po, .cache_page_ram_full
+	dec	hl
+	ld	(hl), KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_LOCK_MASK
+	inc	h
+	ld	(hl), 1
+	dec	h
+	ld	b, l
+	ret
+.cache_page_ram_full:
+	scf
+	sbc	hl, hl
+	ret
+
+.cache_phy_read:
+	ld	ix, (iy+KERNEL_VFS_INODE_OP)
+	jp	(ix)
+	
+.cache_phy_write:
+	ld	ix, (iy+KERNEL_VFS_INODE_OP)
+	lea	ix, ix+3
+	jp	(ix)
+	
+.cache_get_page_read:
+; iy = node, hl = offset
+; compute hl/1024 and get actual inode entrie
+	call	kvfs.inode_page_entry
+	ld	a, i
+	push	af
+	di
+; hl = entry of the node
+	ld	a, (hl)
+	or	a, a
+; zero = no cache page mapped
+	jr	nz, .cache_page_hit_read
+	push	hl
+	call	.cache_page_map
+; TODO check for error
+; b = page
+	pop	hl
+	ld	(hl), b
+	inc	hl
+	ld	hl, (hl)
+	pop	af
+	jp	po, $+5
+	ei
+	push	bc
+	call	.cache_phy_read
+	pop	bc
+; ; hardcore lock change
+; ; atomically, this is okay, since we were locked on write and operating on a own page, so nothing should have changed. I need to notify though ....
+; 	ld	hl, kmm_ptlb_map
+; 	ld	l, b
+; 	ld	(hl), KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK or 1
+	tstdi
+	push	bc
+	call	.page_unlock_write
+	pop	bc
+	push	bc
+	call	.page_lock_read
+	pop	bc
+	tstei
+	or	a, a
+	sbc	hl, hl
+	ld	h, b
+	add	hl, hl
+	add	hl, hl
+	ld	bc, KERNEL_MM_RAM
+	add	hl, bc
+	ret
+.cache_page_hit_read:
+	ld	b, a
+	call	.page_lock_read
+	or	a, a
+	ld	a, l
+	sbc	hl, hl
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ld	bc, KERNEL_MM_RAM
+	add	hl, bc
+	pop	af
+	ret	po
+	ei
+	ret
+
+.cache_get_page_write:
+; iy = node, hl = offset
+; destroy all except iy, hl is RAM adress in theory
+; compute hl/1024 and get actual inode entrie
+	call	kvfs.inode_page_entry
+	ld	a, i
+	push	af
+	di
+; hl = entry of the node
+	ld	a, (hl)
+	or	a, a
+; zero = no cache page mapped
+	jr	nz, .cache_page_hit_write
+	push	hl
+	call	.cache_page_map
+; TODO check for error
+; b = page
+	pop	hl
+	ld	(hl), b
+	inc	hl
+	ld	hl, (hl)
+	pop	af
+	jp	po, $+5
+	ei
+	push	bc
+	call	.cache_phy_write
+	pop	bc
+; we are locked for write, so give back the adress and pray
+	or	a, a
+	sbc	hl, hl
+	ld	h, b
+	add	hl, hl
+	add	hl, hl
+	ld	bc, KERNEL_MM_RAM
+	add	hl, bc
+	ret
+.cache_page_hit_write:
+	ld	b, a
+	call	.page_lock_read
+	or	a, a
+	ld	a, l
+	sbc	hl, hl
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ld	bc, KERNEL_MM_RAM
+	add	hl, bc
+	pop	af
+	ret	po
+	ei
+	ret
+	
+.cache_drop_page:
+	ret
+	
+.cache_evict_page:
+	ret
+	
 mmap:
 ; map file page as anonymous shared data
 ; actually get it out of the cache and give a fixed adress for it
