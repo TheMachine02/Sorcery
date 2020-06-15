@@ -41,9 +41,6 @@ define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
 
 ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
 define	kmm_ptlb_map			$D00E00
-; memory region for mapping cache page to virtual inode
-; 2 bytes per inode
-define	kmm_cache_map			$D00C00
 
 kmm:
 
@@ -458,12 +455,13 @@ end if
 	jp	po, .page_map_no_free
 ; else check we have at least c page free
 	ld	d, e
-.map_page_lenght:
+.page_map_length:
 	cpi
-	jp	po, .page_map_no_free
 	jr	nz, .page_map_parse
+	jp	po, .page_map_except
 	dec	d
-	jr	nz, .map_page_lenght
+	jr	nz, .page_map_length
+.page_map_found:
 ; e is lenght, hl is last adress + 1
 	dec	hl
 	ld	a, l
@@ -475,13 +473,13 @@ end if
 	ld	c, l	; save l for latter
 	pop	af
 	push	af
-.map_page_owner:
+.page_map_owner:
 	ld	(hl), 0
 	inc	h
 	ld	(hl), a
 	dec	h
 	inc	hl
-	djnz	.map_page_owner
+	djnz	.page_map_owner
 	pop	af
 	jp	po, $+5
 	ei
@@ -493,6 +491,10 @@ end if
 	ld	bc, KERNEL_MM_RAM
 	add	hl, bc
 	ret
+.page_map_except:
+	dec	d
+	jr	z, .page_map_found
+	jp	.page_map_no_free
 
 .page_map_fast:
 ; register b is page index wanted, return hl = adress or -1 if error, e is flag (SHARED or not)
