@@ -46,7 +46,8 @@ kvfs:
 
 .inode_page_entry:
 ; iy is node, hl is offset in file
-
+; please note that we need to allocate the entry if not allocated
+; (ie max two slab alloc)
 	ret
 
 .find_inode:

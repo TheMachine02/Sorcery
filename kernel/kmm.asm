@@ -40,6 +40,7 @@ define	KERNEL_MEMORY_BLOCK_SIZE	12
 define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
 
 ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
+define	kcache_inode_map		$D00B00
 define	kmm_ptlb_map			$D00E00
 
 kmm:
@@ -648,7 +649,7 @@ end if
 	ret
 
 .cache_page_map:
-; register b is page index wanted, return hl = adress or -1 if error
+; iy is inode
 ; destroy bc, destroy hl
 ; interrupt should be disabled
 ; get kmm_ptlb_map adress
@@ -663,8 +664,16 @@ end if
 	ld	(hl), KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_LOCK_MASK
 	inc	h
 	ld	(hl), 1
-	dec	h
-	ld	b, l
+	ld	a, l
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	add	hl, hl
+	add	hl, hl
+	ld	bc, kcache_inode_map
+	add	hl, bc
+	ld	(hl), iy
+	ld	b, a
 	ret
 .cache_page_ram_full:
 	scf
@@ -781,7 +790,7 @@ end if
 	ret
 .cache_page_hit_write:
 	ld	b, a
-	call	.page_lock_read
+	call	.page_lock_write
 	or	a, a
 	ld	a, l
 	sbc	hl, hl
