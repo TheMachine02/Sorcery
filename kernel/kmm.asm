@@ -457,8 +457,8 @@ end if
 	ld	d, e
 .page_map_length:
 	cpi
-	jr	nz, .page_map_parse
 	jp	po, .page_map_except
+	jr	nz, .page_map_parse
 	dec	d
 	jr	nz, .page_map_length
 .page_map_found:
@@ -492,6 +492,7 @@ end if
 	add	hl, bc
 	ret
 .page_map_except:
+	jp	nz, .page_map_no_free
 	dec	d
 	jr	z, .page_map_found
 	jp	.page_map_no_free
