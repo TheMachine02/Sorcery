@@ -5,7 +5,15 @@ define	KERNEL_FLASH_RAM_CACHE		$D00000
 
 define	KERNEL_FLASH_SIZE		$400000
 
-kflash:
+flash:
+
+.phy_mem_op:
+	jp	.phy_read_page
+	jp	.phy_write_page
+	jp	.phy_create_inode
+	jp	.phy_destroy_inode
+	jp	.phy_read_inode
+	jp	.phy_write_inode
 
 .init:
 ; set flash wait state
@@ -38,11 +46,25 @@ kflash:
 	out0	($28), c
 	ret
 	
-.phy_write_page:
-	ret
-	
 .phy_read_page:
+; 24 bits key adress = hl, page index = b
+	ret
+
+.phy_write_page:
+; page index = b, return 24 bits key adress
+	ret
+
+.phy_erase_sector:
 	ret
 	
-.phy_erase_sector:
+.phy_create_inode:
+	ret
+	
+.phy_destroy_inode:
+	ret
+	
+.phy_write_inode:
+	ret
+	
+.phy_read_inode:
 	ret

@@ -238,9 +238,10 @@ end if
 	jr	z, .page_lock_r_exit
 	inc	h
 	inc	(hl)
-	jr	nz, .page_lock_r_exit
+	jr	nz, $+3
 ; case = overflow
 	dec	(hl)
+	dec	h
 .page_lock_r_exit:
 	pop	af
 	ret	po
@@ -311,9 +312,10 @@ end if
 	jr	z, .page_lock_w_exit
 	inc	h
 	inc	(hl)
-	jr	nz, .page_lock_w_exit
+	jr	nz, $+3
 ; case = overflow
 	dec	(hl)
+	dec	h
 .page_lock_w_exit:
 	pop	af
 	ret	po

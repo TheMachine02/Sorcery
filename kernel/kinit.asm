@@ -32,7 +32,8 @@ kinit:
 ; general system init
 	call	kpower.init
 	call	kmm.init
-	call	kflash.init
+	call	flash.init
+	call	ramfs.init
 	call	kwatchdog.init
 	call	klocal_timer.init
 	call	kinterrupt.init
