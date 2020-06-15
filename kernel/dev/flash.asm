@@ -19,11 +19,9 @@ flash:
 ; set flash wait state
 	di
 	ld	hl, KERNEL_FLASH_CTRL
-	ld	a, KERNEL_FLASH_WAIT_STATE
-	ld	(hl), a
-	ld	a, $06
+	ld	(hl), KERNEL_FLASH_WAIT_STATE
 	ld	l, KERNEL_FLASH_MAPPING and $FF
-	ld	(hl), a
+	ld	(hl), $06
 ; lock it on init
 
 ; flash unlock and lock
