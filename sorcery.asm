@@ -104,6 +104,7 @@ include	'kernel/ktimer.asm'
 include	'kernel/katomic.asm'
 include	'kernel/kmsg.asm'
 include	'kernel/kmm.asm'
+include	'kernel/kslab.asm'
  rb	$0220A8-$
 include	'kernel/knmi.asm'
 include	'kernel/dev/flash.asm'

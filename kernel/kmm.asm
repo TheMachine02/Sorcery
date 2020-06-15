@@ -764,8 +764,6 @@ kmalloc:
 	ld	(iy+KERNEL_MEMORY_BLOCK_NEXT), hl
 	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
 	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
-	ld	ix, (iy+KERNEL_MEMORY_BLOCK_NEXT)
-	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), iy
 	lea	bc, iy+KERNEL_MEMORY_BLOCK_SIZE
 	ld	(iy+KERNEL_MEMORY_BLOCK_PTR), bc
 	pop	iy
@@ -874,13 +872,13 @@ kfree:
 	add	hl, de
 	jr	nc, .free_exit
 ; check if adress is valid
+	push	de
+	pop	ix
 	ld	hl, (ix-3)
 	xor	a, a
 	sbc	hl, de
 	jr	nz, .free_exit	; invalid adress, return quietly
 ; else, free the block and try to merge with prev & next
-	push	de
-	pop	ix
 	lea	ix, ix-KERNEL_MEMORY_BLOCK_SIZE
 	res	7, (ix+KERNEL_MEMORY_BLOCK_FREE)
 	ld	iy, (ix+KERNEL_MEMORY_BLOCK_PREV)

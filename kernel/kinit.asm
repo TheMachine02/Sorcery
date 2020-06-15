@@ -1,4 +1,4 @@
-define	KERNEL_HEAP			$D00040
+define	KERNEL_HEAP			$D00043
 define	KERNEL_THREAD			$D00010
 define	KERNEL_STACK			KERNEL_THREAD + KERNEL_THREAD_STACK
 define	KERNEL_STACK_SIZE		$30
@@ -31,13 +31,18 @@ kinit:
 	out0	($3C), a
 ; general system init
 	call	kpower.init
+	call	kwatchdog.init
+; memory init ;
 	call	kmm.init
+	call	kslab.init
+; device init ;
 	call	flash.init
 	call	ramfs.init
-	call	kwatchdog.init
+; timer and interrupts ;
 	call	klocal_timer.init
 	call	kinterrupt.init
 	call	kthread.init
+; other ;
 	call	kmsg.init
 ; driver init, nice
 	call	kvideo.init
@@ -93,7 +98,7 @@ THREAD_INIT_TEST:
 	ld	hl, 3
 	ld	de, global_exit_value
 	call	kthread.join
-
+		
 ; video lock for me
 ; 	call	kvideo.irq_lock
 
@@ -173,15 +178,23 @@ TEST_THREAD_C:
 
 TEST_THREAD_C_DEATH:
 	call __frameset0
-	
 	ld	iy, (kthread_current)
 	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
-	
+; malloc test ;
+	ld	hl, 512
+	call	kmalloc
+	push	hl
+	ld	hl, 512
+	call	kmalloc	
+	ld	hl, 512
+	call	kmalloc
+	pop	hl
+	call	kfree
+; wait ;	
 	call	kkeyboard.wait_key
-
 ; let's try a segfault, shall we ?
 	ld	bc, 4*256 + 1
 	call	kmm.page_unmap
-	
+; normal path - but not taken
 	ld	hl, 0
 	jp	kthread.exit
