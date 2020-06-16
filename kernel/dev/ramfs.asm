@@ -16,25 +16,24 @@ ramfs:
 	
 .mount:
 ; mount the file system at the specified path (bc)
-;	call	kvfs.find_inode ; also create inode path
+	call	kvfs.find_inode
 ; iy  inode based on path
 ; fill inode iy with mount information
-; ;	ld	iy, kvfs_root_inode
-; 	ld	a, i
-; 	push	af
-; 	di
-; 	ld	hl, KERNEL_MM_NULL
-; 	lea	de, iy+0
-; 	ld	bc, KERNEL_VFS_INODE_SIZE
-; 	ldir
-; 	set	KERNEL_VFS_INODE_DIRECTORY, (iy+KERNEL_VFS_INODE_FLAGS)
-; 	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
-; 	ld	hl, .phy_mem_op
-; 	ld	(iy+KERNEL_VFS_INODE_OP), hl
-; 	pop	af
-; 	ret	po
-; 	ei
-; 	ret
+	ld	a, i
+	push	af
+	di
+	ld	hl, KERNEL_MM_NULL
+	lea	de, iy+0
+	ld	bc, KERNEL_VFS_INODE_SIZE
+	ldir
+	set	KERNEL_VFS_INODE_DIRECTORY, (iy+KERNEL_VFS_INODE_FLAGS) 
+	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
+	ld	hl, .phy_mem_op
+	ld	(iy+KERNEL_VFS_INODE_OP), hl
+	pop	af
+	ret	po
+	ei
+	ret
 	
 .phy_read_page:
 ; 24 bits key adress = hl, page index = b

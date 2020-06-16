@@ -39,8 +39,9 @@ define	KERNEL_MEMORY_BLOCK_PTR		9
 define	KERNEL_MEMORY_BLOCK_SIZE	12
 define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
 
-; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
+; link between cache page and inode (so inode can be updated when droping cache pages)
 define	kcache_inode_map		$D00B00
+; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
 define	kmm_ptlb_map			$D00E00
 
 kmm:
@@ -424,6 +425,43 @@ end if
 	ei
 	ret
 
+.page_relock:
+; change a write lock page to a read lock page
+; b = page
+; destroy bc, hl, de
+	ld	hl, i
+	push	af
+	di
+; page_perm_rw
+	ld	de, kmm_ptlb_map
+	ld	e, b
+	ld	a, (de)
+	rla
+	jp	c, .segfault_critical
+	ld	hl, (kthread_current)
+	and	(KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_SHARED_MASK) shl 1
+	jr	nz, .page_unlock_rw
+	inc	d
+	ld	a, (de)
+	dec	d
+	cp	a, (hl)
+	jp	nz, .segfault_critical
+.page_unlock_rw:
+	ex	de, hl
+; lift lock and relock
+	ld	a, (hl)
+	ld	d, KERNEL_MM_PAGE_LOCK_MASK
+	and	a, d
+	cp	a, d
+; it wasn't locked for write ? WAIT WHAT
+	jp	nz, .segfault_critical
+; lift the lock
+	ld	a, (hl)
+	xor	a, d
+	inc	a
+	ld	(hl), a
+	jr	.page_unlock_shared
+	
 .page_map:
 ; register b is page index wanted, return hl = adress or -1 if error
 ; register c is page count wanted
@@ -648,167 +686,7 @@ end if
 	pop	bc
 	ret
 
-.cache_page_map:
-; iy is inode
-; destroy bc, destroy hl
-; interrupt should be disabled
-; get kmm_ptlb_map adress
-	di
-	ld	hl, kmm_ptlb_map
-	ld	bc, 256
-	ld	a, KERNEL_MM_PAGE_FREE_MASK
-; fast search for free page
-	cpir
-	jp	po, .cache_page_ram_full
-	dec	hl
-	ld	(hl), KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_LOCK_MASK
-	inc	h
-	ld	(hl), 1
-	ld	a, l
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	add	hl, hl
-	add	hl, hl
-	ld	bc, kcache_inode_map
-	add	hl, bc
-	ld	(hl), iy
-	ld	b, a
-	ret
-.cache_page_ram_full:
-	scf
-	sbc	hl, hl
-	ret
-
-.cache_phy_read:
-	ld	ix, (iy+KERNEL_VFS_INODE_OP)
-	jp	(ix)
-	
-.cache_phy_write:
-	ld	ix, (iy+KERNEL_VFS_INODE_OP)
-	lea	ix, ix+3
-	jp	(ix)
-	
-.cache_get_page_read:
-; iy = node, hl = offset
-; compute hl/1024 and get actual inode entrie
-	call	kvfs.inode_page_entry
-	ld	a, i
-	push	af
-	di
-; hl = entry of the node
-	ld	a, (hl)
-	or	a, a
-; zero = no cache page mapped
-	jr	nz, .cache_page_hit_read
-	push	hl
-	call	.cache_page_map
-; TODO check for error
-; b = page
-	pop	hl
-	ld	(hl), b
-	inc	hl
-	ld	hl, (hl)
-	pop	af
-	jp	po, $+5
-	ei
-	push	bc
-	call	.cache_phy_read
-	pop	bc
-; ; hardcore lock change
-; ; atomically, this is okay, since we were locked on write and operating on a own page, so nothing should have changed. I need to notify though ....
-; 	ld	hl, kmm_ptlb_map
-; 	ld	l, b
-; 	ld	(hl), KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK or 1
-	tstdi
-	push	bc
-	call	.page_unlock_write
-	pop	bc
-	push	bc
-	call	.page_lock_read
-	pop	bc
-	tstei
-	or	a, a
-	sbc	hl, hl
-	ld	h, b
-	add	hl, hl
-	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
-	ret
-.cache_page_hit_read:
-	ld	b, a
-	call	.page_lock_read
-	or	a, a
-	ld	a, l
-	sbc	hl, hl
-	ld	h, a
-	add	hl, hl
-	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
-	pop	af
-	ret	po
-	ei
-	ret
-
-.cache_get_page_write:
-; iy = node, hl = offset
-; destroy all except iy, hl is RAM adress in theory
-; compute hl/1024 and get actual inode entrie
-	call	kvfs.inode_page_entry
-	ld	a, i
-	push	af
-	di
-; hl = entry of the node
-	ld	a, (hl)
-	or	a, a
-; zero = no cache page mapped
-	jr	nz, .cache_page_hit_write
-	push	hl
-	call	.cache_page_map
-; TODO check for error
-; b = page
-	pop	hl
-	ld	(hl), b
-	inc	hl
-	ld	hl, (hl)
-	pop	af
-	jp	po, $+5
-	ei
-	push	bc
-	call	.cache_phy_write
-	pop	bc
-; we are locked for write, so give back the adress and pray
-	or	a, a
-	sbc	hl, hl
-	ld	h, b
-	add	hl, hl
-	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
-	ret
-.cache_page_hit_write:
-	ld	b, a
-	call	.page_lock_write
-	or	a, a
-	ld	a, l
-	sbc	hl, hl
-	ld	h, a
-	add	hl, hl
-	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
-	pop	af
-	ret	po
-	ei
-	ret
-	
-.cache_drop_page:
-	ret
-	
-.cache_evict_page:
-	ret
+include	'kmm_cache.asm'
 	
 mmap:
 ; map file page as anonymous shared data

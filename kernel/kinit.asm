@@ -47,6 +47,9 @@ kinit:
 ; driver init, nice
 	call	kvideo.init
 	call	kkeyboard.init
+; mount root ;
+	ld	bc, .root_path
+	call	ramfs.mount	
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
@@ -56,6 +59,9 @@ kinit:
 	ei
 	slp
 	jr	.arch_sleep
+
+.root_path:
+ db "/", 0
 
 kname:
 	ld	bc, Sorcery.name
