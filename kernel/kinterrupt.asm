@@ -68,7 +68,7 @@ end if
 	ld	a, b
 	rla
 	rla
-	and	$F0
+	and	a, $F0
 	or	a, c
 	rra
 	call	c, KERNEL_IRQ_HANDLER_001
@@ -151,7 +151,7 @@ kscheduler:
 	ld	a, SCHED_PRIO_MIN
 	ld	(hl), a
 	inc	hl
-	jr	.local_quantum_compute
+	jr	.schedule_give_quanta
 	
 .local_timer:
 ; schedule jiffies timer first
@@ -189,11 +189,13 @@ if CONFIG_USE_DOWNCLOCKING
 	ld	(kcstate_timer), a
 end if
 
-.local_quantum:
+.schedule_check_quanta:
+; if we need to reschedule, skip this phase entirely ;
 	ld	hl, kthread_need_reschedule
 	sra	(hl)
 	ld	(hl), l
 	inc	hl
+; load current thread ;
 	ld	iy, (hl)
 	jr	c, .schedule
 ; do we have idle thread ?
@@ -206,26 +208,28 @@ end if
 	dec	(hl)
 	jr	nz, kinterrupt.resume
 ; lower thread priority and move queue
+.schedule_unpromote:
 	dec	hl
 	ld	de, kthread_mqueue_0
 	ld	e, (hl)
-	ex	de, hl
-	call	kqueue.remove
-	ld	a, l
+	ld	a, e
 	add	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
 	jp	p, $+5
 	xor	a, a
 	cp	a, SCHED_PRIO_MIN+1
 	jr	c, $+4
-	ld	a, SCHED_PRIO_MIN	
-	ld	(de), a
+	ld	a, SCHED_PRIO_MIN
+	ld	(hl), a
+	inc	hl
+	cp	a, e
+	jr	z, .schedule_give_quanta
+	ex	de, hl
+	call	kqueue.remove
 	ld	l, a
 	call	kqueue.insert_tail
-	ld	a, l
 	ex	de, hl
-	inc	hl
-.local_quantum_compute:
+.schedule_give_quanta:
 ; exponential quantum
 	rrca
 	rrca
@@ -281,10 +285,10 @@ end if
 ; are they the same ?
 	lea	hl, iy+0
 	sbc	hl, de
+	exx
 	jr	z, .context_restore_minimal
 ; same one, just quit and restore fast
 ; save state of the current thread
-	exx
 	ex	af,af'
 	push	hl
 	push	bc
@@ -301,7 +305,8 @@ end if
 	ld	(kthread_current), hl	; mark new current
 	ld	c, KERNEL_THREAD_STACK_LIMIT
 	add	hl, bc
-	ld	bc, $00033A
+;	ld	bc, $00033A
+	ld	b, $03
 	otimr
 	ld	hl, (hl)
 	ld	sp, hl
@@ -317,7 +322,6 @@ end if
 .context_restore_minimal:
 	pop	iy
 	pop	ix
-	exx
 	ex	af, af'
 	ei
 	ret

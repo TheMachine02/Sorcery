@@ -44,11 +44,6 @@ else if CONFIG_CRYSTAL_DIVISOR = 0
 	define	TIME_MS_TO_JIFFIES		113
 	define	TIME_S_TO_JIFFIES		222
 end if
-
-; timer queue
-define	klocal_timer_queue		$D00300
-define 	klocal_timer_size		$D00300
-define	klocal_timer_current		$D00301
  
 klocal_timer:
 

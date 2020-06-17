@@ -14,8 +14,8 @@ define	KERNEL_THREAD_PRIORITY			$0A
 define	KERNEL_THREAD_QUANTUM			$0B
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
-define	KERNEL_THREAD_STACK_LIMIT		$0C
-define	KERNEL_THREAD_STACK			$0F
+; define	KERNEL_THREAD_STACK_LIMIT		$0C
+; define	KERNEL_THREAD_STACK			$0F
 define	KERNEL_THREAD_HEAP			$12
 define	KERNEL_THREAD_TIME			$15
 ; some stuff ;
@@ -37,16 +37,18 @@ define	KERNEL_THREAD_SIGNAL			$2E
 define	KERNEL_THREAD_EV_SIG			$2E
 define	KERNEL_THREAD_EV_SIG_POINTER		$2F
 ; other ;
-define	KERNEL_THREAD_NICE			$31
-define	KERNEL_THREAD_ATTRIBUTE			$32
-define	KERNEL_THREAD_JOINED			$33	; joined thread waiting for exit()
+define	KERNEL_THREAD_NICE			$32
+define	KERNEL_THREAD_ATTRIBUTE			$33
+define	KERNEL_THREAD_JOINED			$34	; joined thread waiting for exit()
 ; priority waiting list
-define	KERNEL_THREAD_LIST_PRIORITY		$34
-define	KERNEL_THREAD_LIST			$35
+define	KERNEL_THREAD_LIST_PRIORITY		$35
+define	KERNEL_THREAD_LIST			$36
 
 ; io waiting queue
-define	KERNEL_THREAD_IO			$38
-; free $0F
+define	KERNEL_THREAD_IO			$39
+
+define	KERNEL_THREAD_STACK_LIMIT		$3A
+define	KERNEL_THREAD_STACK			$3D
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 61 descriptors usables ;
@@ -91,6 +93,10 @@ define	kthread_mqueue_3_current		$D0040D
 define	kthread_queue_retire			$D00410
 define	kthread_queue_retire_size		$D00410
 define	kthread_queue_retire_current		$D00411
+; timer queue
+define	klocal_timer_queue			$D00414
+define 	klocal_timer_size			$D00414
+define	klocal_timer_current			$D00415
 
 define	kthread_need_reschedule			$D00100
 define	kthread_current				$D00101

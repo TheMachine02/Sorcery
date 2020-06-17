@@ -57,6 +57,7 @@ kinit:
 ; nice idle thread code
 .arch_sleep:
 	ei
+	nop
 	slp
 	jr	.arch_sleep
 
