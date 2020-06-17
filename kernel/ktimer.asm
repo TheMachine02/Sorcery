@@ -12,17 +12,18 @@ define	SIGEV_VALUE			$8
 ; uint8_t + prt
 
 define	TIMER				$0
-define	TIMER_COUNT			$0
-define	TIMER_NEXT			$3
-define	TIMER_PREVIOUS			$6
-define	TIMER_SIGEVENT			$9
-define	TIMER_EV_SIGNOTIFY		$9
-define	TIMER_EV_SIGNO			$A
-define	TIMER_EV_NOTIFY_FUNCTION	$B
-define	TIMER_EV_NOTIFY_THREAD		$E
-define	TIMER_EV_VALUE			$11
+define	TIMER_FLAGS			$1
+define	TIMER_NEXT			$1
+define	TIMER_PREVIOUS			$4
+define	TIMER_COUNT			$7
+define	TIMER_SIGEVENT			$A
+define	TIMER_EV_SIGNOTIFY		$A
+define	TIMER_EV_SIGNO			$B
+define	TIMER_EV_NOTIFY_FUNCTION	$C
+define	TIMER_EV_NOTIFY_THREAD		$F
+define	TIMER_EV_VALUE			$12
 ; uint8_t + prt
-define	TIMER_SIZE			21
+define	TIMER_SIZE			22
 
 ; (div/32768)*1000*16
 ; (32768/div)/1000*256
@@ -95,8 +96,10 @@ klocal_timer:
 	ld	hl, .notify_default
 	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
 .create_arm:
-	call	.insert			; will meet "or a, a" (line 190)
-	ei				; so, Carry=0
+	ld	hl, klocal_timer_queue
+	call	kqueue.insert_head
+; will meet "or a, a" (line 23), so carry is null
+	ei
 	sbc	hl, hl
 	ret
 .create_failed:
@@ -114,9 +117,11 @@ klocal_timer:
 	di
 	ld	hl, (iy+TIMER_COUNT)
 	ld	a, l
-	or	a, h				; Carry=0
+	or	a, h
 	jr	z, .reset_errno
-	call	.remove				; won't modify Carry
+	ld	hl, klocal_timer_queue
+	call	kqueue.remove_head
+; won't modify Carry
 	sbc	hl, hl
 	ld	(iy+TIMER_COUNT), hl
 	ei
@@ -163,59 +168,15 @@ end if
 	ld	(iy+TIMER_COUNT), hl
 	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_SIGNAL
 	ld	(iy+TIMER_EV_SIGNO), SIGALRM
-	call	.insert
+	ld	hl, klocal_timer_queue
+	call	kqueue.insert_head
 	ei
 	ret
-.alarm_disarm:				; Carry=0 thx to "or a, d" line 148
-	call	.remove			; then not modified by .remove
-	sbc	hl, hl			; = "ld	hl, NULL"
+.alarm_disarm:
+	ld	hl, klocal_timer_queue
+	call	kqueue.remove_head
+; carry wasn't modified
+	sbc	hl, hl
 	ld	(iy+TIMER_COUNT), hl
 	ei
-	ret
-	
-.insert:
-; iy is node to insert
-; hl is queue pointer (count, queue_current)
-; update queue_current to inserted node
-; inplace insert of the node
-	ld	hl, klocal_timer_queue
-	ld	a, (hl)
-	inc	(hl)
-	inc	hl
-	or	a, a
-	jr	z, .create_queue
-	push	ix
-	ld	ix, (hl)
-	ld	(hl), iy
-	ld	hl, (ix+TIMER_NEXT)
-	ld	(iy+TIMER_PREVIOUS), ix
-	ld	(iy+TIMER_NEXT), hl
-	ld	(ix+TIMER_NEXT), iy
-	push	hl
-	pop	ix
-	ld	(ix+TIMER_PREVIOUS), iy
-	pop	ix
-	ret
-.create_queue:
-	ld	(hl), iy
-	ld	(iy+TIMER_PREVIOUS), iy
-	ld	(iy+TIMER_NEXT), iy
-	ret
-
-; please, be sure of what you remove
-.remove:
-	ld	hl, klocal_timer_queue
-	dec	(hl)
-	inc	hl
-	ret	z
-	push	ix
-	ld	ix, (iy+TIMER_NEXT)
-	ld	(hl), ix
-	ld	hl, (iy+TIMER_PREVIOUS)
-	ld	(ix+TIMER_PREVIOUS), hl
-	inc	hl
-	inc	hl
-	inc	hl
-	ld	(hl), ix
-	pop	ix
 	ret

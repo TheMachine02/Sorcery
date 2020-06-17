@@ -46,7 +46,8 @@ end if
 .rst20:
 .rst28:
 .rst30:
-    ret
+	ei
+	ret
 .nmi = knmi.service
 
 if CONFIG_USE_CACHED_ISR = 1
@@ -225,7 +226,8 @@ end if
 	cp	a, e
 	jr	z, .schedule_give_quanta
 	ex	de, hl
-	call	kqueue.remove
+; we are the head of our queue, since we were executing ;
+	call	kqueue.remove_head
 	ld	l, a
 	call	kqueue.insert_tail
 	ex	de, hl
@@ -328,7 +330,8 @@ end if
 
 .local_timer_process:
 ; remove the timer from the queue
-	call	klocal_timer.remove
+	ld	hl, klocal_timer_queue
+	call	kqueue.remove_head
 ; switch based on what we should do
 	ld	a, (iy+TIMER_EV_SIGNOTIFY)
 	or	a, a

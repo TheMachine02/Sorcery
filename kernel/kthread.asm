@@ -12,6 +12,7 @@ define	KERNEL_THREAD_IRQ			$08
 define	KERNEL_THREAD_STATUS			$09
 define	KERNEL_THREAD_PRIORITY			$0A
 define	KERNEL_THREAD_QUANTUM			$0B
+define	KERNEL_THREAD_IO			$0C
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
 ; define	KERNEL_THREAD_STACK_LIMIT		$0C
@@ -23,29 +24,27 @@ define	KERNEL_THREAD_ERRNO			$18
 define  KERNEL_THREAD_SIGNAL_MASK		$19
 ; timer ;
 define	KERNEL_THREAD_TIMER			$1D
-define	KERNEL_THREAD_TIMER_COUNT		$1D
-define	KERNEL_THREAD_TIMER_NEXT		$20
-define	KERNEL_THREAD_TIMER_PREVIOUS		$23
-define	KERNEL_THREAD_TIMER_SIGEVENT		$26
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$26
-define	KERNEL_THREAD_TIMER_EV_SIGNO		$27
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$28
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	$2B
-define	KERNEL_THREAD_TIMER_EV_VALUE		$2E
+define	KERNEL_THREAD_TIMER_FLAGS		$1D
+define	KERNEL_THREAD_TIMER_NEXT		$1E
+define	KERNEL_THREAD_TIMER_PREVIOUS		$21
+define	KERNEL_THREAD_TIMER_COUNT		$24
+define	KERNEL_THREAD_TIMER_SIGEVENT		$27
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$27
+define	KERNEL_THREAD_TIMER_EV_SIGNO		$28
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$29
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	$2C
+define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
 ; union with thread sigval ;
-define	KERNEL_THREAD_SIGNAL			$2E
-define	KERNEL_THREAD_EV_SIG			$2E
-define	KERNEL_THREAD_EV_SIG_POINTER		$2F
+define	KERNEL_THREAD_SIGNAL			$2F
+define	KERNEL_THREAD_EV_SIG			$2F
+define	KERNEL_THREAD_EV_SIG_POINTER		$30
 ; other ;
-define	KERNEL_THREAD_NICE			$32
-define	KERNEL_THREAD_ATTRIBUTE			$33
-define	KERNEL_THREAD_JOINED			$34	; joined thread waiting for exit()
+define	KERNEL_THREAD_NICE			$33
+define	KERNEL_THREAD_ATTRIBUTE			$34
+define	KERNEL_THREAD_JOINED			$35	; joined thread waiting for exit()
 ; priority waiting list
-define	KERNEL_THREAD_LIST_PRIORITY		$35
-define	KERNEL_THREAD_LIST			$36
-
-; io waiting queue
-define	KERNEL_THREAD_IO			$39
+define	KERNEL_THREAD_LIST_PRIORITY		$36
+define	KERNEL_THREAD_LIST			$37
 
 define	KERNEL_THREAD_STACK_LIMIT		$3A
 define	KERNEL_THREAD_STACK			$3D
@@ -543,7 +542,8 @@ kthread:
 	ld	a, l
 	or	a, h
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	call	nz, klocal_timer.remove
+	ld	hl, klocal_timer_queue
+	call	nz, kqueue.remove_head
 	lea	iy, iy-KERNEL_THREAD_TIMER
 	ld	hl, NULL
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
@@ -743,7 +743,8 @@ task_switch_sleep_ms:
 	ld	hl, klocal_timer.notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	call	klocal_timer.insert
+	ld	hl, klocal_timer_queue
+	call	kqueue.insert_head
 	lea	iy, iy-KERNEL_THREAD_TIMER
 	
 ; from TASK_READY to TASK_INTERRUPTIBLE
@@ -761,7 +762,8 @@ task_switch_interruptible:
 task_switch_running:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	hl, kthread_queue_retire
-	call	kqueue.remove
+; we can consider removing the head of the queue here and update head pointer, since retire order doesn't matter ;
+	call	kqueue.remove_head
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 assert kqueue.insert_head = $
 ;	jr	kqueue.insert_head

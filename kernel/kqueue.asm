@@ -71,9 +71,46 @@ kqueue:
 	dec	hl
 	pop	ix
 	ret
-	
+
+.remove_head:
+; iy assumed to be queue head
+; remove iy as node, update queue head to the next node of iy
+; can also use as a general 'fast' remove node with random head updating (if you don't need head to point to something particular)
+	dec	(hl)
+	ret	z
+	push	ix
+	push	hl
+	inc	hl
+	ld	ix, (iy+QUEUE_NEXT)
+	ld	(hl), ix
+	ld	hl, (iy+QUEUE_PREVIOUS)
+	ld	(ix+QUEUE_PREVIOUS), hl
+	inc	hl
+	ld	(hl), ix
+	pop	hl
+	pop	ix
+	ret
+
+.remove_tail:
+; iy assumed to be queue tail
+; remove iy as node, update queue head to the next node of iy
+; dangerous if the node was head, queue will be *broken*
+	dec	(hl)
+	ret	z
+	push	ix
+	push	hl
+	ld	ix, (iy+QUEUE_NEXT)
+	ld	hl, (iy+QUEUE_PREVIOUS)
+	ld	(ix+QUEUE_PREVIOUS), hl
+	inc	hl
+	ld	(hl), ix
+	pop	hl
+	pop	ix
+	ret
+
 .remove:
 ; iy is node to remove
+; safe general queue remove
 ; update queue_current to NULL if count=0 or if the node removed is current, to the next node
 ; hl is queue pointer (count, queue_current)
 ; node MUST belong to the queue
