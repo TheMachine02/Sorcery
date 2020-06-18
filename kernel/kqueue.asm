@@ -91,23 +91,6 @@ kqueue:
 	pop	ix
 	ret
 
-.remove_tail:
-; iy assumed to be queue tail
-; remove iy as node, update queue head to the next node of iy
-; dangerous if the node was head, queue will be *broken*
-	dec	(hl)
-	ret	z
-	push	ix
-	push	hl
-	ld	ix, (iy+QUEUE_NEXT)
-	ld	hl, (iy+QUEUE_PREVIOUS)
-	ld	(ix+QUEUE_PREVIOUS), hl
-	inc	hl
-	ld	(hl), ix
-	pop	hl
-	pop	ix
-	ret
-
 .remove:
 ; iy is node to remove
 ; safe general queue remove

@@ -527,41 +527,51 @@ kthread:
    	
 .sleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
-	di
 	push	iy
 	push	de
 	push	af
 	ld	iy, (kthread_current)
+	di
 	call	task_switch_sleep_ms
 	call	task_yield
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
 	di
 	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
-	push	hl
 	ld	a, l
 	or	a, h
+	jr	nz, .sleep_intr
+	ei
+	sbc	hl, hl
+	pop	af
+	pop	de
+	pop	iy
+	ret
+.sleep_intr:
+; we were interrupted by signal
+	ex	de, hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
 	ld	hl, klocal_timer_queue
-	call	nz, kqueue.remove_head
+	call	kqueue.remove_head
 	lea	iy, iy-KERNEL_THREAD_TIMER
-	ld	hl, NULL
+	or	a, a
+	sbc	hl, hl
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	pop	hl
 	ei
-	ld	e, l
+; de is time left, so get ms left
+	ld	l, d
+	ld	h, TIME_JIFFIES_TO_MS
+	ld	d, h
 ; times in jiffies left to sleep
-	ld	d, TIME_JIFFIES_TO_MS
 	mlt	de
 	ex	de, hl
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	ex	de, hl
 	xor	a, a
-	ld	e, d
-	ld	d, a
-	ld	l, TIME_JIFFIES_TO_MS
+	ld	l, h
+	ld	h, a
+	ex	de, hl
 	mlt	hl
 	add	hl, hl
 	add	hl, hl
@@ -727,16 +737,14 @@ task_switch_sleep_ms:
 ; do  hl * (32768/154/1000)
 	ld	e, l
 	ld	d, TIME_MS_TO_JIFFIES
+	ld	l, d
 	mlt	de
-	ld	a, e
-	or	a, a
-	jr	z, $+3
-	inc	d
+	mlt	hl
+	xor	a, a
+	sbc	a, e
 	ld	e, d
 	ld	d, 0
-	ld	l, TIME_MS_TO_JIFFIES
-	mlt	hl
-	add	hl, de
+	adc	hl, de
 ; add timer
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
@@ -749,6 +757,7 @@ task_switch_sleep_ms:
 	
 ; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:
+; actual overhead : only jr
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
 	ld	hl, kthread_mqueue_0
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
