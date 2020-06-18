@@ -2,10 +2,10 @@ include	'include/ez80.inc'
 include	'include/asm-errno.inc'
 include	'include/asm-signal.inc'
 include	'include/tiformat.inc'
-format	ti executable 'SORCERY'
 include	'include/os.inc'
-
 include 'config'
+
+format	ti executable 'SORCERY'
 
 ;-------------------------------------------------------------------------------
 	os_create
