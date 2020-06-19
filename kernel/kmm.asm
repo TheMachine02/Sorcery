@@ -347,11 +347,10 @@ end if
 ; lock lifted
 	ld	a, KERNEL_MM_PAGE_LOCK_MASK
 	and	a, (hl)
+; notify if = MAX_READER or if = zero	
+	jp	z, .segfault_critical
 	cp	a, KERNEL_MM_PAGE_LOCK_MASK
 ; lock for write
-	jp	z, .segfault_critical
-; notify if = MAX_READER or if = zero
-	or	a, a
 	jp	z, .segfault_critical
 	dec	(hl)
 	jr	z, .page_unlock_shared
@@ -447,19 +446,18 @@ end if
 	cp	a, (hl)
 	jp	nz, .segfault_critical
 .page_unlock_rw:
-	ex	de, hl
 ; lift lock and relock
-	ld	a, (hl)
-	ld	d, KERNEL_MM_PAGE_LOCK_MASK
-	and	a, d
-	cp	a, d
+	ld	a, (de)
+	ld	h, KERNEL_MM_PAGE_LOCK_MASK
+	and	a, h
+	cp	a, h
 ; it wasn't locked for write ? WAIT WHAT
 	jp	nz, .segfault_critical
 ; lift the lock
-	ld	a, (hl)
-	xor	a, d
+	ld	a, (de)
+	xor	a, h
 	inc	a
-	ld	(hl), a
+	ld	(de), a
 	jr	.page_unlock_shared
 	
 .page_map:
