@@ -54,10 +54,10 @@ kmutex:
 
 .init:
 	inc	hl
-	ld	(hl), NULL
+	xor	a, a
+	ld	(hl), a
 	dec	hl
 	ld	(hl), KERNEL_MUTEX_MAGIC
-	or	a, a
 	sbc	hl, hl
 	ret
 
