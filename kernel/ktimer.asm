@@ -86,7 +86,6 @@ klocal_timer:
 	or	a, a
 	sbc	hl, de
 	jr	z, .create_default
-	ex	de, hl
 	lea	de, iy+TIMER_SIGEVENT
 	ld	bc, SIGEVENT_SIZE
 	ldir
