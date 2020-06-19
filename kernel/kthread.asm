@@ -372,7 +372,6 @@ kthread:
 	ld	iy, (kthread_current)
 	lea	hl, ix+0
 	lea	bc, iy+0
-	or	a, a
 	sbc	hl, bc
 	jr	z, .join_itself
 	ld	a, (bc)
@@ -478,7 +477,7 @@ kthread:
 ; first disable stack protector (load the kernel_stack stack protector)
 	ld	a, $B0
 	out0	($3A), a
-	ld	a, $00
+	xor	a, a
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
@@ -671,7 +670,7 @@ kthread:
 	ld	l, a
 	ld	de, kthread_pid_map
 	add	hl, de
-	ld	de, NULL
+	mlt	de
 	ld	(hl), e
 	inc	hl
 	ld	(hl), de
