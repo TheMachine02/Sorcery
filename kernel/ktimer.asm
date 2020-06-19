@@ -82,8 +82,9 @@ klocal_timer:
 	or	a, l
 	jr	nz, .create_failed
 	ld	(iy+TIMER_COUNT), de
-	ld	a, d
-	or	a, e
+	add	hl, de
+	or	a, a
+	sbc	hl, de
 	jr	z, .create_default
 	ex	de, hl
 	lea	de, iy+TIMER_SIGEVENT
