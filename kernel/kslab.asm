@@ -20,8 +20,7 @@ kslab:
 	pop	iy
 	ld	hl, KERNEL_MM_PAGE_SIZE
 	ld	(iy+KERNEL_SLAB_SIZE), hl
-	or	a, a
-	sbc	hl, hl
+	ld	h, l
 	ld	(iy+KERNEL_SLAB_NEXT), hl
 	ld	(iy+KERNEL_SLAB_PREVIOUS), hl
 	ret
@@ -45,7 +44,6 @@ kslab:
 .malloc_break:
 	push	de
 	ld	bc, 1
-	xor	a, a
 	call	kmm.thread_map
 	pop	de
 ; return hl as the adress

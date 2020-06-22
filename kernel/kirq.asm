@@ -85,7 +85,6 @@ kirq:
 	push	af
 ; enable a specific IRQ or a specific IRQ combinaison
 	ld	c, a
-	ld	a, c
 	rra
 	rra
 	and	00111100b
@@ -117,7 +116,6 @@ kirq:
 	push	af
 ; enable a specific IRQ
 	ld	c, a
-	ld	a, c
 	rra
 	rra
 	cpl
