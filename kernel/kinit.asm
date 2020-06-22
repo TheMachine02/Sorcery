@@ -170,12 +170,10 @@ TEST_THREAD_C:
 ; need to catch rst 00h for that !
 	ld	hl, global_mutex
 	call	kmutex.lock
-
 	ld	hl, $AA55AA
-	ld	a, SIGCONT
+	ld	a, SIGUSR1
 	ld	c, 1
 	call	ksignal.kill
-;	
 	ld	hl, global_mutex
 	call	kmutex.unlock
 

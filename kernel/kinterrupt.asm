@@ -145,11 +145,13 @@ kscheduler:
 	ld	a, (hl)
 	sub	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
-	jp	p, $+5
-	xor	a, a
-	cp	a, SCHED_PRIO_MIN+1
-	jr	c, $+4
-	ld	a, SCHED_PRIO_MIN
+	cp	a, SCHED_PRIO_MIN
+	jr	c, .schedule_clamp_prio
+	rla
+	sbc	a, a
+	cpl
+	and	SCHED_PRIO_MIN
+.schedule_clamp_prio:
 	ld	(hl), a
 	inc	hl
 	jr	.schedule_give_quanta
@@ -216,20 +218,21 @@ end if
 	ld	a, e
 	add	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
-	jp	p, $+5
-	xor	a, a
-	cp	a, SCHED_PRIO_MIN+1
-	jr	c, $+4
-	ld	a, SCHED_PRIO_MIN
+	cp	a, SCHED_PRIO_MIN
+	jr	c, .schedule_move_queue
+	rla
+	sbc	a, a
+	cpl
+	and	SCHED_PRIO_MIN
+.schedule_move_queue:
 	ld	(hl), a
 	inc	hl
-	cp	a, e
-	jr	z, .schedule_give_quanta
 	ex	de, hl
 ; we are the head of our queue, since we were executing ;
 	call	kqueue.remove_head
 	ld	l, a
 	call	kqueue.insert_tail
+	ld	a, l
 	ex	de, hl
 .schedule_give_quanta:
 ; exponential quantum
