@@ -1,8 +1,12 @@
-# Sorcery
 
-## A libre preemptive multitasking kernel for the ez80
 
-What does than mean ? Sorcery can execute up to 64 concurrent tasks sharing the same adress space (RAM space + flash space). Library a dynamically loaded in RAM and shared across thread. It implements POSIX-like (it won't be fully compatible) threading with signal, real-time scheduling, hardware and software interrupt, per thread timer. There is no difference between a thread and a process, a process is simply a thread whose code as been reallocated at startup.
+# Sorcery - a preemptive multitasking kernel
+
+<img src="https://i.imgur.com/i6wLFIz.png" />
+
+## Features
+
+Sorcery can execute up to 64 concurrent tasks sharing the same adress space (RAM space + flash space). Library are dynamically loaded in RAM and shared across thread. It implements POSIX-like (it won't be fully compatible) threading with signal, real-time scheduling, hardware and software interrupt, per thread timer. There is no difference between a thread and a process, a process is simply a thread whose code as been reallocated at startup.
 Context switchs is ~ 4000 cycles, more if a thread need to be waked (~ 6000 cycles), 150 times per second (configurable), using a simple round robin scheduling with 4 priority queue implementing feedback (io bound thread are promoted, compute heavy thread are lowered). Lower priority thread are always preempted by the higher priority one.
 
 ## Memory gestion
@@ -23,4 +27,4 @@ Also implemented is minimal drivers to get a input / output (RTC, keyboard, vide
 
 ## Boot code and other
 
-Aims to be compatible with OpenCE boot code (https://github.com/beckadamtheinventor/open-ce) and TI boot code
+Aims to be compatible with Noti boot code (https://github.com/beckadamtheinventor/noti-ez80) and TI boot code
