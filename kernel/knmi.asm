@@ -85,3 +85,11 @@ knmi:
  db "[***] kernel panic : WATCHDOG_VIOLATION",0
 .PC_STRING:
  db "[***] @0x",0
+
+ 
+;  	.db	"EX  -                   "     ;1
+; 	.db	"AF      BC      DE      "     ;2
+; 	.db	"HL      IX      IY      "     ;3
+; 	.db	"SP      PC      IR      "     ;4
+; 	.db	"Stack Dump:             ", 0  ;5
+; 		                               ;8

@@ -2,7 +2,9 @@
 
 # Sorcery - a preemptive multitasking kernel
 
+<p align="center">
 <img src="https://i.imgur.com/i6wLFIz.png" />
+</p>
 
 ## Features
 
