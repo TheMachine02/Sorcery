@@ -1,7 +1,8 @@
-Dynamic Linker library
 
->> load library in memory and load realloc table
->> realloc call in program based of the library
->> we need to export the function name for linking and compilation
 
-int main ()
+- executable format
+- memory model / optimized paging, cache, slab allocator
+- filesystem
+
+- libc
+

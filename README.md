@@ -30,3 +30,4 @@ Also implemented is minimal drivers to get a input / output (RTC, keyboard, vide
 ## Boot code and other
 
 Aims to be compatible with Noti boot code (https://github.com/beckadamtheinventor/noti-ez80) and TI boot code
+Use the Sulphur boot loader as the 'base' OS image for loading kernel as an executable leaf file (custom elf like format)
