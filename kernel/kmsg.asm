@@ -40,9 +40,9 @@ kmsg:
 	ex	de, hl
 	ld 	(hl), a
 	inc	hl
+	or	a, a
 .printk_loop:
 	push	hl
-	or	a, a
 	sbc	hl, de
 	pop	hl
 	jr	c, .printk_buffer_free0
@@ -56,7 +56,6 @@ kmsg:
 	jr	nz, .printk_loop
 ; last check
 	ex	de, hl
-	or	a, a
 	sbc	hl, de
 	jr	c, .printk_buffer_free1
 	lea	de, ix+3
@@ -76,7 +75,7 @@ kmsg:
 	add	ix,bc
 	lea	hl,ix+0
 	xor	a, a
-	cp	a, (hl)
+	or	a, (hl)
 	jr	z, .buffer_not_full
 	ld	bc, KERNEL_MESSAGE_BUFFER_END
 .loop_for_next_0B:
@@ -96,7 +95,7 @@ kmsg:
 	ld	a, (hl)
 ; DO SOMETHING ACCORDING TO THE MESSAGE TYPE VALUE
 ;	-> different colors ?
-	inc	hl
+:loop2:	inc	hl
 	push	de
 	push	ix
 ;	call	displaySTR ; à remplacer -> système de feed avec la console ? (faire attention, le buffer est circulaire)
@@ -116,13 +115,12 @@ kmsg:
 .loop_for_next_non0B:
 	inc	hl
 	push	hl
-	or	a, a
 	sbc	hl,bc
 	pop	hl
 	jr	c, .noproblemo2
 	sbc	hl,hl
 	add	hl,de
 .noproblemo2:
-	cp	a, (hl)
+	or	a, (hl)
 	jr	z, .loop_for_next_non0B
-	jr	.loop
+	jr	.loop2
