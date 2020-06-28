@@ -69,7 +69,7 @@ kname:
 	ld	bc, .name
 	ret	
 .name:
- db "Sorcery-0.0.1-sleep-b7702e2", 0
+ db "Sorcery-0.0.1-sleep-ff39635", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;
@@ -117,6 +117,8 @@ THREAD_INIT_TEST:
 	ld	bc, .INIT_MESSAGE
 	call	console.write_string
 	ld	bc, .INIT_MESSAGE_2
+	call	console.write_string
+	ld	bc, .INIT_MESSAGE_3
 	call	console.write_string
 	
 	call	console.run
@@ -166,11 +168,13 @@ THREAD_INIT_TEST:
 ;	jr	.loop
 	ret
 	
+
 .INIT_MESSAGE:
- db "Watchdog initialised with heartbeat 1s", 10, 0
+ db "Running on ez80 at 6Mhz", 10, 0
 .INIT_MESSAGE_2:
- db "Running init thread", 0
-	
+ db "Watchdog initialised with heartbeat 1s", 10, 0
+.INIT_MESSAGE_3:
+ db "Welcome to Sorcery", 0
 	
 global_running_string:
  db "Frequency (Mhz) :", 0

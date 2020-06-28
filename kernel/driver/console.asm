@@ -1,12 +1,11 @@
-define	console_cursor_xy	$D001E0
-define	console_ring		$D001E6
+define	console_cursor_xy	$D30400
+define	console_ring		$D30403
+define	console_blink		$D30406
+define	console_flags		$D30407
+define	console_key		$D30408
+define	console_color		$D30409
 
-define	console_blink		$D001E9
-define	console_flags		$D001EA
-define	console_key		$D001EB
-define	console_color		$D001EC
-
-define	console_string		$D30400
+define	console_string		$D3040A
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
@@ -345,9 +344,7 @@ console:
 	inc	hl
 	inc	de
 	djnz	.check
-	ld	a, (de)
-	or	a, a
-	jp	z, kinit
+	jp	kinit
 .not_found:
 	
 	ld	bc, .UNKNOW_INSTR
@@ -665,8 +662,17 @@ console:
 	pop	bc
 	djnz	.blit_loop
 	ret
+
+.COMMAND:
+ db 2	; command count
+ dl .REBOOT
+ dl .ECHO
+ 
 .REBOOT:
- db 6, 'r', 'e', 'b', 'o', 'o', 't'
+ db 7, "r", "e", "b", "o", "o", "t", 0
+.ECHO:
+ db 5, "e", "c", "h", "o"
+ 
 .PROMPT:
  db "\e[31mroot\e[39m:\e[34m~\e[39m# ", 0
 

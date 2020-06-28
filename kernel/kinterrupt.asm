@@ -249,6 +249,9 @@ end if
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	bc, (hl)
+; strange, maybe fix ?
+;	ld	l, KERNEL_WATCHDOG_CLR and $FF
+;	ld	(hl), 0
 	ld	l, KERNEL_WATCHDOG_RST and $FF
 	ld	(hl), $B9
 	inc	hl
