@@ -21,13 +21,12 @@ console:
 	ld	b, 80
 .wait_keyboard:
 	push	bc
-; 	ld	hl, $F50000
-; 	ld	(hl),2
-; 	xor	a, a
-; .busy_wait:
-; 	cp	a, (hl)
-; 	jr	nz, .busy_wait
-	call	kkeyboard.wait_scan
+	ld	hl, DRIVER_KEYBOARD_CTRL
+	ld	(hl), 2
+	xor	a, a
+.wait_busy:
+	cp	a, (hl)
+	jr	nz, .wait_busy
 ; check if pressed now == pressed previous
 	call	.read_keyboard
 	ld	l, a
@@ -90,7 +89,7 @@ console:
 	inc	a
 	ld	(console_blink), a
 		
-	bit	2, a
+	bit	1, a
 	call	nz, .cursor
 	
 	call	kvideo.vsync	; wait for vsync to be sure change has been comit

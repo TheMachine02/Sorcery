@@ -4,6 +4,7 @@ define	DRIVER_KEYBOARD_CTRL                0xF50000
 define	DRIVER_KEYBOARD_ISCR                0xF50008
 define	DRIVER_KEYBOARD_IMSC                0xF5000C
 define	DRIVER_KEYBOARD_ISR                 0xD000FB
+define	DRIVER_KEYBOARD_MODE_IDLE		0
 define	DRIVER_KEYBOARD_CONTINUOUS_SCAN     3
 define	DRIVER_KEYBOARD_SINGLE_SCAN         2
 define	DRIVER_KEYBOARD_KEY_DETECTION       1
@@ -20,12 +21,11 @@ kkeyboard:
 	jp	.irq_lock
 	jp	.irq_unlock
 	jp	.wait_key
-	jp	.wait_scan
     
 .init:
 	tstdi
 	ld	hl, DRIVER_KEYBOARD_CTRL
-	ld	(hl), DRIVER_KEYBOARD_CONTINUOUS_SCAN
+	ld	(hl), DRIVER_KEYBOARD_MODE_IDLE
 	ld	de, $08080F
 	inc	l
 	ld	(hl), e
@@ -38,7 +38,6 @@ kkeyboard:
 ; interrupt on data change
 	ld	(hl), 2
 ; init the stdin file
-	
 ; lock reset
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
@@ -96,15 +95,14 @@ kkeyboard:
 	ld	a, DRIVER_KEYBOARD_IRQ
 	jp	kthread.wait_on_IRQ
 	    
-.wait_scan:
-	ld	hl, DRIVER_KEYBOARD_IMSC
-	set	0, (hl)
-.wait_scan_bit:
-	ld	a, DRIVER_KEYBOARD_IRQ
-	call	kthread.wait_on_IRQ
-	ld	hl, DRIVER_KEYBOARD_ISR
-	bit	0, (hl)
-	jr	z, .wait_scan_bit
-	ld	hl, DRIVER_KEYBOARD_IMSC
-	res	0, (hl)
-	ret
+; .wait_scan:
+; 	ld	hl, DRIVER_KEYBOARD_IMSC
+; 	set	0, (hl)
+; 	ld	hl, DRIVER_KEYBOARD_ISR
+; .wait_scan_bit:
+; 	bit	0, (hl)
+; 	jr	z, .wait_scan_bit
+; 	set	0, (hl)
+; 	ld	hl, DRIVER_KEYBOARD_IMSC
+; 	res	0, (hl)
+; 	ret
