@@ -310,8 +310,7 @@ end if
 	ld	(kthread_current), hl	; mark new current
 	ld	c, KERNEL_THREAD_STACK_LIMIT
 	add	hl, bc
-;	ld	bc, $00033A
-	ld	b, $03
+	ld	bc, $00033A
 	otimr
 	ld	hl, (hl)
 	ld	sp, hl

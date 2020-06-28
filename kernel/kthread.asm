@@ -12,11 +12,10 @@ define	KERNEL_THREAD_IRQ			$08
 define	KERNEL_THREAD_STATUS			$09
 define	KERNEL_THREAD_PRIORITY			$0A
 define	KERNEL_THREAD_QUANTUM			$0B
-define	KERNEL_THREAD_IO			$0C
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
-; define	KERNEL_THREAD_STACK_LIMIT		$0C
-; define	KERNEL_THREAD_STACK			$0F
+define	KERNEL_THREAD_STACK_LIMIT		$0C
+define	KERNEL_THREAD_STACK			$0F
 define	KERNEL_THREAD_HEAP			$12
 define	KERNEL_THREAD_TIME			$15
 ; some stuff ;
@@ -46,8 +45,9 @@ define	KERNEL_THREAD_JOINED			$35	; joined thread waiting for exit()
 define	KERNEL_THREAD_LIST_PRIORITY		$36
 define	KERNEL_THREAD_LIST			$37
 
-define	KERNEL_THREAD_STACK_LIMIT		$3A
-define	KERNEL_THREAD_STACK			$3D
+;define	KERNEL_THREAD_STACK_LIMIT		$3A
+;define	KERNEL_THREAD_STACK			$3D
+define	KERNEL_THREAD_IO			$3A
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 61 descriptors usables ;
@@ -686,8 +686,8 @@ kthread:
 	db	TASK_IDLE		; Status
 	db	SCHED_PRIO_MIN		; Special anyway
 	db	$FF			; quantum
-	dl	$D000E0			; Stack will be writed at first unschedule
-	dl	$D000A0			; Stack limit
+	dl	$D000B0			; Stack limit
+	dl	$D000F0			; Stack will be writed at first unschedule
 	dl	NULL			; No true heap for idle thread
 	dl	NULL			; No friend
 	db	NULL			; Errno

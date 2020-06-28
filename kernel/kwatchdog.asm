@@ -1,5 +1,5 @@
 define	KERNEL_WATCHDOG_VIOLATION	$DE
-define	KERNEL_WATCHDOG_HEARTBEAT	$010000
+define	KERNEL_WATCHDOG_HEARTBEAT	$008000		; 1s heartbeat
 define	KERNEL_WATCHDOG_COUNTER		$F16000
 define	KERNEL_WATCHDOG_LD		$F16004
 define	KERNEL_WATCHDOG_RST		$F16008
@@ -30,18 +30,20 @@ kwatchdog:
 	ex	de, hl
 	ld	l, KERNEL_WATCHDOG_CLR and $FF
 	set	0, (hl)
-; and start the timer	
+
+.arm:
+; and start the timer
 	ld	l, KERNEL_WATCHDOG_CTRL and $FF
 	set	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
 	ret
-
-.stop:
+	
+.disarm:
 	ld	hl, KERNEL_WATCHDOG_CLR
 	set	0, (hl)
-; and stop the timer	
+; and stop the timer
 	ld	l, KERNEL_WATCHDOG_CTRL and $FF
 	res	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
 	ret
 
 .RESET_DATA:
-	db	$00, $00, $01, $00, $B9, $5A
+	db	$00, $80, $00, $00, $B9, $5A

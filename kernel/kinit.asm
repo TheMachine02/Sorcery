@@ -1,7 +1,8 @@
 define	KERNEL_HEAP			$D00043
 define	KERNEL_THREAD			$D00010
 define	KERNEL_STACK			KERNEL_THREAD + KERNEL_THREAD_STACK
-define	KERNEL_STACK_SIZE		$30
+define	KERNEL_STACK_SIZE		$40
+; from B0 to F0
 
 define	KERNEL_BOOT_MEMORY0		$D0009B   ; touched memory by the boot.
 define	KERNEL_BOOT_MEMORY1		$D000AC   ; same, a set somewhere
@@ -33,7 +34,6 @@ kinit:
 	out0	($3C), a
 ; general system init
 	call	kpower.init
-	call	kwatchdog.init
 ; memory init ;
 	call	kmm.init
 	call	kslab.init
@@ -49,7 +49,8 @@ kinit:
 	call	kkeyboard.init
 ; mount root ;
 	ld	bc, .root_path
-	call	ramfs.mount	
+	call	ramfs.mount
+	call	kwatchdog.init
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
@@ -87,7 +88,7 @@ THREAD_INIT_TEST:
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
 	ld	iy, TEST_THREAD_C ; thread 2
 	call	kthread.create
-
+; 
 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
 	call	kthread.create
 	
@@ -111,13 +112,12 @@ THREAD_INIT_TEST:
 ; video lock for me
 ; 	call	kvideo.irq_lock
 
-	call	kvideo.clear
 	call	console.init
+	call	console.run
 
-	ld	bc, 0
-.loop:
-	push	bc
-	
+;	ld	bc, 0
+;.loop:
+;	push	bc
 	
 ; ; 	ld	de, (DRIVER_VIDEO_BUFFER)
 ; ; 	ld	hl, KERNEL_MM_NULL
@@ -149,18 +149,16 @@ THREAD_INIT_TEST:
 ; 	ld	e, 10+2*11
 ; 	call	kvideo.put_int
 
-	call	console.run
-
 ;	call	kvideo.copy
 	
 ;	ld	hl, 1000	; 1000 ms is nice
 ;	call	kthread.sleep
 
-	
 ; we were not waked by spining thread ! (masked signal)
-	pop	bc
-	inc	bc
-	jr	.loop
+;	pop	bc
+;	inc	bc
+;	jr	.loop
+	ret
 
 global_running_string:
  db "Frequency (Mhz) :", 0
@@ -205,9 +203,13 @@ TEST_THREAD_C_DEATH:
 	call	kmalloc
 	pop	hl
 	call	kfree
-; wait ;	
-	call	kkeyboard.wait_key
-; let's try a segfault, shall we ?
+; wait ;
+.malloc_free_looping:
+	ld	hl, 512
+	call	kmalloc
+	call	kfree
+	jr	.malloc_free_looping
 ; normal path - but not taken
 	ld	hl, 0
-	jp	kthread.exit
+	call	kthread.exit
+	ret
