@@ -249,7 +249,7 @@ end if
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	bc, (hl)
-	ld	l, KERNEL_WATCHDOG_RST mod 256
+	ld	l, KERNEL_WATCHDOG_RST and $FF
 	ld	(hl), $B9
 	inc	hl
 	ld	(hl), $5A

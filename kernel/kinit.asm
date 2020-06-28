@@ -15,8 +15,10 @@ define	KERNEL_DEV_NULL			$E40000
 kinit:
 ; boot 5.0.1 stupidity power ++
 	di
+; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
+; shift to soft kinit way to reboot ++
 ; setup stack for the kernel
-	ld	sp, $D000E0
+	ld	sp, $D000F0
 	ld	(KERNEL_STACK), sp
 	ld.sis sp, $0000
 ; setup master interrupt divisor = define jiffies
@@ -42,8 +44,6 @@ kinit:
 	call	klocal_timer.init
 	call	kinterrupt.init
 	call	kthread.init
-; other ;
-	call	kmsg.init
 ; driver init, nice
 	call	kvideo.init
 	call	kkeyboard.init
@@ -65,8 +65,10 @@ kinit:
  db "/", 0
 
 kname:
-	ld	bc, Sorcery.name
-	ret
+	ld	bc, .name
+	ret	
+.name:
+ db "Sorcery-0.0.1-sleep-b7702e2", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;
@@ -92,60 +94,68 @@ THREAD_INIT_TEST:
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
 	
-	ld	hl, global_mutex
-	call	kmutex.lock
-	
-	ld	hl, lz4_frozen
-	ld	de, $D40000
-	call	lz4.decompress
-
-	ld	hl, global_mutex
-	call	kmutex.unlock
-
-	ld	hl, 3
-	ld	de, global_exit_value
-	call	kthread.join
+; 	ld	hl, global_mutex
+; 	call	kmutex.lock
+; 	
+; 	ld	hl, lz4_frozen
+; 	ld	de, (DRIVER_VIDEO_BUFFER)
+; 	call	lz4.decompress
+; 
+; 	ld	hl, global_mutex
+; 	call	kmutex.unlock
+; 
+; 	ld	hl, 3
+; 	ld	de, global_exit_value
+; 	call	kthread.join
 		
 ; video lock for me
 ; 	call	kvideo.irq_lock
 
+	call	kvideo.clear
+	call	console.init
+
 	ld	bc, 0
 .loop:
 	push	bc
-	ld	de, (DRIVER_VIDEO_BUFFER)
-	ld	hl, KERNEL_MM_NULL
-	ld	bc, 320*39
-	ldir	
-; printing kernel name ;
-	call	kname
-	ld	hl, 0
-	ld	e, 0
-	call	kvideo.put_string
-; print the small counter ;
-	ld	hl, 0
-	ld	e, 13
-	pop	bc
-	push	bc
-	call	kvideo.put_int
-; clock clock ;
-	ld	bc, global_running_string
-	ld	hl, 0
-	ld	e, 26
-	call	kvideo.put_string
-	call	kcstate.get_clock
-	ld	hl, global_frequency_table
-	ld	bc, 0
-	ld	c, a
-	add	hl, bc
-	ld	c, (hl)
-	ld	hl, 102
-	ld	e, 26
-	call	kvideo.put_int
 	
-	call	kvideo.swap
 	
-	ld	hl, 1000	; 1000 ms is nice
-	call	kthread.sleep
+; ; 	ld	de, (DRIVER_VIDEO_BUFFER)
+; ; 	ld	hl, KERNEL_MM_NULL
+; ; 	ld	bc, 320*39
+; ; 	ldir	
+; ; printing kernel name ;
+; 	call	kname
+; 	ld	hl, 10
+; 	ld	e, 10
+; 	call	kvideo.put_string
+; ; print the small counter ;
+; 	ld	hl, 10
+; 	ld	e, 10+1*11
+; 	pop	bc
+; 	push	bc
+; 	call	kvideo.put_int
+; ; clock clock ;
+; 	ld	bc, bob
+; 	ld	hl, 10
+; 	ld	e, 10+2*11
+; 	call	kvideo.put_string
+; 	call	kcstate.get_clock
+; 	ld	hl, global_frequency_table
+; 	ld	bc, 0
+; 	ld	c, a
+; 	add	hl, bc
+; 	ld	c, (hl)
+; 	ld	hl, 260
+; 	ld	e, 10+2*11
+; 	call	kvideo.put_int
+
+	call	console.run
+
+;	call	kvideo.copy
+	
+;	ld	hl, 1000	; 1000 ms is nice
+;	call	kthread.sleep
+
 	
 ; we were not waked by spining thread ! (masked signal)
 	pop	bc
@@ -168,14 +178,14 @@ TEST_THREAD_C:
 ; trap opcode instruction
 ;db	$DD, $FF
 ; need to catch rst 00h for that !
-	ld	hl, global_mutex
-	call	kmutex.lock
-	ld	hl, $AA55AA
-	ld	a, SIGUSR1
-	ld	c, 1
-	call	ksignal.kill
-	ld	hl, global_mutex
-	call	kmutex.unlock
+; 	ld	hl, global_mutex
+; 	call	kmutex.lock
+; 	ld	hl, $AA55AA
+; 	ld	a, SIGUSR1
+; 	ld	c, 1
+; 	call	ksignal.kill
+; 	ld	hl, global_mutex
+; 	call	kmutex.unlock
 
 	jr	.spin
 	pop ix
@@ -183,8 +193,8 @@ TEST_THREAD_C:
 
 TEST_THREAD_C_DEATH:
 	call __frameset0
-	ld	iy, (kthread_current)
-	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
+;	ld	iy, (kthread_current)
+;	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 ; malloc test ;
 	ld	hl, 512
 	call	kmalloc
@@ -198,8 +208,6 @@ TEST_THREAD_C_DEATH:
 ; wait ;	
 	call	kkeyboard.wait_key
 ; let's try a segfault, shall we ?
-	ld	bc, 4*256 + 1
-	call	kmm.page_unmap
 ; normal path - but not taken
 	ld	hl, 0
 	jp	kthread.exit

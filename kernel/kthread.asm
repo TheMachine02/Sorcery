@@ -287,6 +287,7 @@ kthread:
 ; resume a thread waiting IRQ
 ; interrupt should be DISABLED when calling this routine
 ; save a
+	di
 	ld	e, a
 	lea	hl, iy+KERNEL_THREAD_IRQ
 	ld	a, (hl)

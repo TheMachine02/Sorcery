@@ -1,5 +1,7 @@
 ;include 'include/kernel.inc'
 
+include 'console.asm'
+
 define DRIVER_VIDEO_VRAM                  0xD40000
 define DRIVER_VIDEO_VRAM_SIZE             0x25800
 define DRIVER_VIDEO_FRAMEBUFFER_SIZE      0x12C00
@@ -159,6 +161,13 @@ kvideo:
 	ldir
 	ret
 
+.copy:
+	ld	hl, (DRIVER_VIDEO_BUFFER)
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	ld	bc, 76800
+	ldir
+	ret
+	
 .pixel_setup:
 	ld	d, 160
 	mlt	de
@@ -439,5052 +448,5053 @@ kvideo:
  dl	10
  dl	1
 
-.CHARACTER32:
-db 0,1,4
-db 8
-db 8
-db 8
-db 8
-.CHARACTER33:
-db 2,8,3
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER34:
-db 2,3,5
-db 8
-db 0
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 0
-db 8
-.CHARACTER35:
-db 2,8,10
-db 8
-db 8
-db 8
-db 8
-db 1
-db 7
-db 6
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 2
-db 8
-db 3
-db 5
-db 8
-db 8
-db 8
-db 5
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 3
-db 5
-db 7
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 7
-db 6
-db 3
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 5
-db 8
-db 8
-db 8
-db 5
-db 3
-db 8
-db 2
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 6
-db 7
-db 1
-db 8
-db 8
-db 8
-db 8
-.CHARACTER36:
-db 2,10,7
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 0
-db 0
-db 8
-db 8
-db 0
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 2
-db 6
-db 8
-db 8
-db 8
-db 8
-db 0
-db 5
-db 1
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 0
-db 8
-db 8
-db 0
-db 0
-db 0
-db 1
-db 5
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-.CHARACTER37:
-db 2,8,11
-db 8
-db 5
-db 0
-db 0
-db 5
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 6
-db 0
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 6
-db 0
-db 5
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 0
-db 0
-db 5
-db 1
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 5
-db 0
-db 0
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 5
-db 0
-db 6
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 0
-db 6
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 5
-db 0
-db 0
-db 5
-db 8
-.CHARACTER38:
-db 2,8,10
-db 8
-db 8
-db 5
-db 1
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 5
-db 7
-db 3
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 2
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 4
-db 5
-db 1
-db 6
-db 8
-db 6
-db 1
-db 8
-db 8
-db 0
-db 7
-db 8
-db 6
-db 0
-db 4
-db 1
-db 5
-db 8
-db 8
-db 2
-db 3
-db 7
-db 7
-db 3
-db 0
-db 4
-db 8
-db 8
-db 8
-db 7
-db 3
-db 0
-db 0
-db 3
-db 7
-db 2
-db 3
-db 7
-.CHARACTER39:
-db 2,3,3
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-.CHARACTER40:
-db 1,10,4
-db 8
-db 8
-db 2
-db 8
-db 8
-db 5
-db 4
-db 8
-db 8
-db 3
-db 6
-db 8
-db 8
-db 1
-db 7
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 1
-db 7
-db 8
-db 8
-db 3
-db 6
-db 8
-db 8
-db 5
-db 4
-db 8
-db 8
-db 8
-db 2
-db 8
-.CHARACTER41:
-db 1,10,4
-db 8
-db 2
-db 8
-db 8
-db 8
-db 4
-db 5
-db 8
-db 8
-db 6
-db 3
-db 8
-db 8
-db 7
-db 1
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 1
-db 8
-db 8
-db 6
-db 3
-db 8
-db 8
-db 4
-db 5
-db 8
-db 8
-db 2
-db 8
-db 8
-.CHARACTER42:
-db 2,6,6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 3
-db 7
-db 0
-db 7
-db 3
-db 8
-db 7
-db 2
-db 0
-db 2
-db 7
-db 8
-db 7
-db 2
-db 0
-db 3
-db 7
-db 8
-db 3
-db 7
-db 0
-db 7
-db 3
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-.CHARACTER43:
-db 3,7,9
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-.CHARACTER44:
-db 9,2,4
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-.CHARACTER45:
-db 6,1,4
-db 8
-db 0
-db 0
-db 0
-.CHARACTER46:
-db 9,1,4
-db 8
-db 0
-db 8
-db 8
-.CHARACTER47:
-db 2,9,5
-db 8
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 3
-db 4
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 4
-db 4
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-.CHARACTER48:
-db 2,8,7
-db 8
-db 7
-db 2
-db 0
-db 2
-db 7
-db 8
-db 8
-db 3
-db 3
-db 7
-db 3
-db 3
-db 8
-db 8
-db 1
-db 6
-db 8
-db 6
-db 1
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 1
-db 6
-db 8
-db 6
-db 1
-db 8
-db 8
-db 3
-db 3
-db 7
-db 3
-db 3
-db 8
-db 8
-db 7
-db 2
-db 0
-db 2
-db 7
-db 8
-.CHARACTER49:
-db 2,8,7
-db 8
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-.CHARACTER50:
-db 2,8,7
-db 8
-db 5
-db 1
-db 0
-db 2
-db 6
-db 8
-db 8
-db 2
-db 6
-db 7
-db 4
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 7
-db 8
-db 8
-db 8
-db 4
-db 1
-db 7
-db 8
-db 8
-db 8
-db 4
-db 1
-db 7
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 7
-.CHARACTER51:
-db 2,8,7
-db 8
-db 5
-db 1
-db 0
-db 1
-db 6
-db 8
-db 8
-db 3
-db 7
-db 7
-db 5
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 6
-db 8
-db 8
-db 8
-db 8
-db 7
-db 4
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 3
-db 7
-db 7
-db 4
-db 2
-db 8
-db 8
-db 5
-db 1
-db 0
-db 2
-db 7
-db 8
-.CHARACTER52:
-db 2,8,7
-db 8
-db 8
-db 8
-db 5
-db 0
-db 8
-db 8
-db 8
-db 8
-db 6
-db 2
-db 3
-db 8
-db 8
-db 8
-db 7
-db 1
-db 7
-db 2
-db 8
-db 8
-db 8
-db 2
-db 6
-db 8
-db 1
-db 8
-db 8
-db 3
-db 5
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-.CHARACTER53:
-db 2,8,7
-db 8
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 2
-db 7
-db 8
-db 8
-db 8
-db 8
-db 7
-db 3
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 8
-db 8
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 0
-db 0
-db 2
-db 7
-db 8
-.CHARACTER54:
-db 2,8,7
-db 8
-db 8
-db 4
-db 1
-db 0
-db 0
-db 8
-db 8
-db 5
-db 1
-db 6
-db 8
-db 8
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 3
-db 0
-db 1
-db 6
-db 8
-db 8
-db 0
-db 4
-db 7
-db 4
-db 1
-db 8
-db 8
-db 1
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 3
-db 4
-db 7
-db 4
-db 1
-db 8
-db 8
-db 7
-db 2
-db 0
-db 1
-db 6
-db 8
-.CHARACTER55:
-db 2,8,7
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 4
-db 8
-db 8
-db 8
-db 8
-db 7
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 4
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-db 8
-.CHARACTER56:
-db 2,8,7
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-db 8
-db 0
-db 5
-db 8
-db 5
-db 0
-db 8
-db 8
-db 1
-db 5
-db 8
-db 5
-db 1
-db 8
-db 8
-db 6
-db 0
-db 0
-db 0
-db 6
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 1
-db 4
-db 7
-db 4
-db 1
-db 8
-db 8
-db 6
-db 1
-db 0
-db 1
-db 6
-db 8
-.CHARACTER57:
-db 2,8,7
-db 8
-db 6
-db 1
-db 0
-db 2
-db 7
-db 8
-db 8
-db 1
-db 4
-db 7
-db 4
-db 4
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 1
-db 8
-db 8
-db 1
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 6
-db 1
-db 0
-db 3
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 8
-db 8
-db 8
-db 6
-db 1
-db 5
-db 8
-db 8
-db 0
-db 0
-db 1
-db 4
-db 8
-db 8
-.CHARACTER58:
-db 4,6,4
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-.CHARACTER59:
-db 4,7,4
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-.CHARACTER60:
-db 4,6,10
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 4
-db 1
-db 8
-db 8
-db 8
-db 8
-db 7
-db 5
-db 2
-db 0
-db 3
-db 6
-db 8
-db 8
-db 8
-db 3
-db 0
-db 2
-db 5
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 0
-db 2
-db 5
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 5
-db 2
-db 0
-db 3
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 4
-db 1
-db 8
-.CHARACTER61:
-db 5,3,9
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-.CHARACTER62:
-db 4,6,9
-db 8
-db 1
-db 4
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 3
-db 0
-db 2
-db 5
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 5
-db 2
-db 0
-db 3
-db 8
-db 8
-db 8
-db 8
-db 7
-db 5
-db 2
-db 0
-db 3
-db 8
-db 8
-db 6
-db 3
-db 0
-db 2
-db 5
-db 7
-db 8
-db 8
-db 8
-db 1
-db 4
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-.CHARACTER63:
-db 2,8,6
-db 8
-db 0
-db 0
-db 0
-db 5
-db 8
-db 8
-db 8
-db 8
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 3
-db 2
-db 8
-db 8
-db 8
-db 4
-db 1
-db 7
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-.CHARACTER64:
-db 2,10,12
-db 8
-db 8
-db 8
-db 6
-db 2
-db 0
-db 0
-db 1
-db 4
-db 7
-db 8
-db 8
-db 8
-db 8
-db 4
-db 1
-db 5
-db 7
-db 7
-db 6
-db 3
-db 1
-db 7
-db 8
-db 8
-db 5
-db 1
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 3
-db 8
-db 8
-db 2
-db 5
-db 8
-db 4
-db 0
-db 3
-db 0
-db 8
-db 7
-db 1
-db 8
-db 8
-db 0
-db 7
-db 8
-db 0
-db 6
-db 6
-db 0
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 0
-db 6
-db 6
-db 0
-db 7
-db 2
-db 3
-db 8
-db 8
-db 2
-db 5
-db 8
-db 4
-db 0
-db 3
-db 0
-db 1
-db 5
-db 8
-db 8
-db 8
-db 5
-db 1
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 1
-db 6
-db 7
-db 7
-db 4
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 0
-db 2
-db 6
-db 8
-db 8
-db 8
-.CHARACTER65:
-db 2,8,7
-db 8
-db 8
-db 6
-db 0
-db 6
-db 8
-db 8
-db 8
-db 8
-db 3
-db 1
-db 3
-db 8
-db 8
-db 8
-db 7
-db 0
-db 6
-db 0
-db 7
-db 8
-db 8
-db 5
-db 2
-db 8
-db 2
-db 5
-db 8
-db 8
-db 2
-db 5
-db 8
-db 5
-db 2
-db 8
-db 7
-db 0
-db 0
-db 0
-db 0
-db 0
-db 7
-db 4
-db 3
-db 8
-db 8
-db 8
-db 3
-db 4
-db 1
-db 6
-db 8
-db 8
-db 8
-db 6
-db 1
-.CHARACTER66:
-db 2,8,8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 1
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 5
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 5
-db 1
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 4
-db 1
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 2
-db 6
-db 8
-.CHARACTER67:
-db 2,8,8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-db 8
-db 6
-db 1
-db 6
-db 7
-db 7
-db 3
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 1
-db 6
-db 7
-db 7
-db 3
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-.CHARACTER68:
-db 2,8,8
-db 8
-db 0
-db 0
-db 0
-db 1
-db 5
-db 8
-db 8
-db 8
-db 0
-db 8
-db 7
-db 6
-db 1
-db 5
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 5
-db 1
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 5
-db 1
-db 8
-db 8
-db 0
-db 8
-db 7
-db 6
-db 1
-db 5
-db 8
-db 8
-db 0
-db 0
-db 0
-db 1
-db 5
-db 8
-db 8
-.CHARACTER69:
-db 2,8,7
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-.CHARACTER70:
-db 2,8,6
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-.CHARACTER71:
-db 2,8,9
-db 8
-db 8
-db 6
-db 2
-db 0
-db 0
-db 2
-db 5
-db 8
-db 8
-db 6
-db 1
-db 5
-db 7
-db 7
-db 6
-db 2
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 0
-db 0
-db 0
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 5
-db 1
-db 5
-db 7
-db 8
-db 6
-db 0
-db 8
-db 8
-db 8
-db 5
-db 2
-db 0
-db 0
-db 2
-db 6
-db 8
-.CHARACTER72:
-db 2,8,8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER73:
-db 2,8,3
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-.CHARACTER74:
-db 2,10,4
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 5
-db 1
-db 8
-db 0
-db 1
-db 6
-db 8
-.CHARACTER75:
-db 2,8,7
-db 8
-db 0
-db 8
-db 8
-db 7
-db 1
-db 4
-db 8
-db 0
-db 8
-db 6
-db 1
-db 5
-db 8
-db 8
-db 0
-db 6
-db 1
-db 5
-db 8
-db 8
-db 8
-db 0
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 0
-db 4
-db 1
-db 7
-db 8
-db 8
-db 8
-db 0
-db 8
-db 4
-db 1
-db 7
-db 8
-db 8
-db 0
-db 8
-db 8
-db 4
-db 1
-db 7
-db 8
-db 0
-db 8
-db 8
-db 8
-db 4
-db 1
-.CHARACTER76:
-db 2,8,6
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-.CHARACTER77:
-db 2,8,9
-db 8
-db 0
-db 5
-db 8
-db 8
-db 8
-db 5
-db 0
-db 8
-db 8
-db 0
-db 1
-db 8
-db 8
-db 8
-db 1
-db 0
-db 8
-db 8
-db 0
-db 1
-db 5
-db 8
-db 5
-db 1
-db 0
-db 8
-db 8
-db 0
-db 6
-db 1
-db 8
-db 1
-db 6
-db 0
-db 8
-db 8
-db 0
-db 8
-db 2
-db 2
-db 2
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 6
-db 0
-db 6
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER78:
-db 2,8,8
-db 8
-db 0
-db 2
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 1
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 5
-db 2
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 1
-db 5
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 5
-db 1
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 2
-db 5
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 6
-db 1
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 2
-db 0
-db 8
-.CHARACTER79:
-db 2,8,9
-db 8
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-db 8
-db 8
-db 6
-db 1
-db 6
-db 7
-db 6
-db 1
-db 6
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 8
-db 5
-db 1
-db 6
-db 7
-db 6
-db 1
-db 5
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-db 8
-.CHARACTER80:
-db 2,8,7
-db 8
-db 0
-db 0
-db 0
-db 1
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 4
-db 1
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 4
-db 1
-db 8
-db 8
-db 0
-db 0
-db 0
-db 1
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-.CHARACTER81:
-db 2,9,9
-db 8
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-db 8
-db 8
-db 6
-db 1
-db 6
-db 7
-db 6
-db 1
-db 5
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 8
-db 5
-db 1
-db 6
-db 7
-db 6
-db 1
-db 5
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 0
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 2
-db 7
-db 8
-.CHARACTER82:
-db 2,8,7
-db 8
-db 0
-db 0
-db 0
-db 1
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 4
-db 1
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 4
-db 1
-db 8
-db 8
-db 0
-db 0
-db 0
-db 1
-db 7
-db 8
-db 8
-db 0
-db 8
-db 7
-db 2
-db 5
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 1
-db 7
-db 8
-db 0
-db 8
-db 8
-db 8
-db 4
-db 2
-.CHARACTER83:
-db 2,8,8
-db 8
-db 7
-db 2
-db 0
-db 0
-db 2
-db 5
-db 8
-db 8
-db 1
-db 4
-db 7
-db 8
-db 6
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 0
-db 2
-db 3
-db 6
-db 8
-db 8
-db 8
-db 8
-db 7
-db 5
-db 4
-db 1
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 6
-db 7
-db 7
-db 4
-db 1
-db 8
-db 8
-db 5
-db 2
-db 0
-db 0
-db 2
-db 6
-db 8
-.CHARACTER84:
-db 2,8,7
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-.CHARACTER85:
-db 2,8,8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 7
-db 1
-db 8
-db 8
-db 3
-db 3
-db 7
-db 7
-db 3
-db 3
-db 8
-db 8
-db 7
-db 3
-db 0
-db 0
-db 3
-db 7
-db 8
-.CHARACTER86:
-db 2,8,7
-db 0
-db 7
-db 8
-db 8
-db 8
-db 7
-db 0
-db 3
-db 4
-db 8
-db 8
-db 8
-db 4
-db 3
-db 7
-db 1
-db 8
-db 8
-db 8
-db 1
-db 7
-db 8
-db 2
-db 5
-db 8
-db 5
-db 2
-db 8
-db 8
-db 6
-db 2
-db 8
-db 2
-db 6
-db 8
-db 8
-db 8
-db 1
-db 5
-db 1
-db 8
-db 8
-db 8
-db 8
-db 5
-db 0
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 1
-db 8
-db 8
-db 8
-.CHARACTER87:
-db 2,8,9
-db 1
-db 7
-db 8
-db 8
-db 1
-db 8
-db 8
-db 7
-db 1
-db 3
-db 5
-db 8
-db 7
-db 0
-db 6
-db 8
-db 5
-db 3
-db 5
-db 3
-db 8
-db 5
-db 0
-db 4
-db 8
-db 3
-db 5
-db 7
-db 1
-db 8
-db 3
-db 4
-db 2
-db 8
-db 1
-db 7
-db 8
-db 1
-db 7
-db 1
-db 8
-db 1
-db 7
-db 1
-db 8
-db 8
-db 3
-db 4
-db 2
-db 8
-db 2
-db 3
-db 3
-db 8
-db 8
-db 5
-db 0
-db 5
-db 8
-db 5
-db 0
-db 5
-db 8
-db 8
-db 7
-db 0
-db 7
-db 8
-db 7
-db 0
-db 7
-db 8
-.CHARACTER88:
-db 2,8,7
-db 3
-db 3
-db 8
-db 8
-db 8
-db 3
-db 3
-db 7
-db 1
-db 5
-db 8
-db 5
-db 1
-db 7
-db 8
-db 6
-db 1
-db 6
-db 1
-db 6
-db 8
-db 8
-db 8
-db 4
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 4
-db 0
-db 4
-db 8
-db 8
-db 8
-db 6
-db 1
-db 6
-db 1
-db 6
-db 8
-db 7
-db 1
-db 6
-db 8
-db 6
-db 1
-db 7
-db 3
-db 4
-db 8
-db 8
-db 8
-db 3
-db 3
-.CHARACTER89:
-db 2,8,7
-db 3
-db 5
-db 8
-db 8
-db 8
-db 5
-db 3
-db 7
-db 1
-db 6
-db 8
-db 6
-db 1
-db 7
-db 8
-db 6
-db 1
-db 6
-db 1
-db 6
-db 8
-db 8
-db 8
-db 4
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-.CHARACTER90:
-db 2,8,9
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 7
-db 1
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 2
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 1
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-.CHARACTER91:
-db 2,10,4
-db 8
-db 0
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 0
-db 8
-.CHARACTER92:
-db 2,9,4
-db 1
-db 6
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-db 4
-db 4
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 8
-db 1
-db 6
-db 8
-db 8
-db 3
-db 4
-db 8
-db 8
-db 6
-db 1
-.CHARACTER93:
-db 2,10,4
-db 8
-db 0
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 0
-db 8
-.CHARACTER94:
-db 2,3,9
-db 8
-db 8
-db 8
-db 4
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 2
-db 7
-db 2
-db 4
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 8
-db 3
-db 4
-db 8
-.CHARACTER95:
-db 11,1,6
-db 0
-db 0
-db 0
-db 0
-db 0
-db 0
-.CHARACTER96:
-db 1,2,6
-db 4
-db 2
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 8
-.CHARACTER97:
-db 4,6,7
-db 8
-db 8
-db 0
-db 0
-db 1
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 1
-db 8
-db 8
-db 6
-db 1
-db 0
-db 0
-db 0
-db 8
-db 8
-db 1
-db 5
-db 7
-db 7
-db 0
-db 8
-db 8
-db 0
-db 6
-db 7
-db 3
-db 0
-db 8
-db 8
-db 5
-db 0
-db 1
-db 4
-db 0
-db 8
-.CHARACTER98:
-db 1,9,7
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 3
-db 0
-db 1
-db 7
-db 8
-db 8
-db 0
-db 4
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 4
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 3
-db 0
-db 1
-db 7
-db 8
-.CHARACTER99:
-db 4,6,6
-db 8
-db 7
-db 2
-db 0
-db 0
-db 8
-db 8
-db 2
-db 3
-db 7
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 2
-db 3
-db 7
-db 8
-db 8
-db 8
-db 7
-db 2
-db 0
-db 0
-db 8
-.CHARACTER100:
-db 1,9,7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 1
-db 0
-db 3
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 7
-db 1
-db 0
-db 3
-db 0
-db 8
-.CHARACTER101:
-db 4,6,7
-db 8
-db 7
-db 2
-db 0
-db 1
-db 6
-db 8
-db 8
-db 3
-db 5
-db 8
-db 5
-db 1
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 8
-db 8
-db 3
-db 3
-db 7
-db 7
-db 3
-db 8
-db 8
-db 7
-db 3
-db 0
-db 1
-db 5
-db 8
-.CHARACTER102:
-db 1,9,4
-db 8
-db 5
-db 1
-db 0
-db 8
-db 1
-db 6
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-.CHARACTER103:
-db 4,8,7
-db 8
-db 7
-db 1
-db 0
-db 3
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 7
-db 1
-db 0
-db 3
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 2
-db 8
-db 8
-db 8
-db 0
-db 0
-db 1
-db 6
-db 8
-.CHARACTER104:
-db 1,9,7
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 4
-db 0
-db 1
-db 5
-db 8
-db 8
-db 0
-db 4
-db 7
-db 5
-db 1
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER105:
-db 2,8,3
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-.CHARACTER106:
-db 2,10,3
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 6
-db 0
-db 8
-db 0
-db 4
-db 8
-.CHARACTER107:
-db 1,9,6
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 7
-db 1
-db 5
-db 8
-db 0
-db 7
-db 1
-db 5
-db 8
-db 8
-db 0
-db 1
-db 5
-db 8
-db 8
-db 8
-db 0
-db 5
-db 1
-db 7
-db 8
-db 8
-db 0
-db 8
-db 5
-db 1
-db 7
-db 8
-db 0
-db 8
-db 8
-db 5
-db 1
-.CHARACTER108:
-db 1,9,3
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-.CHARACTER109:
-db 4,6,11
-db 8
-db 0
-db 4
-db 0
-db 0
-db 5
-db 4
-db 0
-db 1
-db 5
-db 8
-db 8
-db 0
-db 4
-db 7
-db 5
-db 0
-db 4
-db 7
-db 5
-db 1
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER110:
-db 4,6,7
-db 8
-db 0
-db 4
-db 0
-db 1
-db 5
-db 8
-db 8
-db 0
-db 4
-db 7
-db 5
-db 1
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER111:
-db 4,6,7
-db 8
-db 7
-db 2
-db 0
-db 2
-db 7
-db 8
-db 8
-db 2
-db 4
-db 7
-db 3
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 2
-db 8
-db 8
-db 7
-db 2
-db 0
-db 2
-db 7
-db 8
-.CHARACTER112:
-db 4,8,7
-db 8
-db 0
-db 3
-db 0
-db 1
-db 7
-db 8
-db 8
-db 0
-db 4
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 4
-db 7
-db 4
-db 2
-db 8
-db 8
-db 0
-db 3
-db 0
-db 1
-db 7
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-.CHARACTER113:
-db 4,8,7
-db 8
-db 7
-db 1
-db 0
-db 3
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 0
-db 7
-db 8
-db 7
-db 0
-db 8
-db 8
-db 2
-db 4
-db 7
-db 4
-db 0
-db 8
-db 8
-db 7
-db 1
-db 0
-db 3
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-.CHARACTER114:
-db 4,6,5
-db 8
-db 0
-db 4
-db 1
-db 0
-db 8
-db 0
-db 3
-db 7
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-.CHARACTER115:
-db 4,6,7
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-db 8
-db 0
-db 6
-db 8
-db 7
-db 3
-db 8
-db 8
-db 3
-db 1
-db 3
-db 6
-db 8
-db 8
-db 8
-db 8
-db 7
-db 4
-db 2
-db 3
-db 8
-db 8
-db 3
-db 7
-db 8
-db 6
-db 0
-db 8
-db 8
-db 5
-db 1
-db 0
-db 1
-db 5
-db 8
-.CHARACTER116:
-db 2,8,4
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 7
-db 8
-db 8
-db 4
-db 0
-db 0
-.CHARACTER117:
-db 4,6,7
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 0
-db 8
-db 8
-db 7
-db 0
-db 8
-db 8
-db 1
-db 5
-db 7
-db 4
-db 0
-db 8
-db 8
-db 5
-db 1
-db 0
-db 4
-db 0
-db 8
-.CHARACTER118:
-db 4,6,6
-db 0
-db 7
-db 8
-db 8
-db 7
-db 0
-db 3
-db 4
-db 8
-db 8
-db 4
-db 3
-db 6
-db 1
-db 8
-db 8
-db 1
-db 6
-db 8
-db 2
-db 5
-db 5
-db 2
-db 8
-db 8
-db 5
-db 1
-db 1
-db 5
-db 8
-db 8
-db 8
-db 1
-db 1
-db 8
-db 8
-.CHARACTER119:
-db 4,6,9
-db 6
-db 2
-db 8
-db 7
-db 0
-db 7
-db 8
-db 1
-db 7
-db 7
-db 0
-db 8
-db 4
-db 0
-db 4
-db 7
-db 0
-db 8
-db 8
-db 1
-db 6
-db 1
-db 4
-db 1
-db 6
-db 2
-db 8
-db 8
-db 3
-db 3
-db 1
-db 8
-db 1
-db 3
-db 3
-db 8
-db 8
-db 5
-db 0
-db 4
-db 8
-db 4
-db 0
-db 5
-db 8
-db 8
-db 6
-db 0
-db 7
-db 8
-db 7
-db 0
-db 6
-db 8
-.CHARACTER120:
-db 4,6,6
-db 3
-db 5
-db 8
-db 8
-db 5
-db 3
-db 8
-db 2
-db 6
-db 6
-db 2
-db 8
-db 8
-db 7
-db 1
-db 1
-db 7
-db 8
-db 8
-db 6
-db 0
-db 0
-db 7
-db 8
-db 7
-db 1
-db 6
-db 5
-db 1
-db 7
-db 3
-db 4
-db 8
-db 8
-db 4
-db 3
-.CHARACTER121:
-db 4,8,6
-db 1
-db 8
-db 8
-db 8
-db 8
-db 1
-db 2
-db 5
-db 8
-db 8
-db 5
-db 3
-db 6
-db 1
-db 8
-db 8
-db 1
-db 6
-db 8
-db 2
-db 5
-db 5
-db 2
-db 8
-db 8
-db 6
-db 1
-db 2
-db 6
-db 8
-db 8
-db 8
-db 2
-db 2
-db 8
-db 8
-db 8
-db 8
-db 3
-db 6
-db 8
-db 8
-db 0
-db 0
-db 5
-db 8
-db 8
-db 8
-.CHARACTER122:
-db 4,6,5
-db 0
-db 0
-db 0
-db 0
-db 0
-db 8
-db 8
-db 8
-db 4
-db 3
-db 8
-db 8
-db 4
-db 2
-db 8
-db 8
-db 5
-db 1
-db 7
-db 8
-db 5
-db 1
-db 7
-db 8
-db 8
-db 0
-db 0
-db 0
-db 0
-db 0
-.CHARACTER123:
-db 2,10,7
-db 8
-db 8
-db 8
-db 4
-db 1
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 1
-db 0
-db 8
-.CHARACTER124:
-db 2,11,4
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-.CHARACTER125:
-db 2,10,7
-db 8
-db 0
-db 0
-db 4
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 6
-db 8
-db 8
-db 8
-db 8
-db 8
-db 4
-db 0
-db 0
-db 8
-db 8
-db 8
-db 8
-db 1
-db 5
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 0
-db 8
-db 8
-db 8
-db 8
-db 8
-db 6
-db 0
-db 8
-db 8
-db 8
-db 8
-db 0
-db 0
-db 4
-db 8
-db 8
-db 8
-.CHARACTER126:
-db 5,3,9
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 8
-db 5
-db 1
-db 0
-db 3
-db 7
-db 7
-db 2
-db 8
-db 8
-db 3
-db 7
-db 7
-db 3
-db 0
-db 1
-db 5
-db 8
-.TRANSLATION_TABLE:
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER32
-db 0x00
-dl .CHARACTER33
-db 0x00
-dl .CHARACTER34
-db 0x00
-dl .CHARACTER35
-db 0x00
-dl .CHARACTER36
-db 0x00
-dl .CHARACTER37
-db 0x00
-dl .CHARACTER38
-db 0x00
-dl .CHARACTER39
-db 0x00
-dl .CHARACTER40
-db 0x00
-dl .CHARACTER41
-db 0x00
-dl .CHARACTER42
-db 0x00
-dl .CHARACTER43
-db 0x00
-dl .CHARACTER44
-db 0x00
-dl .CHARACTER45
-db 0x00
-dl .CHARACTER46
-db 0x00
-dl .CHARACTER47
-db 0x00
-dl .CHARACTER48
-db 0x00
-dl .CHARACTER49
-db 0x00
-dl .CHARACTER50
-db 0x00
-dl .CHARACTER51
-db 0x00
-dl .CHARACTER52
-db 0x00
-dl .CHARACTER53
-db 0x00
-dl .CHARACTER54
-db 0x00
-dl .CHARACTER55
-db 0x00
-dl .CHARACTER56
-db 0x00
-dl .CHARACTER57
-db 0x00
-dl .CHARACTER58
-db 0x00
-dl .CHARACTER59
-db 0x00
-dl .CHARACTER60
-db 0x00
-dl .CHARACTER61
-db 0x00
-dl .CHARACTER62
-db 0x00
-dl .CHARACTER63
-db 0x00
-dl .CHARACTER64
-db 0x00
-dl .CHARACTER65
-db 0x00
-dl .CHARACTER66
-db 0x00
-dl .CHARACTER67
-db 0x00
-dl .CHARACTER68
-db 0x00
-dl .CHARACTER69
-db 0x00
-dl .CHARACTER70
-db 0x00
-dl .CHARACTER71
-db 0x00
-dl .CHARACTER72
-db 0x00
-dl .CHARACTER73
-db 0x00
-dl .CHARACTER74
-db 0x00
-dl .CHARACTER75
-db 0x00
-dl .CHARACTER76
-db 0x00
-dl .CHARACTER77
-db 0x00
-dl .CHARACTER78
-db 0x00
-dl .CHARACTER79
-db 0x00
-dl .CHARACTER80
-db 0x00
-dl .CHARACTER81
-db 0x00
-dl .CHARACTER82
-db 0x00
-dl .CHARACTER83
-db 0x00
-dl .CHARACTER84
-db 0x00
-dl .CHARACTER85
-db 0x00
-dl .CHARACTER86
-db 0x00
-dl .CHARACTER87
-db 0x00
-dl .CHARACTER88
-db 0x00
-dl .CHARACTER89
-db 0x00
-dl .CHARACTER90
-db 0x00
-dl .CHARACTER91
-db 0x00
-dl .CHARACTER92
-db 0x00
-dl .CHARACTER93
-db 0x00
-dl .CHARACTER94
-db 0x00
-dl .CHARACTER95
-db 0x00
-dl .CHARACTER96
-db 0x00
-dl .CHARACTER97
-db 0x00
-dl .CHARACTER98
-db 0x00
-dl .CHARACTER99
-db 0x00
-dl .CHARACTER100
-db 0x00
-dl .CHARACTER101
-db 0x00
-dl .CHARACTER102
-db 0x00
-dl .CHARACTER103
-db 0x00
-dl .CHARACTER104
-db 0x00
-dl .CHARACTER105
-db 0x00
-dl .CHARACTER106
-db 0x00
-dl .CHARACTER107
-db 0x00
-dl .CHARACTER108
-db 0x00
-dl .CHARACTER109
-db 0x00
-dl .CHARACTER110
-db 0x00
-dl .CHARACTER111
-db 0x00
-dl .CHARACTER112
-db 0x00
-dl .CHARACTER113
-db 0x00
-dl .CHARACTER114
-db 0x00
-dl .CHARACTER115
-db 0x00
-dl .CHARACTER116
-db 0x00
-dl .CHARACTER117
-db 0x00
-dl .CHARACTER118
-db 0x00
-dl .CHARACTER119
-db 0x00
-dl .CHARACTER120
-db 0x00
-dl .CHARACTER121
-db 0x00
-dl .CHARACTER122
-db 0x00
-dl .CHARACTER123
-db 0x00
-dl .CHARACTER124
-db 0x00
-dl .CHARACTER125
-db 0x00
-dl .CHARACTER126
-db 0x00
+ include 'dejavu.inc'
+; .CHARACTER32:
+; db 0,1,4
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER33:
+; db 2,8,3
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER34:
+; db 2,3,5
+; db 8
+; db 0
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 0
+; db 8
+; .CHARACTER35:
+; db 2,8,10
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 7
+; db 6
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 2
+; db 8
+; db 3
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 5
+; db 7
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 7
+; db 6
+; db 3
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 3
+; db 8
+; db 2
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 6
+; db 7
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER36:
+; db 2,10,7
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 0
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 2
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 5
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 0
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; .CHARACTER37:
+; db 2,8,11
+; db 8
+; db 5
+; db 0
+; db 0
+; db 5
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 6
+; db 0
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 6
+; db 0
+; db 5
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 0
+; db 0
+; db 5
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 5
+; db 0
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 5
+; db 0
+; db 6
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 0
+; db 6
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 5
+; db 0
+; db 0
+; db 5
+; db 8
+; .CHARACTER38:
+; db 2,8,10
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 5
+; db 7
+; db 3
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 2
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 4
+; db 5
+; db 1
+; db 6
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 6
+; db 0
+; db 4
+; db 1
+; db 5
+; db 8
+; db 8
+; db 2
+; db 3
+; db 7
+; db 7
+; db 3
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 7
+; db 3
+; db 0
+; db 0
+; db 3
+; db 7
+; db 2
+; db 3
+; db 7
+; .CHARACTER39:
+; db 2,3,3
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER40:
+; db 1,10,4
+; db 8
+; db 8
+; db 2
+; db 8
+; db 8
+; db 5
+; db 4
+; db 8
+; db 8
+; db 3
+; db 6
+; db 8
+; db 8
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 1
+; db 7
+; db 8
+; db 8
+; db 3
+; db 6
+; db 8
+; db 8
+; db 5
+; db 4
+; db 8
+; db 8
+; db 8
+; db 2
+; db 8
+; .CHARACTER41:
+; db 1,10,4
+; db 8
+; db 2
+; db 8
+; db 8
+; db 8
+; db 4
+; db 5
+; db 8
+; db 8
+; db 6
+; db 3
+; db 8
+; db 8
+; db 7
+; db 1
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 8
+; db 8
+; db 6
+; db 3
+; db 8
+; db 8
+; db 4
+; db 5
+; db 8
+; db 8
+; db 2
+; db 8
+; db 8
+; .CHARACTER42:
+; db 2,6,6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 3
+; db 7
+; db 0
+; db 7
+; db 3
+; db 8
+; db 7
+; db 2
+; db 0
+; db 2
+; db 7
+; db 8
+; db 7
+; db 2
+; db 0
+; db 3
+; db 7
+; db 8
+; db 3
+; db 7
+; db 0
+; db 7
+; db 3
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; .CHARACTER43:
+; db 3,7,9
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER44:
+; db 9,2,4
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER45:
+; db 6,1,4
+; db 8
+; db 0
+; db 0
+; db 0
+; .CHARACTER46:
+; db 9,1,4
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER47:
+; db 2,9,5
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 3
+; db 4
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 4
+; db 4
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; .CHARACTER48:
+; db 2,8,7
+; db 8
+; db 7
+; db 2
+; db 0
+; db 2
+; db 7
+; db 8
+; db 8
+; db 3
+; db 3
+; db 7
+; db 3
+; db 3
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 3
+; db 3
+; db 7
+; db 3
+; db 3
+; db 8
+; db 8
+; db 7
+; db 2
+; db 0
+; db 2
+; db 7
+; db 8
+; .CHARACTER49:
+; db 2,8,7
+; db 8
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; .CHARACTER50:
+; db 2,8,7
+; db 8
+; db 5
+; db 1
+; db 0
+; db 2
+; db 6
+; db 8
+; db 8
+; db 2
+; db 6
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 7
+; .CHARACTER51:
+; db 2,8,7
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 3
+; db 7
+; db 7
+; db 5
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 3
+; db 7
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 2
+; db 7
+; db 8
+; .CHARACTER52:
+; db 2,8,7
+; db 8
+; db 8
+; db 8
+; db 5
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 2
+; db 3
+; db 8
+; db 8
+; db 8
+; db 7
+; db 1
+; db 7
+; db 2
+; db 8
+; db 8
+; db 8
+; db 2
+; db 6
+; db 8
+; db 1
+; db 8
+; db 8
+; db 3
+; db 5
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER53:
+; db 2,8,7
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 2
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 3
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 2
+; db 7
+; db 8
+; .CHARACTER54:
+; db 2,8,7
+; db 8
+; db 8
+; db 4
+; db 1
+; db 0
+; db 0
+; db 8
+; db 8
+; db 5
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 3
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 1
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 3
+; db 4
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 7
+; db 2
+; db 0
+; db 1
+; db 6
+; db 8
+; .CHARACTER55:
+; db 2,8,7
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; .CHARACTER56:
+; db 2,8,7
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 5
+; db 8
+; db 5
+; db 0
+; db 8
+; db 8
+; db 1
+; db 5
+; db 8
+; db 5
+; db 1
+; db 8
+; db 8
+; db 6
+; db 0
+; db 0
+; db 0
+; db 6
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 1
+; db 4
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 6
+; db 1
+; db 0
+; db 1
+; db 6
+; db 8
+; .CHARACTER57:
+; db 2,8,7
+; db 8
+; db 6
+; db 1
+; db 0
+; db 2
+; db 7
+; db 8
+; db 8
+; db 1
+; db 4
+; db 7
+; db 4
+; db 4
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 1
+; db 8
+; db 8
+; db 1
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 6
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 0
+; db 1
+; db 4
+; db 8
+; db 8
+; .CHARACTER58:
+; db 4,6,4
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER59:
+; db 4,7,4
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER60:
+; db 4,6,10
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 5
+; db 2
+; db 0
+; db 3
+; db 6
+; db 8
+; db 8
+; db 8
+; db 3
+; db 0
+; db 2
+; db 5
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 0
+; db 2
+; db 5
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 5
+; db 2
+; db 0
+; db 3
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 4
+; db 1
+; db 8
+; .CHARACTER61:
+; db 5,3,9
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; .CHARACTER62:
+; db 4,6,9
+; db 8
+; db 1
+; db 4
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 3
+; db 0
+; db 2
+; db 5
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 5
+; db 2
+; db 0
+; db 3
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 5
+; db 2
+; db 0
+; db 3
+; db 8
+; db 8
+; db 6
+; db 3
+; db 0
+; db 2
+; db 5
+; db 7
+; db 8
+; db 8
+; db 8
+; db 1
+; db 4
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER63:
+; db 2,8,6
+; db 8
+; db 0
+; db 0
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 2
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; .CHARACTER64:
+; db 2,10,12
+; db 8
+; db 8
+; db 8
+; db 6
+; db 2
+; db 0
+; db 0
+; db 1
+; db 4
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; db 5
+; db 7
+; db 7
+; db 6
+; db 3
+; db 1
+; db 7
+; db 8
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 3
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 4
+; db 0
+; db 3
+; db 0
+; db 8
+; db 7
+; db 1
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 0
+; db 6
+; db 6
+; db 0
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 0
+; db 6
+; db 6
+; db 0
+; db 7
+; db 2
+; db 3
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 4
+; db 0
+; db 3
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 1
+; db 6
+; db 7
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 0
+; db 2
+; db 6
+; db 8
+; db 8
+; db 8
+; .CHARACTER65:
+; db 2,8,7
+; db 8
+; db 8
+; db 6
+; db 0
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 1
+; db 3
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 6
+; db 0
+; db 7
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 5
+; db 2
+; db 8
+; db 7
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 7
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; db 3
+; db 4
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; .CHARACTER66:
+; db 2,8,8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 5
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 2
+; db 6
+; db 8
+; .CHARACTER67:
+; db 2,8,8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 6
+; db 1
+; db 6
+; db 7
+; db 7
+; db 3
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 6
+; db 7
+; db 7
+; db 3
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; .CHARACTER68:
+; db 2,8,8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 7
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 8
+; db 7
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; .CHARACTER69:
+; db 2,8,7
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; .CHARACTER70:
+; db 2,8,6
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER71:
+; db 2,8,9
+; db 8
+; db 8
+; db 6
+; db 2
+; db 0
+; db 0
+; db 2
+; db 5
+; db 8
+; db 8
+; db 6
+; db 1
+; db 5
+; db 7
+; db 7
+; db 6
+; db 2
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 5
+; db 1
+; db 5
+; db 7
+; db 8
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 0
+; db 0
+; db 2
+; db 6
+; db 8
+; .CHARACTER72:
+; db 2,8,8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER73:
+; db 2,8,3
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER74:
+; db 2,10,4
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 5
+; db 1
+; db 8
+; db 0
+; db 1
+; db 6
+; db 8
+; .CHARACTER75:
+; db 2,8,7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 4
+; db 8
+; db 0
+; db 8
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 4
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 4
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 4
+; db 1
+; db 7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; .CHARACTER76:
+; db 2,8,6
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; .CHARACTER77:
+; db 2,8,9
+; db 8
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 0
+; db 8
+; db 8
+; db 0
+; db 1
+; db 8
+; db 8
+; db 8
+; db 1
+; db 0
+; db 8
+; db 8
+; db 0
+; db 1
+; db 5
+; db 8
+; db 5
+; db 1
+; db 0
+; db 8
+; db 8
+; db 0
+; db 6
+; db 1
+; db 8
+; db 1
+; db 6
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 2
+; db 2
+; db 2
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 6
+; db 0
+; db 6
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER78:
+; db 2,8,8
+; db 8
+; db 0
+; db 2
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 5
+; db 2
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 1
+; db 5
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 5
+; db 1
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 2
+; db 5
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 6
+; db 1
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 2
+; db 0
+; db 8
+; .CHARACTER79:
+; db 2,8,9
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 6
+; db 7
+; db 6
+; db 1
+; db 6
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 5
+; db 1
+; db 6
+; db 7
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; .CHARACTER80:
+; db 2,8,7
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 4
+; db 1
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 4
+; db 1
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER81:
+; db 2,9,9
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 6
+; db 7
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 5
+; db 1
+; db 6
+; db 7
+; db 6
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 2
+; db 7
+; db 8
+; .CHARACTER82:
+; db 2,8,7
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 4
+; db 1
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 4
+; db 1
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 7
+; db 2
+; db 5
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 4
+; db 2
+; .CHARACTER83:
+; db 2,8,8
+; db 8
+; db 7
+; db 2
+; db 0
+; db 0
+; db 2
+; db 5
+; db 8
+; db 8
+; db 1
+; db 4
+; db 7
+; db 8
+; db 6
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 0
+; db 2
+; db 3
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 5
+; db 4
+; db 1
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 6
+; db 7
+; db 7
+; db 4
+; db 1
+; db 8
+; db 8
+; db 5
+; db 2
+; db 0
+; db 0
+; db 2
+; db 6
+; db 8
+; .CHARACTER84:
+; db 2,8,7
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; .CHARACTER85:
+; db 2,8,8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 7
+; db 1
+; db 8
+; db 8
+; db 3
+; db 3
+; db 7
+; db 7
+; db 3
+; db 3
+; db 8
+; db 8
+; db 7
+; db 3
+; db 0
+; db 0
+; db 3
+; db 7
+; db 8
+; .CHARACTER86:
+; db 2,8,7
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 7
+; db 0
+; db 3
+; db 4
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 7
+; db 1
+; db 8
+; db 8
+; db 8
+; db 1
+; db 7
+; db 8
+; db 2
+; db 5
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 6
+; db 2
+; db 8
+; db 2
+; db 6
+; db 8
+; db 8
+; db 8
+; db 1
+; db 5
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 8
+; db 8
+; db 8
+; .CHARACTER87:
+; db 2,8,9
+; db 1
+; db 7
+; db 8
+; db 8
+; db 1
+; db 8
+; db 8
+; db 7
+; db 1
+; db 3
+; db 5
+; db 8
+; db 7
+; db 0
+; db 6
+; db 8
+; db 5
+; db 3
+; db 5
+; db 3
+; db 8
+; db 5
+; db 0
+; db 4
+; db 8
+; db 3
+; db 5
+; db 7
+; db 1
+; db 8
+; db 3
+; db 4
+; db 2
+; db 8
+; db 1
+; db 7
+; db 8
+; db 1
+; db 7
+; db 1
+; db 8
+; db 1
+; db 7
+; db 1
+; db 8
+; db 8
+; db 3
+; db 4
+; db 2
+; db 8
+; db 2
+; db 3
+; db 3
+; db 8
+; db 8
+; db 5
+; db 0
+; db 5
+; db 8
+; db 5
+; db 0
+; db 5
+; db 8
+; db 8
+; db 7
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 7
+; db 8
+; .CHARACTER88:
+; db 2,8,7
+; db 3
+; db 3
+; db 8
+; db 8
+; db 8
+; db 3
+; db 3
+; db 7
+; db 1
+; db 5
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 6
+; db 1
+; db 6
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 4
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 6
+; db 1
+; db 6
+; db 8
+; db 7
+; db 1
+; db 6
+; db 8
+; db 6
+; db 1
+; db 7
+; db 3
+; db 4
+; db 8
+; db 8
+; db 8
+; db 3
+; db 3
+; .CHARACTER89:
+; db 2,8,7
+; db 3
+; db 5
+; db 8
+; db 8
+; db 8
+; db 5
+; db 3
+; db 7
+; db 1
+; db 6
+; db 8
+; db 6
+; db 1
+; db 7
+; db 8
+; db 6
+; db 1
+; db 6
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 4
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; .CHARACTER90:
+; db 2,8,9
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 2
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; .CHARACTER91:
+; db 2,10,4
+; db 8
+; db 0
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 8
+; .CHARACTER92:
+; db 2,9,4
+; db 1
+; db 6
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 4
+; db 4
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 3
+; db 4
+; db 8
+; db 8
+; db 6
+; db 1
+; .CHARACTER93:
+; db 2,10,4
+; db 8
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 0
+; db 8
+; .CHARACTER94:
+; db 2,3,9
+; db 8
+; db 8
+; db 8
+; db 4
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 2
+; db 7
+; db 2
+; db 4
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; db 3
+; db 4
+; db 8
+; .CHARACTER95:
+; db 11,1,6
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; .CHARACTER96:
+; db 1,2,6
+; db 4
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 8
+; .CHARACTER97:
+; db 4,6,7
+; db 8
+; db 8
+; db 0
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 1
+; db 8
+; db 8
+; db 6
+; db 1
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 1
+; db 5
+; db 7
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 6
+; db 7
+; db 3
+; db 0
+; db 8
+; db 8
+; db 5
+; db 0
+; db 1
+; db 4
+; db 0
+; db 8
+; .CHARACTER98:
+; db 1,9,7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 3
+; db 0
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 3
+; db 0
+; db 1
+; db 7
+; db 8
+; .CHARACTER99:
+; db 4,6,6
+; db 8
+; db 7
+; db 2
+; db 0
+; db 0
+; db 8
+; db 8
+; db 2
+; db 3
+; db 7
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 2
+; db 3
+; db 7
+; db 8
+; db 8
+; db 8
+; db 7
+; db 2
+; db 0
+; db 0
+; db 8
+; .CHARACTER100:
+; db 1,9,7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; .CHARACTER101:
+; db 4,6,7
+; db 8
+; db 7
+; db 2
+; db 0
+; db 1
+; db 6
+; db 8
+; db 8
+; db 3
+; db 5
+; db 8
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 3
+; db 7
+; db 7
+; db 3
+; db 8
+; db 8
+; db 7
+; db 3
+; db 0
+; db 1
+; db 5
+; db 8
+; .CHARACTER102:
+; db 1,9,4
+; db 8
+; db 5
+; db 1
+; db 0
+; db 8
+; db 1
+; db 6
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER103:
+; db 4,8,7
+; db 8
+; db 7
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 2
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 1
+; db 6
+; db 8
+; .CHARACTER104:
+; db 1,9,7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 4
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER105:
+; db 2,8,3
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER106:
+; db 2,10,3
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 6
+; db 0
+; db 8
+; db 0
+; db 4
+; db 8
+; .CHARACTER107:
+; db 1,9,6
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 7
+; db 1
+; db 5
+; db 8
+; db 0
+; db 7
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 0
+; db 5
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 5
+; db 1
+; .CHARACTER108:
+; db 1,9,3
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER109:
+; db 4,6,11
+; db 8
+; db 0
+; db 4
+; db 0
+; db 0
+; db 5
+; db 4
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 5
+; db 0
+; db 4
+; db 7
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER110:
+; db 4,6,7
+; db 8
+; db 0
+; db 4
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 5
+; db 1
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER111:
+; db 4,6,7
+; db 8
+; db 7
+; db 2
+; db 0
+; db 2
+; db 7
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 3
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 7
+; db 2
+; db 0
+; db 2
+; db 7
+; db 8
+; .CHARACTER112:
+; db 4,8,7
+; db 8
+; db 0
+; db 3
+; db 0
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 4
+; db 7
+; db 4
+; db 2
+; db 8
+; db 8
+; db 0
+; db 3
+; db 0
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; .CHARACTER113:
+; db 4,8,7
+; db 8
+; db 7
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 2
+; db 4
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 7
+; db 1
+; db 0
+; db 3
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; .CHARACTER114:
+; db 4,6,5
+; db 8
+; db 0
+; db 4
+; db 1
+; db 0
+; db 8
+; db 0
+; db 3
+; db 7
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; .CHARACTER115:
+; db 4,6,7
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; db 8
+; db 0
+; db 6
+; db 8
+; db 7
+; db 3
+; db 8
+; db 8
+; db 3
+; db 1
+; db 3
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 7
+; db 4
+; db 2
+; db 3
+; db 8
+; db 8
+; db 3
+; db 7
+; db 8
+; db 6
+; db 0
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 1
+; db 5
+; db 8
+; .CHARACTER116:
+; db 2,8,4
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 7
+; db 8
+; db 8
+; db 4
+; db 0
+; db 0
+; .CHARACTER117:
+; db 4,6,7
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 7
+; db 0
+; db 8
+; db 8
+; db 1
+; db 5
+; db 7
+; db 4
+; db 0
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 4
+; db 0
+; db 8
+; .CHARACTER118:
+; db 4,6,6
+; db 0
+; db 7
+; db 8
+; db 8
+; db 7
+; db 0
+; db 3
+; db 4
+; db 8
+; db 8
+; db 4
+; db 3
+; db 6
+; db 1
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 2
+; db 5
+; db 5
+; db 2
+; db 8
+; db 8
+; db 5
+; db 1
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 1
+; db 1
+; db 8
+; db 8
+; .CHARACTER119:
+; db 4,6,9
+; db 6
+; db 2
+; db 8
+; db 7
+; db 0
+; db 7
+; db 8
+; db 1
+; db 7
+; db 7
+; db 0
+; db 8
+; db 4
+; db 0
+; db 4
+; db 7
+; db 0
+; db 8
+; db 8
+; db 1
+; db 6
+; db 1
+; db 4
+; db 1
+; db 6
+; db 2
+; db 8
+; db 8
+; db 3
+; db 3
+; db 1
+; db 8
+; db 1
+; db 3
+; db 3
+; db 8
+; db 8
+; db 5
+; db 0
+; db 4
+; db 8
+; db 4
+; db 0
+; db 5
+; db 8
+; db 8
+; db 6
+; db 0
+; db 7
+; db 8
+; db 7
+; db 0
+; db 6
+; db 8
+; .CHARACTER120:
+; db 4,6,6
+; db 3
+; db 5
+; db 8
+; db 8
+; db 5
+; db 3
+; db 8
+; db 2
+; db 6
+; db 6
+; db 2
+; db 8
+; db 8
+; db 7
+; db 1
+; db 1
+; db 7
+; db 8
+; db 8
+; db 6
+; db 0
+; db 0
+; db 7
+; db 8
+; db 7
+; db 1
+; db 6
+; db 5
+; db 1
+; db 7
+; db 3
+; db 4
+; db 8
+; db 8
+; db 4
+; db 3
+; .CHARACTER121:
+; db 4,8,6
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 2
+; db 5
+; db 8
+; db 8
+; db 5
+; db 3
+; db 6
+; db 1
+; db 8
+; db 8
+; db 1
+; db 6
+; db 8
+; db 2
+; db 5
+; db 5
+; db 2
+; db 8
+; db 8
+; db 6
+; db 1
+; db 2
+; db 6
+; db 8
+; db 8
+; db 8
+; db 2
+; db 2
+; db 8
+; db 8
+; db 8
+; db 8
+; db 3
+; db 6
+; db 8
+; db 8
+; db 0
+; db 0
+; db 5
+; db 8
+; db 8
+; db 8
+; .CHARACTER122:
+; db 4,6,5
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 4
+; db 3
+; db 8
+; db 8
+; db 4
+; db 2
+; db 8
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 5
+; db 1
+; db 7
+; db 8
+; db 8
+; db 0
+; db 0
+; db 0
+; db 0
+; db 0
+; .CHARACTER123:
+; db 2,10,7
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 1
+; db 0
+; db 8
+; .CHARACTER124:
+; db 2,11,4
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; .CHARACTER125:
+; db 2,10,7
+; db 8
+; db 0
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 6
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 4
+; db 0
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 1
+; db 5
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 6
+; db 0
+; db 8
+; db 8
+; db 8
+; db 8
+; db 0
+; db 0
+; db 4
+; db 8
+; db 8
+; db 8
+; .CHARACTER126:
+; db 5,3,9
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 8
+; db 5
+; db 1
+; db 0
+; db 3
+; db 7
+; db 7
+; db 2
+; db 8
+; db 8
+; db 3
+; db 7
+; db 7
+; db 3
+; db 0
+; db 1
+; db 5
+; db 8
+; .TRANSLATION_TABLE:
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER32
+; db 0x00
+; dl .CHARACTER33
+; db 0x00
+; dl .CHARACTER34
+; db 0x00
+; dl .CHARACTER35
+; db 0x00
+; dl .CHARACTER36
+; db 0x00
+; dl .CHARACTER37
+; db 0x00
+; dl .CHARACTER38
+; db 0x00
+; dl .CHARACTER39
+; db 0x00
+; dl .CHARACTER40
+; db 0x00
+; dl .CHARACTER41
+; db 0x00
+; dl .CHARACTER42
+; db 0x00
+; dl .CHARACTER43
+; db 0x00
+; dl .CHARACTER44
+; db 0x00
+; dl .CHARACTER45
+; db 0x00
+; dl .CHARACTER46
+; db 0x00
+; dl .CHARACTER47
+; db 0x00
+; dl .CHARACTER48
+; db 0x00
+; dl .CHARACTER49
+; db 0x00
+; dl .CHARACTER50
+; db 0x00
+; dl .CHARACTER51
+; db 0x00
+; dl .CHARACTER52
+; db 0x00
+; dl .CHARACTER53
+; db 0x00
+; dl .CHARACTER54
+; db 0x00
+; dl .CHARACTER55
+; db 0x00
+; dl .CHARACTER56
+; db 0x00
+; dl .CHARACTER57
+; db 0x00
+; dl .CHARACTER58
+; db 0x00
+; dl .CHARACTER59
+; db 0x00
+; dl .CHARACTER60
+; db 0x00
+; dl .CHARACTER61
+; db 0x00
+; dl .CHARACTER62
+; db 0x00
+; dl .CHARACTER63
+; db 0x00
+; dl .CHARACTER64
+; db 0x00
+; dl .CHARACTER65
+; db 0x00
+; dl .CHARACTER66
+; db 0x00
+; dl .CHARACTER67
+; db 0x00
+; dl .CHARACTER68
+; db 0x00
+; dl .CHARACTER69
+; db 0x00
+; dl .CHARACTER70
+; db 0x00
+; dl .CHARACTER71
+; db 0x00
+; dl .CHARACTER72
+; db 0x00
+; dl .CHARACTER73
+; db 0x00
+; dl .CHARACTER74
+; db 0x00
+; dl .CHARACTER75
+; db 0x00
+; dl .CHARACTER76
+; db 0x00
+; dl .CHARACTER77
+; db 0x00
+; dl .CHARACTER78
+; db 0x00
+; dl .CHARACTER79
+; db 0x00
+; dl .CHARACTER80
+; db 0x00
+; dl .CHARACTER81
+; db 0x00
+; dl .CHARACTER82
+; db 0x00
+; dl .CHARACTER83
+; db 0x00
+; dl .CHARACTER84
+; db 0x00
+; dl .CHARACTER85
+; db 0x00
+; dl .CHARACTER86
+; db 0x00
+; dl .CHARACTER87
+; db 0x00
+; dl .CHARACTER88
+; db 0x00
+; dl .CHARACTER89
+; db 0x00
+; dl .CHARACTER90
+; db 0x00
+; dl .CHARACTER91
+; db 0x00
+; dl .CHARACTER92
+; db 0x00
+; dl .CHARACTER93
+; db 0x00
+; dl .CHARACTER94
+; db 0x00
+; dl .CHARACTER95
+; db 0x00
+; dl .CHARACTER96
+; db 0x00
+; dl .CHARACTER97
+; db 0x00
+; dl .CHARACTER98
+; db 0x00
+; dl .CHARACTER99
+; db 0x00
+; dl .CHARACTER100
+; db 0x00
+; dl .CHARACTER101
+; db 0x00
+; dl .CHARACTER102
+; db 0x00
+; dl .CHARACTER103
+; db 0x00
+; dl .CHARACTER104
+; db 0x00
+; dl .CHARACTER105
+; db 0x00
+; dl .CHARACTER106
+; db 0x00
+; dl .CHARACTER107
+; db 0x00
+; dl .CHARACTER108
+; db 0x00
+; dl .CHARACTER109
+; db 0x00
+; dl .CHARACTER110
+; db 0x00
+; dl .CHARACTER111
+; db 0x00
+; dl .CHARACTER112
+; db 0x00
+; dl .CHARACTER113
+; db 0x00
+; dl .CHARACTER114
+; db 0x00
+; dl .CHARACTER115
+; db 0x00
+; dl .CHARACTER116
+; db 0x00
+; dl .CHARACTER117
+; db 0x00
+; dl .CHARACTER118
+; db 0x00
+; dl .CHARACTER119
+; db 0x00
+; dl .CHARACTER120
+; db 0x00
+; dl .CHARACTER121
+; db 0x00
+; dl .CHARACTER122
+; db 0x00
+; dl .CHARACTER123
+; db 0x00
+; dl .CHARACTER124
+; db 0x00
+; dl .CHARACTER125
+; db 0x00
+; dl .CHARACTER126
+; db 0x00

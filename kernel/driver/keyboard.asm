@@ -35,7 +35,10 @@ kkeyboard:
 	ld	(hl), de
 ; enable interrupt chip side
 	ld	l, DRIVER_KEYBOARD_IMSC and $FF
+; interrupt on data change
 	ld	(hl), 2
+; init the stdin file
+	
 ; lock reset
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
@@ -96,8 +99,8 @@ kkeyboard:
 .wait_scan:
 	ld	hl, DRIVER_KEYBOARD_IMSC
 	set	0, (hl)
-	ld	a, DRIVER_KEYBOARD_IRQ
 .wait_scan_bit:
+	ld	a, DRIVER_KEYBOARD_IRQ
 	call	kthread.wait_on_IRQ
 	ld	hl, DRIVER_KEYBOARD_ISR
 	bit	0, (hl)

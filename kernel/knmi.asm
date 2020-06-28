@@ -11,6 +11,13 @@ define KERNEL_REGISTER_AF   21
 ; address 0220A8
 knmi:
 .service:
+	scf
+	sbc	hl, hl
+	ld	(hl), 2
+	
+	ld	hl, KERNEL_WATCHDOG_CTRL
+	res	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
+	
 	ld	(KERNEL_REGISTER_DUMP), ix
 	ld	ix, KERNEL_REGISTER_DUMP
 	ld	(ix+KERNEL_REGISTER_IY), iy
