@@ -1,24 +1,58 @@
-define	console_cursor_xy	$D30400
-define	console_ring		$D30403
-define	console_blink		$D30406
-define	console_flags		$D30407
-define	console_key		$D30408
-define	console_color		$D30409
-
+define	console_color		$D30400
+define	console_cursor_xy	$D30401
+define	console_ring		$D30404
+define	console_blink		$D30407
+define	console_flags		$D30408
+define	console_key		$D30409
 define	console_string		$D3040A
+
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
 
 console:
 
+.init:
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	hl, .PALETTE
+	ld	bc, 20
+	ldir
+	ld	hl, .PALETTE_SPLASH
+	ld	bc, 16
+	ldir
+	ld	hl, $E40000
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	ld	bc, 76800
+	ldir
+	ld	iy, $D30000
+	ld	(console_ring), iy
+	ld	a, 1
+	ld	(console_color), a
+	ld	a, $FD
+	ld	(console_key), a
+	xor	a, a
+	ld	(console_flags), a
+	call	ring_buffer.create
+	
+.init_splash:
+	ld	hl, 5*256
+	ld	(console_cursor_xy), hl
+	ld	h, 0
+	ld	e, l
+	ld	bc, .SPLASH
+	call	.blit
+	ld	hl, 2*256+10
+	call	kname
+	call	.glyph_string
+	ret
+
 .run:
 	call	.new_line
-	ld	hl, (console_cursor_xy)
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
-	ld	b, 80
+; around 200 ms repeat time
+	ld	b, 20
 .wait_keyboard:
 	push	bc
 	ld	hl, DRIVER_KEYBOARD_CTRL
@@ -29,29 +63,30 @@ console:
 	jr	nz, .wait_busy
 ; check if pressed now == pressed previous
 	call	.read_keyboard
-	ld	l, a
-	ld	a, (console_key)
-	sub	a, l
-	ld	a, l
+	ld	hl, console_key
+	cp	a, (hl)
 ; no, process
 	pop	bc
-	jr	nz, .doit
+	jr	nz, .process_key
+	ld	hl, 9
+	call	kthread.sleep	; sleep around 10 ms
 	djnz	.wait_keyboard
 	ld	a, $FD
-.doit:
-	ld	(console_key), a
+	ld	hl, console_key
+.process_key:
+	ld	(hl), a
 	
-	ld	hl, (console_cursor_xy)
-	call	.glyph_blank
+	call	kvideo.vsync
+; wait for vsync, we are in vblank now
 	
 	ld	iy, (console_ring)
 	ld	hl, (iy+RING_BUFFER_HEAD)
-	ld	a, (console_color)
-	ld	c, a
 	ld	a, (hl)
-	or	a, a
-	ld	hl, (console_cursor_xy)
-	call	nz, .glyph_put_char
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	ld	hl, (hl)
+	call	.glyph_char_overwrite
 	
 	ld	a, (console_key)
 	cp	a, $FC
@@ -77,13 +112,8 @@ console:
 	cp	a, $F7
 	call	z, .handle_key_mode
 	
-	call	.read_char
-	push	af
-	ld	a, (console_color)
-	ld	c, a
-	pop	af
-	call	p, .write_char
 ; keyboard00
+	call	.handle_key_char
 	
 	ld	a, (console_blink)
 	inc	a
@@ -92,12 +122,8 @@ console:
 	bit	1, a
 	call	nz, .cursor
 	
-	call	kvideo.vsync	; wait for vsync to be sure change has been comit
 	jp	.run_loop
 
-	
-	
-	
 .KEYMAP_NO_MOD:
  db ' ', ':', '?', 'x', 'y', 'z', '"', 's', 't', 'u', 'v', 'w', 'n', 'o', 'p', 'q', 'r', 'i', 'j', 'k', 'l', 'm'
  db 'd', 'e', 'f', 'g', 'h', 'a', 'b', 'c', 0
@@ -116,24 +142,6 @@ console:
  db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
 
 .KEYMAP_2ND:
-
-.read_char:
-	ld	a, (console_flags)
-	bit	0, a
-	ld	hl, .KEYMAP_NO_MOD
-	jr	z, .oooo
-	ld	hl, .KEYMAP_ALPHA
-.oooo:
-	ld	de, 0
-	ld	a, (console_key)
-	or	a, a
-	ret	m
-	ld	e, a
-	add	hl, de
-	xor	a, a
-	ld	(console_flags), a
-	ld	a, (hl)
-	ret
 
 .read_keyboard:
 	ld	a, ($F50014)
@@ -176,30 +184,17 @@ console:
 	ret	nz
 	ld	a, iyl
 	jr	.back
+
+; console cursor routine ;
 	
 .cursor:
-	ld	hl, (console_cursor_xy)
-	ld	a, (console_color)
-	ld	c, a
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	ld	hl, (hl)
 	ld	a, '_'
-	jp	.glyph_put_char
-	
-.glyph_blank:
-	call	.glyph_adress
-; hl = screen
-	ld	hl, $E40000
-	ld	a, 11
-.glyph_blank_loop:
-	ld	bc, 6
-	ldir
-	ld	bc, 320-6
-	ex	de, hl
-	add	hl, bc
-	ex	de, hl
-	dec	a
-	jr	nz, .glyph_blank_loop
-	ret
-	
+	jp	.glyph_char
+
 .decrement_cursor:
 	ld	hl, (console_cursor_xy)
 	ld	a, l
@@ -232,20 +227,21 @@ console:
 	ret
 	
 .new_line:
+; return hl = console_cursor_xy
 	ld	hl, (console_cursor_xy)
 ; x = l, y = h
-	ld	l, 0
 	ld	a, h
-	inc	a
-	cp	a, CONSOLE_GLYPH_Y
+	cp	a, CONSOLE_GLYPH_Y - 1
 	jr	z, .new_line_shift
-; else
+	inc	a
+.new_line_shift:
 	ld	h, a
+	ld	l, 0
+	push	hl
+	call	z, .shift_up
+	pop	hl
 	ld	(console_cursor_xy), hl
 	ret
-.new_line_shift:
-	ld	(console_cursor_xy), hl
-	jp	.shift_up
 
 .handle_key_del:
 	ld	iy, (console_ring)
@@ -277,15 +273,13 @@ console:
 	ld	a, (hl)
 	or	a, a
 	jr	z, .restore
-	ld	iy, (console_ring)
 	call	ring_buffer.increment
 	push	hl
-	push	af
-	ld	hl, (console_cursor_xy)
-	ld	a, (console_color)
-	ld	c, a
-	pop	af
-	call	.glyph_put_char
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	ld	hl, (hl)
+	call	.glyph_char
 	call	console.increment_cursor
 	pop	hl
 	jr	.refresh_line_loop
@@ -294,62 +288,96 @@ console:
 	ld	(console_cursor_xy), hl
 	ret
 
-.handle_key_enter:
-	ld	hl, (console_cursor_xy)
-	call	.glyph_blank
-	ld	iy, (console_ring)
-	ld	hl, (iy+RING_BUFFER_HEAD)
-	ld	a, (console_color)
-	ld	c, a
-	ld	a, (hl)
-	or	a, a
-	ld	hl, (console_cursor_xy)
-	call	nz, .glyph_put_char
-	
+.handle_key_enter:	
 	ld	iy, (console_ring)
 	ld	de, console_string
 	ld	bc, 0
-.loop:
+.handle_enter_string:
 	push	bc
 	call	ring_buffer.read
 	pop	bc
-	jr	z, .finish
 	or	a, a
-	jr	z, .loop
 	ld	(de), a
+	jr	z, .finish
 	inc	de
 	inc	bc
-	jr	.loop
+	jr	.handle_enter_string
 .finish:
-	xor	a, a
-	ld	(de), a
 	push	bc
 	call	.new_line
 ; execute the instruction now
 	pop	bc
 	ld	a, b
 	or	a, c
-	jr	z, .no_command
+	jr	z, .clean_command
 ; check the command
 ; if command = reboot, we'll do rst 0h
-	ld	de, console_string
 	ld	hl, .REBOOT
-	ld	b, (hl)
-	inc	hl
-.check:
-	ld	a, (de)
-	cp	a, (hl)
-	jr	nz, .not_found
-	inc	hl
-	inc	de
-	djnz	.check
-	jp	kinit
-.not_found:
-	
+	call	.check_builtin
+	jp	z, kinit
+	ld	hl, .COLOR
+	call	.check_builtin
+	jr	z, .color
 	ld	bc, .UNKNOW_INSTR
 	call	.write_string
 	call	.new_line
-.no_command:
+.clean_command:
+	ld	hl, (console_cursor_xy)
+	jp	.prompt
+	
+.check_builtin:
+	ld	de, console_string
+	ld	bc, 0
+	ld	c, (hl)
+	inc	hl
+.check_builtin_compare:
+	ld	a, (de)
+	cpi
+	ret	nz
+	inc	de
+	jp	pe, .check_builtin_compare
+	ret
+
+.color:
+	ld	hl, (console_cursor_xy)
+; 24 * 8 + 4 * 7
+	call	.glyph_adress
+; de = address
+	ld	hl, 40
+	add	hl, de
+	ex	de, hl
+	push	de
+	ld	a, 2
+	ld	c, 8
+.color_block_b:
+	ld	b, 24
+.color_block:
+	ld	(de), a
+	inc	de
+	djnz	.color_block
+	inc	a
+	dec	c
+	inc	de
+	inc	de
+	inc	de
+	inc	de
+	jr	nz, .color_block_b
+	pop	de
+	ld	hl, 320
+	add	hl, de
+	ex	de, hl
+	ld	a, 10
+.color_copy_block:
+	push	hl
+	ld	bc, 220
+	ldir
+	ld	hl, 100
+	add	hl, de
+	ex	de, hl
+	pop	hl
+	dec	a
+	jr	nz, .color_copy_block	
+	call	.new_line
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
 	
@@ -373,6 +401,38 @@ console:
 	ld	(iy+RING_BUFFER_HEAD), hl
 	jp	console.decrement_cursor
 
+.handle_key_char:
+	ld	hl, console_key
+	ld	a, (hl)
+	or	a, a
+	ret	m
+	dec	hl
+; reset flags
+	ld	bc, .KEYMAP_NO_MOD
+	bit	0, (hl)
+	jr	z, .handle_key_no_mod
+	ld	bc, .KEYMAP_ALPHA
+.handle_key_no_mod:
+	ld	(hl), 0
+	sbc	hl, hl
+	ld	l, a
+	add	hl, bc
+	ld	a, (hl)
+; read color
+	ld	hl, console_color
+	ld	c, (hl)
+
+.write_char:
+	push	af
+	ld	iy, (console_ring)
+	call	ring_buffer.write
+	ld	hl, (console_cursor_xy)
+	ld	a, (console_color)
+	ld	c, a
+	pop	af
+	call	.glyph_char_overwrite
+	jp	console.increment_cursor
+
 .write_string:
 ; bc is string
 	ld	a, (bc)
@@ -391,19 +451,6 @@ console:
 	pop	bc
 	inc	bc
 	jr	.write_string
-	
-.write_char:
-	push	af
-	ld	iy, (console_ring)
-	call	ring_buffer.write
-	ld	hl, (console_cursor_xy)
-	call	.glyph_blank
-	ld	hl, (console_cursor_xy)
-	ld	a, (console_color)
-	ld	c, a
-	pop	af
-	call	.glyph_put_char
-	jp	console.increment_cursor
 
 .handle_key_clear:
 .clear:
@@ -414,41 +461,6 @@ console:
 	ldir
 	or	a, a
 	sbc	hl, hl
-	jr	.prompt
-	
-.init:
-	ld	de, DRIVER_VIDEO_PALETTE
-	ld	hl, .PALETTE
-	ld	bc, 20
-	ldir
-	ld	hl, .PALETTE_SPLASH
-	ld	bc, 16
-	ldir
-	ld	hl, $E40000
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	ld	bc, 76800
-	ldir
-	ld	iy, $D30000
-	ld	(console_ring), iy
-	ld	a, 1
-	ld	(console_color), a
-	ld	a, $FD
-	ld	(console_key), a
-	xor	a, a
-	ld	(console_flags), a
-	call	ring_buffer.create
-	
-.init_splash:
-	ld	hl, 5*256
-	ld	(console_cursor_xy), hl
-	ld	h, 0
-	ld	e, l
-	ld	bc, .SPLASH
-	call	.blit
-	ld	hl, 2*256+10
-	call	kname
-	call	.glyph_put_string
-	ret
 	
 .prompt:
 	push	hl
@@ -461,7 +473,7 @@ console:
 	sbc	hl, bc
 	ld	bc, .PROMPT
 
-.glyph_put_string:
+.glyph_string:
 ; bc = string, hl xy
 	call	.glyph_adress
 .glyph_string_loop:
@@ -485,7 +497,7 @@ console:
 	ld	a, (console_color)
 	ld	c, a
 	ld	a, h
-	call	.glyph_put_char_entry
+	call	.glyph_char_entry
 	pop	bc
 	pop	de
 	ld	hl, 6
@@ -533,13 +545,13 @@ console:
 	ex	de, hl
 	ret
 
-.glyph_put_char:
+.glyph_char:
 ; h = y , l = x (console 50x20), c is color, a is char
 ; y isdb 11, x is 6 in height/width
 ; x * 6 + (y*11)*320 + buffer (3520)
 	call	.glyph_adress
 ; a = char, c = color, hl = screen
-.glyph_put_char_entry:
+.glyph_char_entry:
 	or	a, a
 	sbc	hl, hl
 	ld	l, a
@@ -571,41 +583,30 @@ console:
 	ex	(sp), iy
 .glyph_char_loop:
 	ld	a, (de)
-	or	a, a
-	jr	z, $+3
+	inc	de
+	rra
+	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	inc	de
-	ld	a, (de)
-	or	a, a
-	jr	z, $+3
+	rra
+	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	inc	de
-	ld	a, (de)
-	or	a, a
-	jr	z, $+3
+	rra
+	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	inc	de
-	ld	a, (de)
-	or	a, a
-	jr	z, $+3
+	rra
+	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	inc	de
-	ld	a, (de)
-	or	a, a
-	jr	z, $+3
+	rra
+	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	inc	de
-	ld	a, (de)
-	or	a, a
-	jr	z, $+3
+	rra
+	jr	nc, $+3
 	ld	(hl), c
-	inc	hl
-	inc	de
 	ld	hl, 320
 	ex	de, hl
 	add	iy, de
@@ -614,7 +615,133 @@ console:
 	djnz	.glyph_char_loop
 	pop	iy
 	ret
-	
+
+.glyph_char_overwrite:
+	call	.glyph_adress
+	or	a, a
+	jp	z, .glyph_blank_entry
+	sbc	hl, hl
+	ld	l, a
+	ld	a, c
+	add	hl, hl
+	add	hl, hl
+	ld	bc, .TRANSLATION_TABLE
+	add	hl, bc
+	ld	hl, (hl)
+; hl = font.adress (vstart offset, vsize (bytes), hsize(bytes))
+; de = buffer adress
+	ld	b, (hl)	; voffset
+	ld	c, a
+	ld	a, 11
+	sub	a, b
+; for c in height
+	push	hl
+	ex	de, hl
+.glyph_blank_voffset:
+	ld	de, 0
+	ld	(hl), de
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	(hl), de
+	ld	de, 320 - 3
+	add	hl, de
+	djnz	.glyph_blank_voffset
+	ex	de, hl
+	pop	hl
+	inc	hl
+	ld	b, (hl)	; vsize
+	sub	a, b
+	push	af
+; de = start buffer
+	inc	hl
+	inc	hl
+; hl = start glyph
+; a = color, horiz is 6, vertical is b
+	ex	de, hl
+	push	hl
+	ex	(sp), iy
+.glyph_char_ow_loop:
+	ld	a, (de)
+	inc	de
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	jr	c, $+4
+	ld	(hl), 0
+	inc	hl
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	jr	c, $+4
+	ld	(hl), 0
+	inc	hl
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	jr	c, $+4
+	ld	(hl), 0
+	inc	hl
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	jr	c, $+4
+	ld	(hl), 0
+	inc	hl
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	jr	c, $+4
+	ld	(hl), 0
+	inc	hl
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	jr	c, $+4
+	ld	(hl), 0
+	ld	hl, 320
+	ex	de, hl
+	add	iy, de
+	ex	de, hl
+	lea	hl, iy + 0
+	djnz	.glyph_char_ow_loop
+	pop	iy
+	pop	af
+	ret	z
+; clean up, from hl, height a
+	ld	de, 0
+	ld	bc, 320-3
+.glyph_blank_voffset_down:
+	ld	(hl), de
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	(hl), de
+	add	hl, bc
+	dec	a
+	jr	nz, .glyph_blank_voffset_down
+	ret
+
+.glyph_blank:
+	call	.glyph_adress
+; hl = screen
+.glyph_blank_entry:
+	ld	hl, $E40000
+	ld	bc, 256 + 11
+	ld	a, c
+.glyph_blank_loop:
+	dec	b
+	ld	c, 6
+	ldir
+	inc	b
+	ld	c, 58
+	ex	de, hl
+	add	hl, bc
+	ex	de, hl
+	dec	a
+	jr	nz, .glyph_blank_loop
+	ret
+
 .shift_up:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	or	a, a
@@ -666,11 +793,14 @@ console:
  db 2	; command count
  dl .REBOOT
  dl .ECHO
+ dl .COLOR
  
 .REBOOT:
  db 7, "r", "e", "b", "o", "o", "t", 0
 .ECHO:
  db 5, "e", "c", "h", "o"
+.COLOR:
+ db 6, "c", "o", "l", "o", "r", 0
  
 .PROMPT:
  db "\e[31mroot\e[39m:\e[34m~\e[39m# ", 0
@@ -686,14 +816,22 @@ include 'logo.asm'
 ; default = foreground = \e[39m
  dw $0000	; background
  dw $FFFF	; foreground
- dw $0000	; color 1	; \e[30m
- dw $4000	; color 2
- dw $1D83	; color 3
- dw $B343	; color 4
- dw $18D6	; color 5
- dw $1D96	; color 6
- dw $B596	; color 7
- dw $FFFF	; color 8	; \e[37m
+ dw $1084	; color 0	; \e[30m
+ dw $7C00	; color 1
+ dw $03E0	; color 2
+ dw $7FE0	; color 3
+ dw $221F	; color 4
+ dw $7C1F	; color 5
+ dw $421F	; color 6
+ dw $FFFF	; color 7	; \e[37m
+; 30	Black , rgb
+; 31	Red
+; 32	Green
+; 33	Yellow
+; 34	Blue
+; 35	Magenta
+; 36	Cyan
+; 37	White
 
 .PALETTE_SPLASH:
  dw $3000 ;  // 00 :: rgba(95,0,3,255)

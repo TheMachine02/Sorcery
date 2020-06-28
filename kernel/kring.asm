@@ -21,6 +21,18 @@ ring_buffer:
 	ld	(iy+RING_BUFFER_SIZE), bc
 	ret
 
+.length:
+	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	bc, (iy+RING_BUFFER_TAIL)
+	or	a, a
+	sbc	hl, bc
+	ret	nc
+; if carry, tail > head, so length = (RING_BUFFER_BOUND_UPP - tail) + head- RING_BUFFER_BOUND_LOW
+; = head - tail + RING_BUFFER_MAX_SIZE
+	ld	bc, RING_BUFFER_MAX_SIZE
+	add	hl, bc
+	ret
+	
 .increment:
 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
 	inc	hl
@@ -47,6 +59,11 @@ ring_buffer:
 ; ; reset head value
 ; ; increment pointer
 ; ; check if full, else make head = tail
+	call	.length
+	ld	bc, (iy+RING_BUFFER_SIZE)
+	or	a, a
+	sbc	hl, bc
+	jr	c, .update
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	(hl), a
 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
@@ -73,7 +90,23 @@ ring_buffer:
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	(iy+RING_BUFFER_TAIL), hl
 	ret
-
+	
+.update:
+	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	(hl), a
+	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	(hl), a
+	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
+	inc	hl
+	xor	a, a
+	sbc	hl, bc
+	add	hl, bc
+	jr	nz, .update_rewind
+	lea	hl, iy+RING_BUFFER_BOUND_LOW
+.update_rewind:
+	ld	(iy+RING_BUFFER_HEAD), hl
+	ret
+	
 .read:
 	ld	hl, (iy+RING_BUFFER_SIZE)
 	ld	a, l
