@@ -14,7 +14,10 @@ define	CONSOLE_GLYPH_Y		20
 console:
 
 .run:
-
+	call	.new_line
+	ld	hl, (console_cursor_xy)
+	call	.prompt
+.run_loop:
 ; wait keyboard scan
 	ld	b, 80
 .wait_keyboard:
@@ -68,12 +71,14 @@ console:
 	cp	a, $FA
 	call	z, .handle_key_left
 	
-; write character based on the the key pressed
-
 	ld	a, (console_key)
 	cp	a, $FF
 	call	z, .handle_key_del
 
+	ld	a, (console_key)
+	cp	a, $F7
+	call	z, .handle_key_mode
+	
 	call	.read_char
 	push	af
 	ld	a, (console_color)
@@ -90,7 +95,7 @@ console:
 	call	nz, .cursor
 	
 	call	kvideo.vsync	; wait for vsync to be sure change has been comit
-	jp	.run
+	jp	.run_loop
 
 	
 	
@@ -104,7 +109,7 @@ console:
  db 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 0
 
 .KEYBOARD_KEY:
- db $FD, $FD, $FD, $FD, $FD, $FD, $FD, $FF
+ db $FD, $FD, $FD, $FD, $FD, $FD, $F7, $FF
  db $FD, $03, $07, $0C, $11, $16, $1B, $FD
  db $00, $04, $08, $0D, $12, $17, $1C, $FD
  db $01, $05, $09, $0E, $13, $18, $1D, $FD
@@ -245,6 +250,12 @@ console:
 	jp	.shift_up
 
 .handle_key_del:
+	ld	iy, (console_ring)
+	call	ring_buffer.remove_head
+	ret	z
+	jr	.refresh_line
+	
+.handle_key_mode:
 ; backspace behaviour
 	ld	iy, (console_ring)
 	call	ring_buffer.remove
@@ -341,11 +352,8 @@ console:
 	
 	ld	bc, .UNKNOW_INSTR
 	call	.write_string
-	ld	iy, (console_ring)
 	call	.new_line
 .no_command:
-	call	ring_buffer.flush
-
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
 	
@@ -374,8 +382,16 @@ console:
 	ld	a, (bc)
 	or	a, a
 	ret	z
+	cp	a, 10	; '\n'
+	jr	z, .write_string_new_line
 	push	bc
 	call	.write_char
+	pop	bc
+	inc	bc
+	jr	.write_string
+.write_string_new_line:
+	push	bc
+	call	.new_line
 	pop	bc
 	inc	bc
 	jr	.write_string
@@ -400,8 +416,6 @@ console:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
 	ldir
-	ld	iy, (console_ring)
-	call	ring_buffer.flush
 	or	a, a
 	sbc	hl, hl
 	jr	.prompt
@@ -438,10 +452,13 @@ console:
 	ld	hl, 2*256+10
 	call	kname
 	call	.glyph_put_string
+	ret
 	
-	ld	hl, (console_cursor_xy)
-
 .prompt:
+	push	hl
+	ld	iy, (console_ring)
+	call	ring_buffer.flush
+	pop	hl
 	ld	bc, 8
 	add	hl, bc
 	ld	(console_cursor_xy), hl

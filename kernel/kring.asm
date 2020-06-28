@@ -111,8 +111,18 @@ ring_buffer:
 	sbc	hl, hl
 	ld	(iy+RING_BUFFER_SIZE), hl
 	ret
-	
+
+.remove_head:
+; suppr behaviour
+	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	a, (hl)
+	or	a, a
+	ret	z
+	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
+	jr	.remove_collapse
+
 .remove:
+; backspace behaviour
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	call	.decrement
 	ld	a, (hl)
@@ -138,4 +148,4 @@ ring_buffer:
 	dec	hl
 	ld	(iy+RING_BUFFER_SIZE), hl
 	xor	a, $FF
-	ret 
+	ret

@@ -113,6 +113,12 @@ THREAD_INIT_TEST:
 ; 	call	kvideo.irq_lock
 
 	call	console.init
+	
+	ld	bc, .INIT_MESSAGE
+	call	console.write_string
+	ld	bc, .INIT_MESSAGE_2
+	call	console.write_string
+	
 	call	console.run
 
 ;	ld	bc, 0
@@ -159,7 +165,13 @@ THREAD_INIT_TEST:
 ;	inc	bc
 ;	jr	.loop
 	ret
-
+	
+.INIT_MESSAGE:
+ db "Watchdog initialised with heartbeat 1s", 10, 0
+.INIT_MESSAGE_2:
+ db "Running init thread", 0
+	
+	
 global_running_string:
  db "Frequency (Mhz) :", 0
 global_frequency_table:
