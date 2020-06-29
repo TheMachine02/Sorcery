@@ -1,8 +1,17 @@
 .CHARACTER32:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER33:
-db 1,8,6
+db 0
 db 4
 db 4
 db 4
@@ -11,13 +20,23 @@ db 4
 db 4
 db 0
 db 4
+db 0
+db 0
 .CHARACTER34:
-db 1,3,6
+db 0
 db 10
 db 10
 db 10
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 .CHARACTER35:
-db 2,7,6
+db 0
+db 0
 db 10
 db 10
 db 31
@@ -25,8 +44,10 @@ db 10
 db 31
 db 10
 db 10
+db 0
+db 0
 .CHARACTER36:
-db 1,9,6
+db 0
 db 4
 db 14
 db 21
@@ -36,8 +57,10 @@ db 20
 db 21
 db 14
 db 4
+db 0
 .CHARACTER37:
-db 2,7,6
+db 0
+db 0
 db 18
 db 21
 db 10
@@ -45,8 +68,11 @@ db 4
 db 10
 db 21
 db 9
+db 0
+db 0
 .CHARACTER38:
-db 2,7,6
+db 0
+db 0
 db 6
 db 9
 db 5
@@ -54,13 +80,22 @@ db 2
 db 21
 db 9
 db 22
+db 0
+db 0
 .CHARACTER39:
-db 1,3,6
+db 0
 db 4
 db 4
 db 4
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 .CHARACTER40:
-db 1,9,6
+db 0
 db 8
 db 4
 db 4
@@ -70,8 +105,9 @@ db 2
 db 4
 db 4
 db 8
+db 0
 .CHARACTER41:
-db 1,9,6
+db 0
 db 2
 db 4
 db 4
@@ -81,35 +117,69 @@ db 8
 db 4
 db 4
 db 2
+db 0
 .CHARACTER42:
-db 3,5,6
+db 0
+db 0
+db 0
 db 4
 db 21
 db 14
 db 21
 db 4
+db 0
+db 0
+db 0
 .CHARACTER43:
-db 3,5,6
+db 0
+db 0
+db 0
 db 4
 db 4
 db 31
 db 4
 db 4
+db 0
+db 0
+db 0
 .CHARACTER44:
-db 7,4,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 6
 db 6
 db 4
 db 2
 .CHARACTER45:
-db 5,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
 db 31
+db 0
+db 0
+db 0
+db 0
+db 0
 .CHARACTER46:
-db 7,2,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 6
 db 6
+db 0
+db 0
 .CHARACTER47:
-db 1,10,6
+db 0
 db 16
 db 16
 db 8
@@ -121,7 +191,8 @@ db 2
 db 1
 db 1
 .CHARACTER48:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 25
@@ -129,8 +200,11 @@ db 21
 db 19
 db 17
 db 14
+db 0
+db 0
 .CHARACTER49:
-db 2,7,6
+db 0
+db 0
 db 4
 db 6
 db 5
@@ -138,8 +212,11 @@ db 4
 db 4
 db 4
 db 4
+db 0
+db 0
 .CHARACTER50:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 16
@@ -147,8 +224,11 @@ db 8
 db 4
 db 2
 db 31
+db 0
+db 0
 .CHARACTER51:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 16
@@ -156,8 +236,11 @@ db 12
 db 16
 db 17
 db 14
+db 0
+db 0
 .CHARACTER52:
-db 2,7,6
+db 0
+db 0
 db 8
 db 12
 db 10
@@ -165,8 +248,11 @@ db 9
 db 31
 db 8
 db 8
+db 0
+db 0
 .CHARACTER53:
-db 2,7,6
+db 0
+db 0
 db 31
 db 1
 db 15
@@ -174,8 +260,11 @@ db 16
 db 16
 db 17
 db 14
+db 0
+db 0
 .CHARACTER54:
-db 2,7,6
+db 0
+db 0
 db 14
 db 1
 db 15
@@ -183,8 +272,11 @@ db 17
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER55:
-db 2,7,6
+db 0
+db 0
 db 31
 db 16
 db 8
@@ -192,8 +284,11 @@ db 8
 db 4
 db 4
 db 4
+db 0
+db 0
 .CHARACTER56:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 17
@@ -201,8 +296,11 @@ db 14
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER57:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 17
@@ -210,15 +308,25 @@ db 30
 db 16
 db 16
 db 14
+db 0
+db 0
 .CHARACTER58:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 12
 db 12
 db 0
 db 12
 db 12
+db 0
+db 0
 .CHARACTER59:
-db 4,7,6
+db 0
+db 0
+db 0
+db 0
 db 6
 db 6
 db 0
@@ -227,7 +335,8 @@ db 6
 db 4
 db 2
 .CHARACTER60:
-db 2,7,6
+db 0
+db 0
 db 16
 db 8
 db 4
@@ -235,13 +344,23 @@ db 2
 db 4
 db 8
 db 16
+db 0
+db 0
 .CHARACTER61:
-db 4,3,6
+db 0
+db 0
+db 0
+db 0
 db 31
 db 0
 db 31
+db 0
+db 0
+db 0
+db 0
 .CHARACTER62:
-db 2,7,6
+db 0
+db 0
 db 2
 db 4
 db 8
@@ -249,8 +368,11 @@ db 16
 db 8
 db 4
 db 2
+db 0
+db 0
 .CHARACTER63:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 16
@@ -258,8 +380,11 @@ db 8
 db 4
 db 0
 db 4
+db 0
+db 0
 .CHARACTER64:
-db 2,7,6
+db 0
+db 0
 db 14
 db 17
 db 29
@@ -267,8 +392,10 @@ db 21
 db 29
 db 1
 db 30
+db 0
+db 0
 .CHARACTER65:
-db 1,8,6
+db 0
 db 14
 db 17
 db 17
@@ -277,8 +404,10 @@ db 17
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER66:
-db 1,8,6
+db 0
 db 15
 db 17
 db 17
@@ -287,8 +416,10 @@ db 17
 db 17
 db 17
 db 15
+db 0
+db 0
 .CHARACTER67:
-db 1,8,6
+db 0
 db 14
 db 17
 db 1
@@ -297,8 +428,10 @@ db 1
 db 1
 db 17
 db 14
+db 0
+db 0
 .CHARACTER68:
-db 1,8,6
+db 0
 db 15
 db 17
 db 17
@@ -307,8 +440,10 @@ db 17
 db 17
 db 17
 db 15
+db 0
+db 0
 .CHARACTER69:
-db 1,8,6
+db 0
 db 31
 db 1
 db 1
@@ -317,8 +452,10 @@ db 1
 db 1
 db 1
 db 31
+db 0
+db 0
 .CHARACTER70:
-db 1,8,6
+db 0
 db 31
 db 1
 db 1
@@ -327,8 +464,10 @@ db 1
 db 1
 db 1
 db 1
+db 0
+db 0
 .CHARACTER71:
-db 1,8,6
+db 0
 db 14
 db 17
 db 1
@@ -337,8 +476,10 @@ db 17
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER72:
-db 1,8,6
+db 0
 db 17
 db 17
 db 17
@@ -347,8 +488,10 @@ db 17
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER73:
-db 1,8,6
+db 0
 db 14
 db 4
 db 4
@@ -357,8 +500,10 @@ db 4
 db 4
 db 4
 db 14
+db 0
+db 0
 .CHARACTER74:
-db 1,8,6
+db 0
 db 16
 db 16
 db 16
@@ -367,8 +512,10 @@ db 16
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER75:
-db 1,8,6
+db 0
 db 17
 db 9
 db 5
@@ -377,8 +524,10 @@ db 5
 db 9
 db 17
 db 17
+db 0
+db 0
 .CHARACTER76:
-db 1,8,6
+db 0
 db 1
 db 1
 db 1
@@ -387,8 +536,10 @@ db 1
 db 1
 db 1
 db 31
+db 0
+db 0
 .CHARACTER77:
-db 1,8,6
+db 0
 db 17
 db 27
 db 21
@@ -397,8 +548,10 @@ db 17
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER78:
-db 1,8,6
+db 0
 db 17
 db 19
 db 19
@@ -407,8 +560,10 @@ db 21
 db 25
 db 25
 db 17
+db 0
+db 0
 .CHARACTER79:
-db 1,8,6
+db 0
 db 14
 db 17
 db 17
@@ -417,8 +572,10 @@ db 17
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER80:
-db 1,8,6
+db 0
 db 15
 db 17
 db 17
@@ -427,8 +584,10 @@ db 1
 db 1
 db 1
 db 1
+db 0
+db 0
 .CHARACTER81:
-db 1,9,6
+db 0
 db 14
 db 17
 db 17
@@ -438,8 +597,9 @@ db 21
 db 9
 db 22
 db 16
+db 0
 .CHARACTER82:
-db 1,8,6
+db 0
 db 15
 db 17
 db 17
@@ -448,8 +608,10 @@ db 9
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER83:
-db 1,8,6
+db 0
 db 14
 db 17
 db 1
@@ -458,8 +620,10 @@ db 16
 db 16
 db 17
 db 14
+db 0
+db 0
 .CHARACTER84:
-db 1,8,6
+db 0
 db 31
 db 4
 db 4
@@ -468,8 +632,10 @@ db 4
 db 4
 db 4
 db 4
+db 0
+db 0
 .CHARACTER85:
-db 1,8,6
+db 0
 db 17
 db 17
 db 17
@@ -478,8 +644,10 @@ db 17
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER86:
-db 1,8,6
+db 0
 db 17
 db 17
 db 17
@@ -488,8 +656,10 @@ db 10
 db 10
 db 4
 db 4
+db 0
+db 0
 .CHARACTER87:
-db 1,8,6
+db 0
 db 17
 db 17
 db 17
@@ -498,8 +668,10 @@ db 21
 db 21
 db 10
 db 10
+db 0
+db 0
 .CHARACTER88:
-db 1,8,6
+db 0
 db 17
 db 17
 db 10
@@ -508,8 +680,10 @@ db 10
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER89:
-db 1,8,6
+db 0
 db 17
 db 17
 db 10
@@ -518,8 +692,10 @@ db 4
 db 4
 db 4
 db 4
+db 0
+db 0
 .CHARACTER90:
-db 1,8,6
+db 0
 db 31
 db 16
 db 8
@@ -528,8 +704,10 @@ db 2
 db 1
 db 1
 db 31
+db 0
+db 0
 .CHARACTER91:
-db 1,9,6
+db 0
 db 28
 db 4
 db 4
@@ -539,8 +717,9 @@ db 4
 db 4
 db 4
 db 28
+db 0
 .CHARACTER92:
-db 1,10,6
+db 0
 db 2
 db 2
 db 4
@@ -552,7 +731,7 @@ db 16
 db 32
 db 32
 .CHARACTER93:
-db 1,9,6
+db 0
 db 7
 db 4
 db 4
@@ -562,28 +741,57 @@ db 4
 db 4
 db 4
 db 7
+db 0
 .CHARACTER94:
-db 2,3,6
+db 0
+db 0
 db 4
 db 10
 db 17
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 .CHARACTER95:
-db 9,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 63
+db 0
 .CHARACTER96:
-db 1,3,6
+db 0
 db 2
 db 4
 db 8
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 .CHARACTER97:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 14
 db 16
 db 30
 db 17
 db 30
+db 0
+db 0
 .CHARACTER98:
-db 1,8,6
+db 0
 db 1
 db 1
 db 1
@@ -592,15 +800,22 @@ db 19
 db 17
 db 17
 db 15
+db 0
+db 0
 .CHARACTER99:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 14
 db 17
 db 1
 db 17
 db 14
+db 0
+db 0
 .CHARACTER100:
-db 1,8,6
+db 0
 db 16
 db 16
 db 16
@@ -609,15 +824,22 @@ db 17
 db 17
 db 25
 db 22
+db 0
+db 0
 .CHARACTER101:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 14
 db 17
 db 31
 db 1
 db 30
+db 0
+db 0
 .CHARACTER102:
-db 1,8,6
+db 0
 db 12
 db 2
 db 2
@@ -626,8 +848,13 @@ db 2
 db 2
 db 2
 db 2
+db 0
+db 0
 .CHARACTER103:
-db 4,7,6
+db 0
+db 0
+db 0
+db 0
 db 30
 db 17
 db 17
@@ -636,7 +863,7 @@ db 22
 db 16
 db 14
 .CHARACTER104:
-db 1,8,6
+db 0
 db 1
 db 1
 db 1
@@ -645,8 +872,11 @@ db 19
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER105:
-db 2,7,6
+db 0
+db 0
 db 4
 db 0
 db 6
@@ -654,8 +884,11 @@ db 4
 db 4
 db 4
 db 12
+db 0
+db 0
 .CHARACTER106:
-db 2,9,6
+db 0
+db 0
 db 4
 db 0
 db 6
@@ -666,7 +899,7 @@ db 4
 db 4
 db 3
 .CHARACTER107:
-db 1,8,6
+db 0
 db 1
 db 1
 db 1
@@ -675,8 +908,10 @@ db 5
 db 7
 db 9
 db 17
+db 0
+db 0
 .CHARACTER108:
-db 1,8,6
+db 0
 db 6
 db 4
 db 4
@@ -685,29 +920,49 @@ db 4
 db 4
 db 4
 db 24
+db 0
+db 0
 .CHARACTER109:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 15
 db 21
 db 21
 db 21
 db 21
+db 0
+db 0
 .CHARACTER110:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 15
 db 17
 db 17
 db 17
 db 17
+db 0
+db 0
 .CHARACTER111:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 14
 db 17
 db 17
 db 17
 db 14
+db 0
+db 0
 .CHARACTER112:
-db 4,7,6
+db 0
+db 0
+db 0
+db 0
 db 13
 db 19
 db 17
@@ -716,7 +971,10 @@ db 15
 db 1
 db 1
 .CHARACTER113:
-db 4,7,6
+db 0
+db 0
+db 0
+db 0
 db 30
 db 17
 db 17
@@ -725,21 +983,31 @@ db 22
 db 16
 db 16
 .CHARACTER114:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 13
 db 19
 db 1
 db 1
 db 1
+db 0
+db 0
 .CHARACTER115:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 30
 db 1
 db 14
 db 16
 db 15
+db 0
+db 0
 .CHARACTER116:
-db 1,8,6
+db 0
 db 2
 db 2
 db 2
@@ -748,36 +1016,61 @@ db 2
 db 2
 db 2
 db 12
+db 0
+db 0
 .CHARACTER117:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 17
 db 17
 db 17
 db 25
 db 22
+db 0
+db 0
 .CHARACTER118:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 17
 db 17
 db 10
 db 10
 db 4
+db 0
+db 0
 .CHARACTER119:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 17
 db 21
 db 21
 db 21
 db 10
+db 0
+db 0
 .CHARACTER120:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 17
 db 10
 db 4
 db 10
 db 17
+db 0
+db 0
 .CHARACTER121:
-db 4,7,6
+db 0
+db 0
+db 0
+db 0
 db 17
 db 17
 db 17
@@ -786,14 +1079,18 @@ db 22
 db 16
 db 14
 .CHARACTER122:
-db 4,5,6
+db 0
+db 0
+db 0
+db 0
 db 31
 db 8
 db 4
 db 2
 db 31
+db 0
+db 0
 .CHARACTER123:
-db 0,11,6
 db 24
 db 4
 db 4
@@ -806,7 +1103,7 @@ db 4
 db 4
 db 24
 .CHARACTER124:
-db 1,9,6
+db 0
 db 4
 db 4
 db 4
@@ -816,8 +1113,8 @@ db 4
 db 4
 db 4
 db 4
+db 0
 .CHARACTER125:
-db 0,11,6
 db 3
 db 4
 db 4
@@ -830,33 +1127,112 @@ db 4
 db 4
 db 3
 .CHARACTER126:
-db 4,3,6
+db 0
+db 0
+db 0
+db 0
 db 2
 db 21
 db 8
+db 0
+db 0
+db 0
+db 0
 .CHARACTER127:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER128:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER129:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER130:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER131:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER132:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER133:
-db 0,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 0
 .CHARACTER134:
-db 10,1,6
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
+db 0
 db 60
 .TRANSLATION_TABLE:
 dl .CHARACTER63

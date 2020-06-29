@@ -150,7 +150,7 @@ krtc:
 	ret
 
 .up_time:
-; those read aren't atomic, so up_time isn't precise... but fast
+; those read aren't atomic, so up_time isn't precise... but fast (at most one second of change)
 	ld	b, 60
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
 	ld	a, (DRIVER_RTC_COUNTER_MINUTE)

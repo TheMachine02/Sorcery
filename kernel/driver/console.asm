@@ -83,7 +83,7 @@ console:
 	ld	c, (hl)
 	inc	hl
 	ld	hl, (hl)
-	call	.glyph_char_overwrite
+	call	.glyph_char
 	
 	ld	a, (console_key)
 	cp	a, $FC
@@ -121,24 +121,52 @@ console:
 	
 	jp	.run_loop
 
-.KEYMAP_NO_MOD:
- db ' ', ':', '?', 'x', 'y', 'z', '"', 's', 't', 'u', 'v', 'w', 'n', 'o', 'p', 'q', 'r', 'i', 'j', 'k', 'l', 'm'
- db 'd', 'e', 'f', 'g', 'h', 'a', 'b', 'c', 0
- 
-.KEYMAP_ALPHA:
- db ' ', '.', ';', 'X', 'Y', 'Z', '!', 'S', 'T', 'U', 'V', 'W', 'N', 'O', 'P', 'Q', 'R', 'I', 'J', 'K', 'L', 'M'
- db 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 0
+.shift_up:
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
+	ld	bc, 11*320
+	add	hl, bc
+	ld	bc, 76800 - 11*320
+	ldir
+	ld	hl, $E40000
+	ld	bc, 11*320
+	ldir
+	ret
 
-.KEYBOARD_KEY:
- db $FD, $FD, $FD, $FD, $FD, $FD, $F7, $FF
- db $FD, $03, $07, $0C, $11, $16, $1B, $FD
- db $00, $04, $08, $0D, $12, $17, $1C, $FD
- db $01, $05, $09, $0E, $13, $18, $1D, $FD
- db $02, $FD, $0A, $0F, $14, $19, $FD, $FD
- db $FE, $06, $0B, $10, $15, $1A, $FC, $FD
- db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
-
-.KEYMAP_2ND:
+.blit:
+; hl,e ; bc is data as hsize,vsize,data
+	ld	d, 160
+	mlt	de
+	add	hl, de
+	add	hl, de
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	add	hl, de
+	ld	a, (bc)
+	ld	e, a
+	inc	bc
+	ld	a, (bc)
+; e = h, a = vsize
+	push	bc
+	inc.s	bc
+	ld	b, a
+	ld	c, e
+	pop	de
+.blit_loop:
+	push	bc
+	push	hl
+	ld	b, 0
+	ex	de, hl
+	ldir
+	ex	de, hl
+	pop	hl
+	ld	c, 64
+	inc	b
+	add	hl, bc
+	pop	bc
+	djnz	.blit_loop
+	ret
 
 .read_keyboard:
 	ld	a, ($F50014)
@@ -378,7 +406,10 @@ console:
 	call	.new_line
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
-	
+
+.handle_key_up:
+	ret
+
 .handle_key_right:
 	ld	iy, (console_ring)
 	ld	hl, (iy+RING_BUFFER_HEAD)
@@ -428,7 +459,7 @@ console:
 	ld	a, (console_color)
 	ld	c, a
 	pop	af
-	call	.glyph_char_overwrite
+	call	.glyph_char
 	jp	console.increment_cursor
 
 .write_string:
@@ -449,7 +480,7 @@ console:
 	pop	bc
 	inc	bc
 	jr	.write_string
-
+	
 .handle_key_clear:
 .clear:
 ; reset cursor xy and put prompt
@@ -470,323 +501,9 @@ console:
 	ld	(console_cursor_xy), hl
 	sbc	hl, bc
 	ld	bc, .PROMPT
+; fall into glyph_string
 
-.glyph_string:
-; bc = string, hl xy
-	call	.glyph_adress
-.glyph_string_loop:
-	ld	a, (bc)
-	or	a, a
-	ret	z
-	push	de
-	push	bc
-	ld	h, a
-	cp	a, $1B
-	jr	z, .escape_sequence
-.glyph_write_color:
-	ld	a, (console_color)
-	ld	c, a
-	ld	a, h
-	call	.glyph_char_entry
-	pop	bc
-	pop	de
-	ld	hl, 6
-	add	hl, de
-	ex	de, hl
-	inc	bc
-	jr	.glyph_string_loop
-	
-.escape_sequence:
-	inc	bc
-	ld	a, (bc)
-	inc	bc
-	cp	a, '['
-	jr	z, .escape_CSI
-; dunno, other sequences
-	ret
-.escape_CSI:
-; bad, I should read parameter and do the command given by last byte
-	inc	bc
-	ld	a, (bc)	; color
-	sub	a, '0' - 2
-	cp	a, 11
-	jr	nz, $+4
-	xor	a, a
-	inc	a
-	ld	(console_color), a
-.sequence_end:
-	inc	bc
-	ld	a, (bc)
-	cp	a, 'm'
-	jr	nz, .sequence_end
-	inc	bc
-	pop	hl
-	pop	de
-	jr	.glyph_string_loop
-	
-.glyph_adress:
-	ld	d, 110
-	ld	e, h
-	mlt	de
-	ex	de, hl
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	d, 6
-	mlt	de
-	add	hl, de
-	ld	de, 10*320+10
-	add	hl, de
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	add	hl, de
-	ex	de, hl
-	ret
-
-.glyph_char:
-; h = y , l = x (console 50x20), c is color, a is char
-; y isdb 11, x is 6 in height/width
-; x * 6 + (y*11)*320 + buffer (3520)
-	call	.glyph_adress
-; a = char, c = color, hl = screen
-.glyph_char_entry:
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	ld	a, c
-	add	hl, hl
-	add	hl, hl
-	ld	bc, .TRANSLATION_TABLE
-	add	hl, bc
-	ld	hl, (hl)
-; hl = font.adress (vstart offset, vsize (bytes), hsize(bytes))
-; de = buffer adress
-	ld	c, (hl)	; voffset
-	ld	b, 160
-	mlt	bc
-	ex	de, hl
-	add	hl, bc
-	add	hl, bc	; voffset*320+buffer
-	ex	de, hl
-	inc	hl
-	ld	b, (hl)	; vsize
-	ld	c, a
-; de = start buffer
-	inc	hl
-	inc	hl
-; hl = start glyph
-; a = color, horiz is 6, vertical is b
-	ex	de, hl
-	push	hl
-	ex	(sp), iy
-.glyph_char_loop:
-	ld	a, (de)
-	inc	de
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	ld	hl, 320
-	ex	de, hl
-	add	iy, de
-	ex	de, hl
-	lea	hl, iy + 0
-	djnz	.glyph_char_loop
-	pop	iy
-	ret
-
-.glyph_char_overwrite:
-	call	.glyph_adress
-	or	a, a
-	jp	z, .glyph_blank_entry
-	sbc	hl, hl
-	ld	l, a
-	ld	a, c
-	add	hl, hl
-	add	hl, hl
-	ld	bc, .TRANSLATION_TABLE
-	add	hl, bc
-	ld	hl, (hl)
-; hl = font.adress (vstart offset, vsize (bytes), hsize(bytes))
-; de = buffer adress
-	ld	b, (hl)	; voffset
-	ld	c, a
-	ld	a, 11
-	sub	a, b
-; for c in height
-	push	hl
-	ex	de, hl
-.glyph_blank_voffset:
-	ld	de, 0
-	ld	(hl), de
-	inc	hl
-	inc	hl
-	inc	hl
-	ld	(hl), de
-	ld	de, 320 - 3
-	add	hl, de
-	djnz	.glyph_blank_voffset
-	ex	de, hl
-	pop	hl
-	inc	hl
-	ld	b, (hl)	; vsize
-	sub	a, b
-	push	af
-; de = start buffer
-	inc	hl
-	inc	hl
-; hl = start glyph
-; a = color, horiz is 6, vertical is b
-	ex	de, hl
-	push	hl
-	ex	(sp), iy
-.glyph_char_ow_loop:
-	ld	a, (de)
-	inc	de
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	jr	c, $+4
-	ld	(hl), 0
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	jr	c, $+4
-	ld	(hl), 0
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	jr	c, $+4
-	ld	(hl), 0
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	jr	c, $+4
-	ld	(hl), 0
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	jr	c, $+4
-	ld	(hl), 0
-	inc	hl
-	rra
-	jr	nc, $+3
-	ld	(hl), c
-	jr	c, $+4
-	ld	(hl), 0
-	ld	hl, 320
-	ex	de, hl
-	add	iy, de
-	ex	de, hl
-	lea	hl, iy + 0
-	djnz	.glyph_char_ow_loop
-	pop	iy
-	pop	af
-	ret	z
-; clean up, from hl, height a
-	ld	de, 0
-	ld	bc, 320-3
-.glyph_blank_voffset_down:
-	ld	(hl), de
-	inc	hl
-	inc	hl
-	inc	hl
-	ld	(hl), de
-	add	hl, bc
-	dec	a
-	jr	nz, .glyph_blank_voffset_down
-	ret
-
-.glyph_blank:
-	call	.glyph_adress
-; hl = screen
-.glyph_blank_entry:
-	ld	hl, $E40000
-	ld	bc, 256 + 11
-	ld	a, c
-.glyph_blank_loop:
-	dec	b
-	ld	c, 6
-	ldir
-	inc	b
-	ld	c, 58
-	ex	de, hl
-	add	hl, bc
-	ex	de, hl
-	dec	a
-	jr	nz, .glyph_blank_loop
-	ret
-
-.shift_up:
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	or	a, a
-	sbc	hl, hl
-	add	hl, de
-	ld	bc, 11*320
-	add	hl, bc
-	ld	bc, 76800 - 11*320
-	ldir
-	ld	hl, $E40000
-	ld	bc, 11*320
-	ldir
-	ret
-
-.blit:
-; hl,e ; bc is data as hsize,vsize,data
-	ld	d, 160
-	mlt	de
-	add	hl, de
-	add	hl, de
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	add	hl, de
-	ld	a, (bc)
-	ld	e, a
-	inc	bc
-	ld	a, (bc)
-; e = h, a = vsize
-	push	bc
-	inc.s	bc
-	ld	b, a
-	ld	c, e
-	pop	de
-.blit_loop:
-	push	bc
-	push	hl
-	ld	b, 0
-	ex	de, hl
-	ldir
-	ex	de, hl
-	pop	hl
-	ld	c, 64
-	inc	b
-	add	hl, bc
-	pop	bc
-	djnz	.blit_loop
-	ret
+include 'console_glyph.asm'
 
 .COMMAND:
  db 2	; command count
@@ -845,4 +562,23 @@ include 'logo.asm'
 .UNKNOW_INSTR:
  db "command not found", 0
 
+.KEYMAP_NO_MOD:
+ db ' ', ':', '?', 'x', 'y', 'z', '"', 's', 't', 'u', 'v', 'w', 'n', 'o', 'p', 'q', 'r', 'i', 'j', 'k', 'l', 'm'
+ db 'd', 'e', 'f', 'g', 'h', 'a', 'b', 'c', 0
+ 
+.KEYMAP_ALPHA:
+ db ' ', '.', ';', 'X', 'Y', 'Z', '!', 'S', 'T', 'U', 'V', 'W', 'N', 'O', 'P', 'Q', 'R', 'I', 'J', 'K', 'L', 'M'
+ db 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 0
+
+.KEYBOARD_KEY:
+ db $FD, $FD, $FD, $FD, $FD, $FD, $F7, $FF
+ db $FD, $03, $07, $0C, $11, $16, $1B, $FD
+ db $00, $04, $08, $0D, $12, $17, $1C, $FD
+ db $01, $05, $09, $0E, $13, $18, $1D, $FD
+ db $02, $FD, $0A, $0F, $14, $19, $FD, $FD
+ db $FE, $06, $0B, $10, $15, $1A, $FC, $FD
+ db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
+
+.KEYMAP_2ND: 
+ 
 include 'gohufont.inc'

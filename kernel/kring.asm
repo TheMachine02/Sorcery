@@ -144,7 +144,7 @@ ring_buffer:
 	sbc	hl, hl
 	ld	(iy+RING_BUFFER_SIZE), hl
 	ret
-
+	
 .remove_head:
 ; suppr behaviour
 	ld	hl, (iy+RING_BUFFER_HEAD)

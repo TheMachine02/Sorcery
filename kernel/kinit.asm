@@ -69,7 +69,7 @@ kname:
 	ld	bc, .name
 	ret	
 .name:
- db "Sorcery-0.0.1-sleep-6a61c73", 0
+ db "Sorcery-0.0.1-sleep-efbd7c7", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;
@@ -170,7 +170,7 @@ THREAD_INIT_TEST:
 	
 
 .INIT_MESSAGE:
- db "Running on ez80 at 48Mhz", 10, 0
+ db "Running on ez80 at 6Mhz", 10, 0
 .INIT_MESSAGE_2:
  db "Watchdog initialised with heartbeat 1s", 10, 0
 .INIT_MESSAGE_3:
@@ -220,11 +220,6 @@ TEST_THREAD_C_DEATH:
 	pop	hl
 	call	kfree
 ; wait ;
-.malloc_free_looping:
-	ld	hl, 512
-	call	kmalloc
-	call	kfree
-	jr	.malloc_free_looping
 ; normal path - but not taken
 	ld	hl, 0
 	call	kthread.exit
