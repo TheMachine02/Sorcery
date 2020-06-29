@@ -47,6 +47,7 @@ kinit:
 ; driver init, nice
 	call	kvideo.init
 	call	kkeyboard.init
+	call	console.init
 ; mount root ;
 	ld	bc, .root_path
 	call	ramfs.mount
@@ -57,8 +58,19 @@ kinit:
 	jp	c, kinterrupt.nmi
 ; nice idle thread code
 .arch_sleep:
+; different behaviour are possible
+; most dynamic is reduce by one the value
+; most brutal is directly set to 6Mhz, we'll need to ramp up
+if CONFIG_USE_DYNAMIC_CLOCK
+; 	in0	a, ($01)
+; 	or	a, a
+; 	jr	z, $+3
+; 	dec	a
+; 	out0	($01), a
+	xor	a, a
+	out0	($01), a
+end if
 	ei
-	nop
 	slp
 	jr	.arch_sleep
 
@@ -111,8 +123,6 @@ THREAD_INIT_TEST:
 		
 ; video lock for me
 ; 	call	kvideo.irq_lock
-
-	call	console.init
 	
 	ld	bc, .INIT_MESSAGE
 	call	console.write_string
@@ -170,7 +180,7 @@ THREAD_INIT_TEST:
 	
 
 .INIT_MESSAGE:
- db "Running on ez80 at 6Mhz", 10, 0
+ db "Running on ez80 at 12Mhz", 10, 0
 .INIT_MESSAGE_2:
  db "Watchdog initialised with heartbeat 1s", 10, 0
 .INIT_MESSAGE_3:

@@ -1,14 +1,17 @@
-define	console_color		$D30400
-define	console_cursor_xy	$D30401
-define	console_ring		$D30404
-define	console_blink		$D30407
-define	console_flags		$D30408
-define	console_key		$D30409
-define	console_string		$D3040A
-
+define	console_buffer		$D00800
+define	console_color		$D00700
+define	console_cursor_xy	$D00701
+define	console_blink		$D00704
+define	console_flags		$D00705
+define	console_key		$D00706
+define	console_string		$D00707
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
+define	CONSOLE_BLINK_RATE	1
+define	CONSOLE_FLAGS_ALPHA	0
+define	CONSOLE_FLAGS_2ND	1
+define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
 
 console:
 
@@ -24,14 +27,13 @@ console:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
 	ldir
-	ld	iy, $D30000
-	ld	(console_ring), iy
 	ld	a, 1
 	ld	(console_color), a
 	ld	a, $FD
 	ld	(console_key), a
 	xor	a, a
 	ld	(console_flags), a
+	ld	iy, console_buffer
 	call	ring_buffer.create
 	
 .init_splash:
@@ -75,8 +77,12 @@ console:
 	ld	(hl), a
 	call	kvideo.vsync
 ; wait for vsync, we are in vblank now (are we ?)
-	
-	ld	iy, (console_ring)
+; the syscall destroy a but not hl
+	ld	a, (hl)
+	cp	a, $FD
+	jr	z, .blink
+		
+	ld	iy, console_buffer
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	ld	hl, console_color
@@ -84,7 +90,7 @@ console:
 	inc	hl
 	ld	hl, (hl)
 	call	.glyph_char
-	
+		
 	ld	a, (console_key)
 	cp	a, $FC
 	call	z, .handle_key_clear
@@ -109,15 +115,25 @@ console:
 	cp	a, $F7
 	call	z, .handle_key_mode
 	
-; keyboard00
-	call	.handle_key_char
-	
-	ld	a, (console_blink)
-	inc	a
-	ld	(console_blink), a
-		
-	bit	1, a
-	call	nz, .cursor
+	ld	a, (console_key)
+	or	a, a
+	call	p, .handle_key_char
+
+.blink:
+	ld	hl, console_blink
+	inc	(hl)
+	bit	CONSOLE_BLINK_RATE, (hl)
+
+	ld	iy, console_buffer
+	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	a, (hl)
+	jr	nz, $+4
+	ld	a, '_'
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	ld	hl, (hl)
+	call	.glyph_char
 	
 	jp	.run_loop
 
@@ -211,14 +227,6 @@ console:
 	jr	.back
 
 ; console cursor routine ;
-	
-.cursor:
-	ld	hl, console_color
-	ld	c, (hl)
-	inc	hl
-	ld	hl, (hl)
-	ld	a, '_'
-	jp	.glyph_char
 
 .decrement_cursor:
 	ld	hl, (console_cursor_xy)
@@ -269,14 +277,14 @@ console:
 	ret
 
 .handle_key_del:
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	call	ring_buffer.remove_head
 	ret	z
 	jr	.refresh_line
 	
 .handle_key_mode:
 ; backspace behaviour
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	call	ring_buffer.remove
 	ret	z
 	ld	hl, (console_cursor_xy)
@@ -286,7 +294,7 @@ console:
 .refresh_line:
 ; start at cursor, ring buffer head
 ; write glyph to console till ring buffer != 0
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	ld	hl, (console_cursor_xy)
 	push	hl
 	ld	hl, (iy+RING_BUFFER_HEAD)
@@ -314,7 +322,7 @@ console:
 	ret
 
 .handle_key_enter:	
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	ld	de, console_string
 	ld	bc, 0
 .handle_enter_string:
@@ -411,7 +419,7 @@ console:
 	ret
 
 .handle_key_right:
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	or	a, a
@@ -421,7 +429,7 @@ console:
 	jp	console.increment_cursor
 
 .handle_key_left:
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	call	ring_buffer.decrement
 	ld	a, (hl)
@@ -431,11 +439,7 @@ console:
 	jp	console.decrement_cursor
 
 .handle_key_char:
-	ld	hl, console_key
-	ld	a, (hl)
-	or	a, a
-	ret	m
-	dec	hl
+	ld	hl, console_flags
 ; reset flags
 	ld	bc, .KEYMAP_NO_MOD
 	bit	0, (hl)
@@ -453,7 +457,7 @@ console:
 
 .write_char:
 	push	af
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	call	ring_buffer.write
 	ld	hl, (console_cursor_xy)
 	ld	a, (console_color)
@@ -493,7 +497,7 @@ console:
 	
 .prompt:
 	push	hl
-	ld	iy, (console_ring)
+	ld	iy, console_buffer
 	call	ring_buffer.flush
 	pop	hl
 	ld	bc, 8

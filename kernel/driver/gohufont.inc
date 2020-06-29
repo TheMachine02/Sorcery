@@ -314,12 +314,12 @@ db 0
 db 0
 db 0
 db 0
-db 0
 db 12
 db 12
 db 0
 db 12
 db 12
+db 0
 db 0
 db 0
 .CHARACTER59:

@@ -177,21 +177,6 @@ kscheduler:
 	djnz	.local_timer_queue
 .local_timer_exit:
 
-if CONFIG_USE_DOWNCLOCKING
-; proof-of-concept
-.clock_state:
-	ld	a, (kcstate_timer)
-	inc	a
-	cp	a, KERNEL_CSTATE_SAMPLING
-	jr	nz, .clock_state_exit
-	call	kcstate.idle_adjust
-	xor	a, a
-	sbc	hl, hl
-	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
-.clock_state_exit:
-	ld	(kcstate_timer), a
-end if
-
 .schedule_check_quanta:
 ; if we need to reschedule, skip this phase entirely ;
 	ld	hl, kthread_need_reschedule
@@ -264,6 +249,9 @@ end if
 	add	hl, bc
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
+if CONFIG_USE_DYNAMIC_CLOCK
+	in0	e, ($01)
+end if
 .dispatch:
 	ld	bc, QUEUE_SIZE
 	xor	a, a
@@ -287,6 +275,13 @@ end if
 	jr	.dispatch_thread
 .dispatch_queue:
 	inc	hl
+if CONFIG_USE_DYNAMIC_CLOCK
+	ld	a, e
+	cp	a, $03
+	jr	z, $+3
+	inc	a
+	out0	($01), a
+end if
 	ld	de, (hl)
 .dispatch_thread:
 ; iy is previous thread, ix is the new thread, let's switch them

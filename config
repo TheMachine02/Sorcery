@@ -2,7 +2,7 @@ define CONFIG_KERNEL_NAME		"Sorcery.0.0.1"
 
 ; special code modifier ;
 define	CONFIG_USE_BOOT_PATCH		0
-define	CONFIG_USE_DOWNCLOCKING		0
+define	CONFIG_USE_DYNAMIC_CLOCK	0
 define	CONFIG_FPU_FAULT		1
 define	CONFIG_USE_LZ4_STRICT		0
 define	CONFIG_USE_CACHED_ISR		0
