@@ -43,8 +43,7 @@ console:
 	call	.blit
 	ld	hl, 2*256+10
 	call	kname
-	call	.glyph_string
-	ret
+	jp	.glyph_string
 
 .run:
 	call	.new_line
@@ -65,7 +64,6 @@ console:
 	call	.read_keyboard
 	ld	hl, console_key
 	cp	a, (hl)
-; no, process
 	pop	bc
 	jr	nz, .process_key
 	ld	hl, 9
@@ -75,9 +73,8 @@ console:
 	ld	hl, console_key
 .process_key:
 	ld	(hl), a
-	
 	call	kvideo.vsync
-; wait for vsync, we are in vblank now
+; wait for vsync, we are in vblank now (are we ?)
 	
 	ld	iy, (console_ring)
 	ld	hl, (iy+RING_BUFFER_HEAD)
@@ -304,6 +301,7 @@ console:
 	jr	.handle_enter_string
 .finish:
 	push	bc
+	call	ring_buffer.flush
 	call	.new_line
 ; execute the instruction now
 	pop	bc
@@ -483,15 +481,7 @@ console:
 	push	de
 	push	bc
 	ld	h, a
-	cp	a, '\'
-	jr	nz, .glyph_write_color
-	inc	bc
-	ld	a, (bc)
-	cp	a, 'e'
-	jr	nz, .glyph_write_color
-	inc	bc
-	ld	a, (bc)
-	cp	a, '['
+	cp	a, $1B
 	jr	z, .escape_sequence
 .glyph_write_color:
 	ld	a, (console_color)
@@ -505,8 +495,17 @@ console:
 	ex	de, hl
 	inc	bc
 	jr	.glyph_string_loop
+	
 .escape_sequence:
 	inc	bc
+	ld	a, (bc)
+	inc	bc
+	cp	a, '['
+	jr	z, .escape_CSI
+; dunno, other sequences
+	ret
+.escape_CSI:
+; bad, I should read parameter and do the command given by last byte
 	inc	bc
 	ld	a, (bc)	; color
 	sub	a, '0' - 2
@@ -803,7 +802,7 @@ console:
  db 6, "c", "o", "l", "o", "r", 0
  
 .PROMPT:
- db "\e[31mroot\e[39m:\e[34m~\e[39m# ", 0
+ db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# ", 0
 
 .BLINK:
  db "_"
