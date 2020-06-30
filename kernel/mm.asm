@@ -684,7 +684,7 @@ end if
 	pop	bc
 	ret
 
-include	'kmm_cache.asm'
+include	'mm_cache.asm'
 	
 mmap:
 ; map file page as anonymous shared data

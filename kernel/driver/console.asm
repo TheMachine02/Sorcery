@@ -355,9 +355,9 @@ console:
 	ld	hl, .COLOR
 	call	.check_builtin
 	jr	z, .color
-	ld	hl, .FREQUENCY
+	ld	hl, .UPTIME
 	call	.check_builtin
-	jr	z, .frequency
+	jr	z, .uptime
 	ld	bc, .UNKNOW_INSTR
 	call	.write_string
 	call	.new_line
@@ -377,20 +377,23 @@ console:
 	inc	de
 	jp	pe, .check_builtin_compare
 	ret
-.frequency:
-	ld	bc, .FREQUENCY_STR
-	call	.write_string
-	in0	a, ($01)
-	ld	hl, .FREQUENCY_TABLE
-	ld	bc, 0
-	ld	c, a
-	add	hl, bc
-	ld	c, (hl)
-; bc is number
+
+.uptime:
+	call	krtc.uptime
+	push	hl
+	pop	bc
 	ld	hl, (console_cursor_xy)
 	call	.glyph_integer
 	call	.new_line
-	ld	hl, (console_cursor_xy)
+	ld	bc, (kinit_load)
+	ld	hl, KERNEL_WATCHDOG_HEARTBEAT
+	or	a, a
+	sbc	hl, bc
+	push	hl
+	pop	bc
+	ld	hl, (console_cursor_xy)	
+	call	.glyph_integer
+	call	.new_line
 	jp	.prompt
 
 .color:
@@ -542,16 +545,11 @@ include 'console_glyph.asm'
  db 5, "e", "c", "h", "o"
 .COLOR:
  db 6, "c", "o", "l", "o", "r", 0
-.FREQUENCY:
- db 10, "f", "r", "e", "q", "u", "e", "n", "c", "y", 0
+.UPTIME:
+ db 7, "u", "p", "t", "i", "m", "e", 0
  
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# ", 0
-
-.FREQUENCY_STR:
- db "Frequency (Mhz) : ", 0
-.FREQUENCY_TABLE:
- db 6, 12, 24, 48
  
 .BLINK:
  db "_"

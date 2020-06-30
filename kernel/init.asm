@@ -13,6 +13,8 @@ define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	NULL 0
 define	KERNEL_DEV_NULL			$E40000
 
+define	kinit_load			$D0000A
+
 kinit:
 .reboot:
 ; boot 5.0.1 stupidity power ++
@@ -50,6 +52,7 @@ kinit:
 ; driver init, nice
 	call	kvideo.init
 	call	kkeyboard.init
+	call	krtc.init
 	call	console.init
 ; mount root ;
 	ld	bc, .root_path

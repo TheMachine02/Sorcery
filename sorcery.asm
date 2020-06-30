@@ -89,37 +89,36 @@ include 'sorcery_certificate.asm'
 	jp	kcstate.get_clock
 	jp	kcstate.set_clock
 	
-include	'kernel/kinit.asm'
-include	'kernel/kinterrupt.asm'
-include	'kernel/kirq.asm'
-include	'kernel/kwatchdog.asm'
-include	'kernel/kpower.asm'
-include	'kernel/kthread.asm'
-include	'kernel/kqueue.asm'
-include	'kernel/kring.asm'
-include	'kernel/ksignal.asm'
-include	'kernel/ktimer.asm'
-include	'kernel/katomic.asm'
-include	'kernel/kmm.asm'
-include	'kernel/kslab.asm'
-include	'kernel/knmi.asm'
+include	'kernel/init.asm'
+include	'kernel/interrupt.asm'
+include	'kernel/irq.asm'
+include	'kernel/watchdog.asm'
+include	'kernel/power.asm'
+include	'kernel/thread.asm'
+include	'kernel/queue.asm'
+include	'kernel/ring.asm'
+include	'kernel/signal.asm'
+include	'kernel/timer.asm'
+include	'kernel/mm.asm'
+include	'kernel/slab.asm'
+include	'kernel/nmi.asm'
+
+include	'kernel/arch/atomic.asm'
+include	'kernel/crypto/crc.asm'
 include	'kernel/dev/flash.asm'
 include	'kernel/dev/ramfs.asm'
-include	'kernel/kvfs.asm'
-
+include	'kernel/vfs.asm'
 include	'kernel/fpu/idiv.asm'
 ; include	'kernel/exec/kexec.asm'
 ; include	'kernel/exec/kso.asm'
 ; include	'kernel/exec/kelf.asm'
-include	'kernel/crypto/kcrc.asm'
-
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
 include	'kernel/driver/console.asm'
-
 include	'kernel/compress/lz4.asm'
+
 
 elf_frozen_example:
 file	'executable.hex'
@@ -128,7 +127,7 @@ elf_frozen_library:
 file	'libtest.hex'
 
 lz4_frozen:
-file	'kernel/kthread.asm.lz4'
+file	'kernel/thread.asm.lz4'
 
 ; rb	$060000 - $
 org $060000

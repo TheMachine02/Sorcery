@@ -59,8 +59,8 @@ krtc:
 	ld	(hl), h
 	inc	l
 	ld	(hl), h
-	ld	l, DRIVER_RTC_CTRL and $FF
-	ld	(hl), DRIVER_RTC_DEFAULT
+;	ld	l, DRIVER_RTC_CTRL and $FF
+;	ld	(hl), DRIVER_RTC_DEFAULT
 ; reset lock
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
@@ -73,6 +73,11 @@ krtc:
 
 .irq_handler:
 	push	af
+	ld	hl, (KERNEL_THREAD_IDLE + KERNEL_THREAD_TIME)
+	ld	(kinit_load), hl
+	or	a, a
+	sbc	hl, hl
+	ld	(KERNEL_THREAD_IDLE + KERNEL_THREAD_TIME), hl
 	ld	hl, DRIVER_RTC_ISCR
 	ld	a, (hl)
 	ld	(DRIVER_RTC_ISR), a
@@ -149,7 +154,7 @@ krtc:
 .get_time:
 	ret
 
-.up_time:
+.uptime:
 ; those read aren't atomic, so up_time isn't precise... but fast (at most one second of change)
 	ld	b, 60
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)

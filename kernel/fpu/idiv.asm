@@ -1,19 +1,10 @@
 div:
-if CONFIG_FPU_FAULT = 1
-.fault:
-	ld	a, SIGFPE
-	call	ksignal.raise
-	pop	af
-	ret
-end if
-
-.16:
 ; hl = hl / bc, de = hl mod bc, return a 16 bits results (bc is 16 bits, hl is 16 bits)
 	push	af
 if CONFIG_FPU_FAULT = 1
 	ld	a, c
 	or	a, b
-	jr	z, .fault
+	jp	z, .fault
 end if
 	xor	a, a
 	sbc	hl, hl
@@ -46,3 +37,10 @@ end repeat
 	ex	de, hl
 	pop	af
 	ret
+if CONFIG_FPU_FAULT = 1
+.fault:
+	ld	a, SIGFPE
+	call	ksignal.raise
+	pop	af
+	ret
+end if
