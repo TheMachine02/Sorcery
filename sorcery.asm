@@ -84,9 +84,6 @@ include 'sorcery_certificate.asm'
 ; 	jp	kmmu.zero_page
 	jp	kmalloc
 	jp	kfree
-; printk
-; 	jp	kmsg.printk
-; 	jp	kmsg.dmesg
 ; power	
 	jp	kpower.get_battery_charging_status
 	jp	kcstate.get_clock
@@ -120,6 +117,7 @@ include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
+include	'kernel/driver/console.asm'
 
 include	'kernel/compress/lz4.asm'
 
