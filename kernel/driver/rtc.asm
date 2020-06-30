@@ -1,26 +1,26 @@
 ;include 'include/kernel.inc'
 
-define DRIVER_RTC_COUNTER_SECOND   0xF30000
-define DRIVER_RTC_COUNTER_MINUTE   0xF30004
-define DRIVER_RTC_COUNTER_HOUR     0xF30008
-define DRIVER_RTC_COUNTER_DAY      0xF3000C
-define DRIVER_RTC_ALARM_SECOND     0xF30010
-define	DRIVER_RTC_ALARM_MINUTE     0xF30014
-define	DRIVER_RTC_ALARM_HOUR       0xF30018
-define	DRIVER_RTC_CTRL             0xF30020
-define	DRIVER_RTC_WRITE_SECOND     0xF30024
-define	DRIVER_RTC_WRITE_MINUTE     0xF30028
-define	DRIVER_RTC_WRITE_HOUR       0xF3002C
-define	DRIVER_RTC_WRITE_DAY        0xF30030
-define	DRIVER_RTC_ISCR             0xF30034
-define	DRIVER_RTC_DEFAULT          01001111b
+define	DRIVER_RTC_COUNTER_SECOND	0xF30000
+define	DRIVER_RTC_COUNTER_MINUTE	0xF30004
+define	DRIVER_RTC_COUNTER_HOUR		0xF30008
+define	DRIVER_RTC_COUNTER_DAY		0xF3000C
+define	DRIVER_RTC_ALARM_SECOND		0xF30010
+define	DRIVER_RTC_ALARM_MINUTE		0xF30014
+define	DRIVER_RTC_ALARM_HOUR		0xF30018
+define	DRIVER_RTC_CTRL			0xF30020
+define	DRIVER_RTC_WRITE_SECOND		0xF30024
+define	DRIVER_RTC_WRITE_MINUTE		0xF30028
+define	DRIVER_RTC_WRITE_HOUR		0xF3002C
+define	DRIVER_RTC_WRITE_DAY		0xF30030
+define	DRIVER_RTC_ISCR			0xF30034
+define	DRIVER_RTC_DEFAULT		11011111b
 
-define	DRIVER_RTC_SECOND_MASK       1
-define	DRIVER_RTC_MINUTE_MASK       2
-define	DRIVER_RTC_HOUR_MASK         4
-define	DRIVER_RTC_DAY_MASK          8
-define	DRIVER_RTC_ALARM_MASK        16
-define	DRIVER_RTC_LOAD_MASK         32
+define	DRIVER_RTC_SECOND_MASK		1
+define	DRIVER_RTC_MINUTE_MASK		2
+define	DRIVER_RTC_HOUR_MASK		4
+define	DRIVER_RTC_DAY_MASK		8
+define	DRIVER_RTC_ALARM_MASK		16
+define	DRIVER_RTC_LOAD_MASK		32
 
 define	DRIVER_RTC_ISR			0xD000F6
 define	DRIVER_RTC_IRQ			01000000b
@@ -46,7 +46,7 @@ krtc:
 	jp	.wait_alarm
 
 .init:
-	tstdi
+	di
 	ld	hl, DRIVER_RTC_WRITE_SECOND
 	ld	(hl), h
 	ld	l, DRIVER_RTC_WRITE_MINUTE and $FF
@@ -57,27 +57,17 @@ krtc:
 	ld	(hl), h
 	inc	l
 	ld	(hl), h
-	inc	l
-	ld	(hl), h
-;	ld	l, DRIVER_RTC_CTRL and $FF
-;	ld	(hl), DRIVER_RTC_DEFAULT
+	ld	l, DRIVER_RTC_CTRL and $FF
+	ld	(hl), DRIVER_RTC_DEFAULT
 ; reset lock
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
-	pop	af
 	ld	hl, .irq_handler
 	ld	a, DRIVER_RTC_IRQ
-	jp	po, kirq.request
-	ei
 	jp	kirq.request
 
 .irq_handler:
 	push	af
-	ld	hl, (KERNEL_THREAD_IDLE + KERNEL_THREAD_TIME)
-	ld	(kinit_load), hl
-	or	a, a
-	sbc	hl, hl
-	ld	(KERNEL_THREAD_IDLE + KERNEL_THREAD_TIME), hl
 	ld	hl, DRIVER_RTC_ISCR
 	ld	a, (hl)
 	ld	(DRIVER_RTC_ISR), a
@@ -155,9 +145,12 @@ krtc:
 	ret
 
 .uptime:
-; those read aren't atomic, so up_time isn't precise... but fast (at most one second of change)
-	ld	b, 60
+; those read aren't atomic, so up_time isn't precise... but fast
+	di
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
+	push	hl
+.uptime_restart:
+	ld	b, 60
 	ld	a, (DRIVER_RTC_COUNTER_MINUTE)
 	ld	e, a
 	ld	d, b
@@ -182,6 +175,14 @@ krtc:
 	add	hl, hl
 	add	hl, hl
 	add	hl, de
+	ex	(sp), hl
+	ld	de, (DRIVER_RTC_COUNTER_SECOND)
+	or	a, a
+	sbc	hl, de	; failed
+	ex	de, hl
+	jr	nz, .uptime_restart
+	pop	hl
+	ei
 	ret
 	
 .set_alarm:

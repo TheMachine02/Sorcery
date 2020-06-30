@@ -212,12 +212,25 @@
 	ret
 	
 .glyph_integer:
+	ld	a, 8
+.glyph_integer_entry:
 	push	iy
 	push	bc
 	call	.glyph_adress
-	ld	iy, .TABLE_OF_TEN
-	pop	hl
+	ex	de, hl
+	ld	e, a
 	ld	a, 8
+	sub	a, e
+	jr	nc, $+3
+	xor	a, a
+	ld	d, a
+	ld	a, e
+	ld	e, 3
+	mlt	de
+	ld	iy, .TABLE_OF_TEN
+	add	iy, de
+	ex	de, hl
+	pop	hl
 .glyph_integer_loop:
 	push	af
 	ld	bc, (iy+0)

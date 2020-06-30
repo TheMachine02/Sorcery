@@ -378,24 +378,6 @@ console:
 	jp	pe, .check_builtin_compare
 	ret
 
-.uptime:
-	call	krtc.uptime
-	push	hl
-	pop	bc
-	ld	hl, (console_cursor_xy)
-	call	.glyph_integer
-	call	.new_line
-	ld	bc, (kinit_load)
-	ld	hl, KERNEL_WATCHDOG_HEARTBEAT
-	or	a, a
-	sbc	hl, bc
-	push	hl
-	pop	bc
-	ld	hl, (console_cursor_xy)	
-	call	.glyph_integer
-	call	.new_line
-	jp	.prompt
-
 .color:
 	ld	hl, (console_cursor_xy)
 ; 24 * 8 + 4 * 7
@@ -439,6 +421,33 @@ console:
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
 
+.uptime:
+; change this to load atomically the 32 bits register please
+	ld	bc, .UPTIME_STR
+	ld	hl, (console_cursor_xy)
+	call	.glyph_string
+	ld	hl, (console_cursor_xy)
+	ld	l, 9
+	ld	a, 4
+	ld	bc, (DRIVER_RTC_COUNTER_DAY)
+	call	.glyph_integer_entry
+	ld	hl, (console_cursor_xy)
+	ld	l, 22
+	ld	a, 2
+	ld	bc, (DRIVER_RTC_COUNTER_HOUR)
+	call	.glyph_integer_entry
+	ld	hl, (console_cursor_xy)
+	ld	l, 26
+	ld	a, 2
+	ld	bc, (DRIVER_RTC_COUNTER_MINUTE)
+	call	.glyph_integer_entry
+	ld	hl, (console_cursor_xy)
+	ld	l, 30
+	ld	a, 2
+	ld	bc, (DRIVER_RTC_COUNTER_SECOND)
+	call	.glyph_integer_entry
+	call	.new_line
+	jp	.prompt
 .handle_key_up:
 	ret
 
@@ -548,6 +557,9 @@ include 'console_glyph.asm'
 .UPTIME:
  db 7, "u", "p", "t", "i", "m", "e", 0
  
+.UPTIME_STR:
+ db "Up since 0000 day(s), 00h 00m 00s", 0
+
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# ", 0
  
