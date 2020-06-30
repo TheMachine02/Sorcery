@@ -210,3 +210,50 @@
 	add	hl, de
 	ex	de, hl
 	ret
+	
+.glyph_integer:
+	push	iy
+	push	bc
+	call	.glyph_adress
+	ld	iy, .TABLE_OF_TEN
+	pop	hl
+	ld	a, 8
+.glyph_integer_loop:
+	push	af
+	ld	bc, (iy+0)
+	lea	iy, iy+3
+	ld	a,'0'-1
+.glyph_find_digit:
+	inc	a
+	or	a, a
+	sbc	hl, bc
+	jr	nc, .glyph_find_digit
+	add	hl, bc
+	push	hl
+	push	de
+	ld	c, 1	; color
+	call	.glyph_char_entry
+	pop	de
+	ld	hl, 6
+	add	hl, de
+	ex	de, hl
+	pop	hl
+	pop	af
+	dec	a
+	jr	nz, .glyph_integer_loop
+	pop	iy
+	ret
+.glyph_quit:
+	pop	af
+	pop	iy
+	ret
+
+.TABLE_OF_TEN:
+ dl	10000000
+ dl	1000000
+ dl	100000
+ dl	10000
+ dl	1000
+ dl	100
+ dl	10
+ dl	1

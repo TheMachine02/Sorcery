@@ -65,13 +65,10 @@ kinit:
 ; most dynamic is reduce by one the value
 ; most brutal is directly set to 6Mhz, we'll need to ramp up
 if CONFIG_USE_DYNAMIC_CLOCK
-; 	in0	a, ($01)
-; 	or	a, a
-; 	jr	z, $+3
-; 	dec	a
-; 	out0	($01), a
 	xor	a, a
 	out0	($01), a
+;	inc	a
+;	ld	($E00005), a
 end if
 	ei
 	slp
@@ -84,7 +81,7 @@ kname:
 	ld	bc, .name
 	ret	
 .name:
- db "Sorcery-0.0.1-sleep-efbd7c7", 0
+ db "Sorcery-0.0.1a-slp-594180b", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;
@@ -183,7 +180,7 @@ THREAD_INIT_TEST:
 	
 
 .INIT_MESSAGE:
- db "Running on ez80 at 12Mhz", 10, 0
+ db "Running on ez80 at 48Mhz", 10, 0
 .INIT_MESSAGE_2:
  db "Watchdog initialised with heartbeat 1s", 10, 0
 .INIT_MESSAGE_3:
@@ -200,7 +197,7 @@ TEST_THREAD_C:
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
 	
-	ld	hl, 16	; 16 ms is nice
+	ld	hl, 2000	; 2000 ms is nice
 	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF

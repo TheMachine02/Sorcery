@@ -19,11 +19,11 @@ console:
 	di
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	hl, .PALETTE
-	ld	bc, 20
+	ld	bc, 36
 	ldir
-	ld	hl, .PALETTE_SPLASH
-	ld	bc, 16
-	ldir
+;	ld	hl, .PALETTE_SPLASH
+;	ld	bc, 16
+;	ldir
 	ld	hl, $E40000
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
@@ -40,7 +40,7 @@ console:
 .init_splash:
 	ld	hl, 5*256
 	ld	(console_cursor_xy), hl
-	ld	h, 0
+	ld	h, l
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
@@ -53,12 +53,16 @@ console:
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
-; around 200 ms repeat time
-	ld	b, 20
+; around 140 ms repeat time
+	ld	b, 12
 .wait_keyboard:
 	push	bc
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	ld	(hl), 2
+	ld	hl, 10
+	call	kthread.sleep	; sleep around 10 ms
+; keyboard should be okay now
+	ld	hl, DRIVER_KEYBOARD_CTRL
 	xor	a, a
 .wait_busy:
 	cp	a, (hl)
@@ -69,8 +73,6 @@ console:
 	cp	a, (hl)
 	pop	bc
 	jr	nz, .process_key
-	ld	hl, 9
-	call	kthread.sleep	; sleep around 10 ms
 	djnz	.wait_keyboard
 	ld	a, $FD
 	ld	hl, console_key
@@ -353,6 +355,9 @@ console:
 	ld	hl, .COLOR
 	call	.check_builtin
 	jr	z, .color
+	ld	hl, .FREQUENCY
+	call	.check_builtin
+	jr	z, .frequency
 	ld	bc, .UNKNOW_INSTR
 	call	.write_string
 	call	.new_line
@@ -372,6 +377,21 @@ console:
 	inc	de
 	jp	pe, .check_builtin_compare
 	ret
+.frequency:
+	ld	bc, .FREQUENCY_STR
+	call	.write_string
+	in0	a, ($01)
+	ld	hl, .FREQUENCY_TABLE
+	ld	bc, 0
+	ld	c, a
+	add	hl, bc
+	ld	c, (hl)
+; bc is number
+	ld	hl, (console_cursor_xy)
+	call	.glyph_integer
+	call	.new_line
+	ld	hl, (console_cursor_xy)
+	jp	.prompt
 
 .color:
 	ld	hl, (console_cursor_xy)
@@ -522,10 +542,17 @@ include 'console_glyph.asm'
  db 5, "e", "c", "h", "o"
 .COLOR:
  db 6, "c", "o", "l", "o", "r", 0
+.FREQUENCY:
+ db 10, "f", "r", "e", "q", "u", "e", "n", "c", "y", 0
  
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# ", 0
 
+.FREQUENCY_STR:
+ db "Frequency (Mhz) : ", 0
+.FREQUENCY_TABLE:
+ db 6, 12, 24, 48
+ 
 .BLINK:
  db "_"
 	

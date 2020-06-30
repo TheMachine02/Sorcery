@@ -47,23 +47,32 @@ knmi:
 	or	a, a
 	jr	nz, .watchdog_violation
 	in0	a, ($3D)
-	and	a, $03
+	and	$03
+	out0	($3E), a
+	bit	0, a
 	jr	nz, .stack_overflow
+	bit	1, a
+	jr	nz, .memory_protection
+.illegal_instruction:
 	jp	kinit.reboot
 	
 .watchdog_violation:
 	ld	bc, .WATCHDOG_EXCEPTION
 	call	.write_exception
 	jp	kinit.reboot
-	
-.illegal_instruction:
-	jp	kinit.reboot
 
 .stack_overflow:
 	ld	bc, .STACKOVERFLOW_EXCEPTION
 	call	.write_exception
+; we should be able to recover here ;
 	jp	kinit.reboot
-		
+
+.memory_protection:
+	ld	bc, .MEMORY_EXCEPTION
+	call	.write_exception
+; we should be able to recover here ;
+	jp	kinit.reboot
+
 .longjump:
 ; restore context
 	ld	hl, (ix+CONTEXT_FRAME_IR)
@@ -171,7 +180,9 @@ knmi:
  db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m", 0
 .STACKOVERFLOW_EXCEPTION:
  db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m", 0
-
+.MEMORY_EXCEPTION:
+ db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m", 0
+ 
 .CONTEXT_FRAME_STR0:
  db "af:           bc:           de:         ", 0
 .CONTEXT_FRAME_STR1:

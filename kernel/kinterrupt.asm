@@ -249,9 +249,6 @@ kscheduler:
 	add	hl, bc
 ; this is total time of the thread (@32768Hz, may overflow)
 	ld	(iy+KERNEL_THREAD_TIME), hl
-if CONFIG_USE_DYNAMIC_CLOCK
-	in0	e, ($01)
-end if
 .dispatch:
 	ld	bc, QUEUE_SIZE
 	xor	a, a
@@ -276,10 +273,8 @@ end if
 .dispatch_queue:
 	inc	hl
 if CONFIG_USE_DYNAMIC_CLOCK
-	ld	a, e
-	cp	a, $03
-	jr	z, $+3
-	inc	a
+	ld	a, $03
+; 	ld	($E00005), a
 	out0	($01), a
 end if
 	ld	de, (hl)
