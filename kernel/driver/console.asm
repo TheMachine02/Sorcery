@@ -358,6 +358,9 @@ console:
 	ld	hl, .UPTIME
 	call	.check_builtin
 	jr	z, .uptime
+	ld	hl, .SHUTDOWN
+	call	.check_builtin
+	jp	z, kpower.cycle_off
 	ld	bc, .UNKNOW_INSTR
 	call	.write_string
 	call	.new_line
@@ -556,6 +559,8 @@ include 'console_glyph.asm'
  db 6, "c", "o", "l", "o", "r", 0
 .UPTIME:
  db 7, "u", "p", "t", "i", "m", "e", 0
+.SHUTDOWN:
+ db 9, "s", "h", "u", "t", "d", "o", "w", "n", 0
  
 .UPTIME_STR:
  db "Up since 0000 day(s), 00h 00m 00s", 0

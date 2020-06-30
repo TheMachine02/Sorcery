@@ -68,10 +68,8 @@ kinit:
 ; most dynamic is reduce by one the value
 ; most brutal is directly set to 6Mhz, we'll need to ramp up
 if CONFIG_USE_DYNAMIC_CLOCK
-	xor	a, a
-	out0	($01), a
-;	inc	a
-;	ld	($E00005), a
+	xor	a,a
+	out0	($01),a
 end if
 	ei
 	slp
@@ -84,7 +82,7 @@ kname:
 	ld	bc, .name
 	ret	
 .name:
- db "Sorcery-0.0.1a-slp-594180b", 0
+ db "Sorcery-0.0.1a-slp-3f07276", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;

@@ -85,9 +85,6 @@ include 'sorcery_certificate.asm'
 	jp	kmalloc
 	jp	kfree
 ; power	
-	jp	kpower.get_battery_charging_status
-	jp	kcstate.get_clock
-	jp	kcstate.set_clock
 	
 include	'kernel/init.asm'
 include	'kernel/interrupt.asm'
