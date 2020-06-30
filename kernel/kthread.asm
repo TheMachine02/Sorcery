@@ -202,10 +202,10 @@ kthread:
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; stack limit set first ;
-	lea	hl, iy + 4
+	lea	hl, iy + 13
 ; we are block aligned. Do +256
 	inc	h
-; please note write affect memory, so do a + 4 to be safe    
+; please note write affect memory, so do a + 13 to be safe, boot code need some stack left
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 ; heap (début)
 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), de

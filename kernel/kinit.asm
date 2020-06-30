@@ -14,6 +14,7 @@ define	NULL 0
 define	KERNEL_DEV_NULL			$E40000
 
 kinit:
+.reboot:
 ; boot 5.0.1 stupidity power ++
 	di
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
@@ -22,6 +23,8 @@ kinit:
 	ld	sp, $D000F0
 	ld	(KERNEL_STACK), sp
 	ld.sis sp, $0000
+	ld	a, $D0
+	ld	MB, a
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a

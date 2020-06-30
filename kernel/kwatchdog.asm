@@ -36,7 +36,7 @@ kwatchdog:
 
 .arm:
 ; and start the timer
-	ld	l, KERNEL_WATCHDOG_CTRL and $FF
+	ld	hl, KERNEL_WATCHDOG_CTRL
 	set	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
 	ret
 	

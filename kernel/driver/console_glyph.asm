@@ -22,7 +22,7 @@
 	ex	de, hl
 	inc	bc
 	jr	.glyph_string_loop
-	
+
 .escape_sequence:
 	inc	bc
 	ld	a, (bc)
@@ -156,13 +156,27 @@
 	ret
 
 .glyph_hex:
-; bc = number to blit in hex format [6 characters], a = color
+; bc = number to blit in hex format [8 characters], a = color
 	call	.glyph_adress
 	push	iy
 	push	bc
 	ld	iy, 0
 	add	iy, sp
 	ld	c, a
+	ld	a, '0'
+	push	de
+	call	.glyph_char_entry
+	pop	de
+	ld	hl, 6
+	add	hl, de
+	ex	de, hl
+	ld	a, 'x'
+	push	de
+	call	.glyph_char_entry
+	pop	de
+	ld	hl, 6
+	add	hl, de
+	ex	de, hl
 	ld	b, (iy+2)
 	call	.glyph_8bit_digit
 	ld	b, (iy+1)

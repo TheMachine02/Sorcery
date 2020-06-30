@@ -16,6 +16,7 @@ define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
 console:
 
 .init:
+	di
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	hl, .PALETTE
 	ld	bc, 20
