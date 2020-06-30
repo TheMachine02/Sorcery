@@ -21,17 +21,13 @@ kirq:
 .init:
 	di
 	ld	hl, KERNEL_IRQ_HANDLER
-	ld	bc, 4
-	ld 	de, .handler
-	ld	a, 8
+	ld 	de, 4
+	ld	b, 8
+	ld	a, $C9
 .init_handler:
-	ld	(hl), de
-	add	hl, bc
-	dec	a
-	jr	nz, .init_handler
-	ret
-
-.handler:
+	ld	(hl), a
+	add	hl, de
+	djnz	.init_handler
 	ret
 
 .free:
@@ -39,8 +35,8 @@ kirq:
 	call	.disable
 	push	de
 	call    .extract_line
-	ld	de, .handler
-	ld	(hl), de
+	ld	a, $C9
+	ld	(hl), a
 	ex	de, hl
 	pop	de
 	ret

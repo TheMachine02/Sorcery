@@ -27,9 +27,8 @@ kinterrupt:
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and $FF
-	ld	a, e
-	or	a, KERNEL_INTERRUPT_ON
-	ld	e, a
+; just use default
+	ld	de, $19
 	ld	(hl), de
 if CONFIG_USE_CACHED_ISR = 1
 	ld	hl, interrupt_flash_base
