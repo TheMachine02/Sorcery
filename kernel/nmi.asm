@@ -101,24 +101,15 @@ knmi:
 .write_exception:
 ; TODO : optimize this for size please
 ; bc is exception string
-	ld	hl, (console_cursor_xy)
 	call	console.glyph_string
-	call	console.new_line
-	call	console.new_line
 	ld	bc, .CONTEXT_FRAME_STR0
 	ld	a, 3
 .write_loop:
 	push	af
-	ld	l, 5
 	call	console.glyph_string
-	inc	bc
-	push	bc
-	call	console.new_line
-	pop	bc
 	pop	af
 	dec	a
 	jr	nz, .write_loop
-	call	console.new_line
 	call	console.glyph_string
 	
 	ld	bc, (ix+CONTEXT_FRAME_AF)
@@ -182,20 +173,20 @@ knmi:
 	ret
 
 .WATCHDOG_EXCEPTION:
- db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m", 0
+ db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m", 10,10,0
 .STACKOVERFLOW_EXCEPTION:
- db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m", 0
+ db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m", 10,10,0
 .MEMORY_EXCEPTION:
- db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m", 0
+ db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m", 10,10,0
  
 .CONTEXT_FRAME_STR0:
- db "af:           bc:           de:         ", 0
+ db "     af:           bc:           de:", 10, 0
 .CONTEXT_FRAME_STR1:
- db "hl:           ",$1B,"[35m","iy", $1B,"[39m", ":           ",$1B,"[35m", "ix", $1B,"[39m", ":", 0
+ db "     hl:           ",$1B,"[35m","iy", $1B,"[39m", ":           ",$1B,"[35m", "ix", $1B,"[39m", ":", 10,0
 .CONTEXT_FRAME_STR2:
- db "sp:           pc:           ",$1B,"[33m","ir", $1B,"[39m", ":", 0
+ db "     sp:           pc:           ",$1B,"[33m","ir", $1B,"[39m", ":", 10, 10, 0
 .CONTEXT_FRAME_STR3:
- db "Stack frame :", 0
+ db "Stack frame :", 10, 0
  
 ; longjump and setjump context
 ; stackframe

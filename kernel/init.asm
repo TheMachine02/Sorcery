@@ -84,7 +84,7 @@ kname:
 	ld	bc, .name
 	ret	
 .name:
- db "Sorcery-0.0.1a-slp-ea95fd7", 0
+ db "Sorcery-0.0.1a-slp-d738d5b", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;
@@ -128,11 +128,11 @@ THREAD_INIT_TEST:
 ; 	call	kvideo.irq_lock
 	
 	ld	bc, .INIT_MESSAGE
-	call	console.write_string
+	call	console.glyph_string
 	ld	bc, .INIT_MESSAGE_2
-	call	console.write_string
+	call	console.glyph_string
 	ld	bc, .INIT_MESSAGE_3
-	call	console.write_string
+	call	console.glyph_string
 	
 	call	console.run
 

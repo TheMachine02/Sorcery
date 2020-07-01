@@ -1,48 +1,59 @@
 .glyph_string:
 ; bc = string, hl xy
+	ld	hl, (console_cursor_xy)
+.glyph_string_entry:
 	call	.glyph_adress
 .glyph_string_loop:
 	ld	a, (bc)
+	inc	bc
 	or	a, a
 	ret	z
-	push	bc
-	ld	h, a
+	cp	a, 10
+	jr	z, .glyph_new_line
 	cp	a, $1B
-	jr	z, .escape_sequence
-.glyph_write_color:
-	ld	a, (console_color)
-	ld	c, a
-	ld	a, h
+	jr	z, .glyph_escape_sequence
+	push	bc
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	inc	(hl)
 	call	.glyph_char_entry
 	pop	bc
-	inc	bc
-	jr	.glyph_string_loop
+	ld	a, (console_cursor_xy)
+	cp	a, CONSOLE_GLYPH_X
+	jr	nz, .glyph_string_loop
 
-.escape_sequence:
-	inc	bc
+.glyph_new_line:
+	push	bc
+	call	.new_line
+	pop	bc
+; recompute adress from console_cursor
+	jr	.glyph_string_entry
+	
+.glyph_escape_sequence:
 	ld	a, (bc)
 	inc	bc
 	cp	a, '['
-	jr	z, .escape_CSI
+	jr	z, .glyph_escape_CSI
 ; dunno, other sequences
-	ret
-.escape_CSI:
+	jr	.glyph_string_loop
+.glyph_escape_CSI:
 ; bad, I should read parameter and do the command given by last byte
 	inc	bc
-	ld	a, (bc)	; color
+; color from the CSI
+	ld	a, (bc)
 	sub	a, '0' - 2
 	cp	a, 11
 	jr	nz, $+4
 	xor	a, a
 	inc	a
 	ld	(console_color), a
-.sequence_end:
+.glyph_sequence_end:
 	inc	bc
 	ld	a, (bc)
 	cp	a, 'm'
-	jr	nz, .sequence_end
+	jr	nz, .glyph_sequence_end
 	inc	bc
-	pop	hl
 	jr	.glyph_string_loop
 	
 .glyph_adress:
@@ -85,7 +96,7 @@
 	ex	(sp), iy
 	ld	b, 11
 	ld	c, a
-.glyph_char_ow_loop:
+.glyph_char_loop:
 	push	de
 	ld	a, (de)
 	ld	e, a
@@ -125,7 +136,7 @@
 	lea	hl, iy + 0
 	pop	de
 	inc	de
-	djnz	.glyph_char_ow_loop
+	djnz	.glyph_char_loop
 ; hl is the last line position
 ; so hl - 320*11 + 6 = next character position
 	ld	de, -320*11+6
@@ -159,6 +170,7 @@
 .glyph_hex:
 ; bc = number to blit in hex format [8 characters], a = color
 	call	.glyph_adress
+.glyph_hex_entry:
 	push	iy
 	push	bc
 	ld	iy, 0

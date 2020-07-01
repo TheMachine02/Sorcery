@@ -1,4 +1,4 @@
-define	console_buffer		$D00800
+define	console_stdin		$D00800
 define	console_color		$D00700
 define	console_cursor_xy	$D00701
 define	console_blink		$D00704
@@ -34,19 +34,22 @@ console:
 	ld	(console_key), a
 	xor	a, a
 	ld	(console_flags), a
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	call	ring_buffer.create
 	
 .init_splash:
-	ld	hl, 5*256
-	ld	(console_cursor_xy), hl
-	ld	h, l
+	or	a, a
+	sbc	hl, hl
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
 	ld	hl, 2*256+10
+	ld	(console_cursor_xy), hl
 	call	kname
-	jp	.glyph_string
+	call	.glyph_string
+	ld	hl, 5*256
+	ld	(console_cursor_xy), hl
+	ret
 
 .run:
 	call	.new_line
@@ -85,7 +88,7 @@ console:
 	cp	a, $FD
 	jr	z, .blink
 		
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	ld	hl, console_color
@@ -127,7 +130,7 @@ console:
 	inc	(hl)
 	bit	CONSOLE_BLINK_RATE, (hl)
 
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	jr	nz, $+4
@@ -267,14 +270,14 @@ console:
 	ret
 
 .handle_key_del:
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	call	ring_buffer.remove_head
 	ret	z
 	jr	.refresh_line
 	
 .handle_key_mode:
 ; backspace behaviour
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	call	ring_buffer.remove
 	ret	z
 	ld	hl, (console_cursor_xy)
@@ -284,7 +287,7 @@ console:
 .refresh_line:
 ; start at cursor, ring buffer head
 ; write glyph to console till ring buffer != 0
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	ld	hl, (console_cursor_xy)
 	push	hl
 	ld	hl, (iy+RING_BUFFER_HEAD)
@@ -312,7 +315,7 @@ console:
 	ret
 
 .handle_key_enter:	
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	ld	de, console_string
 	ld	bc, 0
 .handle_enter_string:
@@ -326,7 +329,6 @@ console:
 	inc	bc
 	jr	.handle_enter_string
 .finish:
-	call	ring_buffer.flush
 	call	.new_line
 ; execute the instruction now
 	pop	bc
@@ -348,7 +350,7 @@ console:
 	call	.check_builtin
 	jr	z, .shutdown
 	ld	bc, .UNKNOW_INSTR
-	call	.write_string
+	call	.glyph_string
 	call	.new_line
 .clean_command:
 	ld	hl, (console_cursor_xy)
@@ -450,7 +452,7 @@ console:
 	ret
 
 .handle_key_right:
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	or	a, a
@@ -460,7 +462,7 @@ console:
 	jp	console.increment_cursor
 
 .handle_key_left:
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	call	ring_buffer.decrement
 	ld	a, (hl)
@@ -488,7 +490,7 @@ console:
 
 .write_char:
 	push	af
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	call	ring_buffer.write
 	ld	hl, (console_cursor_xy)
 	ld	a, (console_color)
@@ -496,22 +498,6 @@ console:
 	pop	af
 	call	.glyph_char
 	jp	console.increment_cursor
-	
-.write_string_new_line:
-	call	.new_line
-.write_string_entry:	
-	pop	bc
-	inc	bc
-.write_string:
-; bc is string
-	ld	a, (bc)
-	or	a, a
-	ret	z
-	cp	a, 10	; '\n'
-	push	bc
-	jr	z, .write_string_new_line
-	call	.write_char
-	jr	.write_string_entry
 
 .handle_key_clear:
 .clear:
@@ -520,17 +506,14 @@ console:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
 	ldir
-	mlt	hl			; hl=$E52C00 -> hl=0
+; actually make hl zero, slower but save 1 byte
+	mlt	hl
 	
 .prompt:
 	push	hl
-	ld	iy, console_buffer
+	ld	iy, console_stdin
 	call	ring_buffer.flush
-	pop	bc
-	ld	l, 8
-	add	hl, bc
-	ld	(console_cursor_xy), hl
-	sbc	hl, bc
+	pop	hl
 	ld	bc, .PROMPT
 ; fall into glyph_string
 
