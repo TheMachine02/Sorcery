@@ -29,14 +29,11 @@ console:
 	ld	bc, 76800
 	ldir
 	ld	hl, console_color
-	ld	a, $01
-	ld	(hl), a
+	ld	(hl), $01
 	ld	l, console_flags and $FF
-	xor	a, a
-	ld	(hl), a
-	ld	a, $FD
+	ld	(hl), c
 	inc	hl
-	ld	(hl), a
+	ld	(hl), $FD
 	ld	iy, console_stdin
 	call	ring_buffer.create
 	
