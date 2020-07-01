@@ -182,20 +182,19 @@ console:
 	ret
 
 .read_keyboard:
-	ld	hl,$F50014
+	ld	de, console_flags
+	ld	a, (de)
+	ld	hl, $F50014
 	bit	7, (hl)
 	jr	z, .swap_alpha
-	ld	a, (console_flags)
 	or	a, 00000001b
-	ld	(console_flags), a
 .swap_alpha:
 	ld	l, $12
 	bit	5, (hl)
 	jr	z, .swap_2nd
-	ld	a, (console_flags)
 	or	a, 00000010b
-	ld	(console_flags), a
 .swap_2nd:
+	ld	(de), a
 	ld	de, .KEYBOARD_KEY
 	ld	c, 7
 .loop1:
