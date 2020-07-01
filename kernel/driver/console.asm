@@ -249,7 +249,7 @@ console:
 	ld	hl, (console_cursor_xy)
 	ld	a, l
 	cp	a, CONSOLE_GLYPH_X-1
-	jr	z, .new_line-HL_ok
+	jr	z, .new_line_entry
 	inc	l
 	ld	(console_cursor_xy), hl
 	ret
@@ -257,7 +257,7 @@ console:
 .new_line:
 ; return hl = console_cursor_xy
 	ld	hl, (console_cursor_xy)
-.new_line-HL_ok:	
+.new_line_entry:	
 ; x = l, y = h
 	ld	a, h
 	cp	a, CONSOLE_GLYPH_Y - 1
