@@ -28,12 +28,15 @@ console:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
 	ldir
-	ld	a, 1
-	ld	(console_color), a
-	ld	a, $FD
-	ld	(console_key), a
+	ld	hl, console_color
+	ld	a, $01
+	ld	(hl), a
+	ld	l, console_flags and $FF
 	xor	a, a
-	ld	(console_flags), a
+	ld	(hl), a
+	ld	a, $FD
+	inc	hl
+	ld	(hl), a
 	ld	iy, console_stdin
 	call	ring_buffer.create
 	
@@ -83,20 +86,16 @@ console:
 	ld	(hl), a
 	call	kvideo.vsync
 ; wait for vsync, we are in vblank now (are we ?)
-; the syscall destroy a but not hl
-	ld	a, (hl)
-	cp	a, $FD
-	jr	z, .blink
-		
+; the syscall destroy a but not hl		
 	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
-	ld	hl, console_color
-	ld	c, (hl)
-	inc	hl
-	ld	hl, (hl)
 	call	.glyph_char
 		
+	ld	a, (console_key)
+	cp	a, $FD
+	jr	z, .blink
+	
 	ld	a, (console_key)
 	cp	a, $FC
 	call	z, .handle_key_clear
@@ -130,16 +129,8 @@ console:
 	inc	(hl)
 	bit	CONSOLE_BLINK_RATE, (hl)
 
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
-	ld	a, (hl)
-	jr	nz, $+4
 	ld	a, '_'
-	ld	hl, console_color
-	ld	c, (hl)
-	inc	hl
-	ld	hl, (hl)
-	call	.glyph_char
+	call	z, .glyph_char
 	
 	jp	.run_loop
 
@@ -281,40 +272,44 @@ console:
 	call	ring_buffer.remove
 	ret	z
 	ld	hl, (console_cursor_xy)
-	call	.glyph_blank
 	call	console.decrement_cursor
 
 .refresh_line:
-; start at cursor, ring buffer head
-; write glyph to console till ring buffer != 0
-	ld	iy, console_stdin
+; bc = string, hl xy
 	ld	hl, (console_cursor_xy)
 	push	hl
+	call	.glyph_adress
+	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 .refresh_line_loop:
-	push	hl
-	ld	hl, (console_cursor_xy)
-	call	.glyph_blank
-	pop	hl
 	ld	a, (hl)
 	or	a, a
-	jr	z, .restore
+	jr	z, .refresh_line_restore
 	call	ring_buffer.increment
 	push	hl
 	ld	hl, console_color
 	ld	c, (hl)
 	inc	hl
-	ld	hl, (hl)
-	call	.glyph_char
-	call	console.increment_cursor
+	inc	(hl)
+	call	.glyph_char_address
+	pop	hl
+	ld	a, (console_cursor_xy)
+	cp	a, CONSOLE_GLYPH_X
+	jr	nz, .refresh_line_loop
+.refresh_new_line:
+	push	hl
+	call	.new_line
+; recompute adress from console_cursor
+	call	.glyph_adress
 	pop	hl
 	jr	.refresh_line_loop
-.restore:
+.refresh_line_restore:
+	call	.glyph_blank_address
 	pop	hl
 	ld	(console_cursor_xy), hl
 	ret
-
-.handle_key_enter:	
+	
+.handle_key_enter:
 	ld	iy, console_stdin
 	ld	de, console_string
 	ld	bc, 0
@@ -430,22 +425,22 @@ console:
 	ld	l, 9
 	ld	a, 4
 	ld	bc, (DRIVER_RTC_COUNTER_DAY)
-	call	.glyph_integer_entry
+	call	.glyph_integer_format
 	pop	hl
 	ld	l, 22
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_HOUR)
-	call	.glyph_integer_entry
+	call	.glyph_integer_format
 	pop	hl
 	ld	l, 26
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_MINUTE)
-	call	.glyph_integer_entry
+	call	.glyph_integer_format
 	pop	hl
 	ld	l, 30
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_SECOND)
-	call	.glyph_integer_entry
+	call	.glyph_integer_format
 	call	.new_line
 	jp	.prompt
 .handle_key_up:
@@ -492,9 +487,6 @@ console:
 	push	af
 	ld	iy, console_stdin
 	call	ring_buffer.write
-	ld	hl, (console_cursor_xy)
-	ld	a, (console_color)
-	ld	c, a
 	pop	af
 	call	.glyph_char
 	jp	console.increment_cursor

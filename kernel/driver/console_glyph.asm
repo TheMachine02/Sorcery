@@ -1,7 +1,7 @@
 .glyph_string:
 ; bc = string, hl xy
 	ld	hl, (console_cursor_xy)
-.glyph_string_entry:
+.glyph_string_address:
 	call	.glyph_adress
 .glyph_string_loop:
 	ld	a, (bc)
@@ -17,7 +17,7 @@
 	ld	c, (hl)
 	inc	hl
 	inc	(hl)
-	call	.glyph_char_entry
+	call	.glyph_char_address
 	pop	bc
 	ld	a, (console_cursor_xy)
 	cp	a, CONSOLE_GLYPH_X
@@ -28,7 +28,7 @@
 	call	.new_line
 	pop	bc
 ; recompute adress from console_cursor
-	jr	.glyph_string_entry
+	jr	.glyph_string_address
 	
 .glyph_escape_sequence:
 	ld	a, (bc)
@@ -76,13 +76,17 @@
 	ret
 
 .glyph_char:
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	ld	hl, (hl)
 ; h = y , l = x (console 50x20), c is color, a is char
 ; y isdb 11, x is 6 in height/width
 ; x * 6 + (y*11)*320 + buffer (3520)
 	call	.glyph_adress
-.glyph_char_entry:
+.glyph_char_address:
 	or	a, a
-	jr	z, .glyph_blank_entry
+	jr	z, .glyph_blank_address
 	sbc	hl, hl
 	ld	l, a
 	ld	a, c
@@ -148,7 +152,7 @@
 .glyph_blank:
 	call	.glyph_adress
 ; hl = screen
-.glyph_blank_entry:
+.glyph_blank_address:
 	ld	hl, $E40000
 	ld	bc, 256 + 11
 	ld	a, c
@@ -170,16 +174,16 @@
 .glyph_hex:
 ; bc = number to blit in hex format [8 characters], a = color
 	call	.glyph_adress
-.glyph_hex_entry:
+.glyph_hex_address:
 	push	iy
 	push	bc
 	ld	iy, 0
 	add	iy, sp
 	ld	c, a
 	ld	a, '0'
-	call	.glyph_char_entry
+	call	.glyph_char_address
 	ld	a, 'x'
-	call	.glyph_char_entry
+	call	.glyph_char_address
 	ld	b, (iy+2)
 	call	.glyph_8bit_digit
 	ld	b, (iy+1)
@@ -206,14 +210,15 @@
 	jr	nc, $+4
 	adc	a, $C0		; $60 + ($90 - $30)
 	sub	a, $60		; ($90-$30)
-	jp	.glyph_char_entry
+	jp	.glyph_char_address
 	
 .glyph_integer:
 	ld	a, 8
-.glyph_integer_entry:
+.glyph_integer_format:
+	call	.glyph_adress
+.glyph_integer_address:
 	push	iy
 	push	bc
-	call	.glyph_adress
 	ex	de, hl
 	ld	e, a
 	ld	a, 8
@@ -241,7 +246,7 @@
 	add	hl, bc
 	push	hl
 	ld	c, 1	; color
-	call	.glyph_char_entry
+	call	.glyph_char_address
 	pop	hl
 	pop	af
 	dec	a
