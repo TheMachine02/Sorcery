@@ -3,8 +3,10 @@ define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$B024
 
+define	kpower_save_interrupt_mask	$D00008
+; we need to save the whales (and the palette)
+define	kpower_save_lcd_palette		$D00B00
 
-define	kpower_interrupt_mask		$D00008
 
 kpower:
 
@@ -24,14 +26,17 @@ kpower:
 	di
 	call	kwatchdog.disarm
 ; backlight / LCD / SPI disable from boot
+	ld	hl, DRIVER_VIDEO_PALETTE
+	ld	de, kpower_save_lcd_palette
+	ld	bc, 512
+	ldir
 	call	_boot_TurnOffHardware
 ; 6Mhz speed
 	di
 	xor	a,a
 	out0	($01),a
-	ld.sis	bc,$1005
-	ld	a, $02
-	out	(bc),a
+	ld	a, $01
+	ld	($E00005), a
 ; usb stuff ?
 ; 	ld	bc,$003030
 ; 	xor	a, a
@@ -69,8 +74,8 @@ kpower:
 	ld	a, $0D	; 0b1101
 	out0	($0D), a
 	ld	b, $FF
-.cycle_wait_busy:
-	djnz	.cycle_wait_busy
+.cycle_wait_busy_00:
+	djnz	.cycle_wait_busy_00
 ; reset rtc : enable, but no interrupts
 	ld	hl, DRIVER_RTC_CTRL
 	ld	(hl), $01
@@ -91,7 +96,7 @@ kpower:
 	ld	de, $01
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
 	ld	bc, (hl)
-	ld	(kpower_interrupt_mask), bc
+	ld	(kpower_save_interrupt_mask), bc
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
 ; acknowledge
@@ -118,12 +123,10 @@ kpower:
 	ld	a, $03
 	out0	($06), a
 	ld	b,$FF
-.cycle_wait_busy_FF:
-	djnz	.cycle_wait_busy_FF
-	ld.sis	bc, $1005
-	ld	a, $04
-	out	(bc), a
+.cycle_wait_busy_01:
+	djnz	.cycle_wait_busy_01
 	ld	a, $03
+	ld	($E00005), a
 	out0	($01), a
 ; usb ?
 ; 	ld.sis	bc,$3114
@@ -131,7 +134,7 @@ kpower:
 ; 	out	(bc), a
 ; interrupts
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
-	ld	bc, (kpower_interrupt_mask)
+	ld	bc, (kpower_save_interrupt_mask)
 	ld	(hl), bc
 	ld	bc, $FFFFFF
 	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
@@ -143,6 +146,13 @@ kpower:
 	ld	(hl), $FF
 ; LCD, SPI, backlight
 	call	_boot_InitializeHardware
+; lot of things broken
+	ld	a, KERNEL_CRYSTAL_DIVISOR
+	out0	(KERNEL_CRYSTAL_CTLR), a
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	hl, kpower_save_lcd_palette
+	ld	bc, 512
+	ldir
 ; get back our 8 bits LCD + interrupts
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT

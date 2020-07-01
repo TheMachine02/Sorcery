@@ -70,6 +70,8 @@ kinit:
 if CONFIG_USE_DYNAMIC_CLOCK
 	xor	a,a
 	out0	($01),a
+	ld	a, $01
+	ld	($E00005),a
 end if
 	ei
 	slp
