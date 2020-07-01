@@ -5,7 +5,6 @@
 	ld	a, (bc)
 	or	a, a
 	ret	z
-	push	de
 	push	bc
 	ld	h, a
 	cp	a, $1B
@@ -16,10 +15,6 @@
 	ld	a, h
 	call	.glyph_char_entry
 	pop	bc
-	pop	de
-	ld	hl, 6
-	add	hl, de
-	ex	de, hl
 	inc	bc
 	jr	.glyph_string_loop
 
@@ -48,15 +43,13 @@
 	jr	nz, .sequence_end
 	inc	bc
 	pop	hl
-	pop	de
 	jr	.glyph_string_loop
 	
 .glyph_adress:
-	ld	d, 110
+	ld	d, 220
 	ld	e, h
 	mlt	de
 	ex	de, hl
-	add	hl, hl
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -125,13 +118,19 @@
 	sbc	a, a
 	and	a, c
 	ld	(hl), a
-	inc	hl
+	ex	de, hl
 	ld	de, 320
 	add	iy, de
+	ex	de, hl
 	lea	hl, iy + 0
 	pop	de
 	inc	de
 	djnz	.glyph_char_ow_loop
+; hl is the last line position
+; so hl - 320*11 + 6 = next character position
+	ld	de, -320*11+6
+	add	hl, de
+	ex	de, hl
 	pop	iy
 	ret
 
@@ -153,6 +152,8 @@
 	ex	de, hl
 	dec	a
 	jr	nz, .glyph_blank_loop
+	ld	hl, -320*11
+	add	hl, de
 	ret
 
 .glyph_hex:
@@ -164,19 +165,9 @@
 	add	iy, sp
 	ld	c, a
 	ld	a, '0'
-	push	de
 	call	.glyph_char_entry
-	pop	de
-	ld	hl, 6
-	add	hl, de
-	ex	de, hl
 	ld	a, 'x'
-	push	de
 	call	.glyph_char_entry
-	pop	de
-	ld	hl, 6
-	add	hl, de
-	ex	de, hl
 	ld	b, (iy+2)
 	call	.glyph_8bit_digit
 	ld	b, (iy+1)
@@ -203,13 +194,7 @@
 	jr	nc, $+4
 	adc	a, $C0		; $60 + ($90 - $30)
 	sub	a, $60		; ($90-$30)
-	push	de
-	call	.glyph_char_entry
-	pop	de
-	ld	hl, 6
-	add	hl, de
-	ex	de, hl
-	ret
+	jp	.glyph_char_entry
 	
 .glyph_integer:
 	ld	a, 8
@@ -243,21 +228,12 @@
 	jr	nc, .glyph_find_digit
 	add	hl, bc
 	push	hl
-	push	de
 	ld	c, 1	; color
 	call	.glyph_char_entry
-	pop	de
-	ld	hl, 6
-	add	hl, de
-	ex	de, hl
 	pop	hl
 	pop	af
 	dec	a
 	jr	nz, .glyph_integer_loop
-	pop	iy
-	ret
-.glyph_quit:
-	pop	af
 	pop	iy
 	ret
 
