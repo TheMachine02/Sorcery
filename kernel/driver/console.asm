@@ -232,14 +232,11 @@ console:
 .decrement_cursor:
 	ld	hl, (console_cursor_xy)
 	dec	l
-	jp	m, .prev_line
-	ld	(console_cursor_xy), hl
-	ret
-
-.prev_line:
+	jp	p, .no_prev_line
 	dec	h
 	ret	m
 	ld	l, CONSOLE_GLYPH_X - 1
+.no_prev_line:
 	ld	(console_cursor_xy), hl
 	ret	
 	
@@ -422,23 +419,27 @@ console:
 ; change this to load atomically the 32 bits register please
 	ld	bc, .UPTIME_STR
 	ld	hl, (console_cursor_xy)
+	push	hl
+	push	hl
+	push	hl
+	push	hl
 	call	.glyph_string
-	ld	hl, (console_cursor_xy)
+	pop	hl
 	ld	l, 9
 	ld	a, 4
 	ld	bc, (DRIVER_RTC_COUNTER_DAY)
 	call	.glyph_integer_entry
-	ld	hl, (console_cursor_xy)
+	pop	hl
 	ld	l, 22
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_HOUR)
 	call	.glyph_integer_entry
-	ld	hl, (console_cursor_xy)
+	pop	hl
 	ld	l, 26
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_MINUTE)
 	call	.glyph_integer_entry
-	ld	hl, (console_cursor_xy)
+	pop	hl
 	ld	l, 30
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_SECOND)
@@ -495,26 +496,23 @@ console:
 	pop	af
 	call	.glyph_char
 	jp	console.increment_cursor
-
+	
+.write_string_new_line:
+	call	.new_line
+.write_string_entry:	
+	pop	bc
+	inc	bc
 .write_string:
 ; bc is string
 	ld	a, (bc)
 	or	a, a
 	ret	z
 	cp	a, 10	; '\n'
+	push	bc
 	jr	z, .write_string_new_line
-	push	bc
 	call	.write_char
-	pop	bc
-	inc	bc
-	jr	.write_string
-.write_string_new_line:
-	push	bc
-	call	.new_line
-	pop	bc
-	inc	bc
-	jr	.write_string
-	
+	jr	.write_string_entry
+
 .handle_key_clear:
 .clear:
 ; reset cursor xy and put prompt
@@ -522,15 +520,14 @@ console:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
 	ldir
-	or	a, a
-	sbc	hl, hl
+	mlt	hl			; hl=$E52C00 -> hl=0
 	
 .prompt:
 	push	hl
 	ld	iy, console_buffer
 	call	ring_buffer.flush
-	pop	hl
-	ld	bc, 8
+	pop	bc
+	ld	l, 8
 	add	hl, bc
 	ld	(console_cursor_xy), hl
 	sbc	hl, bc
