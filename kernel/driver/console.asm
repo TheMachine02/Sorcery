@@ -188,42 +188,40 @@ console:
 	ret
 
 .read_keyboard:
-	ld	a, ($F50014)
-	bit	7, a
+	ld	hl,$F50014
+	bit	7, (hl)
 	jr	z, .swap_alpha
 	ld	a, (console_flags)
 	or	a, 00000001b
 	ld	(console_flags), a
 .swap_alpha:
-
-	ld	a, ($F50012)
-	bit	5, a
+	ld	l, $12
+	bit	5, (hl)
 	jr	z, .swap_2nd
 	ld	a, (console_flags)
 	or	a, 00000010b
 	ld	(console_flags), a
 .swap_2nd:
-	ld	hl, .KEYBOARD_KEY
-	ld	de, $F50012
+	ld	de, .KEYBOARD_KEY
 	ld	c, 7
 .loop1:
-	ld	a, (de)
+	ld	a, (hl)
 	ld	b, 8
 .loop0:
 	rra
 	jr	c, .found_key
 .back:
-	inc	hl
+	inc	de
 	djnz	.loop0
-	inc	de
-	inc	de
+	inc	hl
+	inc	hl
 	dec	c
 	jr	nz, .loop1
 	ld	a, $FD
 	ret
 .found_key:
 	ld	iyl, a
-	ld	a, (hl)
+	ld	a, (de)
 	cp	a, $FD
 	ret	nz
 	ld	a, iyl
