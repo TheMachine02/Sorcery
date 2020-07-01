@@ -36,8 +36,13 @@ knmi:
 	ld	hl, i
 	ld	(ix+CONTEXT_FRAME_IR), hl
 ; perform NMI now that context has been saved
+; restore CPU power state
+	ld	a, $03
+	ld	($E00005), a
+	out0	($01), a
 ; reset major subsystem
 	call    kinterrupt.init
+	call	kvideo.init
 	call	console.init
 ; now, process
 	ld	hl, KERNEL_WATCHDOG_CTRL
