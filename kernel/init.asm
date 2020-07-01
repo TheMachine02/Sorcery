@@ -82,7 +82,7 @@ kname:
 	ld	bc, .name
 	ret	
 .name:
- db "Sorcery-0.0.1a-slp-3f07276", 0
+ db "Sorcery-0.0.1a-slp-bd654b5", 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;

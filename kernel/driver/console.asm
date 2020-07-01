@@ -357,10 +357,10 @@ console:
 	jr	z, .color
 	ld	hl, .UPTIME
 	call	.check_builtin
-	jr	z, .uptime
+	jp	z, .uptime
 	ld	hl, .SHUTDOWN
 	call	.check_builtin
-	jp	z, kpower.cycle_off
+	jr	z, .shutdown
 	ld	bc, .UNKNOW_INSTR
 	call	.write_string
 	call	.new_line
@@ -381,6 +381,11 @@ console:
 	jp	pe, .check_builtin_compare
 	ret
 
+.shutdown:
+	call	kpower.cycle_off
+	ld	hl, (console_cursor_xy)
+	jp	.prompt
+	
 .color:
 	ld	hl, (console_cursor_xy)
 ; 24 * 8 + 4 * 7

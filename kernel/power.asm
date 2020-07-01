@@ -3,6 +3,9 @@ define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$B024
 
+
+define	kpower_interrupt_mask		$D00008
+
 kpower:
 
 .init:
@@ -26,9 +29,9 @@ kpower:
 	di
 	xor	a,a
 	out0	($01),a
-; 	ld.sis	bc,$1005
-; 	ld	a, $02
-; 	out	(bc),a
+	ld.sis	bc,$1005
+	ld	a, $02
+	out	(bc),a
 ; usb stuff ?
 ; 	ld	bc,$003030
 ; 	xor	a, a
@@ -85,24 +88,78 @@ kpower:
 ; let's setup interrupt now
 ; disable all
 ; enable mask
-	ld	de, 0
+	ld	de, $01
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
-	ld	(hl), $01
-	inc	l
-	ld	(hl), $00
+	ld	bc, (hl)
+	ld	(kpower_interrupt_mask), bc
+	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
 ; acknowledge
-	ld	(hl), $FF
-	inc	l
-	ld	(hl), $FF
+	dec	de
+	dec	de
+	ld	(hl), de
 ; annnnnnd shutdown
 	ld	a, $C0
 	out0	($00), a
 	nop
 	ei
 	slp
-	rst	$00
-	
-.cycle_on:
-	ret
 
+.cycle_on:
+	di
+	ld	a, $0F
+	out0	($0D), a
+.wait_for_port_0D:
+	in0	a, ($0D)
+	inc	a
+	jr	nz, .wait_for_port_0D
+	ld	a, $76
+	out0	($05), a
+	ld	a, $03
+	out0	($06), a
+	ld	b,$FF
+.cycle_wait_busy_FF:
+	djnz	.cycle_wait_busy_FF
+	ld.sis	bc, $1005
+	ld	a, $04
+	out	(bc), a
+	ld	a, $03
+	out0	($01), a
+; usb ?
+; 	ld.sis	bc,$3114
+; 	inc	a
+; 	out	(bc), a
+; interrupts
+	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
+	ld	bc, (kpower_interrupt_mask)
+	ld	(hl), bc
+	ld	bc, $FFFFFF
+	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
+	ld	(hl), bc
+; RTC init
+	ld	hl, DRIVER_RTC_CTRL
+	ld	(hl), 10011111b
+	ld	l, DRIVER_RTC_ISCR and $FF
+	ld	(hl), $FF
+; LCD, SPI, backlight
+	call	_boot_InitializeHardware
+; get back our 8 bits LCD + interrupts
+	ld	hl, DRIVER_VIDEO_IMSC
+	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
+	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
+	ld	(DRIVER_VIDEO_CTRL), hl
+; setup timings
+	ld	hl, DRIVER_VIDEO_TIMING0 + 1
+	ld	de, kvideo.LCD_TIMINGS
+	ld	c, 8
+	ldir
+; not sure what this is for
+; 	call	$000080
+; 	ld	a, b
+; 	or	a, a
+; 	ret	z
+; 	ld	a, $DC
+; 	call	$000640
+; 	cp	a, $35
+	ei
+	ret
