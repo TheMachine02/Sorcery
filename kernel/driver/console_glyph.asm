@@ -38,6 +38,18 @@
 ; dunno, other sequences
 	jr	.glyph_string_loop
 .glyph_escape_CSI:
+; read parameter
+; 0x30–0x3F value
+; 0x20–0x2F intermediate
+; final 0x40–0x7E
+
+; first parameter should be loaded into register 
+
+
+
+
+
+
 ; bad, I should read parameter and do the command given by last byte
 	inc	bc
 ; color from the CSI
@@ -95,55 +107,51 @@
 	ld	bc, .TRANSLATION_TABLE
 	add	hl, bc
 	ld	hl, (hl)
-	ex	de, hl
-	push	hl
+	push	de
 	ex	(sp), iy
 	ld	b, 11
 	ld	c, a
 .glyph_char_loop:
-	push	de
-	ld	a, (de)
-	ld	e, a
-	rr	e
+	push	hl
+	ld	l, (hl)
+	rr	l
 	sbc	a, a
 	and	a, c
-	ld	(hl), a
-	inc	hl
-	rr	e
+	ld	(de), a
+	inc	de
+	rr	l
 	sbc	a, a
 	and	a, c
-	ld	(hl), a
-	inc	hl
-	rr	e
+	ld	(de), a
+	inc	de
+	rr	l
 	sbc	a, a
 	and	a, c
-	ld	(hl), a
-	inc	hl
-	rr	e
+	ld	(de), a
+	inc	de
+	rr	l
 	sbc	a, a
 	and	a, c
-	ld	(hl), a
-	inc	hl
-	rr	e
+	ld	(de), a
+	inc	de
+	rr	l
 	sbc	a, a
 	and	a, c
-	ld	(hl), a
-	inc	hl
-	rr	e
+	ld	(de), a
+	inc	de
+	rr	l
 	sbc	a, a
 	and	a, c
-	ld	(hl), a
-	ex	de, hl
+	ld	(de), a
 	ld	de, 320
 	add	iy, de
-	ex	de, hl
-	lea	hl, iy + 0
-	pop	de
-	inc	de
+	lea	de, iy + 0
+	pop	hl
+	inc	hl
 	djnz	.glyph_char_loop
 ; hl is the last line position
 ; so hl - 320*11 + 6 = next character position
-	ld	de, -320*11+6
+	ld	hl, -320*11+6
 	add	hl, de
 	ex	de, hl
 	pop	iy
