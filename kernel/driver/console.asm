@@ -232,14 +232,11 @@ console:
 .decrement_cursor:
 	ld	hl, (console_cursor_xy)
 	dec	l
-	jp	m, .prev_line
-	ld	(console_cursor_xy), hl
-	ret
-
-.prev_line:
+	jp	p, .no_prev_line
 	dec	h
 	ret	m
 	ld	l, CONSOLE_GLYPH_X - 1
+.no_prev_line:
 	ld	(console_cursor_xy), hl
 	ret	
 	
