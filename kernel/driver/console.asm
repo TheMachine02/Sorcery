@@ -233,45 +233,37 @@ console:
 
 .decrement_cursor:
 	ld	hl, (console_cursor_xy)
-	ld	a, l
-	dec	a
-	cp	a, 255
-	jr	z, .prev_line
-	ld	l, a
+	dec	l
+	jp	m, .prev_line
 	ld	(console_cursor_xy), hl
 	ret
 
 .prev_line:
-	ld	hl, (console_cursor_xy)
+	dec	h
+	ret	m
 	ld	l, CONSOLE_GLYPH_X - 1
-	ld	a, h
-	dec	a
-	cp	a, 255
-	ret	z
-	ld	h, a
 	ld	(console_cursor_xy), hl
 	ret	
 	
 .increment_cursor:
 	ld	hl, (console_cursor_xy)
 	ld	a, l
-	inc	a
-	cp	a, CONSOLE_GLYPH_X
-	jr	z, .new_line
-	ld	l, a
+	cp	a, CONSOLE_GLYPH_X-1
+	jr	z, .new_line-HL_ok
+	inc	l
 	ld	(console_cursor_xy), hl
 	ret
 	
 .new_line:
 ; return hl = console_cursor_xy
 	ld	hl, (console_cursor_xy)
+.new_line-HL_ok:	
 ; x = l, y = h
 	ld	a, h
 	cp	a, CONSOLE_GLYPH_Y - 1
 	jr	z, .new_line_shift
-	inc	a
+	inc	h
 .new_line_shift:
-	ld	h, a
 	ld	l, 0
 	push	hl
 	call	z, .shift_up
@@ -331,15 +323,14 @@ console:
 .handle_enter_string:
 	push	bc
 	call	ring_buffer.read
-	pop	bc
 	or	a, a
 	ld	(de), a
 	jr	z, .finish
 	inc	de
+	pop	bc
 	inc	bc
 	jr	.handle_enter_string
 .finish:
-	push	bc
 	call	ring_buffer.flush
 	call	.new_line
 ; execute the instruction now
