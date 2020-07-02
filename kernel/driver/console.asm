@@ -97,6 +97,8 @@ console:
 	jr	.run_loop
 	
 .shift_up:
+	push	hl
+	push	bc
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	or	a, a
 	sbc	hl, hl
@@ -108,6 +110,8 @@ console:
 	ld	hl, $E40000
 	ld	bc, 11*320
 	ldir
+	pop	bc
+	pop	hl
 	ret
 
 .blit:
@@ -215,9 +219,7 @@ console:
 	inc	h
 .new_line_shift:
 	ld	l, 0
-	push	hl
 	call	z, .shift_up
-	pop	hl
 	ld	(console_cursor_xy), hl
 	ret
 
