@@ -333,8 +333,7 @@ console:
 
 .shutdown:
 	call	kpower.cycle_off
-	ld	hl, (console_cursor_xy)
-	jp	.prompt
+	jr	.clean_command
 	
 .color:
 	ld	hl, (console_cursor_xy)
