@@ -225,14 +225,12 @@ console:
 	ret
 
 .handle_key_del:
-	ld	iy, console_stdin
 	call	ring_buffer.remove_head
 	ret	z
 	jr	.refresh_line
 	
 .handle_key_mode:
 ; backspace behaviour
-	ld	iy, console_stdin
 	call	ring_buffer.remove
 	ret	z
 	ld	hl, (console_cursor_xy)
@@ -410,8 +408,6 @@ console:
 	ret
 
 .handle_key_right:
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	or	a, a
 	ret	z
@@ -423,8 +419,6 @@ console:
  db $1B, "[C",0
 
 .handle_key_left:
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
 	call	ring_buffer.decrement
 	ld	a, (hl)
 	or	a, a
@@ -468,7 +462,6 @@ console:
 
 .write_char:
 	push	af
-	ld	iy, console_stdin
 	call	ring_buffer.write
 	pop	af
 	jp	.phy_write_byte
