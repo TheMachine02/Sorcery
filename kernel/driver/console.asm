@@ -43,16 +43,10 @@ console:
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
-	ld	hl, 2*256+10
-	ld	(console_cursor_xy), hl
-	call	kname
-	call	.glyph_string
-	ld	hl, 5*256
-	ld	(console_cursor_xy), hl
-	ret
+	ld	bc, .SPLASH_NAME
+	jp	.glyph_string
 
 .run:
-	call	.new_line
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
@@ -83,7 +77,7 @@ console:
 	ld	(hl), a
 	call	kvideo.vsync
 ; wait for vsync, we are in vblank now (are we ?)
-; the syscall destroy a but not hl		
+; the syscall destroy a but not hl
 	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
@@ -306,6 +300,7 @@ console:
 	ret
 	
 .handle_key_enter:
+	call	.new_line
 	ld	iy, console_stdin
 	ld	de, console_string
 	ld	bc, 0
@@ -320,7 +315,6 @@ console:
 	inc	bc
 	jr	.handle_enter_string
 .finish:
-	call	.new_line
 ; execute the instruction now
 	pop	bc
 	ld	a, b
@@ -342,7 +336,6 @@ console:
 	jr	z, .shutdown
 	ld	bc, .UNKNOW_INSTR
 	call	.glyph_string
-	call	.new_line
 .clean_command:
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
@@ -452,6 +445,9 @@ console:
 	ld	(iy+RING_BUFFER_HEAD), hl
 	jp	console.increment_cursor
 
+.KEY_RIGHT_CSI:
+ db $1B, "[C",0
+
 .handle_key_left:
 	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
@@ -462,6 +458,9 @@ console:
 	ld	(iy+RING_BUFFER_HEAD), hl
 	jp	console.decrement_cursor
 
+.KEY_LEFT_CSI:
+ db $1B, "[D",0
+	
 .handle_key_char:
 	ld	hl, console_flags
 ; reset flags
@@ -476,8 +475,6 @@ console:
 	add	hl, bc
 	ld	a, (hl)
 ; read color
-	ld	hl, console_color
-	ld	c, (hl)
 
 .write_char:
 	push	af
@@ -496,12 +493,11 @@ console:
 	ldir
 ; actually make hl zero, slower but save 1 byte
 	mlt	hl
+	ld	(console_cursor_xy), hl
 	
 .prompt:
-	push	hl
 	ld	iy, console_stdin
 	call	ring_buffer.flush
-	pop	hl
 	ld	bc, .PROMPT
 ; fall into glyph_string
 
@@ -537,6 +533,10 @@ include 'console_glyph.asm'
 db 64,65
 include 'logo.asm'
  
+.SPLASH_NAME:
+; y 2, x 10, then y 5, x 0
+ db $1B, "[3;11H", "Sorcery-0.0.1a-slp-d738d5b", $1B, "[6;1H", 0
+ 
 .PALETTE:
 ; default = foreground = \e[39m
  dw $0000	; background
@@ -569,7 +569,7 @@ include 'logo.asm'
  dw $EDA0 ;  // 07 :: rgba(220,111,0,255)
 
 .UNKNOW_INSTR:
- db "command not found", 0
+ db "command not found", 10,0
 
 .KEYMAP_NO_MOD:
  db ' ', ':', '?', 'x', 'y', 'z', '"', 's', 't', 'u', 'v', 'w', 'n', 'o', 'p', 'q', 'r', 'i', 'j', 'k', 'l', 'm'
