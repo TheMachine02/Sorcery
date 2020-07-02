@@ -313,6 +313,7 @@ console:
 	jr	z, .shutdown
 	ld	bc, .UNKNOW_INSTR
 	call	.glyph_string
+.finish_resume:	
 	call	.new_line
 .clean_command:
 	ld	hl, (console_cursor_xy)
@@ -374,10 +375,7 @@ console:
 	pop	hl
 	dec	a
 	jr	nz, .color_copy_block	
-	call	.new_line
-	ld	hl, (console_cursor_xy)
-	jp	.prompt
-
+	jr	.finish_resume
 .uptime:
 ; change this to load atomically the 32 bits register please
 	ld	bc, .UPTIME_STR
