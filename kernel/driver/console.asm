@@ -222,14 +222,12 @@ console:
 	ret
 
 .handle_key_del:
-	ld	iy, console_stdin
 	call	ring_buffer.remove_head
 	ret	z
 	jr	.refresh_line
 	
 .handle_key_mode:
 ; backspace behaviour
-	ld	iy, console_stdin
 	call	ring_buffer.remove
 	ret	z
 	ld	hl, (console_cursor_xy)
@@ -272,7 +270,6 @@ console:
 	
 .handle_key_enter:
 	call	.new_line
-	ld	iy, console_stdin
 	ld	de, console_string
 	ld	bc, 0
 .handle_enter_string:
@@ -403,8 +400,6 @@ console:
 	ret
 
 .handle_key_right:
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
 	or	a, a
 	ret	z
@@ -416,8 +411,6 @@ console:
  db $1B, "[C",0
 
 .handle_key_left:
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
 	call	ring_buffer.decrement
 	ld	a, (hl)
 	or	a, a
@@ -431,15 +424,10 @@ console:
 .check_console_key:
 	cp	a, $FC
 	jr	z, .handle_key_clear
-
+	
+	ld	iy, console_stdin
 	cp	a, $FE
 	jr	z, .handle_key_enter
-	
-	cp	a, $F9
-	jr	z, .handle_key_right
-	
-	cp	a, $FA
-	jr	z, .handle_key_left
 	
 	cp	a, $FF
 	jr	z, .handle_key_del
@@ -447,6 +435,12 @@ console:
 	cp	a, $F7
 	jr	z, .handle_key_mode
 	
+	ld	hl, (iy+RING_BUFFER_HEAD)
+	cp	a, $F9
+	jr	z, .handle_key_right
+	
+	cp	a, $FA
+	jr	z, .handle_key_left
 	or	a, a
 	ret	m
 	
@@ -467,7 +461,6 @@ console:
 
 .write_char:
 	push	af
-	ld	iy, console_stdin
 	call	ring_buffer.write
 	pop	af
 	call	.glyph_char
