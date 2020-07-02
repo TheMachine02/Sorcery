@@ -128,11 +128,11 @@ THREAD_INIT_TEST:
 ; 	call	kvideo.irq_lock
 	
 	ld	bc, .INIT_MESSAGE
-	call	console.glyph_string
+	call	console.phy_write
 	ld	bc, .INIT_MESSAGE_2
-	call	console.glyph_string
+	call	console.phy_write
 	ld	bc, .INIT_MESSAGE_3
-	call	console.glyph_string
+	call	console.phy_write
 	
 	call	console.run
 
