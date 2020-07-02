@@ -101,16 +101,16 @@ knmi:
 .write_exception:
 ; TODO : optimize this for size please
 ; bc is exception string
-	call	console.glyph_string
+	call	console.phy_write
 	ld	bc, .CONTEXT_FRAME_STR0
 	ld	a, 3
 .write_loop:
 	push	af
-	call	console.glyph_string
+	call	console.phy_write
 	pop	af
 	dec	a
 	jr	nz, .write_loop
-	call	console.glyph_string
+	call	console.phy_write
 	
 	ld	bc, (ix+CONTEXT_FRAME_AF)
 	ld	hl, 7*256+9

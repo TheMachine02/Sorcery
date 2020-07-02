@@ -1,10 +1,13 @@
 define	console_stdin		$D00800
-define	console_color		$D00700
-define	console_cursor_xy	$D00701
-define	console_blink		$D00704
-define	console_flags		$D00705
-define	console_key		$D00706
-define	console_string		$D00707
+
+define	console_dev		$D00700
+define	console_style		$D00700
+define	console_color		$D00701
+define	console_cursor_xy	$D00702
+define	console_blink		$D00705
+define	console_flags		$D00706
+define	console_key		$D00707
+define	console_string		$D00714
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
@@ -44,7 +47,7 @@ console:
 	ld	bc, .SPLASH
 	call	.blit
 	ld	bc, .SPLASH_NAME
-	jp	.glyph_string
+	jp	.phy_write
 
 .run:
 	call	.prompt
@@ -269,7 +272,9 @@ console:
 	ret
 	
 .handle_key_enter:
-	call	.new_line
+	ld	a, 10
+	call	.phy_write_byte
+	ld	iy, console_stdin
 	ld	de, console_string
 	ld	bc, 0
 .handle_enter_string:
@@ -303,9 +308,7 @@ console:
 	call	.check_builtin
 	jr	z, .shutdown
 	ld	bc, .UNKNOW_INSTR
-	call	.glyph_string
-.finish_resume:
-	call	.new_line
+	call	.phy_write
 .clean_command:
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
@@ -365,8 +368,10 @@ console:
 	ex	de, hl
 	pop	hl
 	dec	a
-	jr	nz, .color_copy_block	
-	jr	.finish_resume
+	jr	nz, .color_copy_block
+	ld	a, 10
+	call	.phy_write_byte
+	jr	.clean_command
 .uptime:
 ; change this to load atomically the 32 bits register please
 	ld	bc, .UPTIME_STR
@@ -375,7 +380,7 @@ console:
 	push	hl
 	push	hl
 	push	hl
-	call	.glyph_string
+	call	.phy_write
 	pop	hl
 	ld	l, 9
 	ld	a, 4
@@ -396,7 +401,8 @@ console:
 	ld	a, 2
 	ld	bc, (DRIVER_RTC_COUNTER_SECOND)
 	call	.glyph_integer_format
-	call	.new_line
+	ld	a, 10
+	call	.phy_write_byte
 	jp	.prompt
 .handle_key_up:
 	ret
@@ -426,23 +432,16 @@ console:
 .check_console_key:
 	cp	a, $FC
 	jr	z, .handle_key_clear
-	
-	ld	iy, console_stdin
 	cp	a, $FE
-	jr	z, .handle_key_enter
-	
-	cp	a, $FF
-	jr	z, .handle_key_del
-
-	cp	a, $F7
-	jr	z, .handle_key_mode
-	
-	ld	hl, (iy+RING_BUFFER_HEAD)
+	jp	z, .handle_key_enter
 	cp	a, $F9
-	jr	z, .handle_key_right
-	
+	jr	z, .handle_key_right	
 	cp	a, $FA
 	jr	z, .handle_key_left
+	cp	a, $FF
+	jp	z, .handle_key_del
+	cp	a, $F7
+	jp	z, .handle_key_mode
 	or	a, a
 	ret	m
 	
@@ -465,8 +464,7 @@ console:
 	push	af
 	call	ring_buffer.write
 	pop	af
-	call	.glyph_char
-	jp	console.increment_cursor
+	jp	.phy_write_byte
 
 .handle_key_clear:
 .clear:
@@ -483,8 +481,9 @@ console:
 	ld	iy, console_stdin
 	call	ring_buffer.flush
 	ld	bc, .PROMPT
-; fall into glyph_string
+; fall into phy_write
 
+include	'../dev/console.asm'
 include 'console_glyph.asm'
 
 .COMMAND:
@@ -519,7 +518,7 @@ include 'logo.asm'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
- db $1B, "[3;11H", "Sorcery-0.0.1a-slp-d738d5b", $1B, "[6;1H", 0
+ db $1B, "[2;10H", "Sorcery-0.0.1a-slp-d738d5b", $1B, "[5;H", 0
  
 .PALETTE:
 ; default = foreground = \e[39m
@@ -572,6 +571,4 @@ include 'logo.asm'
  db $FE, $06, $0B, $10, $15, $1A, $FC, $FD
  db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
 
-.KEYMAP_2ND: 
- 
-include 'gohufont.inc'
+.KEYMAP_2ND:
