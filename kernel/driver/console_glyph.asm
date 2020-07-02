@@ -1,3 +1,5 @@
+; TODO : make escape code accessible to glyph_char write
+
 .glyph_string:
 ; bc = string, hl xy
 	ld	hl, (console_cursor_xy)
@@ -32,41 +34,137 @@
 	
 .glyph_escape_sequence:
 	ld	a, (bc)
-	inc	bc
 	cp	a, '['
 	jr	z, .glyph_escape_CSI
 ; dunno, other sequences
+	inc	bc
 	jr	.glyph_string_loop
 .glyph_escape_CSI:
 ; read parameter
 ; 0x30–0x3F value
 ; 0x20–0x2F intermediate
 ; final 0x40–0x7E
-
-; first parameter should be loaded into register 
-
-
-
-
-
-
-; bad, I should read parameter and do the command given by last byte
+	sbc	hl, hl
+.glyph_escape_CSI_read:
 	inc	bc
-; color from the CSI
 	ld	a, (bc)
-	sub	a, '0' - 2
-	cp	a, 11
-	jr	nz, $+4
-	xor	a, a
-	inc	a
+	sub	a, $30
+; this is intermediate
+	cp	a, $0B
+	jr	z, .glyph_escape_CSI_intermediate
+	cp	a, $10
+	jr	nc, .glyph_escape_CSI_final
+; l * 10 + a
+	push	hl
+	ld	h, 10
+	mlt	hl
+	add	a, l
+	pop	hl
+	ld	l, a
+	jr	.glyph_escape_CSI_read
+.glyph_escape_CSI_intermediate:
+; store first param to h
+	ld	h, l
+	ld	l, 0
+	jr	.glyph_escape_CSI_read
+.glyph_escape_CSI_final:
+	inc	bc
+; depending from the  value
+; let's do some shady stuff
+	cp	a, 'm' - $30	; this is sgr
+	jr	z, .glyph_CSI_sgr
+	ld	iy, .CSI_JUMP_TABLE
+	sub	a, $10
+	ex	de, hl
+	sbc	hl, hl
+	ld	l, a
+; unsupported above 12
+	cp	a, 12
+	jr	nc, .glyph_string_address
+	add	hl, hl
+	add	hl, hl
+	ex	de, hl
+	add	iy, de
+	ld	iy, (iy+0)
+	call	.glyph_CSI_iy
+	jr	.glyph_string_address
+.glyph_CSI_iy:
+	jp	(iy)
+.glyph_CSI_sgr:
+; not much supported
+	ld	a, l
+	cp	a, 39
+	jr	z, .glyph_CSI_sgr_default_color
+	sub	a, 30 - 2
 	ld	(console_color), a
-.glyph_sequence_end:
-	inc	bc
-	ld	a, (bc)
-	cp	a, 'm'
-	jr	nz, .glyph_sequence_end
-	inc	bc
-	jr	.glyph_string_loop
+	jp	.glyph_string_loop
+.glyph_CSI_sgr_default_color:
+	ld	a, $01
+	ld	(console_color), a
+	jp	.glyph_string_loop
+
+.CSI_JUMP_TABLE:
+ dd	.glyph_none
+ dd	.glyph_cursor_up
+ dd	.glyph_cursor_down
+ dd	.glyph_cursor_forward
+ dd	.glyph_cursor_back
+ dd	.glyph_cursor_next_line	; next line
+ dd	.glyph_none		; previous line
+ dd	.glyph_cursor_habs	; 
+ dd	.glyph_cursor_position
+ dd	.glyph_none
+ dd	.glyph_none		; erase in display
+ dd	.glyph_none		; erase in line
+
+.glyph_cursor_down:
+.glyph_none:
+	ret
+	
+.glyph_cursor_up:
+	ret
+
+.glyph_cursor_forward:
+	ret
+
+.glyph_cursor_back:
+	ld	a, l
+	neg
+	ld	hl, (console_cursor_xy)
+	add	a, l
+	jp	p, .glyph_cursor_set
+.glyph_cursor_back_loop:
+	dec	h
+	add	a, CONSOLE_GLYPH_X
+	jp	m, .glyph_cursor_back_loop
+	ld	l, a
+	ld	a, h
+	or	a, a
+	jp	p, .glyph_cursor_set
+	ld	h, 0
+	jr	.glyph_cursor_set
+
+.glyph_cursor_next_line:
+	ld	a, l
+.ffloop:	
+	push	bc
+	call	.new_line
+	pop	bc
+	dec	a
+	jr	nz, .ffloop
+	ret
+	
+.glyph_cursor_habs:
+	ret
+
+.glyph_cursor_position:
+; row is h, col is l, so correct
+; there are 1 based
+	dec	l
+	dec	h
+.glyph_cursor_set:
+	ld	(console_cursor_xy), hl
+	ret
 	
 .glyph_adress:
 	ld	d, 220
@@ -88,6 +186,9 @@
 	ret
 
 .glyph_char:
+; display a character a the cursor position and of the console color
+; DOESNT update console_cursor nor color
+; return de = next screen buffer position
 	ld	hl, console_color
 	ld	c, (hl)
 	inc	hl
@@ -158,6 +259,7 @@
 	ret
 
 .glyph_blank:
+; erase a caracter
 	call	.glyph_adress
 ; hl = screen
 .glyph_blank_address:
@@ -218,6 +320,7 @@
 	jr	nc, $+4
 	adc	a, $C0		; $60 + ($90 - $30)
 	sub	a, $60		; ($90-$30)
+	ld	c, 1
 	jp	.glyph_char_address
 	
 .glyph_integer:

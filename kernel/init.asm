@@ -187,7 +187,7 @@ THREAD_INIT_TEST:
 .INIT_MESSAGE_2:
  db "Watchdog initialised with heartbeat 1s", 10, 0
 .INIT_MESSAGE_3:
- db "Welcome to Sorcery", 0
+ db "Welcome to Sorcery", 10, 0
 	
 global_running_string:
  db "Frequency (Mhz) :", 0
