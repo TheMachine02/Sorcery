@@ -59,7 +59,7 @@ kinit:
 	call	ramfs.mount
 	call	kwatchdog.init
 ; create init thread : ie, first program to run (/bin/init/)
-	ld	iy, THREAD_INIT_TEST
+	ld	iy, console.no_init
 	call	kthread.create
 	jp	c, kinterrupt.nmi
 ; nice idle thread code
@@ -127,15 +127,6 @@ THREAD_INIT_TEST:
 ; video lock for me
 ; 	call	kvideo.irq_lock
 	
-	ld	bc, .INIT_MESSAGE
-	call	console.phy_write
-	ld	bc, .INIT_MESSAGE_2
-	call	console.phy_write
-	ld	bc, .INIT_MESSAGE_3
-	call	console.phy_write
-	
-	call	console.run
-
 ;	ld	bc, 0
 ;.loop:
 ;	push	bc
@@ -180,15 +171,7 @@ THREAD_INIT_TEST:
 ;	inc	bc
 ;	jr	.loop
 	ret
-	
 
-.INIT_MESSAGE:
- db "Running on ez80 at 48Mhz", 10, 0
-.INIT_MESSAGE_2:
- db "Watchdog initialised with heartbeat 1s", 10, 0
-.INIT_MESSAGE_3:
- db "Welcome to Sorcery", 10, 0
-	
 global_running_string:
  db "Frequency (Mhz) :", 0
 global_frequency_table:

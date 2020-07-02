@@ -11,10 +11,6 @@ define	console_string		$D00714
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
-define	CONSOLE_BLINK_RATE	1
-define	CONSOLE_FLAGS_ALPHA	0
-define	CONSOLE_FLAGS_2ND	1
-define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
 
 console:
 
@@ -24,9 +20,6 @@ console:
 	ld	hl, .PALETTE
 	ld	bc, 36
 	ldir
-;	ld	hl, .PALETTE_SPLASH
-;	ld	bc, 16
-;	ldir
 	ld	hl, $E40000
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
@@ -48,6 +41,17 @@ console:
 	call	.blit
 	ld	bc, .SPLASH_NAME
 	jp	.phy_write
+
+.INIT_MESSAGE:
+ db "Running on ez80 at 48Mhz", 10
+ db "Watchdog initialised with heartbeat 1s", 10
+ db "Welcome to Sorcery", 10
+ db "No init found !", 10, 0
+ 
+.no_init:
+; need to lock screen for us
+	ld	bc, .INIT_MESSAGE
+	call	.phy_write
 
 .run:
 	call	.prompt

@@ -3,7 +3,6 @@ define	CONSOLE_COLOR		$1
 define	CONSOLE_CURSOR		$2
 define	CONSOLE_CURSOR_COL	$2
 define	CONSOLE_CURSOR_ROW	$3
-
 define	CONSOLE_BLINK		$5
 define	CONSOLE_FLAGS		$6
 define	CONSOLE_KEY		$7
@@ -11,7 +10,12 @@ define	CONSOLE_ESC_BUFFER	$8	; 9 bytes max, two paramaters + 1 output + 1 master
 define	CONSOLE_ESC_OFFSET	$11	; describe the current offset inside the buffer (3 bytes for fast read)
 define	CONSOLE_STRING		$14
 
+define	CONSOLE_FLAGS_ALPHA	0
+define	CONSOLE_FLAGS_2ND	1
+define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
 define	CONSOLE_FLAGS_ESC	7	; we are writing an esc sequence
+
+define	CONSOLE_BLINK_RATE	1
 define	CONSOLE_CURSOR_MAX_COL	50
 define	CONSOLE_CURSOR_MAX_ROW	20
 
