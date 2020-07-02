@@ -178,10 +178,37 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ret
 
 .phy_cursor_forward:
-	ret
+	ld	a, e
+	or	a, a
+	jr	nz, $+3
+	inc	a
+	lea	hl, iy+CONSOLE_CURSOR_COL
+	add	a, (hl)
+.phy_cursor_ffloop:
+	ld	(hl), a
+	sub	a, CONSOLE_CURSOR_MAX_COL
+	ret	c
+	inc	hl
+	inc	(hl)
+	dec	hl
+	jr	.phy_cursor_ffloop
 
 .phy_cursor_back:
-	ret
+; e = count to go back
+	ld	a, e
+	neg
+	jr	nz, $+3
+	dec	a
+	lea	hl, iy+CONSOLE_CURSOR_COL
+	add	a, (hl)
+.phy_cursor_fbloop:
+	ld	(hl), a
+	ret	p
+	inc	hl
+	dec	(hl)
+	dec	hl
+	add	a, CONSOLE_CURSOR_MAX_COL
+	jr	.phy_cursor_fbloop
 
 .phy_cursor_next_line:
 	ret
@@ -198,6 +225,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 .phy_new_line:
 ; iy = console handle
 	lea	hl, iy+CONSOLE_CURSOR_COL
+.phy_new_line_ex:
 	ld	(hl), 0
 	inc	hl
 	inc	(hl)

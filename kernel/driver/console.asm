@@ -88,7 +88,7 @@ console:
 		
 	ld	a, (console_key)
 	cp	a, $FD
-	call	nz, .check_console_key
+	call	nz, .handle_console_stdin
 .blink:
 	ld	hl, console_blink
 	inc	(hl)
@@ -202,75 +202,11 @@ console:
 	ld	hl, (console_cursor_xy)
 	ld	a, l
 	cp	a, CONSOLE_GLYPH_X-1
-	jr	z, .new_line_entry
+;	jr	z, .new_line_entry
 	inc	l
 	ld	(console_cursor_xy), hl
 	ret
-	
-.new_line:
-; return hl = console_cursor_xy
-	ld	hl, (console_cursor_xy)
-.new_line_entry:	
-; x = l, y = h
-	ld	a, h
-	cp	a, CONSOLE_GLYPH_Y - 1
-	jr	z, .new_line_shift
-	inc	h
-.new_line_shift:
-	ld	l, 0
-	push	hl
-	call	z, .shift_up
-	pop	hl
-	ld	(console_cursor_xy), hl
-	ret
 
-.handle_key_del:
-	call	ring_buffer.remove_head
-	ret	z
-	jr	.refresh_line
-	
-.handle_key_mode:
-; backspace behaviour
-	call	ring_buffer.remove
-	ret	z
-	ld	hl, (console_cursor_xy)
-	call	console.decrement_cursor
-
-.refresh_line:
-; bc = string, hl xy
-	ld	hl, (console_cursor_xy)
-	push	hl
-	call	.glyph_adress
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
-.refresh_line_loop:
-	ld	a, (hl)
-	or	a, a
-	jr	z, .refresh_line_restore
-	call	ring_buffer.increment
-	push	hl
-	ld	hl, console_color
-	ld	c, (hl)
-	inc	hl
-	inc	(hl)
-	call	.glyph_char_address
-	pop	hl
-	ld	a, (console_cursor_xy)
-	cp	a, CONSOLE_GLYPH_X
-	jr	nz, .refresh_line_loop
-.refresh_new_line:
-	push	hl
-	call	.new_line
-; recompute adress from console_cursor
-	call	.glyph_adress
-	pop	hl
-	jr	.refresh_line_loop
-.refresh_line_restore:
-	call	.glyph_blank_address
-	pop	hl
-	ld	(console_cursor_xy), hl
-	ret
-	
 .handle_key_enter:
 	ld	a, 10
 	call	.phy_write_byte
@@ -310,7 +246,6 @@ console:
 	ld	bc, .UNKNOW_INSTR
 	call	.phy_write
 .clean_command:
-	ld	hl, (console_cursor_xy)
 	jp	.prompt
 	
 .check_builtin:
@@ -404,44 +339,70 @@ console:
 	ld	a, 10
 	call	.phy_write_byte
 	jp	.prompt
-.handle_key_up:
-	ret
 
-.handle_key_right:
-	ld	a, (hl)
-	or	a, a
+.handle_key_del:
+	call	ring_buffer.remove_head
 	ret	z
-	call	ring_buffer.increment
-	ld	(iy+RING_BUFFER_HEAD), hl
-	jp	console.increment_cursor
-
-.KEY_RIGHT_CSI:
- db $1B, "[C",0
-
-.handle_key_left:
-	call	ring_buffer.decrement
-	ld	a, (hl)
-	or	a, a
-	ret	z
-	ld	(iy+RING_BUFFER_HEAD), hl
-	jp	console.decrement_cursor
+	jr	.refresh_line
 	
-.KEY_LEFT_CSI:
- db $1B, "[D",0
+.handle_key_mode:
+; backspace behaviour
+	call	ring_buffer.remove
+	ret	z
+	ld	hl, (console_cursor_xy)
+	call	console.decrement_cursor
+
+.refresh_line:
+; bc = string, hl xy
+	ld	hl, (console_cursor_xy)
+	push	hl
+	call	.glyph_adress
+	ld	iy, console_stdin
+	ld	hl, (iy+RING_BUFFER_HEAD)
+.refresh_line_loop:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .refresh_line_restore
+	call	ring_buffer.increment
+	push	hl
+	ld	hl, console_color
+	ld	c, (hl)
+	inc	hl
+	inc	(hl)
+	call	.glyph_char_address
+	pop	hl
+	ld	a, (console_cursor_xy)
+	cp	a, CONSOLE_GLYPH_X
+	jr	nz, .refresh_line_loop
+.refresh_new_line:
+	push	hl
+	ld	hl, console_cursor_xy
+	call	.phy_new_line_ex
+; recompute adress from console_cursor
+	ld	hl, (console_cursor_xy)
+	call	.glyph_adress
+	pop	hl
+	jr	.refresh_line_loop
+.refresh_line_restore:
+	call	.glyph_blank_address
+	pop	hl
+	ld	(console_cursor_xy), hl
+	ret  
   
-.check_console_key:
+.handle_console_stdin:
 	cp	a, $FC
 	jr	z, .handle_key_clear
 	cp	a, $FE
 	jp	z, .handle_key_enter
+	cp	a, $FF
+	jr	z, .handle_key_del
+	cp	a, $F7
+	jr	z, .handle_key_mode
+	ld	hl, (iy+RING_BUFFER_HEAD)
 	cp	a, $F9
-	jr	z, .handle_key_right	
+	jr	z, .handle_key_right
 	cp	a, $FA
 	jr	z, .handle_key_left
-	cp	a, $FF
-	jp	z, .handle_key_del
-	cp	a, $F7
-	jp	z, .handle_key_mode
 	or	a, a
 	ret	m
 	
@@ -458,14 +419,40 @@ console:
 	ld	l, a
 	add	hl, bc
 	ld	a, (hl)
-; read color
-
-.write_char:
 	push	af
 	call	ring_buffer.write
 	pop	af
+; putchar(a)
 	jp	.phy_write_byte
 
+.handle_key_up:
+	ret
+
+.handle_key_right:
+	ld	a, (hl)
+	or	a, a
+	ret	z
+	call	ring_buffer.increment
+	ld	(iy+RING_BUFFER_HEAD), hl
+	ld	bc, .KEY_RIGHT_CSI
+	jp	.phy_write
+;	jp	console.increment_cursor
+
+.KEY_RIGHT_CSI:
+ db $1B, "[C",0
+
+.handle_key_left:
+	call	ring_buffer.decrement
+	ld	a, (hl)
+	or	a, a
+	ret	z
+	ld	(iy+RING_BUFFER_HEAD), hl
+	ld	bc, .KEY_LEFT_CSI
+	jp	.phy_write
+	
+.KEY_LEFT_CSI:
+ db $1B, "[D",0	
+	
 .handle_key_clear:
 .clear:
 ; reset cursor xy and put prompt
