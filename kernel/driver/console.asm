@@ -91,36 +91,7 @@ console:
 		
 	ld	a, (console_key)
 	cp	a, $FD
-	jr	z, .blink
-	
-	ld	a, (console_key)
-	cp	a, $FC
-	call	z, .handle_key_clear
-
-	ld	a, (console_key)
-	cp	a, $FE
-	call	z, .handle_key_enter
-	
-	ld	a, (console_key)
-	cp	a, $F9
-	call	z, .handle_key_right
-	
-	ld	a, (console_key)
-	cp	a, $FA
-	call	z, .handle_key_left
-	
-	ld	a, (console_key)
-	cp	a, $FF
-	call	z, .handle_key_del
-
-	ld	a, (console_key)
-	cp	a, $F7
-	call	z, .handle_key_mode
-	
-	ld	a, (console_key)
-	or	a, a
-	call	p, .handle_key_char
-
+	call	nz, .check_console_key
 .blink:
 	ld	hl, console_blink
 	inc	(hl)
@@ -129,8 +100,8 @@ console:
 	ld	a, '_'
 	call	z, .glyph_char
 	
-	jp	.run_loop
-
+	jr	.run_loop
+	
 .shift_up:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	or	a, a
@@ -461,7 +432,29 @@ console:
 	ret	z
 	ld	(iy+RING_BUFFER_HEAD), hl
 	jp	console.decrement_cursor
+	
+.check_console_key:
+	cp	a, $FC
+	jr	z, .handle_key_clear
 
+	cp	a, $FE
+	jr	z, .handle_key_enter
+	
+	cp	a, $F9
+	jr	z, .handle_key_right
+	
+	cp	a, $FA
+	jr	z, .handle_key_left
+	
+	cp	a, $FF
+	jr	z, .handle_key_del
+
+	cp	a, $F7
+	jr	z, .handle_key_mode
+	
+	or	a, a
+	ret	m
+	
 .handle_key_char:
 	ld	hl, console_flags
 ; reset flags
