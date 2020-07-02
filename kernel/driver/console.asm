@@ -304,6 +304,8 @@ console:
 	jr	z, .shutdown
 	ld	bc, .UNKNOW_INSTR
 	call	.glyph_string
+.finish_resume:
+	call	.new_line
 .clean_command:
 	ld	hl, (console_cursor_xy)
 	jp	.prompt
