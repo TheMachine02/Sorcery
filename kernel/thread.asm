@@ -99,8 +99,8 @@ define	klocal_timer_queue			$D00414
 define 	klocal_timer_size			$D00414
 define	klocal_timer_current			$D00415
 
-define	kthread_need_reschedule			$D00500
-define	kthread_current				$D00501
+define	kthread_need_reschedule			$D00000
+define	kthread_current				$D00001
 
 ; please respect these for kinterrupt optimizations ;
 assert kthread_current = kthread_need_reschedule + 1
@@ -688,9 +688,9 @@ kthread:
 	db	TASK_IDLE		; Status
 	db	SCHED_PRIO_MIN		; Special anyway
 	db	$FF			; quantum
-	dl	$D00000			; Stack limit
+	dl	$D00060			; Stack limit
 	dl	$D000F0			; Stack will be writed at first unschedule
-	dl	NULL			; No true heap for idle thread
+	dl	$D00043			; Boot/kernel  heap
 	dl	NULL			; No friend
 	db	NULL			; Errno
 	db	NULL			; Sig

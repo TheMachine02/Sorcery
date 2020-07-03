@@ -273,8 +273,8 @@ kscheduler:
 	inc	hl
 if CONFIG_USE_DYNAMIC_CLOCK
 	ld	a, $03
-	out0	($01),a
-	ld	($E00005),a
+	out0	(KERNEL_POWER_CPU_CLOCK),a
+	ld	(KERNEL_FLASH_CTRL),a
 end if
 	ld	de, (hl)
 .dispatch_thread:

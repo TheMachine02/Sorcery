@@ -29,7 +29,7 @@ kinit:
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 ; blank stack protector
-	ld	a, $00
+	ld	a, $60
 	out0	($3A), a
 	ld	a, $00
 	out0	($3B), a
@@ -67,9 +67,9 @@ kinit:
 ; most brutal is directly set to 6Mhz, we'll need to ramp up
 if CONFIG_USE_DYNAMIC_CLOCK
 	xor	a,a
-	out0	($01),a
+	out0	(KERNEL_POWER_CPU_CLOCK),a
 	ld	a, $01
-	ld	($E00005),a
+	ld	(KERNEL_FLASH_CTRL),a
 end if
 	ei
 	slp

@@ -1,12 +1,11 @@
-define	KERNEL_WATCHDOG_VIOLATION	$DE
 define	KERNEL_WATCHDOG_HEARTBEAT	$008000		; 1s heartbeat
 define	KERNEL_WATCHDOG_COUNTER		$F10000
 define	KERNEL_WATCHDOG_LD		$F10004
 define	KERNEL_WATCHDOG_RST		$F10008
 define	KERNEL_WATCHDOG_CTRL		$F1000C
-define	KERNEL_WATCHDOG_STATUS		$F10010
-define	KERNEL_WATCHDOG_CLR		$F10014
-define	KERNEL_WATCHDOG_ICR		$F10018
+define	KERNEL_WATCHDOG_ISR		$F10010
+define	KERNEL_WATCHDOG_ICR		$F10014
+define	KERNEL_WATCHDOG_ILR		$F10018
 define	KERNEL_WATCHDOG_REVISION	$F1001C
 define	KERNEL_WATCHDOG_BIT_ENABLE    0
 define	KERNEL_WATCHDOG_BIT_REBOOT    1
@@ -28,10 +27,10 @@ kwatchdog:
 	ldir
 ; now, reset the status register too
 	ex	de, hl
-	ld	l, KERNEL_WATCHDOG_CLR and $FF
+	ld	l, KERNEL_WATCHDOG_ICR and $FF
 	set	0, (hl)
 ; one shot interrupt
-	ld	l, KERNEL_WATCHDOG_ICR and $FF
+	ld	l, KERNEL_WATCHDOG_ILR and $FF
 	ld	(hl), 0
 
 .arm:
@@ -41,7 +40,7 @@ kwatchdog:
 	ret
 	
 .disarm:
-	ld	hl, KERNEL_WATCHDOG_CLR
+	ld	hl, KERNEL_WATCHDOG_ICR
 	set	0, (hl)
 ; and stop the timer
 	ld	l, KERNEL_WATCHDOG_CTRL and $FF

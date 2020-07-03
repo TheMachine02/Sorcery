@@ -38,8 +38,8 @@ knmi:
 ; perform NMI now that context has been saved
 ; restore CPU power state
 	ld	a, $03
-	ld	($E00005), a
-	out0	($01), a
+	ld	(KERNEL_FLASH_CTRL), a
+	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; reset major subsystem
 	call    kinterrupt.init
 	call	kvideo.init
@@ -47,7 +47,7 @@ knmi:
 ; now, process
 	ld	hl, KERNEL_WATCHDOG_CTRL
 	res	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
-	ld	l, KERNEL_WATCHDOG_STATUS and $FF
+	ld	l, KERNEL_WATCHDOG_ISR and $FF
 	ld	a, (hl)
 	or	a, a
 	jr	nz, .watchdog_violation
@@ -99,42 +99,7 @@ knmi:
 	retn
  
 .write_exception:
-; TODO : optimize this for size please
 ; bc is exception string
-	call	console.phy_write
-	
-	ld	hl, (ix+CONTEXT_FRAME_DE)
-	push	hl
-	ld	hl, (ix+CONTEXT_FRAME_BC)
-	push	hl
-	ld	hl, (ix+CONTEXT_FRAME_AF)
-	push	hl
-	ld	hl, .CONTEXT_FRAME_STR0
-	push	hl
-	ld	hl, console_string
-	push	hl
-	call	_boot_sprintf
-	ld	hl, 15
-	add	hl, sp
-	ld	sp, hl
-	ld	bc, console_string
-	call	console.phy_write
-	
-	ld	hl, (ix+CONTEXT_FRAME_IX)
-	push	hl
-	ld	hl, (ix+CONTEXT_FRAME_IY)
-	push	hl
-	ld	hl, (ix+CONTEXT_FRAME_HL)
-	push	hl
-	ld	hl, .CONTEXT_FRAME_STR1
-	push	hl
-	ld	hl, console_string
-	push	hl
-	call	_boot_sprintf
-	ld	hl, 15
-	add	hl, sp
-	ld	sp, hl
-	ld	bc, console_string
 	call	console.phy_write
 	
 	ld	hl, (ix+CONTEXT_FRAME_IR)
@@ -143,20 +108,28 @@ knmi:
 	push	hl
 	ld	hl, (ix+CONTEXT_FRAME_SP)
 	push	hl
-	ld	hl, .CONTEXT_FRAME_STR2
+	ld	hl, (ix+CONTEXT_FRAME_IX)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_IY)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_HL)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_DE)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_BC)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_AF)
+	push	hl
+	ld	hl, .CONTEXT_FRAME_STR
 	push	hl
 	ld	hl, console_string
 	push	hl
 	call	_boot_sprintf
-	ld	hl, 15
+	ld	hl, 33
 	add	hl, sp
 	ld	sp, hl
 	ld	bc, console_string
 	call	console.phy_write
-		
-	ld	bc, .CONTEXT_FRAME_STR3
-	call	console.phy_write
-	
 ; blit stack and correspondance ?
 
 ; wait any key
@@ -179,13 +152,10 @@ knmi:
 .MEMORY_EXCEPTION:
  db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m", 10,10,0
  
-.CONTEXT_FRAME_STR0:
- db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10, 0
-.CONTEXT_FRAME_STR1:
- db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10,0
-.CONTEXT_FRAME_STR2:
- db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10, 0
-.CONTEXT_FRAME_STR3:
+.CONTEXT_FRAME_STR:
+ db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10
+ db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10
+ db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10
  db "Stack frame :", 10, 0
  
 ; longjump and setjump context
