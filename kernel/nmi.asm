@@ -102,60 +102,60 @@ knmi:
 ; TODO : optimize this for size please
 ; bc is exception string
 	call	console.phy_write
-	ld	bc, .CONTEXT_FRAME_STR0
-	ld	a, 3
-.write_loop:
-	push	af
+	
+	ld	hl, (ix+CONTEXT_FRAME_DE)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_BC)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_AF)
+	push	hl
+	ld	hl, .CONTEXT_FRAME_STR0
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 15
+	add	hl, sp
+	ld	sp, hl
+	ld	bc, console_string
 	call	console.phy_write
-	pop	af
-	dec	a
-	jr	nz, .write_loop
+	
+	ld	hl, (ix+CONTEXT_FRAME_IX)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_IY)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_HL)
+	push	hl
+	ld	hl, .CONTEXT_FRAME_STR1
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 15
+	add	hl, sp
+	ld	sp, hl
+	ld	bc, console_string
 	call	console.phy_write
 	
-	ld	bc, (ix+CONTEXT_FRAME_AF)
-	ld	hl, 7*256+9
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_BC)
-	ld	hl, 7*256+23
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_DE)
-	ld	hl, 7*256+37
-	ld	a, 1
-	call	console.glyph_hex
-
-	ld	bc, (ix+CONTEXT_FRAME_HL)
-	ld	hl, 8*256+9
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_IY)
-	ld	hl, 8*256+23
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_IX)
-	ld	hl, 8*256+37
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_SP)
-	ld	hl, 9*256+9
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_PC)
-	ld	hl, 9*256+23
-	ld	a, 1
-	call	console.glyph_hex
-	
-	ld	bc, (ix+CONTEXT_FRAME_IR)
-	ld	hl, 9*256+37
-	ld	a, 1
-	call	console.glyph_hex
+	ld	hl, (ix+CONTEXT_FRAME_IR)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_PC)
+	push	hl
+	ld	hl, (ix+CONTEXT_FRAME_SP)
+	push	hl
+	ld	hl, .CONTEXT_FRAME_STR2
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 15
+	add	hl, sp
+	ld	sp, hl
+	ld	bc, console_string
+	call	console.phy_write
+		
+	ld	bc, .CONTEXT_FRAME_STR3
+	call	console.phy_write
 	
 ; blit stack and correspondance ?
 
@@ -180,11 +180,11 @@ knmi:
  db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m", 10,10,0
  
 .CONTEXT_FRAME_STR0:
- db "     af:           bc:           de:", 10, 0
+ db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10, 0
 .CONTEXT_FRAME_STR1:
- db "     hl:           ",$1B,"[35m","iy", $1B,"[39m", ":           ",$1B,"[35m", "ix", $1B,"[39m", ":", 10,0
+ db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10,0
 .CONTEXT_FRAME_STR2:
- db "     sp:           pc:           ",$1B,"[33m","ir", $1B,"[39m", ":", 10, 10, 0
+ db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10, 0
 .CONTEXT_FRAME_STR3:
  db "Stack frame :", 10, 0
  

@@ -113,6 +113,7 @@
 	add	hl, de
 	ret
 
+if CONFIG_USE_GLYPH_NUMBER = 1
 .glyph_hex:
 ; bc = number to blit in hex format [8 characters], a = color
 	call	.glyph_adress
@@ -206,6 +207,8 @@
  dl	100
  dl	10
  dl	1
+ 
+ end if
  
  ; font
  include 'gohufont.inc'

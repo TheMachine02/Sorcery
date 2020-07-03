@@ -13,8 +13,6 @@ define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	NULL 0
 define	KERNEL_DEV_NULL			$E40000
 
-define	kinit_load			$D0000A
-
 kinit:
 .reboot:
 ; boot 5.0.1 stupidity power ++
@@ -31,7 +29,7 @@ kinit:
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 ; blank stack protector
-	ld	a, $B0
+	ld	a, $00
 	out0	($3A), a
 	ld	a, $00
 	out0	($3B), a
@@ -59,7 +57,7 @@ kinit:
 	call	ramfs.mount
 	call	kwatchdog.init
 ; create init thread : ie, first program to run (/bin/init/)
-	ld	iy, console.no_init
+	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
 	jp	c, kinterrupt.nmi
 ; nice idle thread code
@@ -110,6 +108,7 @@ THREAD_INIT_TEST:
 	ld	a, SIGUSR1
 	call	ksignal.procmask_single
 	
+	call	console.run
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
 ; 	
@@ -191,9 +190,9 @@ TEST_THREAD_C:
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
 ; 	ld	hl, $AA55AA
-; 	ld	a, SIGUSR1
-; 	ld	c, 1
-; 	call	ksignal.kill
+	ld	a, SIGUSR1
+	ld	c, 1
+	call	ksignal.kill
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.unlock
 

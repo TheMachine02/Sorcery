@@ -44,7 +44,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jr	nz, .phy_write_loop
 .phy_new_line_string:
 	call	.phy_new_line
-	jr	.phy_write_address	
+	jr	.phy_write_address
 	
 .phy_special_ascii:
 	or	a, a

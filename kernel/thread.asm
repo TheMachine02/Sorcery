@@ -75,6 +75,8 @@ define	SCHED_PRIO_MIN				12
 define	NICE_PRIO_MIN				12
 define	NICE_PRIO_MAX				-12
 
+; D00100 to D00120 is scratch
+
 ; multilevel priority queue ;
 define	kthread_mqueue_0			$D00400
 define	kthread_mqueue_0_size			$D00400
@@ -97,8 +99,8 @@ define	klocal_timer_queue			$D00414
 define 	klocal_timer_size			$D00414
 define	klocal_timer_current			$D00415
 
-define	kthread_need_reschedule			$D00100
-define	kthread_current				$D00101
+define	kthread_need_reschedule			$D00500
+define	kthread_current				$D00501
 
 ; please respect these for kinterrupt optimizations ;
 assert kthread_current = kthread_need_reschedule + 1
@@ -686,7 +688,7 @@ kthread:
 	db	TASK_IDLE		; Status
 	db	SCHED_PRIO_MIN		; Special anyway
 	db	$FF			; quantum
-	dl	$D000B0			; Stack limit
+	dl	$D00000			; Stack limit
 	dl	$D000F0			; Stack will be writed at first unschedule
 	dl	NULL			; No true heap for idle thread
 	dl	NULL			; No friend

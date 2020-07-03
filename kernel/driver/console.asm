@@ -312,36 +312,24 @@ console:
 	call	.phy_write_byte
 	jr	.clean_command
 .uptime:
-; change this to load atomically the 32 bits register please
-	ld	bc, .UPTIME_STR
-	ld	hl, (console_cursor_xy)
+	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
 	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_MINUTE)
 	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_HOUR)
 	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_DAY)
 	push	hl
+	ld	hl, .UPTIME_STR
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 18
+	add	hl, sp
+	ld	sp, hl
+	ld	bc, console_string
 	call	.phy_write
-	pop	hl
-	ld	l, 9
-	ld	a, 4
-	ld	bc, (DRIVER_RTC_COUNTER_DAY)
-	call	.glyph_integer_format
-	pop	hl
-	ld	l, 22
-	ld	a, 2
-	ld	bc, (DRIVER_RTC_COUNTER_HOUR)
-	call	.glyph_integer_format
-	pop	hl
-	ld	l, 26
-	ld	a, 2
-	ld	bc, (DRIVER_RTC_COUNTER_MINUTE)
-	call	.glyph_integer_format
-	pop	hl
-	ld	l, 30
-	ld	a, 2
-	ld	bc, (DRIVER_RTC_COUNTER_SECOND)
-	call	.glyph_integer_format
-	ld	a, 10
-	call	.phy_write_byte
 	jp	.prompt
 
 .handle_key_del:
@@ -495,8 +483,9 @@ include 'console_glyph.asm'
  db 9, "s", "h", "u", "t", "d", "o", "w", "n", 0
  
 .UPTIME_STR:
- db "Up since 0000 day(s), 00h 00m 00s", 0
-
+; db "Up since 0000 day(s), 00h 00m 00s", 0
+ db "Up since %04d day(s), %02dh %02dm %02ds" , 10, 0
+ 
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# ", 0
  
@@ -505,7 +494,7 @@ include 'console_glyph.asm'
 	
 .SPLASH:
 db 64,65
-include 'logo.asm'
+include 'logo.inc'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0

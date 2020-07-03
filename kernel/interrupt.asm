@@ -71,21 +71,21 @@ end if
 	and	a, $F0
 	or	a, c
 	rra
-	call	c, KERNEL_IRQ_HANDLER_001
+	call	c, irq_handler_001
 	rra
-	call	c, KERNEL_IRQ_HANDLER_002
+	call	c, irq_handler_002
 	rra
-	call	c, KERNEL_IRQ_HANDLER_004
+	call	c, irq_handler_004
 	rra
-	call	c, KERNEL_IRQ_HANDLER_008
+	call	c, irq_handler_008
 	rra
-	call	c, KERNEL_IRQ_HANDLER_016
+	call	c, irq_handler_016
 	rra
-	call	c, KERNEL_IRQ_HANDLER_032
+	call	c, irq_handler_032
 	rra
-	call	c, KERNEL_IRQ_HANDLER_064
+	call	c, irq_handler_064
 	rra
-	call	c, KERNEL_IRQ_HANDLER_128
+	call	c, irq_handler_128
 	rr	a	; final one to set zero flag
 .irq_generic:
 	jr	z, .irq_generic_exit

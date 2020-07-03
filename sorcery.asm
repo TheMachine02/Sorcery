@@ -98,6 +98,7 @@ include	'kernel/signal.asm'
 include	'kernel/timer.asm'
 include	'kernel/mm.asm'
 include	'kernel/slab.asm'
+
 include	'kernel/nmi.asm'
 
 include	'kernel/arch/atomic.asm'
