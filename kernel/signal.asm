@@ -170,7 +170,13 @@ ksignal:
 	jr	nz, .kill_clean
 	ld	a, c
 	cp	a, SIGCONT
-	jp	z, .kill_signal_cont
+	jr	nz, .kill_generic
+.kill_signal_cont:
+	push	af
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_STOPPED
+	call	z, task_switch_running
+	pop	af
 .kill_generic:
 ; so now, I have iy = thread to signal, still the signal in c, data in de
 ; push the context on the thread stack
@@ -254,35 +260,28 @@ ksignal:
 	push	ix
 	ld	ix, _sighandler
 	jp	(ix)
-.kill_signal_cont:
-	push	af
-	ld	a, (iy+KERNEL_THREAD_STATUS)
-	cp	a, TASK_STOPPED
-	call	z, task_switch_running
-	pop	af
-	jp	.kill_generic
 .kill_signal_stop:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; if running or interruptible > switch to stopped
 ; if stopped, idle or zombie : don't touch
-	tst	11111110b
-	jp	nz, .kill_clean
+	tst	a, 11111110b
+	jr	nz, .kill_clean
 	dec	a	; interruptible
 	call	z, task_switch_stopped
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
-	jp	.kill_clean
+	jr	.kill_clean
 .kill_signal_kill:
 ; kill anything
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
-	jp	z, .kill_clean
+	jr	z, .kill_clean
 	or	a, a
 	call	nz, task_switch_running
 	ld	iy, (iy+KERNEL_THREAD_STACK)
 ; insert shamelessly thread exit routine
 	ld	hl, kthread.exit
 	ld	(iy+18), hl
-	jp	.kill_clean
+	jr	.kill_clean
 .kill_no_thread:
 	ld	a, ESRCH
 	jr	.kill_errno
