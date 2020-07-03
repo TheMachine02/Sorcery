@@ -452,9 +452,7 @@ console:
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
 	ldir
-; actually make hl zero, slower but save 1 byte
-	mlt	hl
-	ld	(console_cursor_xy), hl
+	ld	(console_cursor_xy), bc
 	
 .prompt:
 	ld	iy, console_stdin
