@@ -45,8 +45,6 @@ define	KERNEL_THREAD_JOINED			$35	; joined thread waiting for exit()
 define	KERNEL_THREAD_LIST_PRIORITY		$36
 define	KERNEL_THREAD_LIST			$37
 
-;define	KERNEL_THREAD_STACK_LIMIT		$3A
-;define	KERNEL_THREAD_STACK			$3D
 define	KERNEL_THREAD_IO			$3A
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
@@ -78,26 +76,11 @@ define	NICE_PRIO_MAX				-12
 ; D00100 to D00120 is scratch
 
 ; multilevel priority queue ;
-define	kthread_mqueue_0			$D00400
-define	kthread_mqueue_0_size			$D00400
-define	kthread_mqueue_0_current		$D00401
-define	kthread_mqueue_1			$D00404
-define	kthread_mqueue_1_size			$D00404
-define	kthread_mqueue_1_current		$D00405
-define	kthread_mqueue_2			$D00408
-define	kthread_mqueue_2_size			$D00408
-define	kthread_mqueue_2_current		$D00409
-define	kthread_mqueue_3			$D0040C
-define	kthread_mqueue_3_size			$D0040C
-define	kthread_mqueue_3_current		$D0040D
+define	kthread_mqueue_active			$D00400		; 16 bytes
 ; retire queue ;
-define	kthread_queue_retire			$D00410
-define	kthread_queue_retire_size		$D00410
-define	kthread_queue_retire_current		$D00411
+define	kthread_queue_retire			$D00410		; 4 bytes
 ; timer queue
-define	klocal_timer_queue			$D00414
-define 	klocal_timer_size			$D00414
-define	klocal_timer_current			$D00415
+define	klocal_timer_queue			$D00414		; 4 bytes
 
 define	kthread_need_reschedule			$D00000
 define	kthread_current				$D00001
@@ -108,14 +91,14 @@ assert kthread_need_reschedule and $FF = 0
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
-define	kthread_pid_map			$D00200
+define	kthread_pid_map				$D00200
 
 kthread:
 .init:
 	di
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	(hl), l
-	ld	de, kthread_mqueue_0 + 1
+	ld	de, kthread_mqueue_active + 1
 	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
 	ldir
 	ld	hl, kthread_need_reschedule
@@ -242,7 +225,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_PPID), a
 ; setup the queue
 ; insert the thread to the ready queue
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call   kqueue.insert_head
 ; setup the stack \o/
@@ -490,7 +473,7 @@ kthread:
 ; need to free IRQ locked and mutex locked to thread
 ; TODO ;
 ; remove from active
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 ; find next to schedule
@@ -706,7 +689,7 @@ task_yield = kthread.yield
 ; need to be fully atomic
 task_switch_uninterruptible:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_UNINTERRUPTIBLE
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
@@ -717,7 +700,7 @@ task_switch_uninterruptible:
 ; need to be fully atomic
 task_switch_zombie:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_ZOMBIE
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
@@ -728,7 +711,7 @@ task_switch_zombie:
 ; need to be fully atomic
 task_switch_stopped:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
@@ -761,7 +744,7 @@ task_switch_sleep_ms:
 task_switch_interruptible:
 ; actual overhead : only jr
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF

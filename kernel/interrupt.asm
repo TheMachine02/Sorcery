@@ -197,7 +197,7 @@ kscheduler:
 ; lower thread priority and move queue
 .schedule_unpromote:
 	dec	hl
-	ld	de, kthread_mqueue_0
+	ld	de, kthread_mqueue_active
 	ld	e, (hl)
 	ld	a, e
 	add	a, QUEUE_SIZE
@@ -233,9 +233,6 @@ kscheduler:
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	bc, (hl)
-; strange, maybe fix ?
-;	ld	l, KERNEL_WATCHDOG_CLR and $FF
-;	ld	(hl), 0
 	ld	l, KERNEL_WATCHDOG_RST and $FF
 	ld	(hl), $B9
 	inc	hl
@@ -251,7 +248,7 @@ kscheduler:
 .dispatch:
 	ld	bc, QUEUE_SIZE
 	xor	a, a
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	or	a, (hl)
 	jr	nz, .dispatch_queue
 	add	hl, bc

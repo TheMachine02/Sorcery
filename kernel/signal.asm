@@ -346,7 +346,7 @@ _sighandler:
 _sighandler_stop:
 	di
 	call	task_switch_stopped
-	ld	hl, 9
+	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
 ; 	tstei

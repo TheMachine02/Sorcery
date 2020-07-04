@@ -33,7 +33,8 @@ flash:
 	out0	($06), a
 	ld	a, $88
 	out0	($24), a
-	ret 
+	ret
+
 .phy_unlock:
 	ld	a, $8C
 	out0	($24), a

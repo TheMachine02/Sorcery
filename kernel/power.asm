@@ -19,7 +19,6 @@ kpower:
 
 .battery_charging:
 	in0	a, (KERNEL_POWER_CHARGING)
-	or	a, a
 	ret
 
 .cycle_off:
@@ -125,7 +124,7 @@ kpower:
 	ld	b,$FF
 .cycle_wait_busy_01:
 	djnz	.cycle_wait_busy_01
-	ld	a, $03
+;	ld	a, $03
 	ld	($E00005), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?
@@ -171,5 +170,6 @@ kpower:
 ; 	ld	a, $DC
 ; 	call	$000640
 ; 	cp	a, $35
+	call	kwatchdog.arm
 	ei
 	ret
