@@ -102,20 +102,6 @@ console:
 	call	z, .glyph_char
 	
 	jr	.run_loop
-	
-.shift_up:
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	or	a, a
-	sbc	hl, hl
-	add	hl, de
-	ld	bc, 11*320
-	add	hl, bc
-	ld	bc, 76800 - 11*320
-	ldir
-	ld	hl, $E40000
-	ld	bc, 11*320
-	ldir
-	ret
 
 .blit:
 ; hl,e ; bc is data as hsize,vsize,data

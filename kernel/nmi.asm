@@ -78,6 +78,11 @@ knmi:
 ; we should be able to recover here ;
 	jp	kinit.reboot
 
+.deadlock:
+	ld	bc, .THREAD_DEADLOCK
+	call	.write_exception
+	jp	kinit.reboot
+
 .longjump:
 ; restore context
 	ld	hl, (ix+CONTEXT_FRAME_IR)
@@ -145,14 +150,17 @@ knmi:
 	res	2, (hl)
 	ret
 
+.THREAD_DEADLOCK:	
+ db db "System exception : ", $1B,"[31m", "system deadlock", $1B,"[39m",0
 .WATCHDOG_EXCEPTION:
- db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m", 10,10,0
+ db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m",0
 .STACKOVERFLOW_EXCEPTION:
- db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m", 10,10,0
+ db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m",0
 .MEMORY_EXCEPTION:
- db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m", 10,10,0
+ db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m",0
  
 .CONTEXT_FRAME_STR:
+ db 10,10
  db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10
  db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10
  db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10

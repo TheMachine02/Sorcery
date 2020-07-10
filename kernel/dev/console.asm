@@ -237,8 +237,19 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	cp	a, CONSOLE_CURSOR_MAX_ROW
 	ret	nz
 	dec	(hl)
+.phy_shift_screen:
 	push	bc
-	call	.shift_up
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
+	ld	bc, 11*320
+	add	hl, bc
+	ld	bc, 76800 - 11*320
+	ldir
+	ld	hl, $E40000
+	ld	bc, 11*320
+	ldir
 	pop	bc
 	ret
 	

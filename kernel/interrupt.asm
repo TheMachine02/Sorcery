@@ -262,7 +262,7 @@ kscheduler:
 	jr	nz, .dispatch_queue
 	add	hl, bc
 	or	a, (hl)
-	jp	z, kinterrupt.nmi
+	jp	z, knmi.deadlock
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
 	jr	.dispatch_thread

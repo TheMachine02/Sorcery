@@ -1,6 +1,5 @@
 define	KERNEL_FLASH_MAPPING		$E00003
 define	KERNEL_FLASH_CTRL		$E00005
-define	KERNEL_FLASH_WAIT_STATE		3
 define	KERNEL_FLASH_RAM_CACHE		$D00000
 
 define	KERNEL_FLASH_SIZE		$400000
@@ -19,7 +18,7 @@ flash:
 ; set flash wait state
 	di
 	ld	hl, KERNEL_FLASH_CTRL
-	ld	(hl), KERNEL_FLASH_WAIT_STATE
+	ld	(hl), $03
 	ld	l, KERNEL_FLASH_MAPPING and $FF
 	ld	(hl), $06
 ; lock it on init
@@ -68,6 +67,20 @@ flash:
 .phy_read_inode:
 	ret
 
+
+	
+.phy_write:	
+; write hl to flash for bc bytes
+	push	hl
+	ld	hl, $0AAA
+	ld	(hl), l
+	ld	hl, $0555
+	ld	(hl), l
+	ld	hl, $0AAA
+	ld	(hl), $A0
+	pop	hl
+	
+	
 	
 	
 ; _flash_write:
