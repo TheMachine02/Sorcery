@@ -62,24 +62,28 @@ knmi:
 	jp	kinit.reboot
 	
 .watchdog_violation:
-	ld	bc, .WATCHDOG_EXCEPTION
+	ld	hl, .WATCHDOG_EXCEPTION
+	ld	bc, 47
 	call	.write_exception
 	jp	kinit.reboot
 
 .stack_overflow:
-	ld	bc, .STACKOVERFLOW_EXCEPTION
+	ld	hl, .STACKOVERFLOW_EXCEPTION
+	ld	bc, 43
 	call	.write_exception
 ; we should be able to recover here ;
 	jp	kinit.reboot
 
 .memory_protection:
-	ld	bc, .MEMORY_EXCEPTION
+	ld	hl, .MEMORY_EXCEPTION
+	ld	bc, 46
 	call	.write_exception
 ; we should be able to recover here ;
 	jp	kinit.reboot
 
 .deadlock:
-	ld	bc, .THREAD_DEADLOCK
+	ld	hl, .THREAD_DEADLOCK
+	ld	bc, 44
 	call	.write_exception
 	jp	kinit.reboot
 
@@ -133,7 +137,8 @@ knmi:
 	ld	hl, 33
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, console_string
+	ld	hl, console_string
+	ld	bc, 179
 	call	console.phy_write
 ; blit stack and correspondance ?
 
@@ -151,13 +156,13 @@ knmi:
 	ret
 
 .THREAD_DEADLOCK:	
- db db "System exception : ", $1B,"[31m", "system deadlock", $1B,"[39m",0
+ db "System exception : ", $1B,"[31m", "system deadlock", $1B,"[39m"
 .WATCHDOG_EXCEPTION:
- db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m",0
+ db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m"
 .STACKOVERFLOW_EXCEPTION:
- db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m",0
+ db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m"
 .MEMORY_EXCEPTION:
- db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m",0
+ db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m"
  
 .CONTEXT_FRAME_STR:
  db 10,10

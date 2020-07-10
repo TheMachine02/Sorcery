@@ -21,14 +21,23 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 
 .phy_write:
 ; write a zero terminated string @bc to the /dev/console special file
+	push	hl
+	ex	(sp), ix
+	call	.phy_write_ex
+	pop	ix
+	ret
+
+.phy_write_ex:
 	ld	iy, console_dev
+	bit	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
+	jr	nz, .phy_escape_sequence_ex
 ; find address of the glyph on the screen
 .phy_write_address:
 	ld	hl, (iy+CONSOLE_CURSOR)
 	call	.glyph_adress
 .phy_write_loop:
-	ld	a, (bc)
-	inc	bc
+	ld	a, (ix+0)
+	inc	ix
 	cp	a, $20
 	jr	c, .phy_special_ascii
 ; write the char read
@@ -40,34 +49,41 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	lea	hl, iy+CONSOLE_CURSOR_COL
 	inc	(hl)
 	ld	a, CONSOLE_CURSOR_MAX_COL
-	cp	a, (hl)
+	cpi
+	ret	po
 	jr	nz, .phy_write_loop
-.phy_new_line_string:
 	call	.phy_new_line
+	jr	.phy_write_address
+
+.phy_new_line_special:
+	call	.phy_new_line
+	cpi
+	ret	po
 	jr	.phy_write_address
 	
 .phy_special_ascii:
-	or	a, a
-	ret	z
 	cp	a, 10
-	jr	z, .phy_new_line_string
+	jr	z, .phy_new_line_special
 	cp	a, $1B
 	jr	nz, .phy_write_loop
 	
 ; process an escape sequence sequentially, from string
-.phy_escape_sequence_string:
+.phy_escape_sequence:
 	set	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
+	cpi
+	ret	po
+.phy_escape_sequence_ex:
 	ld	de, (iy+CONSOLE_ESC_OFFSET)
 	lea	hl, iy+CONSOLE_ESC_BUFFER
 	add	hl, de
+	ex	de, hl
+	lea	hl, ix+0
 .phy_escape_parse:
-	ld	a, (bc)
-	inc	bc
-	or	a, a
-	ret	z
-	ld	(hl), a
-	inc	hl
+	inc	ix
 	inc	(iy+CONSOLE_ESC_OFFSET)
+	ld	a, (hl)
+	ldi
+	jp	po, .phy_single_escape
 	cp	a, $5B
 	jr	z, .phy_escape_parse
 	cp	a, $40
@@ -75,23 +91,18 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jr	c, .phy_escape_parse
 	call	.phy_escape_process
 	jr	.phy_write_address
-	
-; process the sequence by byte, jump to by the phy_write_char if CONSOLE_FLAGS_ESC is set
-.phy_escape_sequence_byte:
-	ld	de, (iy+CONSOLE_ESC_OFFSET)
-	lea	hl, iy+CONSOLE_ESC_BUFFER
-	add	hl, de
-	ld	(hl), a
-	inc	(iy+CONSOLE_ESC_OFFSET)
-	cp	a, $40
-	ret	c
+
+.phy_single_escape:
 	cp	a, $5B
 	ret	z
-
+	cp	a, $40
+	ret	c
+	
 ; actually apply a escape sequence
 .phy_escape_process:
+	ld	de, 0
 	res	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
-	ld	(iy+CONSOLE_ESC_OFFSET), 0
+	ld	(iy+CONSOLE_ESC_OFFSET), e
 	lea	hl, iy+CONSOLE_ESC_BUFFER
 ; read the type of the escape sequence
 	ld	a, (hl)
@@ -252,21 +263,3 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ldir
 	pop	bc
 	ret
-	
-; write a single byte a to the /dev/console special file
-.phy_write_byte:
-	ld	iy, console_dev
-	bit	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
-	jp	nz, .phy_escape_sequence_byte
-; special byte ?
-	cp	a, 10
-	jr	z, .phy_new_line
-; write it as a single normal byte
-	call	.glyph_char
-; update cursor now
-	lea	hl, iy+CONSOLE_CURSOR_COL
-	inc	(hl)
-	ld	a, CONSOLE_CURSOR_MAX_COL
-	cp	a, (hl)
-	ret	nz
-	jr	.phy_new_line

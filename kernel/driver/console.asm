@@ -39,18 +39,20 @@ console:
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
-	ld	bc, .SPLASH_NAME
+	ld	bc, 38
+	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
 .INIT_MESSAGE:
  db "Running on ez80 at 48Mhz", 10
  db "Watchdog initialised with heartbeat 1s", 10
  db "Welcome to Sorcery", 10
- db "No init found !", 10, 0
+ db "No init found !", 10
  
 .no_init:
 ; need to lock screen for us
-	ld	bc, .INIT_MESSAGE
+	ld	bc, 99
+	ld	hl, .INIT_MESSAGE
 	call	.phy_write
 
 .run:
@@ -175,31 +177,9 @@ console:
 	ld	a, iyl
 	jr	.back
 
-; console cursor routine ;
-
-.decrement_cursor:
-	ld	hl, (console_cursor_xy)
-	dec	l
-	jp	p, .no_prev_line
-	dec	h
-	ret	m
-	ld	l, CONSOLE_GLYPH_X - 1
-.no_prev_line:
-	ld	(console_cursor_xy), hl
-	ret	
-	
-.increment_cursor:
-	ld	hl, (console_cursor_xy)
-	ld	a, l
-	cp	a, CONSOLE_GLYPH_X-1
-;	jr	z, .new_line_entry
-	inc	l
-	ld	(console_cursor_xy), hl
-	ret
-
 .handle_key_enter:
-	ld	a, 10
-	call	.phy_write_byte
+	ld	iy, console_dev
+	call	.phy_new_line
 	ld	iy, console_stdin
 	ld	de, console_string
 	ld	bc, 0
@@ -233,7 +213,8 @@ console:
 	ld	hl, .SHUTDOWN
 	call	.check_builtin
 	jr	z, .shutdown
-	ld	bc, .UNKNOW_INSTR
+	ld	hl, .UNKNOW_INSTR
+	ld	bc, 18
 	call	.phy_write
 .clean_command:
 	jp	.prompt
@@ -294,8 +275,8 @@ console:
 	pop	hl
 	dec	a
 	jr	nz, .color_copy_block
-	ld	a, 10
-	call	.phy_write_byte
+	ld	iy, console_dev
+	call	.phy_new_line
 	jr	.clean_command
 .uptime:
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
@@ -314,7 +295,8 @@ console:
 	ld	hl, 18
 	add	hl, sp
 	ld	sp, hl
-	ld	bc, console_string
+	ld	hl, console_string
+	ld	bc, 34
 	call	.phy_write
 	jp	.prompt
 
@@ -327,8 +309,9 @@ console:
 ; backspace behaviour
 	call	ring_buffer.remove
 	ret	z
-	ld	hl, (console_cursor_xy)
-	call	console.decrement_cursor
+	ld	hl, .KEY_LEFT_CSI
+	ld	bc, 3
+	call	.phy_write
 
 .refresh_line:
 ; bc = string, hl xy
@@ -397,11 +380,12 @@ console:
 	ld	l, a
 	add	hl, bc
 	ld	a, (hl)
-	push	af
+	push	hl
 	call	ring_buffer.write
-	pop	af
 ; putchar(a)
-	jp	.phy_write_byte
+	pop	hl
+	ld	bc, 1
+	jp	.phy_write
 
 .handle_key_up:
 	ret
@@ -412,12 +396,12 @@ console:
 	ret	z
 	call	ring_buffer.increment
 	ld	(iy+RING_BUFFER_HEAD), hl
-	ld	bc, .KEY_RIGHT_CSI
+	ld	hl, .KEY_RIGHT_CSI
+	ld	bc, 3
 	jp	.phy_write
-;	jp	console.increment_cursor
 
 .KEY_RIGHT_CSI:
- db $1B, "[C",0
+ db $1B, "[C"
 
 .handle_key_left:
 	call	ring_buffer.decrement
@@ -425,11 +409,12 @@ console:
 	or	a, a
 	ret	z
 	ld	(iy+RING_BUFFER_HEAD), hl
-	ld	bc, .KEY_LEFT_CSI
+	ld	hl, .KEY_LEFT_CSI
+	ld	bc, 3
 	jp	.phy_write
 	
 .KEY_LEFT_CSI:
- db $1B, "[D",0	
+ db $1B, "[D"
 	
 .handle_key_clear:
 .clear:
@@ -445,7 +430,8 @@ console:
 .prompt:
 	ld	iy, console_stdin
 	call	ring_buffer.flush
-	ld	bc, .PROMPT
+	ld	bc, 28
+	ld	hl, .PROMPT
 ; fall into phy_write
 
 include	'../dev/console.asm'
@@ -473,7 +459,7 @@ include 'console_glyph.asm'
  db "Up since %04d day(s), %02dh %02dm %02ds" , 10, 0
  
 .PROMPT:
- db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# ", 0
+ db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# "
  
 .BLINK:
  db "_"
@@ -484,7 +470,7 @@ include 'logo.inc'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
- db $1B, "[2;10H", "Sorcery-0.0.1a-slp-d738d5b", $1B, "[5;H", 0
+ db $1B, "[2;10H", "Sorcery-0.0.1a-slp-d738d5b", $1B, "[5;H"
  
 .PALETTE:
 ; default = foreground = \e[39m
@@ -518,7 +504,7 @@ include 'logo.inc'
  dw $EDA0 ;  // 07 :: rgba(220,111,0,255)
 
 .UNKNOW_INSTR:
- db "command not found", 10,0
+ db "command not found", 10
 
 .KEYMAP_NO_MOD:
  db ' ', ':', '?', 'x', 'y', 'z', '"', 's', 't', 'u', 'v', 'w', 'n', 'o', 'p', 'q', 'r', 'i', 'j', 'k', 'l', 'm'
