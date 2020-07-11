@@ -66,9 +66,6 @@ org $D18800
 ; + set status as uninterruptible maybe ?
 	di
 	rsmix
-	push	hl
-	call	kwatchdog.disarm
-	pop	hl
 	call	.phy_unlock
 ; set de
 	ex	de, hl
