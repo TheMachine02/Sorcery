@@ -40,9 +40,8 @@ kinit:
 ; memory init ;
 	call	kmm.init
 	call	kslab.init
-; device init ;
 	call	flash.init
-	call	ramfs.init
+; 	call	ramfs.init
 ; timer and interrupts ;
 	call	klocal_timer.init
 	call	kinterrupt.init
@@ -51,10 +50,11 @@ kinit:
 	call	kvideo.init
 	call	kkeyboard.init
 	call	krtc.init
+; device init ;
 	call	console.init
 ; mount root ;
-	ld	bc, .root_path
-	call	ramfs.mount
+; 	ld	bc, .root_path
+; 	call	ramfs.mount
 	call	kwatchdog.init
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
@@ -182,8 +182,8 @@ TEST_THREAD_C:
 .spin:
 ; we can sleep now ! (only 8 bits value for now)
 	
-	ld	hl, 2000	; 2000 ms is nice
-	call	kthread.sleep
+;	ld	hl, 2000	; 2000 ms is nice
+;	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF
 ; need to catch rst 00h for that !
@@ -195,6 +195,10 @@ TEST_THREAD_C:
 	call	ksignal.kill
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.unlock
+	ld	bc, 65536
+	ld	hl, $E40000
+	ld	de, $3B0000
+	call	flash.phy_write
 
 	jr	.spin
 	pop ix

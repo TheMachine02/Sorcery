@@ -1,8 +1,5 @@
-
-
-- executable format
-- memory model / optimized paging, cache, slab allocator
-- filesystem
-
-- libc
-
+VFS
+FAT 12
+Device flash and console
+leaf load
+library load
