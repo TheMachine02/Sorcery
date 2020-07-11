@@ -16,13 +16,13 @@ console:
 
 .init:
 	di
-	ld	de, DRIVER_VIDEO_PALETTE
-	ld	hl, .PALETTE
-	ld	bc, 36
-	ldir
 	ld	hl, $E40000
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	bc, 76800
+	ldir
+	ld	hl, .PALETTE
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	c, 36
 	ldir
 	ld	hl, console_color
 	ld	(hl), $01
@@ -39,7 +39,7 @@ console:
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
-	ld	bc, 38
+	ld	c, 38
 	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
