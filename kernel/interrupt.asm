@@ -27,9 +27,8 @@ kinterrupt:
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and $FF
-	ld	a, e
-	or	a, KERNEL_INTERRUPT_ON
-	ld	e, a
+; just use default
+	ld	de, $19
 	ld	(hl), de
 if CONFIG_USE_CACHED_ISR = 1
 	ld	hl, interrupt_flash_base
@@ -72,21 +71,21 @@ end if
 	and	a, $F0
 	or	a, c
 	rra
-	call	c, KERNEL_IRQ_HANDLER_001
+	call	c, irq_handler_001
 	rra
-	call	c, KERNEL_IRQ_HANDLER_002
+	call	c, irq_handler_002
 	rra
-	call	c, KERNEL_IRQ_HANDLER_004
+	call	c, irq_handler_004
 	rra
-	call	c, KERNEL_IRQ_HANDLER_008
+	call	c, irq_handler_008
 	rra
-	call	c, KERNEL_IRQ_HANDLER_016
+	call	c, irq_handler_016
 	rra
-	call	c, KERNEL_IRQ_HANDLER_032
+	call	c, irq_handler_032
 	rra
-	call	c, KERNEL_IRQ_HANDLER_064
+	call	c, irq_handler_064
 	rra
-	call	c, KERNEL_IRQ_HANDLER_128
+	call	c, irq_handler_128
 	rr	a	; final one to set zero flag
 .irq_generic:
 	jr	z, .irq_generic_exit
@@ -145,11 +144,13 @@ kscheduler:
 	ld	a, (hl)
 	sub	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
-	jp	p, $+5
-	xor	a, a
-	cp	a, SCHED_PRIO_MIN+1
-	jr	c, $+4
-	ld	a, SCHED_PRIO_MIN
+	cp	a, SCHED_PRIO_MIN
+	jr	c, .schedule_clamp_prio
+	rla
+	sbc	a, a
+	cpl
+	and	SCHED_PRIO_MIN
+.schedule_clamp_prio:
 	ld	(hl), a
 	inc	hl
 	jr	.schedule_give_quanta
@@ -175,21 +176,6 @@ kscheduler:
 	djnz	.local_timer_queue
 .local_timer_exit:
 
-if CONFIG_USE_DOWNCLOCKING
-; proof-of-concept
-.clock_state:
-	ld	a, (kcstate_timer)
-	inc	a
-	cp	a, KERNEL_CSTATE_SAMPLING
-	jr	nz, .clock_state_exit
-	call	kcstate.idle_adjust
-	xor	a, a
-	sbc	hl, hl
-	ld	(KERNEL_THREAD+KERNEL_THREAD_TIME), hl
-.clock_state_exit:
-	ld	(kcstate_timer), a
-end if
-
 .schedule_check_quanta:
 ; if we need to reschedule, skip this phase entirely ;
 	ld	hl, kthread_need_reschedule
@@ -211,25 +197,26 @@ end if
 ; lower thread priority and move queue
 .schedule_unpromote:
 	dec	hl
-	ld	de, kthread_mqueue_0
+	ld	de, kthread_mqueue_active
 	ld	e, (hl)
 	ld	a, e
 	add	a, QUEUE_SIZE
 	add	a, (iy+KERNEL_THREAD_NICE)
-	jp	p, $+5
-	xor	a, a
-	cp	a, SCHED_PRIO_MIN+1
-	jr	c, $+4
-	ld	a, SCHED_PRIO_MIN
+	cp	a, SCHED_PRIO_MIN
+	jr	c, .schedule_move_queue
+	rla
+	sbc	a, a
+	cpl
+	and	SCHED_PRIO_MIN
+.schedule_move_queue:
 	ld	(hl), a
 	inc	hl
-	cp	a, e
-	jr	z, .schedule_give_quanta
 	ex	de, hl
 ; we are the head of our queue, since we were executing ;
 	call	kqueue.remove_head
 	ld	l, a
 	call	kqueue.insert_tail
+	ld	a, l
 	ex	de, hl
 .schedule_give_quanta:
 ; exponential quantum
@@ -246,7 +233,7 @@ end if
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	bc, (hl)
-	ld	l, KERNEL_WATCHDOG_RST mod 256
+	ld	l, KERNEL_WATCHDOG_RST and $FF
 	ld	(hl), $B9
 	inc	hl
 	ld	(hl), $5A
@@ -261,7 +248,7 @@ end if
 .dispatch:
 	ld	bc, QUEUE_SIZE
 	xor	a, a
-	ld	hl, kthread_mqueue_0
+	ld	hl, kthread_mqueue_active
 	or	a, (hl)
 	jr	nz, .dispatch_queue
 	add	hl, bc
@@ -275,12 +262,17 @@ end if
 	jr	nz, .dispatch_queue
 	add	hl, bc
 	or	a, (hl)
-	jp	z, kinterrupt.nmi
+	jp	z, knmi.deadlock
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
 	jr	.dispatch_thread
 .dispatch_queue:
 	inc	hl
+if CONFIG_USE_DYNAMIC_CLOCK
+	ld	a, $03
+	out0	(KERNEL_POWER_CPU_CLOCK),a
+	ld	(KERNEL_FLASH_CTRL),a
+end if
 	ld	de, (hl)
 .dispatch_thread:
 ; iy is previous thread, ix is the new thread, let's switch them
@@ -307,8 +299,7 @@ end if
 	ld	(kthread_current), hl	; mark new current
 	ld	c, KERNEL_THREAD_STACK_LIMIT
 	add	hl, bc
-;	ld	bc, $00033A
-	ld	b, $03
+	ld	bc, $00033A
 	otimr
 	ld	hl, (hl)
 	ld	sp, hl

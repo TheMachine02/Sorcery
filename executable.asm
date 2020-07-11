@@ -1,14 +1,12 @@
 include 'include/ez80.inc'
-include 'include/asm-elf.inc'
+include 'include/asm-leaf.inc'
 
-library "libtest.so"
-export draw_black
+LEAF.settings.flags = LF_STATIC
 
-elf ELF_EXEC
-
-section .text, ELF_RW_INSTR
+virtual	$D0000
+section '.text' executable
+entry loop
 loop:
-	call	draw_black
 	ld	de, 0
 	ld	b, 4
 	ld	hl, example
@@ -57,18 +55,22 @@ crc16_dnp:
 	ld	d, e
 	ld	e, a
 	ret
-	
-section .bss, ELF_RW_ZERO
+
+virtual	$D1000
+section '.bss' writeable
 free:
 rb	8192
 
-section .data, ELF_RW_DATA
+virtual	$D2000
+section '.data' writeable
 example:
  db	0x00, 0x01, 0x02, 0x03	; 0x40A7
 example2:
  db	0xA5, 0x5A, 0x42, 0x42	; 0xDDC5
+ dl 3
  
-section .rodata, ELF_RO_DATA
+virtual	$D3000
+section '.rodata' readable
 crc16_dnp_table:
  dw	0x0000, 0x365e, 0x6cbc, 0x5ae2, 0xd978, 0xef26, 0xb5c4, 0x839a
  dw	0xff89, 0xc9d7, 0x9335, 0xa56b, 0x26f1, 0x10af, 0x4a4d, 0x7c13

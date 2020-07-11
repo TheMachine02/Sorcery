@@ -7,31 +7,27 @@ define	KERNEL_IRQ_LCD			32
 define	KERNEL_IRQ_RTC			64
 define	KERNEL_IRQ_USB			128
 
-define	KERNEL_IRQ_HANDLER   		$D00110
-define	KERNEL_IRQ_HANDLER_001		$D00110
-define	KERNEL_IRQ_HANDLER_002		$D00114
-define	KERNEL_IRQ_HANDLER_004		$D00118
-define	KERNEL_IRQ_HANDLER_008		$D0011C
-define	KERNEL_IRQ_HANDLER_016		$D00120
-define	KERNEL_IRQ_HANDLER_032		$D00124
-define	KERNEL_IRQ_HANDLER_064		$D00128
-define	KERNEL_IRQ_HANDLER_128		$D0012C
+define	irq_handler   		$D00140
+define	irq_handler_001		$D00140
+define	irq_handler_002		$D00144
+define	irq_handler_004		$D00148
+define	irq_handler_008		$D0014C
+define	irq_handler_016		$D00150
+define	irq_handler_032		$D00154
+define	irq_handler_064		$D00158
+define	irq_handler_128		$D0015C
 
 kirq:
 .init:
 	di
-	ld	hl, KERNEL_IRQ_HANDLER
-	ld	bc, 4
-	ld 	de, .handler
-	ld	a, 8
+	ld	hl, irq_handler
+	ld 	de, 4
+	ld	b, 8
+	ld	a, $C9
 .init_handler:
-	ld	(hl), de
-	add	hl, bc
-	dec	a
-	jr	nz, .init_handler
-	ret
-
-.handler:
+	ld	(hl), a
+	add	hl, de
+	djnz	.init_handler
 	ret
 
 .free:
@@ -39,25 +35,12 @@ kirq:
 	call	.disable
 	push	de
 	call    .extract_line
-	ld	de, .handler
-	ld	(hl), de
+	ld	a, $C9
+	ld	(hl), a
 	ex	de, hl
 	pop	de
 	ret
-    
-.request:
-; a = IRQ, hl = interrupt routine
-; check the interrupt routine is in *RAM*
-	push	de
-	call	.extract_line
-	ld	(hl), $C3
-	inc	hl
-	ld	(hl), de
-	ex	de, hl
-	pop	de
-; register the handler then enable the IRQ    
-	jr	.enable
-    
+        
 .extract_line:
 	push	bc
 	push	af
@@ -72,17 +55,28 @@ kirq:
 	add	a, a
 	sbc	hl, hl
 	ld	l, a
-	ld	bc, KERNEL_IRQ_HANDLER
+	ld	bc, irq_handler
 	add	hl, bc
 	pop	af
 	pop	bc
 ; hl = line, de = old hl, bc safe, af safe
 	ret
 
+.request:
+; a = IRQ, hl = interrupt routine
+; check the interrupt routine is in *RAM*
+	push	de
+	call	.extract_line
+	ld	(hl), $C3
+	inc	hl
+	ld	(hl), de
+	ex	de, hl
+	pop	de
+; register the handler then enable the IRQ    
+
 .enable:
 	push	hl
 	push	bc
-	push	af
 ; enable a specific IRQ or a specific IRQ combinaison
 	ld	c, a
 	rra
@@ -92,28 +86,29 @@ kirq:
 ; this is the second byte for interrupt mask
 	ld	a, c
 	and	00001111b
-	ld	c, a
 ; critical section ;
-	tstdi
+	ld	hl, i
+	push	af
+	di
 ; this is the first byte
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
-	ld	a, (hl)
-	or	a, c
+	or	a, (hl)
 	ld	(hl), a
 	inc	hl
 	ld	a, (hl)
 	or	a, b
 	ld	(hl), a
-	tstei
 	pop	af
+	ld	a, c
 	pop	bc
 	pop	hl
+	ret	po
+	ei	
 	ret
     
 .disable:
 	push	hl
 	push	bc
-	push	af
 ; enable a specific IRQ
 	ld	c, a
 	rra
@@ -125,20 +120,22 @@ kirq:
 	ld	a, c
 	cpl
 	and	00001111b
-	ld	c, a
 ; critical section ;
-	tstdi
+	ld	hl, i
+	push	af
+	di
 ; this is the first byte
 	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
-	ld	a, (hl)
-	and	a, c
+	and	a, (hl)
 	ld	(hl), a
 	inc	hl
 	ld	a, (hl)
 	and	a, b
 	ld	(hl), a
-	tstei
 	pop	af
+	ld	a, c
 	pop	bc
 	pop	hl
+	ret	po
+	ei
 	ret

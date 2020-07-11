@@ -2,86 +2,17 @@
 ; 4 bytes data, mask
 
 ksignal:
-; void	handler(int sig, void *ucontext)
-; sp+6 *ucontext
-; sp+3 sig 
-; sp is return
-.handler:
-; this is called by the thread
-; hl = data, a = signal code, iy is thread
-; stack is context to restore
-; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
-	ld	(iy+KERNEL_THREAD_EV_SIG), a
-	ld	(iy+KERNEL_THREAD_EV_SIG_POINTER), hl
-	ld	c, a
-	ld	b, 3
-	mlt	bc
-	ld	hl, .HANDLER_JUMP-3
-	add	hl, bc
-	ld	ix, (hl)
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	jp	(ix)
-
-.handler_stop:
-	di
-	call	task_switch_stopped
-	ld	hl, 9
-	add	hl, sp
-	ld	sp, hl
-	tstei
-	pop	af
-	pop	de
-	pop	bc
-	pop	hl
-	pop	iy
-	pop	ix
-	jp	task_yield
-		
-.handler_return:
-	ret
-
-.HANDLER_JUMP:
- dl	kthread.exit
- dl	kthread.exit
- dl	kthread.core
- dl	kthread.core
- dl	kthread.core
- dl	kthread.core
- dl	.handler_return
- dl	kthread.core
- dl	kthread.exit
- dl	kthread.exit
- dl	kthread.core
- dl	kthread.exit
- dl	kthread.exit
- dl	kthread.exit
- dl	kthread.exit
- dl	.handler_return
- dl	.handler_return
- dl	.handler_return		; sigcont
- dl	.handler_stop
- dl	.handler_stop
- dl	.handler_stop
- dl	.handler_stop
- dl	kthread.core
 	
 .wait:
 ; wait for a signal, return hl = signal
 	call	kthread.suspend
-	or	a, a
-	sbc	hl, hl
-	push	iy
-	ld	iy, (kthread_current)
-	ld	l, (iy+KERNEL_THREAD_EV_SIG)
-	pop	iy
-	ret
-	
+	jr	.timed_wait_ret
+
 .timed_wait:
 ; sleep for a duration, can be waked by signal
 ; todo : clean signal after read
 	call	kthread.sleep
+.timed_wait_ret:
 	or	a, a
 	sbc	hl, hl
 	push	iy
@@ -118,9 +49,10 @@ ksignal:
 .procmask:
 ; hl is a 4 bytes sigset structure, with signal set to be either reset or set
 ; do a XOR with signal mask
+; there is no need for critical section as long as the thread is the only one to manipulate its mask
 	ld	iy, (kthread_current)
 	lea	de, iy+KERNEL_THREAD_SIGNAL_MASK
-	tstei
+;	tstei
 	ld	a, (de)
 	xor	a, (hl)
 	ld	(de), a
@@ -139,7 +71,7 @@ ksignal:
 	ld	a, (de)
 	xor	a, (hl)
 	ld	(de), a
-	tstdi
+;	tstdi
 	ret
 
 .abort:
@@ -238,7 +170,13 @@ ksignal:
 	jr	nz, .kill_clean
 	ld	a, c
 	cp	a, SIGCONT
-	jp	z, .kill_signal_cont
+	jr	nz, .kill_generic
+.kill_signal_cont:
+	push	af
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_STOPPED
+	call	z, task_switch_running
+	pop	af
 .kill_generic:
 ; so now, I have iy = thread to signal, still the signal in c, data in de
 ; push the context on the thread stack
@@ -257,14 +195,14 @@ ksignal:
 	ld	hl, (hl)
 	ld	sp, hl
 	sbc	hl, hl
-	ld	l, $FF
-	push	hl
+; 	ld	l, $FF
+; 	push	hl
 	push	de
 	ld	l, a
 	push	hl
 	ld	hl, _sigreturn
 	push	hl
-	ld	hl, .handler
+	ld	hl, _sighandler
 	push	hl
 	sbc	hl, hl
 	push	hl
@@ -314,43 +252,36 @@ ksignal:
 	push	de
 	push	af
 ; stack is now clean
-	push	hl
+; 	push	hl
 	push	hl	; data = NULL
 	ld	l, a
 	push	hl	; signal
 	ld	ix, _sigreturn
 	push	ix
-	ld	ix, .handler
+	ld	ix, _sighandler
 	jp	(ix)
-.kill_signal_cont:
-	push	af
-	ld	a, (iy+KERNEL_THREAD_STATUS)
-	cp	a, TASK_STOPPED
-	call	z, task_switch_running
-	pop	af
-	jp	.kill_generic
 .kill_signal_stop:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; if running or interruptible > switch to stopped
 ; if stopped, idle or zombie : don't touch
-	tst	11111110b
-	jp	nz, .kill_clean
+	tst	a, 11111110b
+	jr	nz, .kill_clean
 	dec	a	; interruptible
 	call	z, task_switch_stopped
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
-	jp	.kill_clean
+	jr	.kill_clean
 .kill_signal_kill:
 ; kill anything
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
-	jp	z, .kill_clean
+	jr	z, .kill_clean
 	or	a, a
 	call	nz, task_switch_running
 	ld	iy, (iy+KERNEL_THREAD_STACK)
 ; insert shamelessly thread exit routine
 	ld	hl, kthread.exit
 	ld	(iy+18), hl
-	jp	.kill_clean
+	jr	.kill_clean
 .kill_no_thread:
 	ld	a, ESRCH
 	jr	.kill_errno
@@ -380,12 +311,74 @@ _sigreturn:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-; restore interrupt status (from a schedule = always on, from raise() passed)
-	tstei
+; tstei
 	pop	af
 	pop	de
 	pop	bc
 	pop	hl
 	pop	iy
 	pop	ix
+_sighandler_return:
 	ret
+
+; void	handler(int sig, void *ucontext)
+; sp+6 *ucontext
+; sp+3 sig 
+; sp is return
+_sighandler:
+; this is called by the thread
+; hl = data, a = signal code, iy is thread
+; stack is context to restore
+; note that signal can be masked in the KERNEL_THREAD_SIGNAL 4 bytes mask
+	ld	(iy+KERNEL_THREAD_EV_SIG), a
+	ld	(iy+KERNEL_THREAD_EV_SIG_POINTER), hl
+	ld	c, a
+	ld	b, 3
+	mlt	bc
+	ld	hl, _sighandler_jump-3
+	add	hl, bc
+	ld	ix, (hl)
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	jp	(ix)
+
+_sighandler_stop:
+	di
+	call	task_switch_stopped
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
+; 	tstei
+	pop	af
+	pop	de
+	pop	bc
+	pop	hl
+	pop	iy
+	pop	ix
+	jp	task_yield
+
+_sighandler_jump:
+ dl	kthread.exit
+ dl	kthread.exit
+ dl	kthread.core
+ dl	kthread.core
+ dl	kthread.core
+ dl	kthread.core
+ dl	_sighandler_return
+ dl	kthread.core
+ dl	kthread.exit
+ dl	kthread.exit
+ dl	kthread.core
+ dl	kthread.exit
+ dl	kthread.exit
+ dl	kthread.exit
+ dl	kthread.exit
+ dl	_sighandler_return
+ dl	_sighandler_return
+ dl	_sighandler_return		; sigcont
+ dl	_sighandler_stop
+ dl	_sighandler_stop
+ dl	_sighandler_stop
+ dl	_sighandler_stop
+ dl	kthread.core

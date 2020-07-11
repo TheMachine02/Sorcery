@@ -61,7 +61,7 @@ if CONFIG_USE_BOOT_PATCH=1
 	out0	($22), a
 	out0	($25), a
 else
-	ld	a, $7D
+	ld	a, $00
 	out0 (0x20), a
 	dec	a
 	out0 (0x23), a
@@ -684,7 +684,7 @@ end if
 	pop	bc
 	ret
 
-include	'kmm_cache.asm'
+include	'mm_cache.asm'
 	
 mmap:
 ; map file page as anonymous shared data
