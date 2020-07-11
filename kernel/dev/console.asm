@@ -251,11 +251,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 .phy_shift_screen:
 	push	bc
 	ld	de, (DRIVER_VIDEO_SCREEN)
-	or	a, a
-	sbc	hl, hl
+	ld	hl, 11*320
 	add	hl, de
-	ld	bc, 11*320
-	add	hl, bc
 	ld	bc, 76800 - 11*320
 	ldir
 	ld	hl, $E40000

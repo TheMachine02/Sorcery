@@ -93,24 +93,21 @@
 .glyph_blank:
 ; erase a caracter
 	call	.glyph_adress
-; hl = screen
+; de = screen
 .glyph_blank_address:
-	ld	hl, $E40000
-	ld	bc, 256 + 11
-	ld	a, c
+	push	de
+	push	de
+	ex	(sp), iy
+	ld	de, 320
+	sbc	hl, hl
+	ld	b, 11
 .glyph_blank_loop:
-	dec	b
-	ld	c, 6
-	ldir
-	inc	b
-	ld	c, 58
-	ex	de, hl
-	add	hl, bc
-	ex	de, hl
-	dec	a
-	jr	nz, .glyph_blank_loop
-	ld	hl, -320*11
-	add	hl, de
+	ld	(iy+0), hl
+	ld	(iy+3), hl
+	add	iy, de
+	djnz	.glyph_blank_loop
+	pop	iy
+	pop	hl
 	ret
 
 if CONFIG_USE_GLYPH_NUMBER = 1
