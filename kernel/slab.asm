@@ -59,7 +59,7 @@ kslab:
 	pop	iy
 	ld	(iy+KERNEL_SLAB_SIZE), hl	; write 16 bits in fact
 	ld	(iy+KERNEL_SLAB_PREVIOUS), bc
-	ld	hl, NULL
+	sbc	hl, hl
 	ld	(iy+KERNEL_SLAB_NEXT), hl
 .malloc_test_block:
 	ld	hl, (iy+KERNEL_SLAB_SIZE)
@@ -95,7 +95,6 @@ kslab:
 	or	a, a
 	ret
 .malloc_errno:
-	scf
 	sbc	hl, hl
 	ret
 
