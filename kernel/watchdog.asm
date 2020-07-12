@@ -31,7 +31,7 @@ kwatchdog:
 	set	0, (hl)
 ; one shot interrupt
 	ld	l, KERNEL_WATCHDOG_ILR and $FF
-	ld	(hl), 0
+	ld	(hl), c
 
 .arm:
 ; and start the timer
