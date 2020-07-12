@@ -63,14 +63,14 @@ kvfs:
 	srl	h
 	rr	l
 	ex	de, hl
-	or	a, a
+	xor	a, a
 	sbc	hl, hl
 	ld	h, d
 	ld	l, e
 	ld	bc, KERNEL_VFS_INODE_DIRECT_MAX
 	sbc	hl, bc
 	jr	c, .inode_direct
-	ld	bc, KERNEL_VSF_INODE_INDIRECT_MAX
+	ld	c, KERNEL_VSF_INODE_INDIRECT_MAX and $FF
 	sbc	hl, bc
 	jr	c, .inode_indirect_single
 .inode_indirect_double:
@@ -83,8 +83,7 @@ kvfs:
 	push	de
 	add	hl, hl
 	add	hl, hl
-	ld	a, (iy+KERNEL_VFS_INODE_DATA_DDIRECT+2)
-	or	a, a
+	or	a, (iy+KERNEL_VFS_INODE_DATA_DDIRECT+2)
 	jr	nz, .inode_double_indirect_first
 	push	hl
 	push	iy
@@ -130,8 +129,7 @@ kvfs:
 	add	hl, bc
 	add	hl, hl
 	add	hl, hl
-	ld	a, (iy+KERNEL_VFS_INODE_DATA_SDIRECT+2)
-	or	a, a
+	or	a, (iy+KERNEL_VFS_INODE_DATA_SDIRECT+2)
 	jr	nz, .inode_indirect_find_index
 	push	hl
 	push	iy
