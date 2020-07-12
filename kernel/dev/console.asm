@@ -50,20 +50,24 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	inc	(hl)
 	ld	a, CONSOLE_CURSOR_MAX_COL
 	cpi
-	ret	po
-	jr	nz, .phy_write_loop
-	call	.phy_new_line
-	jr	.phy_write_address
-
-.phy_new_line_special:
-	call	.phy_new_line
+; if z = need todo phy_new_line
+; ret if po
+; continue else
+	jr	z, .phy_write_new_line
+	jp	pe, .phy_write_loop
+	ret
+.phy_write_new_line_ex:
 	cpi
+.phy_write_new_line:
+	push	af
+	call	.phy_new_line
+	pop	af
 	ret	po
 	jr	.phy_write_address
 	
 .phy_special_ascii:
 	cp	a, 10
-	jr	z, .phy_new_line_special
+	jr	z, .phy_write_new_line_ex
 	cp	a, $1B
 	jr	nz, .phy_write_loop
 	

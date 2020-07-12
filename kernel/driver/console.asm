@@ -436,7 +436,6 @@ include	'../dev/console.asm'
 include 'console_glyph.asm'
 
 .COMMAND:
- db 2	; command count
  dl .REBOOT
  dl .ECHO
  dl .COLOR
@@ -458,10 +457,7 @@ include 'console_glyph.asm'
  
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# "
- 
-.BLINK:
- db "_"
-	
+
 .SPLASH:
 db 64,65
 include 'logo.inc'
