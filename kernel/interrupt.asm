@@ -28,7 +28,7 @@ kinterrupt:
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_SIGNAL_LATCH and $FF
 ; just use default
-	ld	de, $19
+	ld	e, $19
 	ld	(hl), de
 if CONFIG_USE_CACHED_ISR = 1
 	ld	hl, interrupt_flash_base
@@ -100,7 +100,7 @@ end if
 	ld	iy, (hl)
 .irq_generic_loop:
 	ld	a, (iy+KERNEL_THREAD_IRQ)
-	tst	a, c
+	and	a, c				; don't need to preserve a, then "tst a,c" not needed
 	call	nz, kthread.resume_from_IRQ
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
 	djnz	.irq_generic_loop
