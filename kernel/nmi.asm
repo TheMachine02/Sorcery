@@ -54,10 +54,10 @@ knmi:
 	in0	a, ($3D)
 	and	$03
 	out0	($3E), a
-	bit	0, a
-	jr	nz, .stack_overflow
-	bit	1, a
-	jr	nz, .memory_protection
+	rra
+	jr	c, .stack_overflow
+	rra
+	jr	c, .memory_protection
 .illegal_instruction:
 	jp	kinit.reboot
 	
