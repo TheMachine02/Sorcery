@@ -67,17 +67,19 @@ org $D18800
 	di
 	rsmix
 	call	.phy_unlock
-; set de
-	ex	de, hl
-; we will write de to hl address
+
+; we will write hl to de address
 .phy_write_loop:
-	ld	a,$AA
-	ld	($000AAA), a
-	ld	a,$55
-	ld	($000555),a
-	ld	a,$A0
-	ld	($000AAA),a
-	ld	a, (de)
+	ld	a, (hl)
+	push	hl
+	ld	hl, $000AAA
+	ld	(hl), l
+	ld	hl, $000555
+	ld	(hl), l
+	add	hl, hl
+	ld	(hl), $A0
+	ld	hl, (KERNEL_INTERRUPT_STATUS_MASKED)
+	ex	de, hl
 	and	a, (hl)
 ; byte to program = A
 	ld	(hl), a
@@ -87,11 +89,9 @@ org $D18800
 	jr	nz, .phy_write_busy_wait
 .phy_write_continue:
 ; schedule if need for an interrupt
-	push	hl
-	ld	hl, KERNEL_INTERRUPT_STATUS_MASKED
-	ld	a, (hl)
-	inc	hl
-	or	a, (hl)
+	ld	a, d
+	or	a, e
+	ex	de, hl
 	pop	hl
 	jr	z, .phy_write_tail
 ; perform interrupt
