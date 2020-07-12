@@ -32,9 +32,9 @@ kpower:
 	call	_boot_TurnOffHardware
 ; 6Mhz speed
 	di
-	xor	a,a
-	out0	(KERNEL_POWER_CPU_CLOCK),a
-	ld	a, $01
+	xor	a, a
+	out0	(KERNEL_POWER_CPU_CLOCK), a
+	inc	a
 	ld	($E00005), a
 ; usb stuff ?
 ; 	ld	bc,$003030
