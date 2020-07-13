@@ -40,22 +40,19 @@ kinit:
 ; memory init ;
 	call	kmm.init
 	call	kslab.init
-	call	flash.init
-; 	call	ramfs.init
 ; timer and interrupts ;
 	call	klocal_timer.init
 	call	kinterrupt.init
 	call	kthread.init
-; driver init, nice
+	call	kwatchdog.init
+; driver init ;
 	call	kvideo.init
 	call	kkeyboard.init
 	call	krtc.init
 ; device init ;
+;	call	vfs.init
 	call	console.init
-; mount root ;
-; 	ld	bc, .root_path
-; 	call	ramfs.mount
-	call	kwatchdog.init
+	call	flash.init
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
@@ -195,10 +192,10 @@ TEST_THREAD_C:
 	call	ksignal.kill
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.unlock
-	ld	bc, 65536
-	ld	hl, $E40000
-	ld	de, $3B0000
-	call	flash.phy_write
+; 	ld	bc, 65536
+; 	ld	hl, $E40000
+; 	ld	de, $3B0000
+; 	call	flash.phy_write
 
 	jr	.spin
 	pop ix

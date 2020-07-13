@@ -478,29 +478,28 @@ kthread:
 	call	kqueue.remove
 ; find next to schedule
 ; ie dispatch method from schedule
-; b = 16 - l / 4
-	push	hl
 ; unmap the memory of the thread
 ; this also unmap the stack
 	ld	a, (iy+KERNEL_THREAD_PID)
 	call	kmm.thread_unmap
 ; that will reset everything belonging to the thread
-	pop	hl
-	ld	a, 16
-	sub	a, l
-	rrca
-	rrca
-	ld	d, a
 	ld	bc, QUEUE_SIZE
 	xor	a, a
-.exit_dispatch_loop:
+	ld	hl, kthread_mqueue_active
 	or	a, (hl)
 	jr	nz, .exit_dispatch_thread
 	add	hl, bc
-	dec	d
-	jr	nz, .exit_dispatch_loop
 	or	a, (hl)
-	jp	z, kinterrupt.nmi
+	jr	nz, .exit_dispatch_thread
+	add	hl, bc
+	or	a, (hl)
+	jr	nz, .exit_dispatch_thread
+	add	hl, bc
+	or	a, (hl)
+	jr	nz, .exit_dispatch_thread
+	add	hl, bc
+	or	a, (hl)
+	jp	z, knmi
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
 	jp	kscheduler.context_restore

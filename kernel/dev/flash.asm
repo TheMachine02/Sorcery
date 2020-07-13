@@ -67,7 +67,6 @@ org $D18800
 	di
 	rsmix
 	call	.phy_unlock
-
 ; we will write hl to de address
 .phy_write_loop:
 	ld	a, (hl)
@@ -78,22 +77,20 @@ org $D18800
 	ld	(hl), l
 	add	hl, hl
 	ld	(hl), $A0
-	ld	hl, (KERNEL_INTERRUPT_STATUS_MASKED)
 	ex	de, hl
 	and	a, (hl)
 ; byte to program = A
 	ld	(hl), a
 ; now we need to check for the write to complete
+; 6 micro second typical, ~300 cycles wait
 .phy_write_busy_wait:
 	cp	a, (hl)
 	jr	nz, .phy_write_busy_wait
-.phy_write_continue:
 ; schedule if need for an interrupt
+	ld	de, (KERNEL_INTERRUPT_STATUS_MASKED)
 	ld	a, d
 	or	a, e
-	ex	de, hl
-	pop	hl
-	jr	z, .phy_write_tail
+	jr	z, .phy_write_continue
 ; perform interrupt
 ; save all ?
 	call	.phy_lock
@@ -102,7 +99,9 @@ org $D18800
 	di
 ; re unlock
 	call	.phy_unlock
-.phy_write_tail:
+.phy_write_continue:
+	ex	de, hl
+	pop	hl
 	inc	de
 	cpi
 	jp	pe, .phy_write_loop

@@ -58,6 +58,8 @@ knmi:
 	jr	c, .stack_overflow
 	rra
 	jr	c, .memory_protection
+	jr	.deadlock
+	
 .illegal_instruction:
 	jp	kinit.reboot
 	
@@ -72,14 +74,14 @@ knmi:
 	ld	bc, 43
 	call	.write_exception
 ; we should be able to recover here ;
-	jp	kinit.reboot
+	jp	kthread.core
 
 .memory_protection:
 	ld	hl, .MEMORY_EXCEPTION
 	ld	bc, 46
 	call	.write_exception
 ; we should be able to recover here ;
-	jp	kinit.reboot
+	jp	kthread.core
 
 .deadlock:
 	ld	hl, .THREAD_DEADLOCK
@@ -153,6 +155,10 @@ knmi:
 	jr	z, .wait_busy
 	ld	l, DRIVER_KEYBOARD_IMSC and $FF
 	res	2, (hl)
+; idle mode now
+	ld	hl, DRIVER_KEYBOARD_CTRL
+	ld	(hl), 0
+; also restore console state, and return
 	ret
 
 .THREAD_DEADLOCK:	
