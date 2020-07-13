@@ -345,7 +345,7 @@ console:
 	pop	hl
 	jr	.refresh_line_loop
 .refresh_line_restore:
-	call	.glyph_blank_address
+	call	.glyph_char_address
 	pop	hl
 	ld	(console_cursor_xy), hl
 	ret  

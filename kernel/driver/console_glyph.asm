@@ -31,7 +31,6 @@
 	call	.glyph_adress
 .glyph_char_address:
 	or	a, a
-	jr	z, .glyph_blank_address
 	sbc	hl, hl
 	ld	l, a
 	ld	a, c
@@ -88,26 +87,6 @@
 	add	hl, de
 	ex	de, hl
 	pop	iy
-	ret
-
-.glyph_blank:
-; erase a caracter
-	call	.glyph_adress
-; de = screen
-.glyph_blank_address:
-	push	de
-	push	de
-	ex	(sp), iy
-	ld	de, 320
-	sbc	hl, hl
-	ld	b, 11
-.glyph_blank_loop:
-	ld	(iy+0), hl
-	ld	(iy+3), hl
-	add	iy, de
-	djnz	.glyph_blank_loop
-	pop	iy
-	pop	hl
 	ret
 
 if CONFIG_USE_GLYPH_NUMBER = 1
