@@ -10,10 +10,6 @@ flash:
 	jp	.phy_read
 	jp	.phy_write
 
-.phy_abort:
-	ld	a, $F0
-	ld	($0), a
-
 .init:
 ; set flash wait state
 	di
@@ -60,12 +56,55 @@ flash:
 .phy_write_base:
 
 org $D18800
+
+.phy_erase:
+; erase sector hl
+	call	.phy_unlock
+	ex	de, hl
+; first cycle
+	ld	hl, $000AAA
+	ld	(hl), l
+	ld	hl, $000555
+	ld	(hl), l
+	add	hl, hl
+	ld	(hl), $80
+; second cycle
+	ld	hl, $000AAA
+	ld	(hl), l
+	ld	hl, $000555
+	ld	(hl), l
+	ex	de, hl
+	ld	(hl), $30
+.phy_erase_loop:
+	ld	de, (KERNEL_INTERRUPT_STATUS_MASKED)
+	ld	a, d
+	or	a, e
+	call	nz, .phy_suspend
+	ld	a, (hl)
+	cp	a, $FF
+	jr	nz, .phy_erase_loop	
+	ret
+
+.phy_suspend:
+	ld	a, $B0
+	ld	($0), a
+; check for DQ6 toggle
+.phy_suspend_busy_wait:
+	bit	6, (hl)
+	jr	z, .phy_suspend_busy_wait
+; perform interrupt
+	call	.phy_lock
+	ei
+	halt
+	di
+; re unlock
+	call	.phy_unlock
+	ld	a, $30
+	ld	($0), a
+	ret
 	
 .phy_write:
 ; write hl to flash for bc bytes
-; + set status as uninterruptible maybe ?
-	di
-	rsmix
 	call	.phy_unlock
 ; we will write hl to de address
 .phy_write_loop:
@@ -83,9 +122,7 @@ org $D18800
 	ld	(hl), a
 ; now we need to check for the write to complete
 ; 6 micro second typical, ~300 cycles wait
-.phy_write_busy_wait:
-	cp	a, (hl)
-	jr	nz, .phy_write_busy_wait
+	call	.phy_status_polling
 ; schedule if need for an interrupt
 	ld	de, (KERNEL_INTERRUPT_STATUS_MASKED)
 	ld	a, d
@@ -107,35 +144,26 @@ org $D18800
 	jp	pe, .phy_write_loop
 	jp	.phy_lock
 
-; _flash_write:
-; 	push hl
-; 	ld hl,$AAA
-; 	ld (hl),$AA
-; 	ld a,$55
-; 	ld ($555),a
-; 	ld (hl),$A0
-; 	pop hl
-; 
-; 	push bc
-; 	ld a,(de)
-; 	and a,(hl)
-; 	ld (de),a
-; 	ld c,a
-; .wait:
-; 	ld a,(de)
-; 	cp a,c
-; 	jr nz,.wait
-; 	pop bc
-; 	inc hl
-; 	inc de
-; 	xor a,a
-; 	dec bc
-; 	ld (ScrapMem),bc
-; 	ld a,(ScrapMem+2)
-; 	or a,b
-; 	or a,c
-; 	jr nz,__flash_write
-; 	ret
+.phy_status_polling:
+	and	a, $80
+	ld	d, a
+.phy_busy_wait:
+	ld	a, (hl)
+	xor	a, d
+	rlca
+	ret	nc
+	bit	6, a
+	jr	z, .phy_busy_wait
+	ld	a, (hl)
+	xor	d
+	rlca
+	jr	nc, .phy_busy_wait
+	
+.phy_abort:
+	ld	a, $F0
+	ld	($0), a
+	ret
+
 ; 
 ; __sector_erase:
 ; 	ex hl,de
@@ -155,8 +183,4 @@ org $D18800
 ; 	ld a,(hl)
 ; 	cp a,$FF
 ; 	jr nz,.loop
-; 	ret	
-	
-.phy_erase_sector:
-	ret
-	
+; 	ret

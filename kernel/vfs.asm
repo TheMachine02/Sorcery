@@ -30,6 +30,8 @@ define	KERNEL_VFS_DIRECTORY_INODE		1
 define	KERNEL_VFS_DIRECTORY_NAME		4
 
 
+define	KERNEL_VFS_BLOCK_DEVICE			0
+
 ; for directories :
 ; also allocate data block, 64 bytes 4 directories per node > 2 byte flags, > 3 bytes inode > 10 bytes names + NULL >
 

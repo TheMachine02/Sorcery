@@ -19,6 +19,28 @@ define	CONSOLE_BLINK_RATE	1
 define	CONSOLE_CURSOR_MAX_COL	50
 define	CONSOLE_CURSOR_MAX_ROW	20
 
+.phy_init:
+	ld	hl, .phy_mem_ops
+	ld	bc, .CONSOLE_DEV
+; inode capabilities flags
+; single dev block, (so write / read / seek only), no seek capabilities exposed
+	ld	a, KERNEL_VFS_BLOCK_DEVICE
+	jp	kvfs.create_inode
+
+.CONSOLE_DEV:
+ db "/dev/console", 0
+
+.phy_mem_ops:
+	jp	.phy_read
+	jp	.phy_write
+	
+.phy_read:
+; bc, hl
+	ld	de, $E40000
+	ex	de, hl
+	ldir
+	ret
+
 .phy_write:
 ; write a zero terminated string @bc to the /dev/console special file
 	push	hl

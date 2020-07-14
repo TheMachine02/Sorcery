@@ -196,6 +196,9 @@ TEST_THREAD_C:
 ; 	ld	hl, $E40000
 ; 	ld	de, $3B0000
 ; 	call	flash.phy_write
+; 
+; 	ld	hl, $3B0000
+; 	call	flash.phy_erase
 
 	jr	.spin
 	pop ix

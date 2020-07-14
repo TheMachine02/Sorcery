@@ -100,7 +100,7 @@ end if
 	ld	iy, (hl)
 .irq_generic_loop:
 	ld	a, (iy+KERNEL_THREAD_IRQ)
-	and	a, c				; don't need to preserve a, then "tst a,c" not needed
+	and	a, c
 	call	nz, kthread.resume_from_IRQ
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
 	djnz	.irq_generic_loop

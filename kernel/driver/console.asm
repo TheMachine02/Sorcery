@@ -32,6 +32,7 @@ console:
 	ld	(hl), $FD
 	ld	iy, console_stdin
 	call	ring_buffer.create
+	call	.phy_init
 	
 .init_splash:
 	or	a, a
@@ -430,8 +431,8 @@ console:
 	call	ring_buffer.flush
 	ld	bc, 28
 	ld	hl, .PROMPT
-; fall into phy_write
-
+	jp	.phy_write
+	
 include	'../dev/console.asm'
 include 'console_glyph.asm'
 
