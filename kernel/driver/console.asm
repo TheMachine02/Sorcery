@@ -1,8 +1,8 @@
 define	console_stdin		$D00800
 
 define	console_dev		$D00700
-define	console_style		$D00700
-define	console_color		$D00701
+define	console_fg_color	$D00700
+define	console_bg_color	$D00701
 define	console_cursor_xy	$D00702
 define	console_blink		$D00705
 define	console_flags		$D00706
@@ -24,8 +24,10 @@ console:
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	c, 36
 	ldir
-	ld	hl, console_color
+	ld	hl, console_dev
 	ld	(hl), $01
+	inc	hl
+	ld	(hl), $00
 	ld	l, console_flags and $FF
 	ld	(hl), c
 	inc	hl
@@ -327,9 +329,9 @@ console:
 	jr	z, .refresh_line_restore
 	call	ring_buffer.increment
 	push	hl
-	ld	hl, console_color
-	ld	c, (hl)
-	inc	hl
+	ld	hl, console_cursor_xy
+; 	ld	c, (hl)
+; 	inc	hl
 	inc	(hl)
 	call	.glyph_char_address
 	pop	hl
@@ -432,9 +434,6 @@ console:
 	ld	bc, 28
 	ld	hl, .PROMPT
 	jp	.phy_write
-	
-include	'../dev/console.asm'
-include 'console_glyph.asm'
 
 .COMMAND:
  dl .REBOOT

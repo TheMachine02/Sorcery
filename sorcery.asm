@@ -47,21 +47,29 @@ include	'kernel/vfs.asm'
 include	'kernel/nmi.asm'
 
 include	'kernel/arch/atomic.asm'
+include	'kernel/arch/debug.asm'
+
 include	'kernel/compress/lz4.asm'
+
 include	'kernel/crypto/crc.asm'
+
+include	'kernel/fpu/idiv.asm'
+
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
 include	'kernel/driver/console.asm'
-include	'kernel/fpu/idiv.asm'
+
+; must follow
+include	'kernel/dev/console.asm'
+include	'kernel/dev/flash.asm'
+
 ; include	'kernel/exec/kexec.asm'
 ; include	'kernel/exec/kso.asm'
 ; include	'kernel/exec/kelf.asm'
 
 ; rb	$060000 - $
-
-include	'kernel/dev/flash.asm'
 
 org $060000
 _endos:

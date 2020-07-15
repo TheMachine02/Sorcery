@@ -1,5 +1,5 @@
-define	CONSOLE_STYLE		$0
-define	CONSOLE_COLOR		$1
+define	CONSOLE_FG_COLOR	$0
+define	CONSOLE_BG_COLOR	$1
 define	CONSOLE_CURSOR		$2
 define	CONSOLE_CURSOR_COL	$2
 define	CONSOLE_CURSOR_ROW	$3
@@ -64,7 +64,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jr	c, .phy_special_ascii
 ; write the char read
 	push	bc
-	ld	c, (iy+CONSOLE_COLOR)
+; 	ld	c, (iy+CONSOLE_FG_COLOR)
 	call	.glyph_char_address
 	pop	bc
 ; increment cursor position now
@@ -191,10 +191,10 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	cp	a, 39
 	jr	z, .phy_CSI_sgr_default_color
 	sub	a, 30 - 2
-	ld	(iy+CONSOLE_COLOR), a
+	ld	(iy+CONSOLE_FG_COLOR), a
 	ret
 .phy_CSI_sgr_default_color:
-	ld	(iy+CONSOLE_COLOR), $01
+	ld	(iy+CONSOLE_FG_COLOR), $01
 	ret
 
 .PHY_CSI_JUMP_TABLE:
@@ -322,3 +322,5 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ldir
 	pop	bc
 	ret
+
+include 'console_glyph.asm'

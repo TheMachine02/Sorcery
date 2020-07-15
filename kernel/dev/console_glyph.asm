@@ -21,9 +21,7 @@
 ; display a character a the cursor position and of the console color
 ; DOESNT update console_cursor nor color
 ; return de = next screen buffer position
-	ld	hl, console_color
-	ld	c, (hl)
-	inc	hl
+	ld	hl, console_cursor_xy
 	ld	hl, (hl)
 ; h = y , l = x (console 50x20), c is color, a is char
 ; y isdb 11, x is 6 in height/width
@@ -33,57 +31,59 @@
 	or	a, a
 	sbc	hl, hl
 	ld	l, a
-	ld	a, c
 	add	hl, hl
 	add	hl, hl
 	ld	bc, .TRANSLATION_TABLE
 	add	hl, bc
 	ld	hl, (hl)
-	push	de
-	ex	(sp), iy
+	push	iy
+	ld	iy, console_dev
+	ld	bc, (iy+CONSOLE_FG_COLOR)
+	ld	iyl, b
+; also load foreground color
 	ld	b, 11
-	ld	c, a
+	ex	de, hl
 .glyph_char_loop:
-	push	hl
-	ld	l, (hl)
-	rr	l
-	sbc	a, a
-	and	a, c
-	ld	(de), a
-	inc	de
-	rr	l
-	sbc	a, a
-	and	a, c
-	ld	(de), a
-	inc	de
-	rr	l
-	sbc	a, a
-	and	a, c
-	ld	(de), a
-	inc	de
-	rr	l
-	sbc	a, a
-	and	a, c
-	ld	(de), a
-	inc	de
-	rr	l
-	sbc	a, a
-	and	a, c
-	ld	(de), a
-	inc	de
-	rr	l
-	sbc	a, a
-	and	a, c
-	ld	(de), a
-	ld	de, 320
-	add	iy, de
-	lea	de, iy + 0
-	pop	hl
+	ld	a, (de)
+	push	de
+	ld	d, iyl
+	ld	(hl), d
+	rra
+	jr	nc, $+3
+	ld	(hl), c
 	inc	hl
+	ld	(hl), d
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	inc	hl
+	ld	(hl), d
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	inc	hl
+	ld	(hl), d
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	inc	hl
+	ld	(hl), d
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	inc	hl
+	ld	(hl), d
+	rra
+	jr	nc, $+3
+	ld	(hl), c
+	ld	de, 320-5
+	add	hl, de
+	pop	de
+	inc	de
 	djnz	.glyph_char_loop
 ; hl is the last line position
 ; so hl - 320*11 + 6 = next character position
-	ld	hl, -320*11+6
+	ld	de, -320*11+6
 	add	hl, de
 	ex	de, hl
 	pop	iy
@@ -187,4 +187,4 @@ if CONFIG_USE_GLYPH_NUMBER = 1
  end if
  
  ; font
- include 'gohufont.inc'
+ include '../font/gohufont.inc'

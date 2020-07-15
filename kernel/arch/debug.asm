@@ -1,69 +1,90 @@
 ; set of CEmu software debug command ;
-
-dbg_cmd:
+macro dbg_cmd
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), a
-	ret
+	pop	hl
+end macro
 
-dbg_open:
+macro dbg_open
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 2
-	ret
+	pop	hl
+end macro
 
-dbg_set_break:
+macro dbg_set_break
 ; de = break point adress
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 3
-	ret
+	pop	hl
+end macro
 	
-dbg_rem_break:
+macro dbg_rem_break
 ; de = break point adress
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 4
-	ret
+	pop	hl
+end macro
 	
-dbg_set_read_watch:
+macro dbg_set_read_watch
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 5
-	ret
+	pop	hl
+end macro
 	
-dbg_set_write_watch:
+macro dbg_set_write_watch
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 6
-	ret
+	pop	hl
+end macro
 	
-dbg_set_rw_watch:
+macro dbg_set_rw_watch
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 7
-	ret
+	pop	hl
+end macro
 	
-dbg_set_watch:
+macro dbg_set_watch
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 11
-	ret
+	pop	hl
+end macro
 	
-dbg_rm_watch:
+macro dbg_rm_watch
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 8
-	ret
+	pop	hl
+end macro
 	
-dbg_rm_all_break:
+macro dbg_rm_all_break
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 9
-	ret
+	pop	hl
+end macro
 
-dbg_rm_all_watch:
+macro dbg_rm_all_watch
+	push	hl
 	scf
 	sbc	hl, hl
 	ld	(hl), 10
-	ret
+	pop	hl
+end macro
