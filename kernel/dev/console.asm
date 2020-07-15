@@ -99,8 +99,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	cpi
 	ret	po
 .phy_escape_sequence_ex:
-	ld	de, (iy+CONSOLE_ESC_OFFSET)
-	lea	hl, iy+CONSOLE_ESC_BUFFER
+	ld	hl, (iy+CONSOLE_ESC_OFFSET)
+	lea	de, iy+CONSOLE_ESC_BUFFER
 	add	hl, de
 	ex	de, hl
 	lea	hl, ix+0
