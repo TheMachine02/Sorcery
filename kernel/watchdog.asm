@@ -28,7 +28,7 @@ kwatchdog:
 ; now, reset the status register too
 	ex	de, hl
 	ld	l, KERNEL_WATCHDOG_ICR and $FF
-	ld	(hl), 0
+	ld	(hl), c
 ; one shot interrupt
 	ld	l, KERNEL_WATCHDOG_ILR and $FF
 	ld	(hl), c
@@ -36,7 +36,7 @@ kwatchdog:
 .arm:
 ; and start the timer
 	ld	hl, KERNEL_WATCHDOG_ICR
-	ld	(hl), 0
+	ld	(hl), h
 	ld	l, KERNEL_WATCHDOG_RST and $FF
 	ld	(hl), $B9
 	inc	hl
@@ -47,7 +47,7 @@ kwatchdog:
 	
 .disarm:
 	ld	hl, KERNEL_WATCHDOG_ICR
-	ld	(hl), 0
+	ld	(hl), h
 ; and stop the timer
 	ld	l, KERNEL_WATCHDOG_CTRL and $FF
 	res	0, (hl)
