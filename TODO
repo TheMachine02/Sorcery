@@ -1,5 +1,4 @@
-VFS
-FAT 12
-Device flash and console
+VFS Device flash and console
+FAT 12 flash
 leaf load
 library load

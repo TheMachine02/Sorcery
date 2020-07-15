@@ -1,12 +1,21 @@
 define	KERNEL_FLASH_MAPPING		$E00003
 define	KERNEL_FLASH_CTRL		$E00005
-define	KERNEL_FLASH_RAM_CACHE		$D00000
-
 define	KERNEL_FLASH_SIZE		$400000
 
 flash:
 
-.phy_mem_op:
+.phy_init:
+	ld	hl, .phy_mem_ops
+	ld	bc, .FLASH_DEV
+; inode capabilities flags
+; single dev block, (so write / read / seek only), seek capabilities exposed
+	ld	a, KERNEL_VFS_BLOCK_DEVICE or KERNEL_VFS_SEEK
+	jp	kvfs.create_inode
+
+.FLASH_DEV:
+ db "/dev/flash", 0
+
+.phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
 
@@ -23,7 +32,8 @@ flash:
 	ld	de, $D18800
 	ld	bc, 256
 	ldir
-	
+	call	.phy_init
+
 ; lock it on init
 
 ; flash unlock and lock
@@ -69,7 +79,6 @@ org $D18800
 	add	hl, hl
 	ld	(hl), $80
 ; second cycle
-	ld	hl, $000AAA
 	ld	(hl), l
 	ld	hl, $000555
 	ld	(hl), l
@@ -150,12 +159,14 @@ org $D18800
 .phy_busy_wait:
 	ld	a, (hl)
 	xor	a, d
-	rlca
+;	rlca
+	add	a, a
 	ret	nc
-	bit	6, a
-	jr	z, .phy_busy_wait
+;	bit	6, a
+;	jr	z, .phy_busy_wait
+	jp	p, .phy_busy_wait
 	ld	a, (hl)
-	xor	d
+	xor	a, d
 	rlca
 	jr	nc, .phy_busy_wait
 	
@@ -163,24 +174,3 @@ org $D18800
 	ld	a, $F0
 	ld	($0), a
 	ret
-
-; 
-; __sector_erase:
-; 	ex hl,de
-; 	ld hl,$AAA
-; 	ld	c,$AA
-; 	ld	(hl),c
-; 	ld	a,$55
-; 	ld	($555),a
-; 	ld	(hl),$80
-; 	ld	(hl),c
-; 	ld	($555),a
-; 	ex hl,de
-; 	ld	(hl),$30 ; Do not change this value. You could superbrick your calculator.
-; 	ld h,$FF
-; 	ld l,h
-; .loop:
-; 	ld a,(hl)
-; 	cp a,$FF
-; 	jr nz,.loop
-; 	ret

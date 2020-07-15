@@ -18,10 +18,6 @@ define	KERNEL_VFS_INODE_DATA_SDIRECT		40
 define	KERNEL_VFS_INODE_DATA_DDIRECT		44
 define	KERNEL_VFS_INODE_OP			53
 
-define	KERNEL_VFS_INODE_FILE			0
-define	KERNEL_VFS_INODE_SYMLINK		1
-define	KERNEL_VFS_INODE_DIRECTORY		2
-
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		14	; 4 entries for 56 bytes in total > or 64 bytes for the slab entry
 
@@ -29,8 +25,16 @@ define	KERNEL_VFS_DIRECTORY_FLAGS		0
 define	KERNEL_VFS_DIRECTORY_INODE		1
 define	KERNEL_VFS_DIRECTORY_NAME		4
 
+; type (4 first bit)
+define	KERNEL_VFS_BLOCK_DEVICE			1
+define	KERNEL_VFS_FILE				2
+define	KERNEL_VFS_DIRECTORY			4
+define	KERNEL_VFS_SYMLINK			8
+; capabilities
+define	KERNEL_VFS_SEEK				16
 
-define	KERNEL_VFS_BLOCK_DEVICE			0
+
+
 
 ; for directories :
 ; also allocate data block, 64 bytes 4 directories per node > 2 byte flags, > 3 bytes inode > 10 bytes names + NULL >

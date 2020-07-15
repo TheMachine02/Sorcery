@@ -170,11 +170,11 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 ; let's do some shady stuff
 	cp	a, 'm' - $30	; this is sgr
 	jr	z, .phy_CSI_sgr
-	sub	a, $10
+	sub	a, $10 + 1
 	sbc	hl, hl
 	ld	l, a
-; unsupported above 12
-	cp	a, 12
+; unsupported above 11
+	cp	a, 11
 	ret	nc
 	add	hl, hl
 	add	hl, hl
@@ -198,13 +198,12 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ret
 
 .PHY_CSI_JUMP_TABLE:
- dd	.phy_none
  dd	.phy_cursor_up
  dd	.phy_cursor_down
  dd	.phy_cursor_forward
  dd	.phy_cursor_back
  dd	.phy_cursor_next_line	; next line
- dd	.phy_none		; previous line
+ dd	.phy_cursor_prev_line	; previous line
  dd	.phy_cursor_habs	; 
  dd	.phy_cursor_position
  dd	.phy_none
@@ -212,49 +211,86 @@ define	CONSOLE_CURSOR_MAX_ROW	20
  dd	.phy_none		; erase in line
 
 .phy_cursor_down:
-.phy_none:
-	ret
-	
-.phy_cursor_up:
-	ret
-
-.phy_cursor_forward:
+	lea	hl, iy+CONSOLE_CURSOR_ROW
 	ld	a, e
 	or	a, a
 	jr	nz, $+3
 	inc	a
-	lea	hl, iy+CONSOLE_CURSOR_COL
 	add	a, (hl)
-.phy_cursor_ffloop:
+	ld	(hl), a
+	sub	a, CONSOLE_CURSOR_MAX_ROW
+	ret	c
+	ld	a, CONSOLE_CURSOR_MAX_ROW - 1
+	ld	(hl), a
+.phy_none:
+	ret
+	
+.phy_cursor_up:
+	lea	hl, iy+CONSOLE_CURSOR_ROW
+	ld	a, e
+	neg
+	jr	nz, $+3
+	dec	a
+	add	a, (hl)
+	ld	(hl), a
+	ret	p
+	xor	a, a
+	ld	(hl), a
+	ret
+
+.phy_cursor_forward:
+	lea	hl, iy+CONSOLE_CURSOR_COL
+	ld	a, e
+	or	a, a
+	jr	nz, $+3
+	inc	a
+	add	a, (hl)
+.phy_cursor_forward_loop:
 	ld	(hl), a
 	sub	a, CONSOLE_CURSOR_MAX_COL
 	ret	c
 	inc	hl
 	inc	(hl)
 	dec	hl
-	jr	.phy_cursor_ffloop
+	jr	.phy_cursor_forward_loop
 
 .phy_cursor_back:
+	lea	hl, iy+CONSOLE_CURSOR_COL
 ; e = count to go back
 	ld	a, e
 	neg
 	jr	nz, $+3
 	dec	a
-	lea	hl, iy+CONSOLE_CURSOR_COL
 	add	a, (hl)
-.phy_cursor_fbloop:
+.phy_cursor_back_loop:
 	ld	(hl), a
 	ret	p
 	inc	hl
 	dec	(hl)
 	dec	hl
 	add	a, CONSOLE_CURSOR_MAX_COL
-	jr	.phy_cursor_fbloop
+	jr	.phy_cursor_back_loop
+
+.phy_cursor_prev_line:
+	call	.phy_cursor_up
+	dec	hl
+	ld	(hl), 0
+	ret
 
 .phy_cursor_next_line:
+	call	.phy_cursor_down
+	dec	hl
+	ld	(hl), 0
 	ret
 	
 .phy_cursor_habs:
+	lea	hl, iy+CONSOLE_CURSOR_COL
+; move cursor to col n absolute
+	ld	a, e
+	cp	a, CONSOLE_CURSOR_MAX_COL
+	jr	nc, $+4
+	ld	a, CONSOLE_CURSOR_MAX_COL - 1
+	ld	(hl), a	
 	ret
 
 .phy_cursor_position:

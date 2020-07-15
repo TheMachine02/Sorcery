@@ -46,7 +46,7 @@ knmi:
 	call	console.init
 ; now, process
 	ld	hl, KERNEL_WATCHDOG_CTRL
-	res	KERNEL_WATCHDOG_BIT_ENABLE, (hl)
+	res	0, (hl)
 	ld	l, KERNEL_WATCHDOG_ISR and $FF
 	ld	a, (hl)
 	or	a, a
