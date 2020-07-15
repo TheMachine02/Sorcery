@@ -142,7 +142,7 @@ kpower:
 	ld	hl, DRIVER_RTC_CTRL
 	ld	(hl), 10011111b
 	ld	l, DRIVER_RTC_ISCR and $FF
-	ld	(hl), $FF
+	ld	(hl), c
 ; LCD, SPI, backlight
 	call	_boot_InitializeHardware
 ; lot of things broken
