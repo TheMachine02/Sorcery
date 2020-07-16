@@ -39,41 +39,40 @@
 	ld	bc, (iy+CONSOLE_FG_COLOR)
 	ld	iy, (hl)
 	ex	de, hl
-	ld	de, $00013B	; 320-5
+	ld	de, 315
 .glyph_char_loop:
 	ld	a, (iy+0)
+	inc	iy
 	ld	(hl), b
-	rra
+	add	a, a
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	rra
+	add	a, a
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	rra
+	add	a, a
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	rra
+	add	a, a
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	rra
+	add	a, a
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	rra
+	add	a, a
 	jr	nc, $+3
 	ld	(hl), c
 	add	hl, de
-	inc	iy
-	and	a, d
 	jr	z, .glyph_char_loop
 ; hl is the last line position
 ; so hl - 320*11 + 6 = next character position
