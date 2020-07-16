@@ -9,7 +9,7 @@ db 0
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER33:
 db 0
 db 4
@@ -21,7 +21,7 @@ db 4
 db 0
 db 4
 db 0
-db 0
+db 64
 .CHARACTER34:
 db 0
 db 10
@@ -33,7 +33,7 @@ db 0
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER35:
 db 0
 db 0
@@ -45,7 +45,7 @@ db 31
 db 10
 db 10
 db 0
-db 0
+db 64
 .CHARACTER36:
 db 0
 db 4
@@ -57,7 +57,7 @@ db 20
 db 21
 db 14
 db 4
-db 0
+db 64
 .CHARACTER37:
 db 0
 db 0
@@ -69,7 +69,7 @@ db 10
 db 21
 db 9
 db 0
-db 0
+db 64
 .CHARACTER38:
 db 0
 db 0
@@ -81,7 +81,7 @@ db 21
 db 9
 db 22
 db 0
-db 0
+db 64
 .CHARACTER39:
 db 0
 db 4
@@ -93,7 +93,7 @@ db 0
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER40:
 db 0
 db 8
@@ -105,7 +105,7 @@ db 2
 db 4
 db 4
 db 8
-db 0
+db 64
 .CHARACTER41:
 db 0
 db 2
@@ -117,7 +117,7 @@ db 8
 db 4
 db 4
 db 2
-db 0
+db 64
 .CHARACTER42:
 db 0
 db 0
@@ -129,7 +129,7 @@ db 21
 db 4
 db 0
 db 0
-db 0
+db 64
 .CHARACTER43:
 db 0
 db 0
@@ -141,7 +141,7 @@ db 4
 db 4
 db 0
 db 0
-db 0
+db 64
 .CHARACTER44:
 db 0
 db 0
@@ -153,7 +153,7 @@ db 0
 db 6
 db 6
 db 4
-db 2
+db 66
 .CHARACTER45:
 db 0
 db 0
@@ -165,7 +165,7 @@ db 0
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER46:
 db 0
 db 0
@@ -177,7 +177,7 @@ db 0
 db 6
 db 6
 db 0
-db 0
+db 64
 .CHARACTER47:
 db 0
 db 16
@@ -189,7 +189,7 @@ db 4
 db 2
 db 2
 db 1
-db 1
+db 65
 .CHARACTER48:
 db 0
 db 0
@@ -201,7 +201,7 @@ db 19
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER49:
 db 0
 db 0
@@ -213,7 +213,7 @@ db 4
 db 4
 db 4
 db 0
-db 0
+db 64
 .CHARACTER50:
 db 0
 db 0
@@ -225,7 +225,7 @@ db 4
 db 2
 db 31
 db 0
-db 0
+db 64
 .CHARACTER51:
 db 0
 db 0
@@ -237,7 +237,7 @@ db 16
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER52:
 db 0
 db 0
@@ -249,7 +249,7 @@ db 31
 db 8
 db 8
 db 0
-db 0
+db 64
 .CHARACTER53:
 db 0
 db 0
@@ -261,7 +261,7 @@ db 16
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER54:
 db 0
 db 0
@@ -273,7 +273,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER55:
 db 0
 db 0
@@ -285,7 +285,7 @@ db 4
 db 4
 db 4
 db 0
-db 0
+db 64
 .CHARACTER56:
 db 0
 db 0
@@ -297,7 +297,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER57:
 db 0
 db 0
@@ -309,7 +309,7 @@ db 16
 db 16
 db 14
 db 0
-db 0
+db 64
 .CHARACTER58:
 db 0
 db 0
@@ -321,7 +321,7 @@ db 12
 db 12
 db 0
 db 0
-db 0
+db 64
 .CHARACTER59:
 db 0
 db 0
@@ -333,7 +333,7 @@ db 0
 db 6
 db 6
 db 4
-db 2
+db 66
 .CHARACTER60:
 db 0
 db 0
@@ -345,7 +345,7 @@ db 4
 db 8
 db 16
 db 0
-db 0
+db 64
 .CHARACTER61:
 db 0
 db 0
@@ -357,7 +357,7 @@ db 31
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER62:
 db 0
 db 0
@@ -369,7 +369,7 @@ db 8
 db 4
 db 2
 db 0
-db 0
+db 64
 .CHARACTER63:
 db 0
 db 0
@@ -381,7 +381,7 @@ db 4
 db 0
 db 4
 db 0
-db 0
+db 64
 .CHARACTER64:
 db 0
 db 0
@@ -393,7 +393,7 @@ db 29
 db 1
 db 30
 db 0
-db 0
+db 64
 .CHARACTER65:
 db 0
 db 14
@@ -405,7 +405,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER66:
 db 0
 db 15
@@ -417,7 +417,7 @@ db 17
 db 17
 db 15
 db 0
-db 0
+db 64
 .CHARACTER67:
 db 0
 db 14
@@ -429,7 +429,7 @@ db 1
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER68:
 db 0
 db 15
@@ -441,7 +441,7 @@ db 17
 db 17
 db 15
 db 0
-db 0
+db 64
 .CHARACTER69:
 db 0
 db 31
@@ -453,7 +453,7 @@ db 1
 db 1
 db 31
 db 0
-db 0
+db 64
 .CHARACTER70:
 db 0
 db 31
@@ -465,7 +465,7 @@ db 1
 db 1
 db 1
 db 0
-db 0
+db 64
 .CHARACTER71:
 db 0
 db 14
@@ -477,7 +477,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER72:
 db 0
 db 17
@@ -489,7 +489,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER73:
 db 0
 db 14
@@ -501,7 +501,7 @@ db 4
 db 4
 db 14
 db 0
-db 0
+db 64
 .CHARACTER74:
 db 0
 db 16
@@ -513,7 +513,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER75:
 db 0
 db 17
@@ -525,7 +525,7 @@ db 9
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER76:
 db 0
 db 1
@@ -537,7 +537,7 @@ db 1
 db 1
 db 31
 db 0
-db 0
+db 64
 .CHARACTER77:
 db 0
 db 17
@@ -549,7 +549,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER78:
 db 0
 db 17
@@ -561,7 +561,7 @@ db 25
 db 25
 db 17
 db 0
-db 0
+db 64
 .CHARACTER79:
 db 0
 db 14
@@ -573,7 +573,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER80:
 db 0
 db 15
@@ -585,7 +585,7 @@ db 1
 db 1
 db 1
 db 0
-db 0
+db 64
 .CHARACTER81:
 db 0
 db 14
@@ -597,7 +597,7 @@ db 21
 db 9
 db 22
 db 16
-db 0
+db 64
 .CHARACTER82:
 db 0
 db 15
@@ -609,7 +609,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER83:
 db 0
 db 14
@@ -621,7 +621,7 @@ db 16
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER84:
 db 0
 db 31
@@ -633,7 +633,7 @@ db 4
 db 4
 db 4
 db 0
-db 0
+db 64
 .CHARACTER85:
 db 0
 db 17
@@ -645,7 +645,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER86:
 db 0
 db 17
@@ -657,7 +657,7 @@ db 10
 db 4
 db 4
 db 0
-db 0
+db 64
 .CHARACTER87:
 db 0
 db 17
@@ -669,7 +669,7 @@ db 21
 db 10
 db 10
 db 0
-db 0
+db 64
 .CHARACTER88:
 db 0
 db 17
@@ -681,7 +681,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER89:
 db 0
 db 17
@@ -693,7 +693,7 @@ db 4
 db 4
 db 4
 db 0
-db 0
+db 64
 .CHARACTER90:
 db 0
 db 31
@@ -705,7 +705,7 @@ db 1
 db 1
 db 31
 db 0
-db 0
+db 64
 .CHARACTER91:
 db 0
 db 28
@@ -717,7 +717,7 @@ db 4
 db 4
 db 4
 db 28
-db 0
+db 64
 .CHARACTER92:
 db 0
 db 2
@@ -729,7 +729,7 @@ db 8
 db 16
 db 16
 db 32
-db 32
+db 96
 .CHARACTER93:
 db 0
 db 7
@@ -741,7 +741,7 @@ db 4
 db 4
 db 4
 db 7
-db 0
+db 64
 .CHARACTER94:
 db 0
 db 0
@@ -753,7 +753,7 @@ db 0
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER95:
 db 0
 db 0
@@ -765,7 +765,7 @@ db 0
 db 0
 db 0
 db 63
-db 0
+db 64
 .CHARACTER96:
 db 0
 db 2
@@ -777,7 +777,7 @@ db 0
 db 0
 db 0
 db 0
-db 0
+db 64
 .CHARACTER97:
 db 0
 db 0
@@ -789,7 +789,7 @@ db 30
 db 17
 db 30
 db 0
-db 0
+db 64
 .CHARACTER98:
 db 0
 db 1
@@ -801,7 +801,7 @@ db 17
 db 17
 db 15
 db 0
-db 0
+db 64
 .CHARACTER99:
 db 0
 db 0
@@ -813,7 +813,7 @@ db 1
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER100:
 db 0
 db 16
@@ -825,7 +825,7 @@ db 17
 db 25
 db 22
 db 0
-db 0
+db 64
 .CHARACTER101:
 db 0
 db 0
@@ -837,7 +837,7 @@ db 31
 db 1
 db 30
 db 0
-db 0
+db 64
 .CHARACTER102:
 db 0
 db 12
@@ -849,7 +849,7 @@ db 2
 db 2
 db 2
 db 0
-db 0
+db 64
 .CHARACTER103:
 db 0
 db 0
@@ -861,7 +861,7 @@ db 17
 db 25
 db 22
 db 16
-db 14
+db 78
 .CHARACTER104:
 db 0
 db 1
@@ -873,7 +873,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER105:
 db 0
 db 0
@@ -885,7 +885,7 @@ db 4
 db 4
 db 12
 db 0
-db 0
+db 64
 .CHARACTER106:
 db 0
 db 0
@@ -897,7 +897,7 @@ db 4
 db 4
 db 4
 db 4
-db 3
+db 67
 .CHARACTER107:
 db 0
 db 1
@@ -909,7 +909,7 @@ db 7
 db 9
 db 17
 db 0
-db 0
+db 64
 .CHARACTER108:
 db 0
 db 6
@@ -921,7 +921,7 @@ db 4
 db 4
 db 24
 db 0
-db 0
+db 64
 .CHARACTER109:
 db 0
 db 0
@@ -933,7 +933,7 @@ db 21
 db 21
 db 21
 db 0
-db 0
+db 64
 .CHARACTER110:
 db 0
 db 0
@@ -945,7 +945,7 @@ db 17
 db 17
 db 17
 db 0
-db 0
+db 64
 .CHARACTER111:
 db 0
 db 0
@@ -957,7 +957,7 @@ db 17
 db 17
 db 14
 db 0
-db 0
+db 64
 .CHARACTER112:
 db 0
 db 0
@@ -969,7 +969,7 @@ db 17
 db 17
 db 15
 db 1
-db 1
+db 65
 .CHARACTER113:
 db 0
 db 0
@@ -981,7 +981,7 @@ db 17
 db 25
 db 22
 db 16
-db 16
+db 80
 .CHARACTER114:
 db 0
 db 0
@@ -993,7 +993,7 @@ db 1
 db 1
 db 1
 db 0
-db 0
+db 64
 .CHARACTER115:
 db 0
 db 0
@@ -1005,7 +1005,7 @@ db 14
 db 16
 db 15
 db 0
-db 0
+db 64
 .CHARACTER116:
 db 0
 db 2
@@ -1017,7 +1017,7 @@ db 2
 db 2
 db 12
 db 0
-db 0
+db 64
 .CHARACTER117:
 db 0
 db 0
@@ -1029,7 +1029,7 @@ db 17
 db 25
 db 22
 db 0
-db 0
+db 64
 .CHARACTER118:
 db 0
 db 0
@@ -1041,7 +1041,7 @@ db 10
 db 10
 db 4
 db 0
-db 0
+db 64
 .CHARACTER119:
 db 0
 db 0
@@ -1053,7 +1053,7 @@ db 21
 db 21
 db 10
 db 0
-db 0
+db 64
 .CHARACTER120:
 db 0
 db 0
@@ -1065,7 +1065,7 @@ db 4
 db 10
 db 17
 db 0
-db 0
+db 64
 .CHARACTER121:
 db 0
 db 0
@@ -1077,7 +1077,7 @@ db 17
 db 25
 db 22
 db 16
-db 14
+db 78
 .CHARACTER122:
 db 0
 db 0
@@ -1089,7 +1089,7 @@ db 4
 db 2
 db 31
 db 0
-db 0
+db 64
 .CHARACTER123:
 db 24
 db 4
@@ -1101,7 +1101,7 @@ db 4
 db 4
 db 4
 db 4
-db 24
+db 88
 .CHARACTER124:
 db 0
 db 4
@@ -1113,7 +1113,7 @@ db 4
 db 4
 db 4
 db 4
-db 0
+db 64
 .CHARACTER125:
 db 3
 db 4
@@ -1125,7 +1125,7 @@ db 4
 db 4
 db 4
 db 4
-db 3
+db 67
 .CHARACTER126:
 db 0
 db 0
@@ -1137,262 +1137,134 @@ db 8
 db 0
 db 0
 db 0
-db 0
+db 64
 
 .TRANSLATION_TABLE:
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER32
-db 0x00
 dl .CHARACTER33
-db 0x00
 dl .CHARACTER34
-db 0x00
 dl .CHARACTER35
-db 0x00
 dl .CHARACTER36
-db 0x00
 dl .CHARACTER37
-db 0x00
 dl .CHARACTER38
-db 0x00
 dl .CHARACTER39
-db 0x00
 dl .CHARACTER40
-db 0x00
 dl .CHARACTER41
-db 0x00
 dl .CHARACTER42
-db 0x00
 dl .CHARACTER43
-db 0x00
 dl .CHARACTER44
-db 0x00
 dl .CHARACTER45
-db 0x00
 dl .CHARACTER46
-db 0x00
 dl .CHARACTER47
-db 0x00
 dl .CHARACTER48
-db 0x00
 dl .CHARACTER49
-db 0x00
 dl .CHARACTER50
-db 0x00
 dl .CHARACTER51
-db 0x00
 dl .CHARACTER52
-db 0x00
 dl .CHARACTER53
-db 0x00
 dl .CHARACTER54
-db 0x00
 dl .CHARACTER55
-db 0x00
 dl .CHARACTER56
-db 0x00
 dl .CHARACTER57
-db 0x00
 dl .CHARACTER58
-db 0x00
 dl .CHARACTER59
-db 0x00
 dl .CHARACTER60
-db 0x00
 dl .CHARACTER61
-db 0x00
 dl .CHARACTER62
-db 0x00
 dl .CHARACTER63
-db 0x00
 dl .CHARACTER64
-db 0x00
 dl .CHARACTER65
-db 0x00
 dl .CHARACTER66
-db 0x00
 dl .CHARACTER67
-db 0x00
 dl .CHARACTER68
-db 0x00
 dl .CHARACTER69
-db 0x00
 dl .CHARACTER70
-db 0x00
 dl .CHARACTER71
-db 0x00
 dl .CHARACTER72
-db 0x00
 dl .CHARACTER73
-db 0x00
 dl .CHARACTER74
-db 0x00
 dl .CHARACTER75
-db 0x00
 dl .CHARACTER76
-db 0x00
 dl .CHARACTER77
-db 0x00
 dl .CHARACTER78
-db 0x00
 dl .CHARACTER79
-db 0x00
 dl .CHARACTER80
-db 0x00
 dl .CHARACTER81
-db 0x00
 dl .CHARACTER82
-db 0x00
 dl .CHARACTER83
-db 0x00
 dl .CHARACTER84
-db 0x00
 dl .CHARACTER85
-db 0x00
 dl .CHARACTER86
-db 0x00
 dl .CHARACTER87
-db 0x00
 dl .CHARACTER88
-db 0x00
 dl .CHARACTER89
-db 0x00
 dl .CHARACTER90
-db 0x00
 dl .CHARACTER91
-db 0x00
 dl .CHARACTER92
-db 0x00
 dl .CHARACTER93
-db 0x00
 dl .CHARACTER94
-db 0x00
 dl .CHARACTER95
-db 0x00
 dl .CHARACTER96
-db 0x00
 dl .CHARACTER97
-db 0x00
 dl .CHARACTER98
-db 0x00
 dl .CHARACTER99
-db 0x00
 dl .CHARACTER100
-db 0x00
 dl .CHARACTER101
-db 0x00
 dl .CHARACTER102
-db 0x00
 dl .CHARACTER103
-db 0x00
 dl .CHARACTER104
-db 0x00
 dl .CHARACTER105
-db 0x00
 dl .CHARACTER106
-db 0x00
 dl .CHARACTER107
-db 0x00
 dl .CHARACTER108
-db 0x00
 dl .CHARACTER109
-db 0x00
 dl .CHARACTER110
-db 0x00
 dl .CHARACTER111
-db 0x00
 dl .CHARACTER112
-db 0x00
 dl .CHARACTER113
-db 0x00
 dl .CHARACTER114
-db 0x00
 dl .CHARACTER115
-db 0x00
 dl .CHARACTER116
-db 0x00
 dl .CHARACTER117
-db 0x00
 dl .CHARACTER118
-db 0x00
 dl .CHARACTER119
-db 0x00
 dl .CHARACTER120
-db 0x00
 dl .CHARACTER121
-db 0x00
 dl .CHARACTER122
-db 0x00
 dl .CHARACTER123
-db 0x00
 dl .CHARACTER124
-db 0x00
 dl .CHARACTER125
-db 0x00
 dl .CHARACTER126
-db 0x00
 dl .CHARACTER32
-db 0x00
