@@ -36,42 +36,41 @@
 	push	iy
 	ld	iy, console_dev
 ; load foreground & background color
-	ld	bc, (iy+CONSOLE_FG_COLOR)
+;	ld	bc, (iy+CONSOLE_FG_COLOR)
+	ld	bc, (iy+CONSOLE_FG_COLOR-1)
+	ld	c, (iy+CONSOLE_BG_COLOR)
 	ld	iy, (hl)
 	ex	de, hl
 	ld	de, 315
+; c = background b = foreground bcu = background
 .glyph_char_loop:
 	ld	a, (iy+0)
 	inc	iy
-	ld	(hl), b
+	ld	(hl), bc
 	add	a, a
 	jr	nc, $+3
+	ld	(hl), b
+	inc	hl
+	add	a, a
+	jr	c, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), b
 	add	a, a
 	jr	nc, $+3
+	ld	(hl), b
+	inc	hl
+	ld	(hl), bc
+	add	a, a
+	jr	nc, $+3
+	ld	(hl), b
+	inc	hl
+	add	a, a
+	jr	c, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), b
 	add	a, a
 	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
 	ld	(hl), b
-	add	a, a
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	ld	(hl), b
-	add	a, a
-	jr	nc, $+3
-	ld	(hl), c
-	inc	hl
-	ld	(hl), b
-	add	a, a
-	jr	nc, $+3
-	ld	(hl), c
 	add	hl, de
 	jr	z, .glyph_char_loop
 ; hl is the last line position
