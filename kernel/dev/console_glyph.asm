@@ -28,59 +28,52 @@
 ; x * 6 + (y*11)*320 + buffer (3520)
 	call	.glyph_adress
 .glyph_char_address:
-	or	a, a
-	sbc	hl, hl
 	ld	l, a
-	add	hl, hl
-	add	hl, hl
+	ld	h, 3
+	mlt	hl
 	ld	bc, .TRANSLATION_TABLE
 	add	hl, bc
-	ld	hl, (hl)
 	push	iy
-	ld	iy, console_dev
-	ld	bc, (iy+CONSOLE_FG_COLOR)
-	ld	iyl, b
-; also load foreground color
-	ld	b, 11
+	ld	iy, (hl)
+; load foreground & background color
+	ld	bc, (console_dev+CONSOLE_FG_COLOR)
 	ex	de, hl
+	ld	de, $00013B	; 320-5
 .glyph_char_loop:
-	ld	a, (de)
-	push	de
-	ld	d, iyl
-	ld	(hl), d
+	ld	a, (iy+0)
+	ld	(hl), b
 	rra
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), d
+	ld	(hl), b
 	rra
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), d
+	ld	(hl), b
 	rra
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), d
+	ld	(hl), b
 	rra
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), d
+	ld	(hl), b
 	rra
 	jr	nc, $+3
 	ld	(hl), c
 	inc	hl
-	ld	(hl), d
+	ld	(hl), b
 	rra
 	jr	nc, $+3
 	ld	(hl), c
-	ld	de, 320-5
 	add	hl, de
-	pop	de
-	inc	de
-	djnz	.glyph_char_loop
+	inc	iy
+	and	a, d
+	jr	z, .glyph_char_loop
 ; hl is the last line position
 ; so hl - 320*11 + 6 = next character position
 	ld	de, -320*11+6
