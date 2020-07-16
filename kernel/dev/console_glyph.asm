@@ -23,7 +23,7 @@
 ; return de = next screen buffer position
 	ld	hl, console_cursor_xy
 	ld	hl, (hl)
-; h = y , l = x (console 50x20), c is color, a is char
+; h = y , l = x (console 50x20)
 ; y isdb 11, x is 6 in height/width
 ; x * 6 + (y*11)*320 + buffer (3520)
 	call	.glyph_adress

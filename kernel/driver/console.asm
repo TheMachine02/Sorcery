@@ -93,7 +93,9 @@ console:
 	ld	iy, console_stdin
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	a, (hl)
-	call	.glyph_char
+	ld	hl, console_blink
+	bit	CONSOLE_BLINK_RATE, (hl)
+	call	z, .glyph_char
 		
 	ld	a, (console_key)
 	cp	a, $FD
