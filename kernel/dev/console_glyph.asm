@@ -34,9 +34,10 @@
 	ld	bc, .TRANSLATION_TABLE
 	add	hl, bc
 	push	iy
-	ld	iy, (hl)
+	ld	iy, console_dev
 ; load foreground & background color
-	ld	bc, (console_dev+CONSOLE_FG_COLOR)
+	ld	bc, (iy+CONSOLE_FG_COLOR)
+	ld	iy, (hl)
 	ex	de, hl
 	ld	de, $00013B	; 320-5
 .glyph_char_loop:
