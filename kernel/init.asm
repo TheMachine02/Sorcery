@@ -76,10 +76,10 @@ end if
  db "/", 0
 
 kname:
-	ld	bc, .name
+	ld	bc, .string
 	ret	
-.name:
- db "Sorcery-0.0.1a-slp-d738d5b", 0
+.string:
+ db CONFIG_KERNEL_NAME, 0
 
 ; Exemple area ;
 ; Static compiled thread an such ;

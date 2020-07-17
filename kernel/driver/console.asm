@@ -45,7 +45,7 @@ console:
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
-	ld	bc, 38
+	ld	bc, 37
 	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
@@ -485,7 +485,7 @@ include 'logo.inc'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
- db $1B, "[2;10H", "Sorcery-0.0.1a-slp-d738d5b", $1B, "[5;H"
+ db $1B, "[2;10H", CONFIG_KERNEL_NAME, $1B, "[5;H"
  
 .PALETTE:
 ; default = foreground = \e[39m
