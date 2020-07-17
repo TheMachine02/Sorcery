@@ -159,11 +159,8 @@ org $D18800
 .phy_busy_wait:
 	ld	a, (hl)
 	xor	a, d
-;	rlca
 	add	a, a
 	ret	nc
-;	bit	6, a
-;	jr	z, .phy_busy_wait
 	jp	p, .phy_busy_wait
 	ld	a, (hl)
 	xor	a, d

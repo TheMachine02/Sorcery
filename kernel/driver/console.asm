@@ -1,13 +1,14 @@
 define	console_stdin		$D00800
 
 define	console_dev		$D00700
-define	console_fg_color	$D00700
-define	console_bg_color	$D00701
-define	console_cursor_xy	$D00702
-define	console_blink		$D00705
-define	console_flags		$D00706
-define	console_key		$D00707
-define	console_string		$D00714
+define	console_style		$D00700
+define	console_fg_color	$D00701
+define	console_bg_color	$D00702
+define	console_cursor_xy	$D00703
+define	console_blink		$D00706
+define	console_flags		$D00707
+define	console_key		$D00708
+define	console_string		$D00715
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
@@ -25,6 +26,8 @@ console:
 	ld	c, 36
 	ldir
 	ld	hl, console_dev
+	ld	(hl), $00
+	inc	hl
 	ld	(hl), $01
 	inc	hl
 	ld	(hl), $00
@@ -47,14 +50,11 @@ console:
 	jp	.phy_write
 
 .INIT_MESSAGE:
- db "Running on ez80 at 48Mhz", 10
- db "Watchdog initialised with heartbeat 1s", 10
- db "Welcome to Sorcery", 10
- db "No init found !", 10
+ db "No init found ! You are on your own.", 10
  
 .no_init:
 ; need to lock screen for us
-	ld	bc, 99
+	ld	bc, 37
 	ld	hl, .INIT_MESSAGE
 	call	.phy_write
 
@@ -218,6 +218,9 @@ console:
 	ld	hl, .SHUTDOWN
 	call	.check_builtin
 	jr	z, .shutdown
+	ld	hl, .ECHO
+	call	.check_builtin
+	jr	z, .echo	
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
 	call	.phy_write
@@ -236,6 +239,22 @@ console:
 	inc	de
 	jp	pe, .check_builtin_compare
 	ret
+.echo:
+	ld	hl, console_string + 5
+	xor	a, a
+	ld	bc, 0
+	cpir
+	or	a, a
+	sbc	hl, hl
+	sbc	hl, bc
+	push	hl
+	pop	bc
+	cpi
+	jp	po, .clean_command
+	ld	hl, console_string + 5
+	call	.phy_write
+	call	.phy_new_line	
+	jr	.clean_command
 
 .shutdown:
 	call	kpower.cycle_off
@@ -282,7 +301,7 @@ console:
 	jr	nz, .color_copy_block
 	ld	iy, console_dev
 	call	.phy_new_line
-	jr	.clean_command
+	jp	.clean_command
 .uptime:
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
 	push	hl
@@ -445,7 +464,7 @@ console:
 .REBOOT:
  db 7, "r", "e", "b", "o", "o", "t", 0
 .ECHO:
- db 5, "e", "c", "h", "o"
+ db 5, "e", "c", "h", "o", " "
 .COLOR:
  db 6, "c", "o", "l", "o", "r", 0
 .UPTIME:
@@ -504,11 +523,11 @@ include 'logo.inc'
 
 .KEYMAP_NO_MOD:
  db ' ', ':', '?', 'x', 'y', 'z', '"', 's', 't', 'u', 'v', 'w', 'n', 'o', 'p', 'q', 'r', 'i', 'j', 'k', 'l', 'm'
- db 'd', 'e', 'f', 'g', 'h', 'a', 'b', 'c', 0
+ db 'd', 'e', 'f', 'g', 'h', 'a', 'b', 'c'
  
 .KEYMAP_ALPHA:
  db ' ', '.', ';', 'X', 'Y', 'Z', '!', 'S', 'T', 'U', 'V', 'W', 'N', 'O', 'P', 'Q', 'R', 'I', 'J', 'K', 'L', 'M'
- db 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C', 0
+ db 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C'
 
 .KEYBOARD_KEY:
  db $FD, $FD, $FD, $FD, $FD, $FD, $F7, $FF

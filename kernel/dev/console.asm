@@ -1,14 +1,15 @@
-define	CONSOLE_FG_COLOR	$0
-define	CONSOLE_BG_COLOR	$1
-define	CONSOLE_CURSOR		$2
-define	CONSOLE_CURSOR_COL	$2
-define	CONSOLE_CURSOR_ROW	$3
-define	CONSOLE_BLINK		$5
-define	CONSOLE_FLAGS		$6
-define	CONSOLE_KEY		$7
-define	CONSOLE_ESC_BUFFER	$8	; 9 bytes max, two paramaters + 1 output + 1 master (partial buffer)
-define	CONSOLE_ESC_OFFSET	$11	; describe the current offset inside the buffer (3 bytes for fast read)
-define	CONSOLE_STRING		$14
+define	CONSOLE_STYLE		$0
+define	CONSOLE_FG_COLOR	$1
+define	CONSOLE_BG_COLOR	$2
+define	CONSOLE_CURSOR		$3
+define	CONSOLE_CURSOR_COL	$3
+define	CONSOLE_CURSOR_ROW	$4
+define	CONSOLE_BLINK		$6
+define	CONSOLE_FLAGS		$7
+define	CONSOLE_KEY		$8
+define	CONSOLE_ESC_BUFFER	$9	; 9 bytes max, two paramaters + 1 output + 1 master (partial buffer)
+define	CONSOLE_ESC_OFFSET	$12	; describe the current offset inside the buffer (3 bytes for fast read)
+define	CONSOLE_STRING		$15
 
 define	CONSOLE_FLAGS_ALPHA	0
 define	CONSOLE_FLAGS_2ND	1
@@ -170,7 +171,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 ; let's do some shady stuff
 	cp	a, 'm' - $30	; this is sgr
 	jr	z, .phy_CSI_sgr
-	sub	a, $10 + 1
+	sub	a, $11
 	sbc	hl, hl
 	ld	l, a
 ; unsupported above 11
@@ -188,13 +189,31 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 .phy_CSI_sgr:
 ; not much supported
 	ld	a, e
+	or	a, a
+	jr	z, .phy_CSI_sgr_default
+	cp	a, 40
+	jr	nc, .phy_CSI_sgr_background
+.phy_CSI_sgr_foreground:
 	cp	a, 39
-	jr	z, .phy_CSI_sgr_default_color
+	jr	z, .phy_CSI_sgr_fgd_color
 	sub	a, 30 - 2
 	ld	(iy+CONSOLE_FG_COLOR), a
 	ret
-.phy_CSI_sgr_default_color:
+.phy_CSI_sgr_background:
+	cp	a, 49
+	jr	z, .phy_CSI_sgr_bgd_color
+	sub	a, 40 - 2
+	ld	(iy+CONSOLE_BG_COLOR), a
+	ret
+.phy_CSI_sgr_fgd_color:
 	ld	(iy+CONSOLE_FG_COLOR), $01
+	ret
+.phy_CSI_sgr_bgd_color:
+	ld	(iy+CONSOLE_BG_COLOR), $00
+	ret
+.phy_CSI_sgr_default:
+	ld	hl, $000100
+	ld	(iy+CONSOLE_STYLE), hl
 	ret
 
 .PHY_CSI_JUMP_TABLE:
