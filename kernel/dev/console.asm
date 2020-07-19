@@ -108,7 +108,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 .phy_escape_parse:
 	inc	ix
 	inc	(iy+CONSOLE_ESC_OFFSET)
-	ld	a, CONSOLE_ESC_BUFFER_MAX_SIZE
+; we are checking offset, allowed between 0 and 8
+	ld	a, CONSOLE_ESC_BUFFER_MAX_SIZE - 1
 	cp	a, (iy+CONSOLE_ESC_OFFSET)
 	jr	c, .phy_escape_flush	; ie error out, and ignore
 	ld	a, (hl)
