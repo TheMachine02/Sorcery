@@ -9,7 +9,7 @@ define	CONSOLE_FLAGS		$7
 define	CONSOLE_KEY		$8
 define	CONSOLE_ESC_OFFSET	$9	; describe the current offset inside the buffer (3 bytes for fast read)
 define	CONSOLE_ESC_BUFFER	$C	; 9 bytes max, two paramaters + 1 output + 1 master (partial buffer)
-define	CONSOLE_ESC_BUFFER_MAX_SIZE	10
+define	CONSOLE_ESC_BUFFER_MAX_SIZE	9
 define	CONSOLE_STRING		$15
 
 define	CONSOLE_FLAGS_ALPHA	0
@@ -93,12 +93,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jr	z, .phy_write_new_line_ex
 	cp	a, $1B
 	jr	nz, .phy_write_loop
-	
-.phy_escape_flush:
-	res	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
-	ld	(iy+CONSOLE_ESC_OFFSET), 0
-	ret	
-	
+
 ; process an escape sequence sequentially, from string
 .phy_escape_sequence:
 	set	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
@@ -114,8 +109,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	inc	ix
 	inc	(iy+CONSOLE_ESC_OFFSET)
 	ld	a, CONSOLE_ESC_BUFFER_MAX_SIZE
-	cp	a, (iy+CONSOLE_ESC_BUFFER)
-	jr	z, .phy_escape_flush	; ie error out, and ignore
+	cp	a, (iy+CONSOLE_ESC_OFFSET)
+	jr	c, .phy_escape_flush	; ie error out, and ignore
 	ld	a, (hl)
 	ldi
 	jp	po, .phy_single_escape
@@ -127,6 +122,11 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	call	.phy_escape_process
 	jr	.phy_write_address
 
+.phy_escape_flush:
+	res	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
+	ld	(iy+CONSOLE_ESC_OFFSET), 0
+	ret
+	
 .phy_single_escape:
 	cp	a, $5B
 	ret	z
