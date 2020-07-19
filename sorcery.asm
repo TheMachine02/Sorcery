@@ -1,8 +1,10 @@
 include	'include/ez80.inc'
-include	'include/asm-errno.inc'
-include	'include/asm-signal.inc'
 include	'include/tiformat.inc'
 include	'include/os.inc'
+; kernel header
+include	'header/asm-errno.inc'
+include	'header/asm-signal.inc'
+; kernel build config
 include 'config'
 
 format	ti executable 'SORCERY'
@@ -59,10 +61,10 @@ include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
+; driver & device
 include	'kernel/driver/console.asm'
-
-; must follow
 include	'kernel/dev/console.asm'
+include	'kernel/driver/flash.asm'
 include	'kernel/dev/flash.asm'
 
 ; include	'kernel/exec/kexec.asm'

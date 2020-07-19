@@ -1,9 +1,3 @@
-define	KERNEL_FLASH_MAPPING		$E00003
-define	KERNEL_FLASH_CTRL		$E00005
-define	KERNEL_FLASH_SIZE		$400000
-
-flash:
-
 .phy_init:
 	ld	hl, .phy_mem_ops
 	ld	bc, .FLASH_DEV
@@ -18,48 +12,10 @@ flash:
 .phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
+	jp	.phy_seek
 
-.init:
-; set flash wait state
-	di
-	rsmix
-	ld	hl, KERNEL_FLASH_CTRL
-	ld	(hl), $03
-	ld	l, KERNEL_FLASH_MAPPING and $FF
-	ld	(hl), $06
-
-	ld	hl, .phy_write_base
-	ld	de, $D18800
-	ld	bc, 256
-	ldir
-	call	.phy_init
-
-; lock it on init
-
-; flash unlock and lock
-.phy_lock:
-	xor	a, a
-	out0	($28), a
-	in0	a, ($06)
-	res	2, a
-	out0	($06), a
-	ret
-	
-.phy_unlock:
-	in0	a, ($06)
-	or	a, 4
-	out0	($06), a
-	ld	a, 4
-	di 
-	jr	$+2
-	di
-	rsmix 
-	im 1
-	out0	($28),a
-	in0	a,($28)
-	bit	2,a
-	ret
- 
+; no op
+.phy_seek:
 .phy_read:
 	ret
 
@@ -69,7 +25,7 @@ org $D18800
 
 .phy_erase:
 ; erase sector hl
-	call	.phy_unlock
+	call	.unlock
 	ex	de, hl
 ; first cycle
 	ld	hl, $000AAA
@@ -84,6 +40,8 @@ org $D18800
 	ld	(hl), l
 	ex	de, hl
 	ld	(hl), $30
+; timeout 50µs
+	call	.phy_timeout
 .phy_erase_loop:
 	ld	de, (KERNEL_INTERRUPT_STATUS_MASKED)
 	ld	a, d
@@ -102,22 +60,38 @@ org $D18800
 	bit	6, (hl)
 	jr	z, .phy_suspend_busy_wait
 ; perform interrupt
-	call	.phy_lock
+	call	.lock
 	ei
 	halt
 	di
 ; re unlock
-	call	.phy_unlock
+	call	.unlock
 	ld	a, $30
 	ld	($0), a
 	ret
-	
+
+.phy_timeout:
+; wait a bit more than 50 µs
+	push	hl
+	ld	hl, 73
+.phy_timeout_wait:
+	dec	hl
+	add	hl,de
+	or	a,a
+	sbc	hl,de
+	jr	nz, .phy_timeout_wait
+	pop	hl
+	ret
+
 .phy_write:
 ; write hl to flash for bc bytes
-	call	.phy_unlock
+	call	.unlock
 ; we will write hl to de address
 .phy_write_loop:
 	ld	a, (hl)
+	ex	de, hl
+	and	a, (hl)
+	ex	de, hl
 	push	hl
 	ld	hl, $000AAA
 	ld	(hl), l
@@ -125,45 +99,42 @@ org $D18800
 	ld	(hl), l
 	add	hl, hl
 	ld	(hl), $A0
-	ex	de, hl
-	and	a, (hl)
 ; byte to program = A
-	ld	(hl), a
+	ld	(de), a
 ; now we need to check for the write to complete
 ; 6 micro second typical, ~300 cycles wait
 	call	.phy_status_polling
 ; schedule if need for an interrupt
-	ld	de, (KERNEL_INTERRUPT_STATUS_MASKED)
-	ld	a, d
-	or	a, e
+	ld	hl, (KERNEL_INTERRUPT_STATUS_MASKED)
+	ld	a, h
+	or	a, l
 	jr	z, .phy_write_continue
 ; perform interrupt
 ; save all ?
-	call	.phy_lock
+	call	.lock
 	ei
 	halt
 	di
 ; re unlock
-	call	.phy_unlock
+	call	.unlock
 .phy_write_continue:
-	ex	de, hl
 	pop	hl
 	inc	de
 	cpi
 	jp	pe, .phy_write_loop
-	jp	.phy_lock
+	jp	.lock
 
 .phy_status_polling:
 	and	a, $80
-	ld	d, a
+	ld	h, a
 .phy_busy_wait:
-	ld	a, (hl)
-	xor	a, d
+	ld	a, (de)
+	xor	a, h
 	add	a, a
 	ret	nc
 	jp	p, .phy_busy_wait
-	ld	a, (hl)
-	xor	a, d
+	ld	a, (de)
+	xor	a, h
 	rlca
 	jr	nc, .phy_busy_wait
 	

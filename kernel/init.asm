@@ -193,7 +193,7 @@ TEST_THREAD_C:
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.unlock
 ; 	ld	bc, 65536
-; 	ld	hl, $E40000
+; 	ld	hl, $020000
 ; 	ld	de, $3B0000
 ; 	call	flash.phy_write
 ; 	ld	hl, $3B0000
