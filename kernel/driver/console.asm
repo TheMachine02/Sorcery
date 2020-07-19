@@ -87,7 +87,7 @@ console:
 	ld	hl, console_key
 .process_key:
 	ld	(hl), a
-	call	kvideo.vsync
+	call	video.vsync
 ; wait for vsync, we are in vblank now (are we ?)
 ; the syscall destroy a but not hl
 	ld	iy, console_stdin

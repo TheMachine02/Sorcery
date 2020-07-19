@@ -1,5 +1,5 @@
 ; auto generated file
-define CONFIG_KERNEL_NAME "Sorcery.0.0.1-slp-722c672"
+define CONFIG_KERNEL_NAME "Sorcery.0.0.1-slp-eb3c29d"
 ; special code modifier ;
 define	CONFIG_USE_BOOT_PATCH		0
 ; try to save power during idle by lowering clock to 6MHz ;

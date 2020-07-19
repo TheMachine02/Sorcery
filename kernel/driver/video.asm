@@ -1,41 +1,26 @@
-;include 'include/kernel.inc'
-
-define DRIVER_VIDEO_VRAM                  0xD40000
-define DRIVER_VIDEO_VRAM_SIZE             0x25800
-define DRIVER_VIDEO_FRAMEBUFFER_SIZE      0x12C00
-define DRIVER_VIDEO_CTRL                  0xE30018
+define DRIVER_VIDEO_VRAM                  $D40000
+define DRIVER_VIDEO_VRAM_SIZE             $25800
+define DRIVER_VIDEO_FRAMEBUFFER_SIZE      $12C00
+define DRIVER_VIDEO_CTRL                  $E30018
 define DRIVER_VIDEO_CTRL_DEFAULT          100100100111b
-define DRIVER_VIDEO_IMSC                  0xE3001C
+define DRIVER_VIDEO_IMSC                  $E3001C
 define DRIVER_VIDEO_IMSC_DEFAULT          00000100b
-define DRIVER_VIDEO_ICR                   0xE30028
-define DRIVER_VIDEO_ISR                   0xE30020
-define DRIVER_VIDEO_SCREEN                0xE30010
-define DRIVER_VIDEO_BUFFER                0xE30014
-define DRIVER_VIDEO_PALETTE               0xE30200
-define DRIVER_VIDEO_TIMING0               0xE30000
-define DRIVER_VIDEO_TIMING1               0xE30004
-define DRIVER_VIDEO_TIMING2               0xE30008
-define DRIVER_VIDEO_TIMING3               0xE3000C
-
-; define DRIVER_VIDEO_FONT_PALETTE          0xE30C08
-; define DRIVER_VIDEO_BLIT_PALETTE          0xE30C09
+define DRIVER_VIDEO_ICR                   $E30028
+define DRIVER_VIDEO_ISR                   $E30020
+define DRIVER_VIDEO_SCREEN                $E30010
+define DRIVER_VIDEO_BUFFER                $E30014
+define DRIVER_VIDEO_PALETTE               $E30200
+define DRIVER_VIDEO_TIMING0               $E30000
+define DRIVER_VIDEO_TIMING1               $E30004
+define DRIVER_VIDEO_TIMING2               $E30008
+define DRIVER_VIDEO_TIMING3               $E3000C
 
 define DRIVER_VIDEO_IRQ                   00100000b
-define DRIVER_VIDEO_IRQ_LOCK              0xE30C0A
-define DRIVER_VIDEO_IRQ_LOCK_THREAD       0xE30C0B
+define DRIVER_VIDEO_IRQ_LOCK              $E30C0A
+define DRIVER_VIDEO_IRQ_LOCK_THREAD       $E30C0B
 define DRIVER_VIDEO_IRQ_LOCK_SET          0
 
-kvideo:
-	db	21
-.jump:
-	jp	.init
-	jp	.irq_handler
-	jp	.irq_lock
-	jp	.irq_unlock
-	jp	.swap
-	jp	.vsync
-	jp	.clear_buffer
-	jp	.clear_color
+video:
 
 .init:
 	di
@@ -105,15 +90,10 @@ kvideo:
 	ld	de, NULL
 	ld	(hl), de
 	ret
-
-.vsync:
-	ld	a, i
-	jp	po, .vsync_atomic
-	ld	a, DRIVER_VIDEO_IRQ
-	jp	kthread.wait_on_IRQ
 	
 .swap:
 	ld	a, i
+	ld	a, DRIVER_VIDEO_IRQ
 	di
 	ld	hl, (DRIVER_VIDEO_SCREEN) 
 	ld	de, (DRIVER_VIDEO_BUFFER)
@@ -121,10 +101,14 @@ kvideo:
 	ld	(DRIVER_VIDEO_SCREEN), de
 ; is interrupt enabled ?
 ; quit if not enabled, wait for vsync signal else
-	jp	po, .vsync_atomic
-	ld	a, DRIVER_VIDEO_IRQ
-	jp	kthread.wait_on_IRQ	
+	jp	pe, kthread.wait_on_IRQ
+	jr	.vsync_atomic
 
+.vsync:
+	ld	a, i
+	ld	a, DRIVER_VIDEO_IRQ
+	jp	pe, kthread.wait_on_IRQ
+	
 .vsync_atomic:
 ; wait until the LCD finish displaying the frame
 	ld	hl, DRIVER_VIDEO_ICR

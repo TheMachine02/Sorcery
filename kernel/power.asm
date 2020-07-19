@@ -159,7 +159,7 @@ kpower:
 	ld	(DRIVER_VIDEO_CTRL), hl
 ; setup timings
 	ld	hl, DRIVER_VIDEO_TIMING0 + 1
-	ld	de, kvideo.LCD_TIMINGS
+	ld	de, video.LCD_TIMINGS
 	ld	c, 8
 	ldir
 ; not sure what this is for

@@ -15,7 +15,7 @@ ring_buffer:
 	ld	(iy+RING_BUFFER_HEAD), de
 	ld	(iy+RING_BUFFER_TAIL), de
 	ld	bc, RING_BUFFER_MAX_SIZE
-	ld	hl, $E40000
+	ld	hl, KERNEL_MM_NULL
 	ldir
 	ld	(iy+RING_BUFFER_BOUND_UPP), de
 	ld	(iy+RING_BUFFER_SIZE), bc

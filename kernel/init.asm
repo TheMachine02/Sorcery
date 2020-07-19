@@ -45,12 +45,12 @@ kinit:
 	call	kinterrupt.init
 	call	kthread.init
 	call	kwatchdog.init
+;	call	kvfs.init
 ; driver init ;
-	call	kvideo.init
+	call	video.init
 	call	kkeyboard.init
 	call	krtc.init
-; device init ;
-;	call	vfs.init
+; device & driver init ;
 	call	console.init
 	call	flash.init
 ; create init thread : ie, first program to run (/bin/init/)

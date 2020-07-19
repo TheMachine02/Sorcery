@@ -42,7 +42,7 @@ knmi:
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; reset major subsystem
 	call    kinterrupt.init
-	call	kvideo.init
+	call	video.init
 	call	console.init
 ; now, process
 	ld	hl, KERNEL_WATCHDOG_CTRL

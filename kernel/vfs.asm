@@ -35,7 +35,6 @@ define	KERNEL_VFS_SEEK				16
 
 
 
-
 ; for directories :
 ; also allocate data block, 64 bytes 4 directories per node > 2 byte flags, > 3 bytes inode > 10 bytes names + NULL >
 
