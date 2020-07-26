@@ -28,22 +28,7 @@ define	DRIVER_RTC_IRQ_LOCK_THREAD	0xD000F7
 define	DRIVER_RTC_IRQ_LOCK		0xD000FA
 define	DRIVER_RTC_IRQ_LOCK_SET		0
 
-krtc:
-	db	11
-.jump:
-	jp	.init
-	jp	.irq_handler
-	jp	.irq_lock
-	jp	.irq_unlock
-	jp	.wait_bit
-	jp	.wait_second
-	jp	.wait_minute
-	jp	.wait_hour
-	jp	.wait_day
-	jp	.set_time
-	jp	.get_time
-	jp	.set_alarm
-	jp	.wait_alarm
+rtc:
 
 .init:
 	di

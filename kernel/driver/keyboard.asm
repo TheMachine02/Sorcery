@@ -13,17 +13,10 @@ define	DRIVER_KEYBOARD_IRQ_LOCK            0xE30C0A
 define	DRIVER_KEYBOARD_IRQ_LOCK_THREAD     0xE30C0B
 define	DRIVER_KEYBOARD_IRQ_LOCK_SET        0
 
-kkeyboard:
-	db	5
-.jump:
-	jp	.init
-	jp	.irq_handler
-	jp	.irq_lock
-	jp	.irq_unlock
-	jp	.wait_key
+keyboard:
     
 .init:
-	tstdi
+	di
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	ld	(hl), DRIVER_KEYBOARD_MODE_IDLE
 	ld	de, $08080F
@@ -42,10 +35,7 @@ kkeyboard:
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
 	ld	hl, .irq_handler
-	pop	af
 	ld	a, DRIVER_KEYBOARD_IRQ
-	jp	po, kirq.request
-	ei
 	jp	kirq.request
 
 .irq_handler:

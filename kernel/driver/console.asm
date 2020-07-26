@@ -220,7 +220,10 @@ console:
 	jr	z, .shutdown
 	ld	hl, .ECHO
 	call	.check_builtin
-	jr	z, .echo	
+	jr	z, .echo
+	ld	hl, .TOP
+	call	.check_builtin
+	jp	z, .builtin_top
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
 	call	.phy_write
@@ -462,15 +465,17 @@ console:
  dl .COLOR
  
 .REBOOT:
- db 7, "r", "e", "b", "o", "o", "t", 0
+ db 7, "reboot", 0
 .ECHO:
- db 5, "e", "c", "h", "o", " "
+ db 5, "echo "
 .COLOR:
- db 6, "c", "o", "l", "o", "r", 0
+ db 6, "color", 0
 .UPTIME:
- db 7, "u", "p", "t", "i", "m", "e", 0
+ db 7, "uptime", 0
 .SHUTDOWN:
- db 9, "s", "h", "u", "t", "d", "o", "w", "n", 0
+ db 9, "shutdown", 0
+.TOP:
+ db 4, "top",0
  
 .UPTIME_STR:
 ; db "Up since 0000 day(s), 00h 00m 00s", 0
@@ -485,7 +490,7 @@ include 'logo.inc'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
- db $1B, "[2;10H", CONFIG_KERNEL_NAME, $1B, "[5;H"
+ db $1B, "[3;11H", CONFIG_KERNEL_NAME, $1B, "[6;H"
  
 .PALETTE:
 ; default = foreground = \e[39m
@@ -539,3 +544,114 @@ include 'logo.inc'
  db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
 
 .KEYMAP_2ND:
+
+.TOP_STR:
+ db $1B,"[47m", $1B, "[30m" 
+ db " PID  %cpu" ,10, $1B, "[39m", $1B, "[49m"
+
+.builtin_top:
+.top_init:
+	ld	b, 18
+	ld	hl, kthread_pid_map+4
+	ld	de, 0
+.top_init_time_loop:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .top_init_skip
+	inc	hl
+	ld	iy, (hl)
+	ld	(iy+KERNEL_THREAD_TIME), de
+	inc	hl
+	inc	hl
+	inc	hl
+.top_init_skip:
+	djnz	.top_init_time_loop
+.top_loop:
+; clear all console
+	call	video.vsync
+
+	ld	hl, $E40000
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	ld	bc, 76800
+	ldir
+	ld	(console_cursor_xy), bc
+; display the str
+	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
+	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_MINUTE)
+	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_HOUR)
+	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_DAY)
+	push	hl
+	ld	hl, .UPTIME_STR
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 18
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, console_string
+	ld	bc, 34
+	call	.phy_write
+
+	ld	hl, .TOP_STR
+	ld	bc, 31
+	call	.phy_write
+	
+	di
+	ld	b, 18
+	ld	hl, kthread_pid_map+4
+.top_data_loop:
+	push	bc
+
+	ld	a, (hl)
+	or	a, a
+	jr	z, .top_skip
+	inc	hl
+	ld	iy, (hl)
+	dec	hl
+	ld	de, (iy+KERNEL_THREAD_TIME)
+	push	hl
+	ld	a, l
+	rra
+	sra	a
+; display a
+	or	a, a
+	sbc	hl, hl
+	ld	(iy+KERNEL_THREAD_TIME), hl
+	ld	l, a
+	push	hl
+; de / 32768 * 100
+	ex	de, hl
+	ld	l, 200
+	mlt	hl
+	ld	l, h
+	ld	h, 0
+	ex	(sp), hl
+	push	hl
+	ld	hl, .TOP_LINE_STR
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 12
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, console_string
+	ld	bc, 10
+	call	.phy_write
+	pop	hl
+.top_skip:
+	ld	de, 4
+	add	hl, de
+	pop	bc
+	djnz	.top_data_loop
+	
+	ei
+	call	rtc.wait_second
+	jp	.top_loop
+	
+.TOP_LINE_STR:
+ db " %3d  %3d", 10, 0

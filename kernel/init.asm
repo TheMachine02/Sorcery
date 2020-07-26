@@ -48,11 +48,12 @@ kinit:
 ;	call	kvfs.init
 ; driver init ;
 	call	video.init
-	call	kkeyboard.init
-	call	krtc.init
+	call	keyboard.init
+	call	rtc.init
 ; device & driver init ;
 	call	console.init
 	call	flash.init
+;	call	null.init
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
@@ -176,10 +177,8 @@ global_frequency_table:
 TEST_THREAD_C:
 	call __frameset0
 	ld hl, (ix+6)
-.spin:
-; we can sleep now ! (only 8 bits value for now)
-	
-;	ld	hl, 2000	; 2000 ms is nice
+.spin:	
+;	ld	hl, 30	; 30 ms is nice
 ;	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF
@@ -208,6 +207,7 @@ TEST_THREAD_C_DEATH:
 ;	ld	iy, (kthread_current)
 ;	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 ; malloc test ;
+.spin:
 	ld	hl, 512
 	call	kmalloc
 	push	hl
@@ -217,6 +217,7 @@ TEST_THREAD_C_DEATH:
 	call	kmalloc
 	pop	hl
 	call	kfree
+	jr	.spin
 ; wait ;
 ; normal path - but not taken
 	ld	hl, 0

@@ -318,12 +318,20 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	cp	a, CONSOLE_CURSOR_MAX_COL
 	jr	nc, $+4
 	ld	a, CONSOLE_CURSOR_MAX_COL - 1
-	ld	(hl), a	
+	ld	(hl), a
 	ret
 
 .phy_cursor_position:
 ; row is d, col is e, so correct
 ; there are 0 based, default is 0
+	ld	a, e
+	or	a, a
+	jr	z, $+3
+	dec	e
+	ld	a, d
+	or	a, a
+	jr	z, $+3
+	dec	d
 	ld	(iy+CONSOLE_CURSOR), de
 	ret
 

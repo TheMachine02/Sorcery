@@ -170,6 +170,5 @@ kpower:
 ; 	ld	a, $DC
 ; 	call	$000640
 ; 	cp	a, $35
-	call	kwatchdog.arm
 	ei
-	ret
+	jp	kwatchdog.arm

@@ -12,27 +12,17 @@ define	DRIVER_HRTIMER1_IRQ_LOCK_THREAD		0xD000F2
 define	DRIVER_HRTIMER1_IRQ_LOCK		0xD000F5
 define	DRIVER_HRTIMER1_IRQ_LOCK_SET		0
 
-ktimer:
-	db	3
-.jump:
-	jp	.init
-	jp	.irq_handler
-	jp	.irq_lock
-	jp	.irq_unlock
-	jp	.wait
+timer:
 
 .init:
-	tstdi
+	di
 ; todo : enable the timer 1 with default paramater
 
 ; reset lock
 	call	.irq_lock_reset
 ; enable IRQ handler & enable IRQ
 	ld	hl, .irq_handler
-	pop	af
 	ld	a, DRIVER_HRTIMER1_IRQ
-	jp	po, kirq.request
-	ei
 	jp	kirq.request
 
 .irq_handler:
