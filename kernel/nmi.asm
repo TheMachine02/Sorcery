@@ -1,4 +1,4 @@
-define	CONTEXT_FRAME		0
+define	CONTEXT_FRAME			0
 define	CONTEXT_FRAME_RET		0	; PC register ;
 define	CONTEXT_FRAME_PC		0
 define	CONTEXT_FRAME_SP		3	; SP register ;
