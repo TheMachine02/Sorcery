@@ -57,7 +57,7 @@ kinit:
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
-	jp	c, kinterrupt.nmi
+	jp	c, nmi
 ; nice idle thread code
 .arch_sleep:
 ; different behaviour are possible

@@ -245,11 +245,7 @@ kthread:
 	ld	(iy-18), hl
 	ld	(iy-21), bc
 	ld	(iy-24), de
-<<<<<<< HEAD
-	ei
-=======
 	rsti
->>>>>>> da80da31a1ff7c599d4d50ffb93fef23b3e9e6ae
 	lea	iy, ix+0
 	pop	ix
 	pop	af

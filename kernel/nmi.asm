@@ -113,7 +113,7 @@ nmi:
 	push	hl
 	push	bc
 	ld	hl, .CONTEXT_FRAME_SYSE
-	ld	bc, 23
+	ld	bc, 24
 	call	console.phy_write
 	pop	bc
 	pop	hl
@@ -145,10 +145,10 @@ nmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_string
-	ld	bc, 184
+	ld	bc, 183
 	call	console.phy_write
 ; unwind stack frame
-	ld	ix, (knmi_context+CONTEXT_FRAME_SP)
+	ld	ix, (nmi_context+CONTEXT_FRAME_SP)
 	ld	b, 8
 .exception_unwind:
 	push	bc
@@ -168,7 +168,7 @@ nmi:
 	call	console.phy_write
 	pop	ix
 	pop	bc
-	djnz	.execption_unwind
+	djnz	.exception_unwind
 ; wait any key
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	ld	(hl), 1
@@ -186,7 +186,7 @@ nmi:
 ; also restore console state, and return
 	ret
 
-.THREAD_DEADLOCK:	
+.THREAD_DEADLOCK:
  db "system deadlock"
 .WATCHDOG_EXCEPTION:
  db "watchdog violation"
@@ -195,7 +195,7 @@ nmi:
 .MEMORY_EXCEPTION:
  db "memory protection"
  
- ; size 23
+ ; size 24
 .CONTEXT_FRAME_SYSE:
  db "System exception : ", $1B, "[31m"
  
@@ -204,9 +204,9 @@ nmi:
  db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10
  db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10
  db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10
- db "Stack frame :", 10, 0 
+ db "Stack frame :", 0 
  
  ; 8 level stack free on screen
  ; size 11 (not counting null)
  .CONTEXT_STACK_STR:
- db "  +0x%06x", 10, 0
+ db 10,"  +0x%06x", 0

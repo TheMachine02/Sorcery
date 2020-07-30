@@ -31,7 +31,7 @@ include 'sorcery_certificate.asm'
 	jp	kinterrupt.rst20
 	jp	kinterrupt.rst28
 	jp	kinterrupt.rst30
-	jp	kinterrupt.nmi
+	jp	nmi
 	
 include	'kernel/init.asm'
 include	'kernel/interrupt.asm'
