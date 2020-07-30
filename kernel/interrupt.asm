@@ -325,9 +325,8 @@ end if
 	call	kqueue.remove_head
 ; switch based on what we should do
 	ld	a, (iy+TIMER_EV_SIGNOTIFY)
-	or	a, a
-	ret	z
 	dec	a
+	ret	m
 	jr	nz, .local_timer_thread
 .local_timer_signal:
 	ld	hl, (iy+TIMER_EV_NOTIFY_THREAD)

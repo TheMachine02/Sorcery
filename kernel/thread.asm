@@ -137,7 +137,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_ERRNO), l
 ; restore register and pop all the stack
 	exx
-	tstei
+	ei
 	lea	iy, ix+0
 	pop	ix
 	pop	af
@@ -155,7 +155,7 @@ kthread:
 ; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
 	push	af
 	push	ix
-	tstdi
+	di
 ; save hl, de, bc registers
 	exx
 	lea	ix, iy+0
@@ -245,7 +245,7 @@ kthread:
 	ld	(iy-18), hl
 	ld	(iy-21), bc
 	ld	(iy-24), de
-	tstei
+	ei
 	lea	iy, ix+0
 	pop	ix
 	pop	af
@@ -455,11 +455,11 @@ kthread:
 	pop	hl
 	call	task_yield
 .exit_clean:
-; interrupts should be definitely stopped here !
-	di
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	ksignal.kill
+; interrupts should be definitely stopped here !
+	di
 ; first disable stack protector (load the kernel_stack stack protector)
 	ld	a, $B0
 	out0	($3A), a

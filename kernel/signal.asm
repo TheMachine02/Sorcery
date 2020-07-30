@@ -52,7 +52,6 @@ ksignal:
 ; there is no need for critical section as long as the thread is the only one to manipulate its mask
 	ld	iy, (kthread_current)
 	lea	de, iy+KERNEL_THREAD_SIGNAL_MASK
-;	tstei
 	ld	a, (de)
 	xor	a, (hl)
 	ld	(de), a
@@ -71,7 +70,6 @@ ksignal:
 	ld	a, (de)
 	xor	a, (hl)
 	ld	(de), a
-;	tstdi
 	ret
 
 .abort:
@@ -195,8 +193,6 @@ ksignal:
 	ld	hl, (hl)
 	ld	sp, hl
 	sbc	hl, hl
-; 	ld	l, $FF
-; 	push	hl
 	push	de
 	ld	l, a
 	push	hl

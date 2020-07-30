@@ -7,7 +7,7 @@ define	KERNEL_MUTEX_LIST		2
 define	KERNEL_MUTEX_LIST_COUNT		2
 define	KERNEL_MUTEX_LIST_HEAD		3
 
-define	KERNEL_MUTEX_MAGIC	$FE
+define	KERNEL_MUTEX_MAGIC		$FE
 
 macro tstdi
 	ld	a, i
@@ -21,7 +21,6 @@ macro tstei
 	ei
 end macro
 
-    
 kmutex:
 ; POSIX errorcheck mutex implementation
 .unlock:
@@ -124,3 +123,42 @@ kmutex:
 	pop	iy
 	scf
 	ret
+
+
+; ; 4 bytes structure
+; define	KERNEL_SEMRW_LOCK		0
+; define	KERNEL_SEMRW_LOCK_BIT		0
+; define	KERNEL_SEMRW_LIST		1
+; 
+; semrw:
+; 
+; .init:
+; 	ld	de, NULL
+; 	inc	hl
+; 	ld	(hl), de
+; 	dec	hl
+; 	ld	(hl), NULL
+; 	ex	de, hl
+; 	ret
+; 
+; .lock_write:
+; ; if zero : can acquire the lock
+; 	di
+; 	ld	a, (hl)
+; 	or	a, a
+; 	
+; 
+; 
+; 	ret
+; 
+; .lock_read:
+; ; always acquire the lock
+; 	di
+; 	inc	(hl)
+; 	jr	z, .lock_read_error
+; ; if z set = overflow, trigger error
+; 	ei
+; 	ret
+; 	
+; .unlock:
+; 	ret*/
