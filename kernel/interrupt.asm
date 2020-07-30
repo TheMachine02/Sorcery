@@ -250,7 +250,7 @@ kscheduler:
 	jr	nz, .dispatch_queue
 	add	hl, bc
 	or	a, (hl)
-	jp	z, knmi
+	jp	z, nmi
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
 	jr	.dispatch_thread
