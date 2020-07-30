@@ -104,7 +104,7 @@ THREAD_INIT_TEST:
 	call	kthread.create
 	
 	ld	a, SIGUSR1
-	call	ksignal.procmask_single
+	call	signal.procmask_single
 	
 	call	console.run
 ; 	ld	hl, global_mutex
@@ -188,7 +188,7 @@ TEST_THREAD_C:
 ; 	ld	hl, $AA55AA
 	ld	a, SIGUSR1
 	ld	c, 1
-	call	ksignal.kill
+	call	signal.kill
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.unlock
 ; 	ld	bc, 65536

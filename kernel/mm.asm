@@ -156,7 +156,7 @@ end if
 	ld	hl, (kthread_current)
 	ld	c, (hl)
 	ld	a, SIGSEGV
-	call	ksignal.kill
+	call	signal.kill
 ; well, clean up and try for better ?
 ; interrupts are enabled and wish for the best
 	scf

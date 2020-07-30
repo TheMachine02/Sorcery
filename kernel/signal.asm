@@ -1,7 +1,7 @@
 ; structure sigset
 ; 4 bytes data, mask
 
-ksignal:
+signal:
 	
 .wait:
 ; wait for a signal, return hl = signal
@@ -108,7 +108,7 @@ ksignal:
 	ld	hl, kthread_pid_map
 	ld	l, a
 ; let's start the critical section right now
-	tstdi
+	tsti
 	ld	a, c
 	ld	c, (hl)
 	dec	c
@@ -225,7 +225,7 @@ ksignal:
 	cp	a, TASK_INTERRUPTIBLE
 	call	z, task_switch_running
 .kill_clean:
-	tstei
+	rsti
 	ld	a, b
 	or	a, a
 	sbc	hl, hl
@@ -289,7 +289,7 @@ ksignal:
 .kill_errno:
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_ERRNO), a
-	tstei
+	rsti
 	ld	a, b
 	scf
 	sbc	hl, hl
@@ -307,7 +307,6 @@ _sigreturn:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-; tstei
 	pop	af
 	pop	de
 	pop	bc
@@ -345,7 +344,6 @@ _sighandler_stop:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-; 	tstei
 	pop	af
 	pop	de
 	pop	bc

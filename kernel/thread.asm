@@ -457,7 +457,7 @@ kthread:
 .exit_clean:
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
-	call	ksignal.kill
+	call	signal.kill
 ; interrupts should be definitely stopped here !
 	di
 ; first disable stack protector (load the kernel_stack stack protector)

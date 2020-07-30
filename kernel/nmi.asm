@@ -61,7 +61,7 @@ nmi:
 
 .deadlock:
 	ld	hl, .THREAD_DEADLOCK
-	ld	bc, 16
+	ld	bc, 15
 	call	.exception_write
 	jp	kinit.reboot
 
@@ -70,20 +70,20 @@ nmi:
 	
 .watchdog_violation:
 	ld	hl, .WATCHDOG_EXCEPTION
-	ld	bc, 19
+	ld	bc, 18
 	call	.exception_write
 	jp	kinit.reboot
 
 .stack_overflow:
 	ld	hl, .STACKOVERFLOW_EXCEPTION
-	ld	bc, 15
+	ld	bc, 14
 	call	.exception_write
 ; we should be able to recover here ;
 	jp	kthread.core
 
 .memory_protection:
 	ld	hl, .MEMORY_EXCEPTION
-	ld	bc, 18
+	ld	bc, 17
 	call	.exception_write
 ; we should be able to recover here ;
 	jp	kthread.core

@@ -61,16 +61,19 @@ define	LEAF_SECTION		0
 define	LEAF_SECTION_NAME	0	; 3 bytes, offset into the str table
 define	LEAF_SECTION_TYPE	3	; 1 byte, type
 define	LEAF_SECTION_FLAGS	4	; flags, 1 byte
-define	LEAF_SECTION_ADDR	5	; virtual adress
+define	LEAF_SECTION_ADDR	5	; virtual adress if static or symbol index if not (rel have symbol of the section they are reallocating)
 define	LEAF_SECTION_OFFSET	8	; offset in file 
 define	LEAF_SECTION_SIZE	11	; size of the section
-define	LEAF_SECTION_INFO	14	; link to an other section (for rel section)
+define	LEAF_SECTION_INFO	14	; useless
 define	LEAF_SECTION_PAD	15	; pad to 16 bytes
 
 ; relocation, 6 bytes ;
 define	LEAF_REL		0
 define	LEAF_REL_OFFSET		0	; offset within section of the data to realloc (rel section are section defined with INFO
 define	LEAF_REL_INFO		3	; more info (symbol index)
+
+; if SHN_ABS : do (OFFSET) = symbol_value + (OFFSET)
+; if SHN_UNDEF, it is extern
 
 ; symbol structure, 8 bytes
 define	LEAF_SYMBOL		0
@@ -277,6 +280,8 @@ macro section?
 			store SECTION_FLAGS at section_table : Leaf24_Shdr.sh_flags + SECTION_INDEX * sizeof Leaf24_Shdr
 			if FLAGS = LF_STATIC
 				store SECTION_STATIC_BASE at section_table : Leaf24_Shdr.sh_addr + SECTION_INDEX * sizeof Leaf24_Shdr
+			else	
+				store SECTION_SYMBOL_INDEX at section_table : Leaf24_Shdr.sh_addr + SECTION_INDEX * sizeof Leaf24_Shdr
 			end if
 
 			if $%% = SECTION_OFFSET
@@ -298,7 +303,7 @@ macro section?
 				store RELOCATIONS_OFFSET + SECTION_RELOCATION_INDEX * sizeof Leaf24_Rel at section_table : Leaf24_Shdr.sh_offset + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 				store (RELOCATION_INDEX - SECTION_RELOCATION_INDEX) * sizeof Leaf24_Rel at section_table : Leaf24_Shdr.sh_size + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 				store SHT_REL at section_table : Leaf24_Shdr.sh_type + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
-				store SECTION_INDEX at section_table : Leaf24_Shdr.sh_info + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
+				store SECTION_SYMBOL_INDEX at section_table : Leaf24_Shdr.sh_addr + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 
 				store SECTION_NAME_POSITION at section_table : Leaf24_Shdr.sh_name + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 				store SECTION_NAME_POSITION + 4 at section_table : Leaf24_Shdr.sh_name + SECTION_INDEX * sizeof Leaf24_Shdr
@@ -541,7 +546,6 @@ postpone
 		store $% at section_table : Leaf24_Shdr.sh_offset + SECTION_INDEX * sizeof Leaf24_Shdr
 		store SYMBOL_TABLE_SIZE at section_table : Leaf24_Shdr.sh_size + SECTION_INDEX * sizeof Leaf24_Shdr
 		store SHT_SYMTAB at section_table : Leaf24_Shdr.sh_type + SECTION_INDEX * sizeof Leaf24_Shdr
-		store NUMBER_OF_SECTION_SYMBOLS at section_table : Leaf24_Shdr.sh_info + SECTION_INDEX * sizeof Leaf24_Shdr
 		SYMBOL_TABLE_SECTION_INDEX := SECTION_INDEX
 		load byte_sequence : SYMBOL_TABLE_SIZE from symbol_table:0
 		db byte_sequence

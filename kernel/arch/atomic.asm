@@ -21,18 +21,6 @@ macro	rsti
 	ei
 end	macro
 
-macro tstdi
-	ld	a, i
-	di
-	push	af
-end macro
-
-macro tstei
-	pop	af
-	jp	po, $+5
-	ei
-end macro
-
 atomic_rw:
 	ret
 

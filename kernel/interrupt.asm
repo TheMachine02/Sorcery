@@ -320,7 +320,7 @@ end if
 	ld	hl, (iy+TIMER_EV_NOTIFY_THREAD)
 	ld	c, (hl)
 	ld	a, (iy+TIMER_EV_SIGNO)
-	jp	ksignal.kill
+	jp	signal.kill
 .local_timer_thread:
 ; callback
 	push	iy
