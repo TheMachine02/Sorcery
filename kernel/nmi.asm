@@ -11,22 +11,22 @@ define	CONTEXT_FRAME_BC		18
 define	CONTEXT_FRAME_AF		21
 define	CONTEXT_FRAME_IR		24
 
-define	knmi_context			$D00043
+define	nmi_context			$D00043
 
 assert $ < $0220A8
 rb $0220A8-$
 
-knmi:
+nmi:
 .service:
-	ld	(knmi_context+CONTEXT_FRAME_IX), ix
-	ld	ix, knmi_context
+	ld	(nmi_context+CONTEXT_FRAME_IX), ix
+	ld	ix, nmi_context
 	ld	(ix+CONTEXT_FRAME_IY), iy
 	ld	(ix+CONTEXT_FRAME_HL), hl
 	ld	(ix+CONTEXT_FRAME_DE), de
 	ld	(ix+CONTEXT_FRAME_BC), bc
 	pop	hl
 	ld	(ix+CONTEXT_FRAME_PC), hl
-	ld	(knmi_context+CONTEXT_FRAME_SP), sp
+	ld	(nmi_context+CONTEXT_FRAME_SP), sp
 ; restore kernel stack pointer to be sure we *have* a valid stack pointer
 	ld	sp, (KERNEL_STACK)
 	push	af
