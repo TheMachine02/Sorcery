@@ -61,7 +61,7 @@ knmi:
 
 .deadlock:
 	ld	hl, .THREAD_DEADLOCK
-	ld	bc, 44
+	ld	bc, 16
 	call	.exception_write
 	jp	kinit.reboot
 
@@ -70,23 +70,24 @@ knmi:
 	
 .watchdog_violation:
 	ld	hl, .WATCHDOG_EXCEPTION
-	ld	bc, 47
+	ld	bc, 19
 	call	.exception_write
 	jp	kinit.reboot
 
 .stack_overflow:
 	ld	hl, .STACKOVERFLOW_EXCEPTION
-	ld	bc, 43
+	ld	bc, 15
 	call	.exception_write
 ; we should be able to recover here ;
 	jp	kthread.core
 
 .memory_protection:
 	ld	hl, .MEMORY_EXCEPTION
-	ld	bc, 46
+	ld	bc, 18
 	call	.exception_write
 ; we should be able to recover here ;
 	jp	kthread.core
+
 .longjump:
 ; restore context
 	ld	hl, (ix+CONTEXT_FRAME_IR)
@@ -108,7 +109,14 @@ knmi:
 	retn
  
 .exception_write:
-; bc is exception string
+; hl is exception string, bc is size
+	push	hl
+	push	bc
+	ld	hl, .CONTEXT_FRAME_SYSE
+	ld	bc, 23
+	call	console.phy_write
+	pop	bc
+	pop	hl
 	call	console.phy_write
 	ld	hl, (ix+CONTEXT_FRAME_IR)
 	push	hl
@@ -137,7 +145,7 @@ knmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_string
-	ld	bc, 179
+	ld	bc, 184
 	call	console.phy_write
 ; unwind stack frame
 	ld	ix, (knmi_context+CONTEXT_FRAME_SP)
@@ -179,22 +187,26 @@ knmi:
 	ret
 
 .THREAD_DEADLOCK:	
- db "System exception : ", $1B,"[31m", "system deadlock", $1B,"[39m"
+ db "system deadlock"
 .WATCHDOG_EXCEPTION:
- db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m"
+ db "watchdog violation"
 .STACKOVERFLOW_EXCEPTION:
- db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m"
+ db "stack overflow"
 .MEMORY_EXCEPTION:
- db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m"
+ db "memory protection"
+ 
+ ; size 23
+.CONTEXT_FRAME_SYSE:
+ db "System exception : ", $1B, "[31m"
  
 .CONTEXT_FRAME_STR:
- db 10,10
+ db 10,10, $1B, "[39m"
  db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10
  db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10
  db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10
- db "Stack frame :", 10, 0
+ db "Stack frame :", 10, 0 
  
- ; 8 level stack free on screen, take the most important
- ; 11 total length
+ ; 8 level stack free on screen
+ ; size 11 (not counting null)
  .CONTEXT_STACK_STR:
  db "  +0x%06x", 10, 0
