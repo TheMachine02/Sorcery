@@ -9,12 +9,13 @@ define	kpower_save_lcd_palette		$D00B00
 
 macro	wait
 	ld	b, $FF
-	djnz	$-2
+	djnz	$
 end	macro
 
 kpower:
 
 .init:
+	di
 	ld	a, $03
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 	ret
@@ -117,6 +118,8 @@ kpower:
 	nop
 	ei
 	slp
+
+; will fall back on cycle ON when ON will be pressed, after trigger ON interrupt within kernel
 
 .cycle_on:
 	di
