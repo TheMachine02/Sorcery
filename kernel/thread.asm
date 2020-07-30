@@ -137,7 +137,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_ERRNO), l
 ; restore register and pop all the stack
 	exx
-	ei
+	rsti
 	lea	iy, ix+0
 	pop	ix
 	pop	af
@@ -155,7 +155,7 @@ kthread:
 ; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
 	push	af
 	push	ix
-	di
+	tsti
 ; save hl, de, bc registers
 	exx
 	lea	ix, iy+0
@@ -234,8 +234,8 @@ kthread:
 	ld	hl, .exit
 	ld	(iy-6), hl
 	ld	(iy-9), ix
-	ld	d,e			; ld	de, NULL
-	ld	(iy-12), de		; ix [NULL] > int argc, char *argv[]
+	ld	d, e			; ld	de, NULL
+	ld	(iy-12), de		; ix [NULL] > int argc, char *argv[] : in the stack
 	ld	(iy-15), de		; iy [NULL] > in the future
 	ld	(iy-27), de		; af [NULL] > TODO
 	exx
@@ -245,7 +245,11 @@ kthread:
 	ld	(iy-18), hl
 	ld	(iy-21), bc
 	ld	(iy-24), de
+<<<<<<< HEAD
 	ei
+=======
+	rsti
+>>>>>>> da80da31a1ff7c599d4d50ffb93fef23b3e9e6ae
 	lea	iy, ix+0
 	pop	ix
 	pop	af
@@ -318,8 +322,7 @@ kthread:
 	or	a, a
 	sbc	hl, de
 	ret	z
-	ld	hl, i
-	push	af
+	tsti
 ; this read need to be atomic !
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; can't wake TASK_READY (0) and TASK_STOPPED (2) and TASK_ZOMBIE (3)
@@ -332,6 +335,7 @@ kthread:
 	ld	a, $FF
 	ld	(kthread_need_reschedule), a
 .resume_exit:
+; rsti optimized
 	pop	af
 	ret	po
 	ei
@@ -499,7 +503,7 @@ kthread:
 	jr	nz, .exit_dispatch_thread
 	add	hl, bc
 	or	a, (hl)
-	jp	z, knmi
+	jp	z, nmi
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
 	jp	kscheduler.context_restore

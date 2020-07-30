@@ -1,16 +1,21 @@
 define	KERNEL_POWER_CHARGING		$000B
 define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
-define	KERNEL_POWER_PWM		$B024
+define	KERNEL_POWER_PWM		$F60020
 
 define	kpower_save_interrupt_mask	$D00008
 ; we need to save the whales (and the palette)
 define	kpower_save_lcd_palette		$D00B00
 
+macro	wait
+	ld	b, $FF
+	djnz	$
+end	macro
 
 kpower:
 
 .init:
+	di
 	ld	a, $03
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 	ret
@@ -19,6 +24,12 @@ kpower:
 
 .battery_charging:
 	in0	a, (KERNEL_POWER_CHARGING)
+	ret
+
+.backlight:
+; set backlight level = a, max is $FF, min is $00
+	ld	hl, KERNEL_POWER_PWM
+	ld	(hl), a
 	ret
 
 .cycle_off:
@@ -70,16 +81,10 @@ kpower:
 	out0	($0C), a
 	ld	a, b
 	out0	($0A), a
-	ld	a, $0D	; 0b1101
+; 0b1101
+	ld	a, $0D
 	out0	($0D), a
-	ld	b, $FF
-.cycle_wait_busy_00:
-	djnz	.cycle_wait_busy_00
-; reset rtc : enable, but no interrupts
-	ld	hl, DRIVER_RTC_CTRL
-	ld	(hl), $01
-	ld	l, DRIVER_RTC_ISCR and $FF
-	ld	(hl), $FF
+	wait
 ; let's got back to various power stuff
 ; disable screen ?
 	in0	a, ($09)
@@ -90,6 +95,11 @@ kpower:
 	ld	a, $FF
 	out0	($07), a
 ; let's setup interrupt now
+; reset rtc : enable, but no interrupts
+	ld	hl, DRIVER_RTC_CTRL
+	ld	(hl), $01
+	ld	l, DRIVER_RTC_ISCR and $FF
+	ld	(hl), a
 ; disable all
 ; enable mask
 	ld	de, $01
@@ -109,6 +119,8 @@ kpower:
 	ei
 	slp
 
+; will fall back on cycle ON when ON will be pressed, after trigger ON interrupt within kernel
+
 .cycle_on:
 	di
 	ld	a, $0F
@@ -121,10 +133,7 @@ kpower:
 	out0	($05), a
 	ld	a, $03
 	out0	($06), a
-	ld	b,$FF
-.cycle_wait_busy_01:
-	djnz	.cycle_wait_busy_01
-;	ld	a, $03
+	wait
 	ld	($E00005), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?

@@ -1,4 +1,4 @@
-define	CONTEXT_FRAME		0
+define	CONTEXT_FRAME			0
 define	CONTEXT_FRAME_RET		0	; PC register ;
 define	CONTEXT_FRAME_PC		0
 define	CONTEXT_FRAME_SP		3	; SP register ;
@@ -11,22 +11,22 @@ define	CONTEXT_FRAME_BC		18
 define	CONTEXT_FRAME_AF		21
 define	CONTEXT_FRAME_IR		24
 
-define	knmi_context			$D00043
+define	nmi_context			$D00043
 
 assert $ < $0220A8
 rb $0220A8-$
 
-knmi:
+nmi:
 .service:
-	ld	(knmi_context+CONTEXT_FRAME_IX), ix
-	ld	ix, knmi_context
+	ld	(nmi_context+CONTEXT_FRAME_IX), ix
+	ld	ix, nmi_context
 	ld	(ix+CONTEXT_FRAME_IY), iy
 	ld	(ix+CONTEXT_FRAME_HL), hl
 	ld	(ix+CONTEXT_FRAME_DE), de
 	ld	(ix+CONTEXT_FRAME_BC), bc
 	pop	hl
 	ld	(ix+CONTEXT_FRAME_PC), hl
-	ld	(knmi_context+CONTEXT_FRAME_SP), sp
+	ld	(nmi_context+CONTEXT_FRAME_SP), sp
 ; restore kernel stack pointer to be sure we *have* a valid stack pointer
 	ld	sp, (KERNEL_STACK)
 	push	af
@@ -58,36 +58,35 @@ knmi:
 	jr	c, .stack_overflow
 	rra
 	jr	c, .memory_protection
-	jr	.deadlock
-	
+
+.deadlock:
+	ld	hl, .THREAD_DEADLOCK
+	ld	bc, 16
+	call	.exception_write
+	jp	kinit.reboot
+
 .illegal_instruction:
 	jp	kinit.reboot
 	
 .watchdog_violation:
 	ld	hl, .WATCHDOG_EXCEPTION
-	ld	bc, 47
-	call	.write_exception
+	ld	bc, 19
+	call	.exception_write
 	jp	kinit.reboot
 
 .stack_overflow:
 	ld	hl, .STACKOVERFLOW_EXCEPTION
-	ld	bc, 43
-	call	.write_exception
+	ld	bc, 15
+	call	.exception_write
 ; we should be able to recover here ;
 	jp	kthread.core
 
 .memory_protection:
 	ld	hl, .MEMORY_EXCEPTION
-	ld	bc, 46
-	call	.write_exception
+	ld	bc, 18
+	call	.exception_write
 ; we should be able to recover here ;
 	jp	kthread.core
-
-.deadlock:
-	ld	hl, .THREAD_DEADLOCK
-	ld	bc, 44
-	call	.write_exception
-	jp	kinit.reboot
 
 .longjump:
 ; restore context
@@ -109,10 +108,16 @@ knmi:
 	ld	ix, (ix+CONTEXT_FRAME_IX)
 	retn
  
-.write_exception:
-; bc is exception string
+.exception_write:
+; hl is exception string, bc is size
+	push	hl
+	push	bc
+	ld	hl, .CONTEXT_FRAME_SYSE
+	ld	bc, 23
 	call	console.phy_write
-	
+	pop	bc
+	pop	hl
+	call	console.phy_write
 	ld	hl, (ix+CONTEXT_FRAME_IR)
 	push	hl
 	ld	hl, (ix+CONTEXT_FRAME_PC)
@@ -140,10 +145,30 @@ knmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_string
-	ld	bc, 179
+	ld	bc, 184
 	call	console.phy_write
-; blit stack and correspondance ?
-
+; unwind stack frame
+	ld	ix, (knmi_context+CONTEXT_FRAME_SP)
+	ld	b, 8
+.exception_unwind:
+	push	bc
+	pea	ix+3
+	ld	hl, (ix+0)
+	push	hl
+	ld	hl, .CONTEXT_STACK_STR
+	push	hl
+	ld	hl, console_string
+	push	hl
+	call	_boot_sprintf
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, console_string
+	ld	bc, 12
+	call	console.phy_write
+	pop	ix
+	pop	bc
+	djnz	.execption_unwind
 ; wait any key
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	ld	(hl), 1
@@ -162,52 +187,26 @@ knmi:
 	ret
 
 .THREAD_DEADLOCK:	
- db "System exception : ", $1B,"[31m", "system deadlock", $1B,"[39m"
+ db "system deadlock"
 .WATCHDOG_EXCEPTION:
- db "System exception : ", $1B,"[31m", "watchdog violation", $1B,"[39m"
+ db "watchdog violation"
 .STACKOVERFLOW_EXCEPTION:
- db "System exception : ", $1B,"[31m", "stack overflow", $1B,"[39m"
+ db "stack overflow"
 .MEMORY_EXCEPTION:
- db "System exception : ", $1B,"[31m", "memory protection", $1B,"[39m"
+ db "memory protection"
+ 
+ ; size 23
+.CONTEXT_FRAME_SYSE:
+ db "System exception : ", $1B, "[31m"
  
 .CONTEXT_FRAME_STR:
- db 10,10
+ db 10,10, $1B, "[39m"
  db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10
  db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10
  db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10
- db "Stack frame :", 10, 0
+ db "Stack frame :", 10, 0 
  
-; longjump and setjump context
-; stackframe
-; 
-; 0021B7     FDE5          push iy
-; 0021B9     FD21030000    ld iy,$000003
-; 0021BE     FD39          add iy,sp
-; 0021C0     FDE5          push iy
-; 0021C2     E1            pop hl
-; 0021C3     FD3703        ld iy,(iy+$03)	; iy is buffer
-; 0021C6     FD3E03        ld (iy+$03),ix	; ix reg, stackframe
-; 0021C9     FD2F06        ld (iy+$06),hl	; sp reg
-; 0021CC     ED27          ld hl,(hl)		; address (stackpointer)
-; 0021CE     FD2F00        ld (iy),hl
-; 0021D1     21000000      ld hl,$000000
-; 0021D5     FDE1          pop iy
-; 0021D7     C9            ret 
-; 0021D8     ED1300        lea de,iy
-; 0021DB     FD21000000    ld iy,$000000
-; 0021E0     FD39          add iy,sp
-; 0021E2     FD2706        ld hl,(iy+$06)
-; 0021E5     01000000      ld bc,$000000
-; 0021E9     B7            or a,a
-; 0021EA     ED42          sbc hl,bc
-; 0021EC     2002          jr nz,$0021F0
-; 0021EE     2E01          ld l,$01
-; 0021F0     FD3703        ld iy,(iy+$03)
-; 0021F3     FD3103        ld ix,(iy+$03)
-; 0021F6     FD0700        ld bc,(iy)
-; 0021F9     FD3706        ld iy,(iy+$06)
-; 0021FC     FDF9          ld sp,iy
-; 0021FE     FD0F00        ld (iy),bc
-; 002201     D5            push de
-; 002202     FDE1          pop iy
-; 002204     C9            ret 
+ ; 8 level stack free on screen
+ ; size 11 (not counting null)
+ .CONTEXT_STACK_STR:
+ db "  +0x%06x", 10, 0

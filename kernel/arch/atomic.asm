@@ -9,6 +9,18 @@ define	KERNEL_MUTEX_LIST_HEAD		3
 
 define	KERNEL_MUTEX_MAGIC		$FE
 
+macro	tsti
+	ld	a, i
+	di
+	push	af
+end	macro
+
+macro	rsti
+	pop	af
+	jp	po, $+5
+	ei
+end	macro
+
 macro tstdi
 	ld	a, i
 	di
@@ -20,6 +32,12 @@ macro tstei
 	jp	po, $+5
 	ei
 end macro
+
+atomic_rw:
+	ret
+
+atomic_op:
+	ret
 
 kmutex:
 ; POSIX errorcheck mutex implementation
