@@ -30,12 +30,6 @@ kinterrupt:
 ; just use default
 	ld	e, $19
 	ld	(hl), de
-if CONFIG_USE_CACHED_ISR = 1
-	ld	hl, interrupt_flash_base
-	ld	de, KERNEL_INTERRUPT_CACHE
-	ld	bc, interrupt_size
-	ldir
-end if	
 ; also reset handler table
 	jp	kirq.init
 
@@ -47,12 +41,6 @@ end if
 .rst30:
 	ei
 	ret
-.nmi = knmi.service
-
-if CONFIG_USE_CACHED_ISR = 1
-	interrupt_flash_base=$
-	org	KERNEL_INTERRUPT_CACHE
-end if
 
 .service:
 	pop	hl
@@ -149,7 +137,7 @@ kscheduler:
 	rla
 	sbc	a, a
 	cpl
-	and	SCHED_PRIO_MIN
+	and	a, SCHED_PRIO_MIN
 .schedule_clamp_prio:
 	ld	(hl), a
 	inc	hl
@@ -207,7 +195,7 @@ kscheduler:
 	rla
 	sbc	a, a
 	cpl
-	and	SCHED_PRIO_MIN
+	and	a, SCHED_PRIO_MIN
 .schedule_move_queue:
 	ld	(hl), a
 	inc	hl
@@ -348,8 +336,3 @@ end if
 	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
 	ld	iy, (iy+TIMER_EV_NOTIFY_THREAD)
 	jp	(hl)
-
-if CONFIG_USE_CACHED_ISR = 1
-	interrupt_size= $ -  KERNEL_INTERRUPT_CACHE
-	org	interrupt_flash_base + interrupt_size
-end if
