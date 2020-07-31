@@ -63,9 +63,9 @@ define	THREAD_JOIGNABLE			0
 
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
-define	TASK_STOPPED				2	; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
-define	TASK_ZOMBIE				3
-define	TASK_UNINTERRUPTIBLE			4
+define	TASK_UNINTERRUPTIBLE			2
+define	TASK_STOPPED				3	; can be waked by signal only SIGCONT, state of SIGSTOP / SIGTSTP
+define	TASK_ZOMBIE				4
 define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
@@ -268,6 +268,44 @@ kthread:
 ; cause should already have been writed
 	jp	task_yield
 
+.wait_on_IRQ_timeout:
+; suspend till IRQ or timer (generic resume correct IRQ stuff)
+	di
+	push	iy
+	push	hl
+	push	de
+	push	af
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_IRQ), a
+	ld	e, l
+	ld	d, TIME_MS_TO_JIFFIES
+	ld	l, d
+	mlt	de
+	mlt	hl
+	xor	a, a
+	sbc	a, e
+	ld	e, d
+	ld	d, 0
+	adc	hl, de
+; add timer
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
+	ld	hl, klocal_timer.notify_default
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
+	lea	iy, iy+KERNEL_THREAD_TIMER
+	ld	hl, klocal_timer_queue
+	call	kqueue.insert_head
+	lea	iy, iy-KERNEL_THREAD_TIMER
+; the process to write the thread state and change the queue should be always a critical section
+	call	task_switch_uninterruptible
+	pop	af
+	pop	de
+	pop	hl
+	pop	iy
+; switch away from current thread to a new active thread
+; cause should already have been writed
+	jp	task_yield
+	
 .resume_from_IRQ:
 ; resume a thread waiting IRQ
 ; interrupt should be DISABLED when calling this routine
@@ -321,12 +359,13 @@ kthread:
 	tsti
 ; this read need to be atomic !
 	ld	a, (iy+KERNEL_THREAD_STATUS)
-; can't wake TASK_READY (0) and TASK_STOPPED (2) and TASK_ZOMBIE (3)
-	cp	a, TASK_INTERRUPTIBLE
-	jr	z, .resume_wake
+; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
+	dec	a
+; 0 or 1 accepted
 	cp	a, TASK_UNINTERRUPTIBLE
-	jr	nz, .resume_exit
+	jr	nc, .resume_exit
 .resume_wake:
+	ld	(iy+KERNEL_THREAD_IRQ), 0
 	call	task_switch_running
 	ld	a, $FF
 	ld	(kthread_need_reschedule), a
@@ -591,33 +630,33 @@ kthread:
 	pop	iy
 	ret
 	
-.get_heap_size:
-; parse all block
-	push	ix
-	push	bc
-	ld	ix, (kthread_current)
-	ld	ix, (ix+KERNEL_THREAD_HEAP)
-; sum of all block is the heap size
-	or	a, a
-	sbc	hl, hl
-.heap_size_loop:
-	ld	bc, (ix+KERNEL_MEMORY_BLOCK_DATA)
-	add	hl, bc
-	ld	bc, KERNEL_MEMORY_BLOCK_SIZE
-	add	hl, bc
-	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
-	or	a, a
-	jr	z, .heap_size_break
-	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-	jr	.heap_size_loop
-.heap_size_break:
-; clean out the upper bit
-	ld	bc, $800000
-	add	hl, bc
-	jr	nc, $-1
-	pop	bc
-	pop	ix
-	ret
+; .get_heap_size:
+; ; parse all block
+; 	push	ix
+; 	push	bc
+; 	ld	ix, (kthread_current)
+; 	ld	ix, (ix+KERNEL_THREAD_HEAP)
+; ; sum of all block is the heap size
+; 	or	a, a
+; 	sbc	hl, hl
+; .heap_size_loop:
+; 	ld	bc, (ix+KERNEL_MEMORY_BLOCK_DATA)
+; 	add	hl, bc
+; 	ld	bc, KERNEL_MEMORY_BLOCK_SIZE
+; 	add	hl, bc
+; 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
+; 	or	a, a
+; 	jr	z, .heap_size_break
+; 	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
+; 	jr	.heap_size_loop
+; .heap_size_break:
+; ; clean out the upper bit
+; 	ld	bc, $800000
+; 	add	hl, bc
+; 	jr	nc, $-1
+; 	pop	bc
+; 	pop	ix
+; 	ret
 
 ; DANGEROUS AREA, helper function ;	
 	
