@@ -10,7 +10,7 @@ define	KERNEL_BOOT_MEMORY1		$D000AC   ; same, a set somewhere
 define	KERNEL_CRYSTAL_CTLR		$00
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 
-define	NULL 0
+define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
 
 kinit:
@@ -36,7 +36,7 @@ kinit:
 	ld	a, $D0
 	out0	($3C), a
 ; general system init
-	call	kpower.init
+	call	power.init
 ; memory init ;
 	call	kmm.init
 	call	kslab.init
@@ -177,6 +177,9 @@ global_frequency_table:
 TEST_THREAD_C:
 	call __frameset0
 	ld hl, (ix+6)
+	ld	iy, leaf_frozen_file
+	call	leaf.exec
+
 .spin:	
 ;	ld	hl, 30	; 30 ms is nice
 ;	call	kthread.sleep
@@ -186,9 +189,9 @@ TEST_THREAD_C:
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
 ; 	ld	hl, $AA55AA
-	ld	a, SIGUSR1
-	ld	c, 1
-	call	signal.kill
+; 	ld	a, SIGUSR1
+; 	ld	c, 1
+; 	call	signal.kill
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.unlock
 ; 	ld	bc, 65536
@@ -197,7 +200,6 @@ TEST_THREAD_C:
 ; 	call	flash.phy_write
 ; 	ld	hl, $3B0000
 ; 	call	flash.phy_erase
-
 	jr	.spin
 	pop ix
 	ret

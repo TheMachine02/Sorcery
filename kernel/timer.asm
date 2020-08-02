@@ -141,7 +141,7 @@ klocal_timer:
 .alarm:
 	ld	iy, (kthread_current)
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	di
+	tsti
 	ld	de, (iy+TIMER_COUNT)
 	ld	a, e
 	or	a, d
@@ -170,6 +170,8 @@ end if
 	ld	(iy+TIMER_EV_SIGNO), SIGALRM
 	ld	hl, klocal_timer_queue
 	call	kqueue.insert_head
+	pop	af
+	ret	po
 	ei
 	ret
 .alarm_disarm:
@@ -178,5 +180,7 @@ end if
 ; carry wasn't modified
 	sbc	hl, hl
 	ld	(iy+TIMER_COUNT), hl
+	pop	af
+	ret	po
 	ei
 	ret

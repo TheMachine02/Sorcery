@@ -260,7 +260,7 @@ console:
 	jr	.clean_command
 
 .shutdown:
-	call	kpower.cycle_off
+	call	power.cycle_off
 	jr	.clean_command
 	
 .color:

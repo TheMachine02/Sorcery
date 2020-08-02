@@ -7,19 +7,18 @@ define	KERNEL_IRQ_LCD			32
 define	KERNEL_IRQ_RTC			64
 define	KERNEL_IRQ_USB			128
 
-define	irq_handler   		$D00140
-define	irq_handler_001		$D00140
-define	irq_handler_002		$D00144
-define	irq_handler_004		$D00148
-define	irq_handler_008		$D0014C
-define	irq_handler_016		$D00150
-define	irq_handler_032		$D00154
-define	irq_handler_064		$D00158
-define	irq_handler_128		$D0015C
+define	irq_handler   			$D00140
+define	irq_handler_001			$D00140
+define	irq_handler_002			$D00144
+define	irq_handler_004			$D00148
+define	irq_handler_008			$D0014C
+define	irq_handler_016			$D00150
+define	irq_handler_032			$D00154
+define	irq_handler_064			$D00158
+define	irq_handler_128			$D0015C
 
 kirq:
 .init:
-	di
 	ld	hl, irq_handler
 	ld 	de, 4
 	ld	b, 8
@@ -81,11 +80,11 @@ kirq:
 	ld	c, a
 	rra
 	rra
-	and	00111100b
+	and	a, 00111100b
 	ld	b, a
 ; this is the second byte for interrupt mask
 	ld	a, c
-	and	00001111b
+	and	a, 00001111b
 ; critical section ;
 	ld	hl, i
 	push	af
@@ -114,12 +113,12 @@ kirq:
 	rra
 	rra
 	cpl
-	and	00111100b
+	and	a, 00111100b
 	ld	b, a
 ; this is the second byte for interrupt mask
 	ld	a, c
 	cpl
-	and	00001111b
+	and	a, 00001111b
 ; critical section ;
 	ld	hl, i
 	push	af

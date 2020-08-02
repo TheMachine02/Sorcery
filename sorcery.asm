@@ -4,6 +4,7 @@ include	'include/os.inc'
 ; kernel header
 include	'header/asm-errno.inc'
 include	'header/asm-signal.inc'
+include	'header/asm-leaf-def.inc'
 ; kernel build config
 include 'config'
 
@@ -26,11 +27,11 @@ include 'sorcery_certificate.asm'
 .syscall:
 	jp	kinit
 	jp	kinterrupt.service
-	jp	kinterrupt.rst10
-	jp	kinterrupt.rst18
-	jp	kinterrupt.rst20
-	jp	kinterrupt.rst28
-	jp	kinterrupt.rst30
+	jp	restart.10h
+	jp	restart.18h
+	jp	restart.20h
+	jp	restart.28h
+	jp	restart.30h
 	jp	nmi
 	
 include	'kernel/init.asm'
@@ -46,7 +47,12 @@ include	'kernel/timer.asm'
 include	'kernel/mm.asm'
 include	'kernel/slab.asm'
 include	'kernel/vfs.asm'
+include	'kernel/restart.asm'
+include	'kernel/exec/leaf.asm'
 include	'kernel/nmi.asm'
+
+leaf_frozen_file:
+file	'demo.leaf'
 
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'

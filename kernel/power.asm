@@ -12,24 +12,24 @@ macro	wait
 	djnz	$
 end	macro
 
-kpower:
+power:
 
 .init:
 	di
 	ld	a, $03
 	out0	(KERNEL_POWER_CPU_CLOCK), a
-	ret
-
-.battery_level=$0003B0
-
-.battery_charging:
-	in0	a, (KERNEL_POWER_CHARGING)
-	ret
-
+	ld	a, $80
+	
 .backlight:
 ; set backlight level = a, max is $FF, min is $00
 	ld	hl, KERNEL_POWER_PWM
 	ld	(hl), a
+	ret	
+	
+.battery_level=$0003B0
+
+.battery_charging:
+	in0	a, (KERNEL_POWER_CHARGING)
 	ret
 
 .cycle_off:

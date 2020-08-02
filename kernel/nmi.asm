@@ -164,7 +164,7 @@ nmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_string
-	ld	bc, 12
+	ld	bc, 15
 	call	console.phy_write
 	pop	ix
 	pop	bc
@@ -204,9 +204,9 @@ nmi:
  db "     af: 0x%06x bc: 0x%06x de: 0x%06x", 10
  db "     hl: 0x%06x ",$1B,"[35m","iy", $1B,"[39m", ": 0x%06x ",$1B,"[35m", "ix", $1B,"[39m", ": 0x%06x", 10
  db "     sp: 0x%06x pc: 0x%06x ",$1B,"[33m","ir", $1B,"[39m", ": 0x%06x", 10, 10
- db "Stack frame :", 0 
+ db "Stack frame :", 0
  
- ; 8 level stack free on screen
- ; size 11 (not counting null)
+ ; blit on screen 8 last value of the stack
+ ; size 15 (not counting null)
  .CONTEXT_STACK_STR:
- db 10,"  +0x%06x", 0
+ db 10,"     +0x%06x", 0

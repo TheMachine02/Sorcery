@@ -26,15 +26,17 @@ struct Leaf24_Shdr
 end struct
 
 struct Leaf24_Sym
-	st_name 	rl 1
-	st_value	rl 1
-	st_info 	rb 1
 	st_shndx	rb 1
+	st_value	rl 1
+	st_name 	rl 1
+	st_info 	rb 1
 end struct
 
 struct Leaf24_Rel
 	r_offset	rl 1
 	r_info		rl 1
+	r_type		rb 1
+	r_pad		rb 1
 end struct
 
 purge struct?
@@ -67,20 +69,21 @@ define	LEAF_SECTION_SIZE	11	; size of the section
 define	LEAF_SECTION_INFO	14	; useless
 define	LEAF_SECTION_PAD	15	; pad to 16 bytes
 
-; relocation, 6 bytes ;
+; relocation, 8 bytes ;
 define	LEAF_REL		0
-define	LEAF_REL_OFFSET		0	; offset within section of the data to realloc (rel section are section defined with INFO
+define	LEAF_REL_OFFSET		0	; offset within section of the data to realloc (rel section are section defined with section ADDR
 define	LEAF_REL_INFO		3	; more info (symbol index)
+define	LEAF_REL_TYPE		6
 
 ; if SHN_ABS : do (OFFSET) = symbol_value + (OFFSET)
 ; if SHN_UNDEF, it is extern
 
 ; symbol structure, 8 bytes
 define	LEAF_SYMBOL		0
-define	LEAF_SYMBOL_NAME	0	; 3 bytes, index is str table
-define	LEAF_SYMBOL_VALUE	3	; 3 bytes, value : either 0 or offset in section
-define	LEAF_SYMBOL_INFO	6	; 1 byte, type (func, global etc)
-define	LEAF_SYMBOL_SHNDX	7	; 1 bytes, section index, 0 is UNDEF, 0xFF is SHN_ABS
+define	LEAF_SYMBOL_SHNDX	0	; 1 bytes, section index, 0 is UNDEF, 0xFF is SHN_ABS
+define	LEAF_SYMBOL_VALUE	1	; 3 bytes, value : either 0 or offset in section
+define	LEAF_SYMBOL_NAME	4	; 3 bytes, index is str table
+define	LEAF_SYMBOL_INFO	7	; 1 byte, type (func, global etc)
 
 ;define	LEAF_ST_BIND(INFO)	((INFO) >> 4)
 ;define	LEAF_ST_TYPE(INFO)	((INFO) & $0F)
@@ -260,7 +263,7 @@ macro entry? address*
 		store SYMBOL_VALUE at symbol_table : Leaf24_Sym.st_value + SYMBOL_INDEX * sizeof Leaf24_Sym
 		store SYMBOL_SECTION_INDEX at symbol_table : Leaf24_Sym.st_shndx + SYMBOL_INDEX * sizeof Leaf24_Sym
 		store STT_FUNC + STB_GLOBAL shl 4 at symbol_table : Leaf24_Sym.st_info + SYMBOL_INDEX * sizeof Leaf24_Sym
-		store SYMBOL_INDEX at LEAF:e_entry
+		store SYMBOL_INDEX * sizeof Leaf24_Sym at LEAF:e_entry
 		SYMBOL_INDEX = SYMBOL_INDEX + 1
 		else
 			store address at LEAF:e_entry
@@ -281,7 +284,7 @@ macro section?
 			if FLAGS = LF_STATIC
 				store SECTION_STATIC_BASE at section_table : Leaf24_Shdr.sh_addr + SECTION_INDEX * sizeof Leaf24_Shdr
 			else	
-				store SECTION_SYMBOL_INDEX at section_table : Leaf24_Shdr.sh_addr + SECTION_INDEX * sizeof Leaf24_Shdr
+				store SECTION_SYMBOL_INDEX * sizeof Leaf24_Sym at section_table : Leaf24_Shdr.sh_addr + SECTION_INDEX * sizeof Leaf24_Shdr
 			end if
 
 			if $%% = SECTION_OFFSET
@@ -303,7 +306,7 @@ macro section?
 				store RELOCATIONS_OFFSET + SECTION_RELOCATION_INDEX * sizeof Leaf24_Rel at section_table : Leaf24_Shdr.sh_offset + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 				store (RELOCATION_INDEX - SECTION_RELOCATION_INDEX) * sizeof Leaf24_Rel at section_table : Leaf24_Shdr.sh_size + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 				store SHT_REL at section_table : Leaf24_Shdr.sh_type + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
-				store SECTION_SYMBOL_INDEX at section_table : Leaf24_Shdr.sh_addr + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
+				store SECTION_SYMBOL_INDEX * sizeof Leaf24_Sym at section_table : Leaf24_Shdr.sh_addr + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 
 				store SECTION_NAME_POSITION at section_table : Leaf24_Shdr.sh_name + (SECTION_INDEX+1) * sizeof Leaf24_Shdr
 				store SECTION_NAME_POSITION + 4 at section_table : Leaf24_Shdr.sh_name + SECTION_INDEX * sizeof Leaf24_Shdr
@@ -445,21 +448,21 @@ end macro
 macro private? address*
 end macro
 
-macro static? declaration*
-	namespace LEAF
-	match name address, declaration
-		label name
-		SYMBOL_NAME = `name
-		store STRING_POSITION at symbol_table : Leaf24_Sym.st_name + SYMBOL_INDEX * sizeof Leaf24_Sym
-		store SYMBOL_NAME : lengthof SYMBOL_NAME at string_table:STRING_POSITION
-		store STT_FUNC + STB_LOCAL shl 4 at symbol_table : Leaf24_Sym.st_info + SYMBOL_INDEX * sizeof Leaf24_Sym
-		store address at symbol_table : Leaf24_Sym.st_value + SYMBOL_INDEX * sizeof Leaf24_Sym
-		store SHN_ABS at symbol_table : Leaf24_Sym.st_shndx + SYMBOL_INDEX * sizeof Leaf24_Sym
-		STRING_POSITION = STRING_POSITION + lengthof SYMBOL_NAME + 1
-		SYMBOL_INDEX = SYMBOL_INDEX + 1
-	end match
-	end namespace
-end macro
+;macro static? declaration*
+;	namespace LEAF
+;	match name address, declaration
+;		label name
+;		SYMBOL_NAME = `name
+;		store STRING_POSITION at symbol_table : Leaf24_Sym.st_name + SYMBOL_INDEX * sizeof Leaf24_Sym
+;		store SYMBOL_NAME : lengthof SYMBOL_NAME at string_table:STRING_POSITION
+;		store STT_FUNC + STB_LOCAL shl 4 at symbol_table : Leaf24_Sym.st_info + SYMBOL_INDEX * sizeof Leaf24_Sym
+;		store address at symbol_table : Leaf24_Sym.st_value + SYMBOL_INDEX * sizeof Leaf24_Sym
+;		store SHN_ABS at symbol_table : Leaf24_Sym.st_shndx + SYMBOL_INDEX * sizeof Leaf24_Sym
+;		STRING_POSITION = STRING_POSITION + lengthof SYMBOL_NAME + 1
+;		SYMBOL_INDEX = SYMBOL_INDEX + 1
+;	end match
+;	end namespace
+;end macro
 
 element _GLOBAL_OFFSET_TABLE_
 RVA? equ -_GLOBAL_OFFSET_TABLE_+
@@ -503,7 +506,7 @@ plain:
 	exit
 	local	offset, info
 r_24:
-	compute info, R_Z80_24 + (0 scaleof (1 metadataof value)) shl 8
+	compute info, (0 scaleof (1 metadataof value))
 	check	LEAF.FLAGS = LF_REALLOC
 	jno	no_realloc
 	jump	add_relocation
@@ -519,7 +522,8 @@ add_relocation:
 	local	Rel
 	compute Rel, LEAF.RELOCATION_INDEX * sizeof Leaf24_Rel
 	asm	store offset at LEAF.relocations : Rel + Leaf24_Rel.r_offset
-	asm	store info at LEAF.relocations : Rel + Leaf24_Rel.r_info
+	asm	store info * sizeof Leaf24_Sym at LEAF.relocations : Rel + Leaf24_Rel.r_info
+	asm	store R_Z80_24 at LEAF.relocations : Rel + Leaf24_Rel.r_type
 	compute LEAF.RELOCATION_INDEX, LEAF.RELOCATION_INDEX + 1
     done:
 end calminstruction

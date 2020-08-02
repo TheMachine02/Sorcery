@@ -1,5 +1,4 @@
-; structure sigset
-; 4 bytes data, mask
+define		KERNEL_SIGNAL_MAX	32
 
 signal:
 	
@@ -8,7 +7,7 @@ signal:
 	call	kthread.suspend
 	jr	.timed_wait_ret
 
-.timed_wait:
+.wait_timeout:
 ; sleep for a duration, can be waked by signal
 ; todo : clean signal after read
 	call	kthread.sleep
@@ -248,7 +247,6 @@ signal:
 	push	de
 	push	af
 ; stack is now clean
-; 	push	hl
 	push	hl	; data = NULL
 	ld	l, a
 	push	hl	; signal

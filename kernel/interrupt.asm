@@ -33,15 +33,6 @@ kinterrupt:
 ; also reset handler table
 	jp	kirq.init
 
-.ret:
-.rst10:
-.rst18:
-.rst20:
-.rst28:
-.rst30:
-	ei
-	ret
-
 .service:
 	pop	hl
 ; read interrupt sources
