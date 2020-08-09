@@ -48,7 +48,7 @@ video:
 	call	.irq_lock_reset
 	ld	hl, .irq_handler
 	ld	a, DRIVER_VIDEO_IRQ
-	jp	kirq.request
+	jp	kinterrupt.irq_request
 
 .irq_handler:
 	ld	hl, DRIVER_VIDEO_ICR

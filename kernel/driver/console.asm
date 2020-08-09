@@ -49,15 +49,6 @@ console:
 	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
-.INIT_MESSAGE:
- db "No init found ! You are on your own.", 10
- 
-.no_init:
-; need to lock screen for us
-	ld	bc, 37
-	ld	hl, .INIT_MESSAGE
-	call	.phy_write
-
 .run:
 	call	.prompt
 .run_loop:

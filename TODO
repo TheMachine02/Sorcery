@@ -2,4 +2,5 @@ VFS Device flash and console
 FAT 12 flash
 leaf load
 library load
+memory management
 keyboard stdin

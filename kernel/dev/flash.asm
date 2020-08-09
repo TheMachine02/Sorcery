@@ -43,7 +43,7 @@ org $D18800
 ; timeout 50µs
 	call	.phy_timeout
 .phy_erase_loop:
-	ld	de, (KERNEL_INTERRUPT_STATUS_MASKED)
+	ld	de, (KERNEL_INTERRUPT_ISR)
 	ld	a, d
 	or	a, e
 	call	nz, .phy_suspend
@@ -105,7 +105,7 @@ org $D18800
 ; 6 micro second typical, ~300 cycles wait
 	call	.phy_status_polling
 ; schedule if need for an interrupt
-	ld	hl, (KERNEL_INTERRUPT_STATUS_MASKED)
+	ld	hl, (KERNEL_INTERRUPT_ISR)
 	ld	a, h
 	or	a, l
 	jr	z, .phy_write_continue

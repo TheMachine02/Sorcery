@@ -7,6 +7,23 @@ define	KERNEL_SLAB_ENTRY_SIZE		8
 define	kslab_heap	$D00040
 
 ; kernel slab allocator ;
+; 1 page :
+; slab stack + slab entries
+; global kernel : list of slab page for each approximate size
+
+kslab.alloc:
+; hl = size
+; find approximate slab for size
+
+
+; find the slab from queue
+; allocate from slab
+
+
+
+
+
+
 
 kslab:
 

@@ -26,7 +26,7 @@ include 'sorcery_certificate.asm'
 	jp	_endos
 .syscall:
 	jp	kinit
-	jp	kinterrupt.service
+	jp	kinterrupt.irq_handler
 	jp	restart.10h
 	jp	restart.18h
 	jp	restart.20h
@@ -36,7 +36,6 @@ include 'sorcery_certificate.asm'
 	
 include	'kernel/init.asm'
 include	'kernel/interrupt.asm'
-include	'kernel/irq.asm'
 include	'kernel/watchdog.asm'
 include	'kernel/power.asm'
 include	'kernel/thread.asm'

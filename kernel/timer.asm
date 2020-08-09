@@ -12,7 +12,7 @@ define	SIGEV_VALUE			$8
 ; uint8_t + prt
 
 define	TIMER				$0
-define	TIMER_FLAGS			$1
+define	TIMER_FLAGS			$0
 define	TIMER_NEXT			$1
 define	TIMER_PREVIOUS			$4
 define	TIMER_COUNT			$7
@@ -184,3 +184,34 @@ end if
 	ret	po
 	ei
 	ret
+
+ktimer:
+.crystal_wake:
+; remove the timer from the queue
+	ld	hl, klocal_timer_queue
+	call	kqueue.remove_head
+; switch based on what we should do
+	ld	a, (iy+TIMER_EV_SIGNOTIFY)
+	dec	a
+	ret	m
+	jr	nz, .crystal_thread
+.crystal_signal:
+	ld	hl, (iy+TIMER_EV_NOTIFY_THREAD)
+	ld	c, (hl)
+	ld	a, (iy+TIMER_EV_SIGNO)
+	jp	signal.kill
+.crystal_thread:
+; callback
+	push	iy
+	push	bc
+	pea	iy+TIMER_EV_VALUE
+	call	.crystal_call
+	pop	hl
+	pop	bc
+	pop	iy
+	ret
+.crystal_call:
+	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
+	ld	iy, (iy+TIMER_EV_NOTIFY_THREAD)
+	jp	(hl)
+

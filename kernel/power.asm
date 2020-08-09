@@ -103,11 +103,11 @@ power:
 ; disable all
 ; enable mask
 	ld	de, $01
-	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
+	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
 	ld	(kpower_save_interrupt_mask), bc
 	ld	(hl), de
-	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
+	ld	l, KERNEL_INTERRUPT_ICR and $FF
 ; acknowledge
 	dec	de
 	dec	de
@@ -141,11 +141,11 @@ power:
 ; 	inc	a
 ; 	out	(bc), a
 ; interrupts
-	ld	hl, KERNEL_INTERRUPT_ENABLE_MASK
+	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (kpower_save_interrupt_mask)
 	ld	(hl), bc
 	ld	bc, $FFFFFF
-	ld	l, KERNEL_INTERRUPT_ACKNOWLEDGE and $FF
+	ld	l, KERNEL_INTERRUPT_ICR and $FF
 	ld	(hl), bc
 ; RTC init
 	ld	hl, DRIVER_RTC_CTRL

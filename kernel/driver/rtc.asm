@@ -49,7 +49,7 @@ rtc:
 ; enable IRQ handler & enable IRQ
 	ld	hl, .irq_handler
 	ld	a, DRIVER_RTC_IRQ
-	jp	kirq.request
+	jp	kinterrupt.irq_request
 
 .irq_handler:
 	push	af

@@ -106,6 +106,9 @@ THREAD_INIT_TEST:
 	ld	a, SIGUSR1
 	call	signal.procmask_single
 	
+	call	video.irq_lock
+;	call	keyboard.irq_lock
+	
 	call	console.run
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
@@ -168,11 +171,6 @@ THREAD_INIT_TEST:
 ;	inc	bc
 ;	jr	.loop
 	ret
-
-global_running_string:
- db "Frequency (Mhz) :", 0
-global_frequency_table:
- db 6,12,24,48
  
 TEST_THREAD_C:
 	call __frameset0
