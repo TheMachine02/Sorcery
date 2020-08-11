@@ -80,7 +80,7 @@ define	kthread_mqueue_active			$D00400		; 16 bytes
 ; retire queue ;
 define	kthread_queue_retire			$D00410		; 4 bytes
 ; timer queue
-define	klocal_timer_queue			$D00414		; 4 bytes
+define	ktimer_queue			$D00414		; 4 bytes
 
 define	kthread_need_reschedule			$D00000
 define	kthread_current				$D00001
@@ -290,10 +290,10 @@ kthread:
 ; add timer
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
-	ld	hl, klocal_timer.notify_default
+	ld	hl, ktimer.notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.insert_head
 	lea	iy, iy-KERNEL_THREAD_TIMER
 ; the process to write the thread state and change the queue should be always a critical section
@@ -574,7 +574,7 @@ kthread:
 ; we were interrupted by signal
 	ex	de, hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.remove_head
 	lea	iy, iy-KERNEL_THREAD_TIMER
 	or	a, a
@@ -771,10 +771,10 @@ task_switch_sleep_ms:
 ; add timer
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
-	ld	hl, klocal_timer.notify_default
+	ld	hl, ktimer.notify_default
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.insert_head
 	lea	iy, iy-KERNEL_THREAD_TIMER
 	

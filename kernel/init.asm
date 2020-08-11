@@ -16,7 +16,7 @@ define	KERNEL_DEV_NULL			$E40000
 kinit:
 .reboot:
 ; boot 5.0.1 stupidity power ++
-	di
+	di	
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 ; shift to soft kinit way to reboot ++
 ; setup stack for the kernel
@@ -41,7 +41,7 @@ kinit:
 	call	kmm.init
 	call	kslab.init
 ; timer and interrupts ;
-	call	klocal_timer.init
+	call	ktimer.init
 	call	kinterrupt.init
 	call	kthread.init
 	call	kwatchdog.init

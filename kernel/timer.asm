@@ -46,11 +46,11 @@ else if CONFIG_CRYSTAL_DIVISOR = 0
 	define	TIME_S_TO_JIFFIES		222
 end if
  
-klocal_timer:
+ktimer:
 
 .init:
 	di
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	ld	de, NULL
 	ld	(hl), e
 	inc	hl
@@ -96,7 +96,7 @@ klocal_timer:
 	ld	hl, .notify_default
 	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
 .create_arm:
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.insert_head
 ; will meet "or a, a" (line 23), so carry is null
 	ei
@@ -119,7 +119,7 @@ klocal_timer:
 	ld	a, l
 	or	a, h
 	jr	z, .reset_errno
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.remove_head
 ; won't modify Carry
 	sbc	hl, hl
@@ -168,14 +168,14 @@ end if
 	ld	(iy+TIMER_COUNT), hl
 	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_SIGNAL
 	ld	(iy+TIMER_EV_SIGNO), SIGALRM
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.insert_head
 	pop	af
 	ret	po
 	ei
 	ret
 .alarm_disarm:
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.remove_head
 ; carry wasn't modified
 	sbc	hl, hl
@@ -185,10 +185,9 @@ end if
 	ei
 	ret
 
-ktimer:
-.crystal_wake:
+.irq_handler:
 ; remove the timer from the queue
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	call	kqueue.remove_head
 ; switch based on what we should do
 	ld	a, (iy+TIMER_EV_SIGNOTIFY)

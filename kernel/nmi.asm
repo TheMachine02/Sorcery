@@ -61,33 +61,43 @@ nmi:
 
 .deadlock:
 	ld	hl, .THREAD_DEADLOCK
-	ld	bc, 15
+.reboot_trampoline:
 	call	.exception_write
 	jp	kinit.reboot
 
 .illegal_instruction:
-	jp	kinit.reboot
+; try to know which instruction triggered it
+	pop	hl
+; return address = hl
+	push	hl
+	dec	hl
+	ld	a, (hl)
+; a = last instruction part
+; check if instruction was rst $0 meaning a probable memory poison corruption
+	cp	a, $C7
+	jr	nz, .illegal_utrap
+	ld	hl, .POISON_MEMORY
+	jr	.reboot_trampoline
+
+.illegal_utrap:
+	ld	hl, .ILLEGAL_TRAP
+	jr	.reboot_trampoline
 	
 .watchdog_violation:
 	ld	hl, .WATCHDOG_EXCEPTION
-	ld	bc, 18
-	call	.exception_write
-	jp	kinit.reboot
-
+	jr	.reboot_trampoline
+	
 .stack_overflow:
 	ld	hl, .STACKOVERFLOW_EXCEPTION
-	ld	bc, 14
 	call	.exception_write
 ; we should be able to recover here ;
+.core_trampoline:
 	jp	kthread.core
 
 .memory_protection:
 	ld	hl, .MEMORY_EXCEPTION
-	ld	bc, 17
-	call	.exception_write
-; we should be able to recover here ;
-	jp	kthread.core
-
+	jr	.core_trampoline
+	
 .longjump:
 ; restore context
 	ld	hl, (ix+CONTEXT_FRAME_IR)
@@ -109,7 +119,10 @@ nmi:
 	retn
  
 .exception_write:
-; hl is exception string, bc is size
+; hl is exception string
+	ld	bc, 0
+	ld	c, (hl)
+	inc	hl
 	push	hl
 	push	bc
 	ld	hl, .CONTEXT_FRAME_SYSE
@@ -187,13 +200,17 @@ nmi:
 	ret
 
 .THREAD_DEADLOCK:
- db "system deadlock"
+ db 14, "system deadlock"
 .WATCHDOG_EXCEPTION:
- db "watchdog violation"
+ db 18, "watchdog violation"
 .STACKOVERFLOW_EXCEPTION:
- db "stack overflow"
+ db 14, "stack overflow"
 .MEMORY_EXCEPTION:
- db "memory protection"
+ db 17, "memory protection"
+.POISON_MEMORY:
+ db 18, "poisoned derefence"
+.ILLEGAL_TRAP:
+ db 19, "illegal instruction"
  
  ; size 24
 .CONTEXT_FRAME_SYSE:

@@ -148,7 +148,7 @@ end if
 	sbc	hl, bc
 	ex	de, hl
 	
-	ld	b, 0	
+	ld	b, 0
 	cp	a, $13
 	jr	nz, .matches_copy
 .matches_lisc:

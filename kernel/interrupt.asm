@@ -59,6 +59,8 @@ kinterrupt:
 	ld	(hl), a
 	add	hl, de
 	djnz	.init_vector
+	xor	a, a
+	ld	(KERNEL_INTERRUPT_EARLY_SWITCH), a
 	ret
 
 .irq_free:
@@ -71,7 +73,83 @@ kinterrupt:
 	ex	de, hl
 	pop	de
 	ret
-        
+
+.irq_request:
+; a = IRQ, hl = interrupt routine
+; check the interrupt routine is in *RAM*
+	push	de
+	call	.irq_extract_line
+	ld	(hl), $C3
+	inc	hl
+	ld	(hl), de
+	ex	de, hl
+	pop	de
+; register the handler then enable the IRQ    
+
+.irq_enable:
+	push	hl
+	push	bc
+	ld	hl, i
+	push	af
+; enable a specific IRQ or a specific IRQ combinaison
+	ld	c, a
+	rra
+	rra
+	and	a, 00111100b
+	ld	b, a
+; this is the second byte for interrupt mask
+	ld	a, c
+	and	a, 00001111b
+; critical section ;
+	di
+; this is the first byte
+	ld	hl, KERNEL_INTERRUPT_IMSC
+	or	a, (hl)
+	ld	(hl), a
+	inc	hl
+	ld	a, (hl)
+	or	a, b
+	ld	(hl), a
+	pop	af
+	pop	bc
+	pop	hl
+	ret	po
+	ei
+	ret
+    
+.irq_disable:
+	push	hl
+	push	bc
+	ld	hl, i
+	push	af
+; enable a specific IRQ
+	ld	c, a
+	rra
+	rra
+	cpl
+	and	a, 00111100b
+	ld	b, a
+; this is the second byte for interrupt mask
+	ld	a, c
+	cpl
+	and	a, 00001111b
+; critical section ;
+	di
+; this is the first byte
+	ld	hl, KERNEL_INTERRUPT_IMSC
+	and	a, (hl)
+	ld	(hl), a
+	inc	hl
+	ld	a, (hl)
+	and	a, b
+	ld	(hl), a
+	pop	af
+	pop	bc
+	pop	hl
+	ret	po
+	ei
+	ret
+
 .irq_extract_line:
 	push	bc
 	push	af
@@ -93,84 +171,23 @@ kinterrupt:
 ; hl = line, de = old hl, bc safe, af safe
 	ret
 
-.irq_request:
-; a = IRQ, hl = interrupt routine
-; check the interrupt routine is in *RAM*
-	push	de
-	call	.irq_extract_line
-	ld	(hl), $C3
-	inc	hl
-	ld	(hl), de
-	ex	de, hl
-	pop	de
-; register the handler then enable the IRQ    
-
-.irq_enable:
-	push	hl
-	push	bc
-; enable a specific IRQ or a specific IRQ combinaison
-	ld	c, a
-	rra
-	rra
-	and	a, 00111100b
-	ld	b, a
-; this is the second byte for interrupt mask
-	ld	a, c
-	and	a, 00001111b
-; critical section ;
-	ld	hl, i
+; C helper function
+.irq_save:
 	push	af
-	di
-; this is the first byte
-	ld	hl, KERNEL_INTERRUPT_IMSC
-	or	a, (hl)
-	ld	(hl), a
-	inc	hl
-	ld	a, (hl)
-	or	a, b
-	ld	(hl), a
-	pop	af
-	ld	a, c
-	pop	bc
+	ld	a, i
+	push	af
 	pop	hl
-	ret	po
-	ei	
+	pop	af
+	di
 	ret
-    
-.irq_disable:
-	push	hl
-	push	bc
-; enable a specific IRQ
-	ld	c, a
-	rra
-	rra
-	cpl
-	and	a, 00111100b
-	ld	b, a
-; this is the second byte for interrupt mask
-	ld	a, c
-	cpl
-	and	a, 00001111b
-; critical section ;
-	ld	hl, i
-	push	af
-	di
-; this is the first byte
-	ld	hl, KERNEL_INTERRUPT_IMSC
-	and	a, (hl)
-	ld	(hl), a
-	inc	hl
-	ld	a, (hl)
-	and	a, b
-	ld	(hl), a
-	pop	af
-	ld	a, c
-	pop	bc
-	pop	hl
-	ret	po
+	
+.irq_restore:
+; last arg is still in hl
+	bit	2, l
+	ret	nz	; po
 	ei
 	ret
-
+	
 .irq_handler:
 	pop	hl
 ; read interrupt sources
@@ -219,7 +236,7 @@ kinterrupt:
 
 .irq_vector_crystal:
 ; schedule jiffies timer first
-	ld	hl, klocal_timer_queue
+	ld	hl, ktimer_queue
 	ld	a, (hl)
 	or	a, a
 	jr	z, kscheduler.schedule_check_quanta
@@ -233,7 +250,7 @@ kinterrupt:
 	ld	(iy+TIMER_COUNT), hl
 	ld	a, h
 	or	a, l
-	call	z, ktimer.crystal_wake
+	call	z, ktimer.irq_handler
 	ld	iy, (iy+TIMER_NEXT)
 	djnz	.irq_crystal_queue
 
