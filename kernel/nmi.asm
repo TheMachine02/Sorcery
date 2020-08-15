@@ -65,6 +65,21 @@ nmi:
 	call	.exception_write
 	jp	kinit.reboot
 
+.watchdog_violation:
+	ld	hl, .WATCHDOG_EXCEPTION
+	jr	.reboot_trampoline
+	
+.stack_overflow:
+	ld	hl, .STACKOVERFLOW_EXCEPTION
+.core_trampoline:
+	call	.exception_write
+; we should be able to recover here ;
+	jp	kthread.core
+
+.memory_protection:
+	ld	hl, .MEMORY_EXCEPTION
+	jr	.core_trampoline
+	
 .illegal_instruction:
 ; try to know which instruction triggered it
 	pop	hl
@@ -77,27 +92,12 @@ nmi:
 	cp	a, $C7
 	jr	nz, .illegal_utrap
 	ld	hl, .POISON_MEMORY
-	jr	.reboot_trampoline
-
-.illegal_utrap:
-	ld	hl, .ILLEGAL_TRAP
-	jr	.reboot_trampoline
-	
-.watchdog_violation:
-	ld	hl, .WATCHDOG_EXCEPTION
-	jr	.reboot_trampoline
-	
-.stack_overflow:
-	ld	hl, .STACKOVERFLOW_EXCEPTION
-	call	.exception_write
-; we should be able to recover here ;
-.core_trampoline:
-	jp	kthread.core
-
-.memory_protection:
-	ld	hl, .MEMORY_EXCEPTION
 	jr	.core_trampoline
 	
+.illegal_utrap:
+	ld	hl, .ILLEGAL_TRAP
+	jr	.core_trampoline
+
 .longjump:
 ; restore context
 	ld	hl, (ix+CONTEXT_FRAME_IR)

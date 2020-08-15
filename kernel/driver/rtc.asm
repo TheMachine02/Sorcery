@@ -52,17 +52,17 @@ rtc:
 	jp	kinterrupt.irq_request
 
 .irq_handler:
-	push	af
 	ld	hl, DRIVER_RTC_ISCR
 	ld	a, (hl)
 	ld	(DRIVER_RTC_ISR), a
 	ld	(hl), 0xFF
-	pop	af
 	ld	hl, DRIVER_RTC_IRQ_LOCK
 	bit	DRIVER_RTC_IRQ_LOCK_SET, (hl)
-	ret	z
+	jp	z, kinterrupt.irq_resume
 	ld	iy, (DRIVER_RTC_IRQ_LOCK_THREAD)
-	jp	kthread.resume_from_IRQ
+	ld	a, DRIVER_RTC_IRQ
+	call	kthread.resume_from_IRQ
+	jp	kinterrupt.irq_resume
 	
 .irq_lock:
 	di

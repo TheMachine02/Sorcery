@@ -185,7 +185,7 @@ end if
 	ei
 	ret
 
-.irq_handler:
+.trigger:
 ; remove the timer from the queue
 	ld	hl, ktimer_queue
 	call	kqueue.remove_head

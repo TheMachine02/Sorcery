@@ -39,17 +39,17 @@ keyboard:
 	jp	kinterrupt.irq_request
 
 .irq_handler:
-	push	af
 	ld	hl, DRIVER_KEYBOARD_ISCR
 	ld	a, (hl)
 	ld	(hl), 0x07
 	ld	(DRIVER_KEYBOARD_ISR), a
-	pop	af
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
 	bit	DRIVER_KEYBOARD_IRQ_LOCK_SET, (hl)
-	ret	z
+	jp	z, kinterrupt.irq_resume
 	ld	iy, (DRIVER_KEYBOARD_IRQ_LOCK_THREAD)
-	jp	kthread.resume_from_IRQ
+	ld	a, DRIVER_KEYBOARD_IRQ
+	call	kthread.resume_from_IRQ
+	jp	kinterrupt.irq_resume
 		
 .irq_lock:
 	di

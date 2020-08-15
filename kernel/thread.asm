@@ -82,12 +82,12 @@ define	kthread_queue_retire			$D00410		; 4 bytes
 ; timer queue
 define	ktimer_queue			$D00414		; 4 bytes
 
-define	kthread_need_reschedule			$D00000
+define	kthread_irq_reschedule			$D00000
 define	kthread_current				$D00001
 
 ; please respect these for kinterrupt optimizations ;
-assert kthread_current = kthread_need_reschedule + 1
-assert kthread_need_reschedule and $FF = 0
+assert kthread_current = kthread_irq_reschedule + 1
+assert kthread_irq_reschedule and $FF = 0
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
@@ -101,7 +101,7 @@ kthread:
 	ld	de, kthread_mqueue_active + 1
 	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
 	ldir
-	ld	hl, kthread_need_reschedule
+	ld	hl, kthread_irq_reschedule
 	ld	(hl), e
 	inc	hl
 	ld	de, KERNEL_THREAD
@@ -309,29 +309,18 @@ kthread:
 .resume_from_IRQ:
 ; resume a thread waiting IRQ
 ; interrupt should be DISABLED when calling this routine
-; save a
 	di
-	ld	e, a
 	lea	hl, iy+KERNEL_THREAD_IRQ
-	ld	a, (hl)
-	or	a, a
-	jr	z, .resume_from_IRQ_exit
+	cp	a, (hl)
+	ret	nz
 	ld	(hl), 0
 	inc	hl
 	ld	a, (hl)
 	cp	a, TASK_UNINTERRUPTIBLE
-	jr	nz, .resume_from_IRQ_exit
-	ld	ix, (iy+KERNEL_THREAD_PREVIOUS)
-	call	task_switch_running
+	ret	nz
 	ld	a, $FF
-	ld	(kthread_need_reschedule), a
-	lea	iy, ix+0
-.resume_from_IRQ_exit:
-; restore a
-	ld	a, e
-; return ix = iy = previous thread in the thread queue
-	or	a, a
-	ret
+	ld	(kthread_irq_reschedule), a
+	jp	task_switch_running
 	
 .suspend:
 ; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically, also, IRQ signal will be reset by IRQ handler, not by wake
@@ -368,7 +357,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_IRQ), 0
 	call	task_switch_running
 	ld	a, $FF
-	ld	(kthread_need_reschedule), a
+	ld	(kthread_irq_reschedule), a
 .resume_exit:
 ; rsti optimized
 	pop	af

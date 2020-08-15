@@ -542,6 +542,7 @@ include 'logo.inc'
 
 .builtin_top:
 .top_init:
+	call	rtc.irq_lock
 	ld	b, 18
 	ld	hl, kthread_pid_map+4
 	ld	de, 0
@@ -639,9 +640,10 @@ include 'logo.inc'
 	add	hl, de
 	pop	bc
 	djnz	.top_data_loop
-	
 	ei
-	call	rtc.wait_second
+	halt
+	ld	a, DRIVER_RTC_IRQ
+	call	kthread.wait_on_IRQ
 	jp	.top_loop
 	
 .TOP_LINE_STR:

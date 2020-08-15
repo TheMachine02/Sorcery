@@ -25,6 +25,8 @@ kinit:
 	ld.sis sp, $0000
 	ld	a, $D0
 	ld	MB, a
+	ld	hl, KERNEL_INTERRUPT_IDT
+	ld	i, hl
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a

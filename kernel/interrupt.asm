@@ -28,17 +28,52 @@ define	KERNEL_IRQ_LCD				32
 define	KERNEL_IRQ_RTC				64
 define	KERNEL_IRQ_USB				128
 
-define	irq_vector   				$D00140
-define	irq_vector_power			$D00140
-define	irq_vector_timer1			$D00144
-define	irq_vector_timer2			$D00148
-define	irq_vector_timer3			$D0014C
-define	irq_vector_keyboard			$D00150
-define	irq_vector_lcd				$D00154
-define	irq_vector_rtc				$D00158
-define	irq_vector_usb				$D0015C
+define	KERNEL_INTERRUPT_IDT			$D00600
+define	KERNEL_INTERRUPT_IDT_SIZE		4
+define	KERNEL_INTERRUPT_IDT_HP			4
+define	KERNEL_INTERRUPT_IDT_JP			$D00640
 
 kinterrupt:
+
+.IDT_PAGE:
+; prio : keyboard > lcd > usb > rtc
+; prio : tr1 > tr2 > tr3 > power
+; IDT_LP
+.IDT_LP:
+ db	$00, $00	; 0000
+ db	$04, $50	; 0001
+ db	$08, $54	; 0010
+ db	$04, $50	; 0011
+ db	$10, $58	; 0100
+ db	$04, $50	; 0101
+ db	$08, $54	; 0110
+ db	$04, $50	; 0111
+ db	$20, $5C	; 1000
+ db	$04, $50	; 1001
+ db	$08, $54	; 1010
+ db	$04, $50	; 1011
+ db	$20, $5C	; 1100
+ db	$04, $50	; 1101
+ db	$08, $54	; 1110
+ db	$04, $50	; 1111
+; IDT_HP
+.IDT_HP:
+ db	$00, $00	; 0000
+ db	$01, $40	; 0001
+ db	$02, $44	; 0010
+ db	$02, $44	; 0011
+ db	$04, $48	; 0100
+ db	$04, $48	; 0101
+ db	$02, $44	; 0110
+ db	$02, $44	; 0111
+ db	$08, $4C	; 1000
+ db	$08, $4C	; 1001
+ db	$02, $44	; 1010
+ db	$02, $44	; 1011
+ db	$04, $48	; 1100
+ db	$04, $48	; 1101
+ db	$02, $44	; 1110
+ db	$02, $44	; 1111
 
 .init:
 	di
@@ -51,10 +86,16 @@ kinterrupt:
 	ld	e, $19
 	ld	(hl), de
 ; also reset handler table
-	ld	hl, irq_vector
-	ld 	de, 4
+	ld	hl, KERNEL_INTERRUPT_IDT
+	ld	i, hl
+	ex	de, hl
+	ld	hl, .IDT_PAGE
+	ld	bc, 64
+	ldir
+	ex	de, hl
+	ld 	de, KERNEL_INTERRUPT_IDT_SIZE
 	ld	b, 8
-	ld	a, $C9
+	ld	a, $C3
 .init_vector:
 	ld	(hl), a
 	add	hl, de
@@ -159,12 +200,12 @@ kinterrupt:
 	rra
 	jr	nc, .irq_extract_bit
 	ld	a, b
+	add	a, a
+	add	a, a
 	ex	de, hl
-	add	a, a
-	add	a, a
 	sbc	hl, hl
 	ld	l, a
-	ld	bc, irq_vector
+	ld	bc, KERNEL_INTERRUPT_IDT_JP
 	add	hl, bc
 	pop	af
 	pop	bc
@@ -187,77 +228,78 @@ kinterrupt:
 	ret	nz	; po
 	ei
 	ret
-	
+
 .irq_handler:
 	pop	hl
 ; read interrupt sources
 	ld	hl, KERNEL_INTERRUPT_ISR
 	ld	bc, (hl)
-	ld	l, KERNEL_INTERRUPT_ICR and $FF
-	ld	(hl), bc
-; check type of the interrupt : master source ?
+	ld	l, (KERNEL_INTERRUPT_ICR + 1) and $FF
 	bit	4, c
-	jr	nz, .irq_vector_crystal
-.irq_acknowledge:
+; IRQ 0 master
+	jr	nz, .irq_crystal_master
+; b = 00iiii00 ; rtc, lcd, usb, keyboard
+; c = 0000iiii ; on and timer
 	ld	a, b
-	rla
-	rla
-	and	a, $F0
-	or	a, c
-	rra
-	call	c, irq_vector_power
-	rra
-	call	c, irq_vector_timer1
-	rra
-	call	c, irq_vector_timer2
-	rra
-	call	c, irq_vector_timer3
-	rra
-	call	c, irq_vector_keyboard
-	rra
-	call	c, irq_vector_lcd
-	rra
-	call	c, irq_vector_rtc
-	rra
-	call	c, irq_vector_usb
-	ld	hl, kthread_need_reschedule
+	srl	a
+	jr	nz, .irq_trampoline
+	dec	hl
+	ld	a, c
+	add	a, a
+	set	KERNEL_INTERRUPT_IDT_HP, a
+.irq_trampoline:
+; it is up to the irq_handler to clean up with return to irq_resume
+	ex	de, hl
+; and now, for some black magic
+	ld	hl, i
+	ld	l, a
+	ldi
+	ld	l, (hl)
+	jp	(hl)
+.irq_resume:
+; check if a thread need to be waked up
+	ld	hl, kthread_irq_reschedule
 	sra	(hl)
 	ld	(hl), l
 	inc	hl
 	ld	iy, (hl)
 	jr	c, kscheduler.schedule
-.irq_resume:
+.irq_resume_minimal:
 	pop	iy
 	pop	ix
 	exx
 	ex	af, af'
 	ei
 	ret
-
-.irq_vector_crystal:
-; schedule jiffies timer first
+	
+.irq_crystal_master:
+; this is the master clock IRQ handler
+	dec	hl
+	set	4, (hl)
+; update timer queue first, then check if we need to reschedule
 	ld	hl, ktimer_queue
 	ld	a, (hl)
 	or	a, a
-	jr	z, kscheduler.schedule_check_quanta
+	jr	z, .irq_crystal_resume
 	inc	hl
 ; this is first thread with a timer
 	ld	iy, (hl)
 	ld	b, a
-.irq_crystal_queue:
+.irq_crystal_timers:
 	ld	hl, (iy+TIMER_COUNT)
 	dec	hl
 	ld	(iy+TIMER_COUNT), hl
 	ld	a, h
 	or	a, l
-	call	z, ktimer.irq_handler
+	call	z, ktimer.trigger
 	ld	iy, (iy+TIMER_NEXT)
-	djnz	.irq_crystal_queue
+	djnz	.irq_crystal_timers
+.irq_crystal_resume:
 
 kscheduler:
 .schedule_check_quanta:
 ; if we need to reschedule, skip this phase entirely ;
-	ld	hl, kthread_need_reschedule
+	ld	hl, kthread_irq_reschedule
 	sra	(hl)
 	ld	(hl), l
 	inc	hl
@@ -403,7 +445,7 @@ end if
 	exx
 	push	ix
 	push	iy
-	ld	hl, kthread_need_reschedule
+	ld	hl, kthread_irq_reschedule
 	ld	(hl), l
 	inc	hl
 	ld	iy, (hl)

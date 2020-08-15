@@ -55,11 +55,12 @@ video:
 	set	2, (hl)
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
-; carry flag is untouched, meaning that this IRQ will need a thread wake    
-	ret	z
+	jp	z, kinterrupt.irq_resume
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
-; reset the carry flag, IRQ doesn't need thread to be waked
-	jp	kthread.resume_from_IRQ
+; signal the IRQ to a waiting (helper / or not ) thread
+	ld	a, DRIVER_VIDEO_IRQ
+	call	kthread.resume_from_IRQ
+	jp	kinterrupt.irq_resume
 
 .irq_lock:
 	di

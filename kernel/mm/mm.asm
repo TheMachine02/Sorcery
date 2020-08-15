@@ -683,7 +683,7 @@ end if
 	pop	bc
 	ret
 
-define	KERNEL_MM_POISON_HW		$C7
+define	KERNEL_HW_POISON		$C7
 
 macro	trap
 	db $FD, $FF
@@ -698,7 +698,7 @@ end	macro
 	ex	de, hl
 	sbc	hl, hl
 	adc	hl, de
-	ld	(hl), KERNEL_MM_POISON_HW
+	ld	(hl), KERNEL_HW_POISON
 	inc	de
 	ldir
 	ret
