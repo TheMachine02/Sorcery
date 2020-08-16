@@ -5,7 +5,7 @@ define	KERNEL_INTERRUPT_ISL			$F0000C		; signal latch
 define	KERNEL_INTERRUPT_ISR			$F00014
 define	KERNEL_INTERRUPT_REVISION		$F00050
 define	KERNEL_INTERRUPT_REVISION_BASE		$010900
-define	KERNEL_INTERRUPT_EARLY_SWITCH		$D177BA
+define	KERNEL_INTERRUPT_BOOT_HANDLER		$D177BA
 
 define	KERNEL_INTERRUPT_ON			00000001b
 define	KERNEL_INTERRUPT_TIMER1			00000010b
@@ -28,18 +28,17 @@ define	KERNEL_IRQ_LCD				32
 define	KERNEL_IRQ_RTC				64
 define	KERNEL_IRQ_USB				128
 
-define	KERNEL_INTERRUPT_IDT			$D00600
-define	KERNEL_INTERRUPT_IDT_SIZE		4
-define	KERNEL_INTERRUPT_IDT_HP			4
-define	KERNEL_INTERRUPT_IDT_JP			$D00640
+define	KERNEL_INTERRUPT_IPT			$D00600
+define	KERNEL_INTERRUPT_IPT_SIZE		4
+define	KERNEL_INTERRUPT_IPT_LP			$D00610
+define	KERNEL_INTERRUPT_IPT_HP			$D00620
+define	KERNEL_INTERRUPT_IPT_JP			$D00640
 
 kinterrupt:
 
-.IDT_PAGE:
-; prio : keyboard > lcd > usb > rtc
-; prio : tr1 > tr2 > tr3 > power
-; IDT_LP
-.IDT_LP:
+.IPT_PAGE:
+; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
+.IPT_LP:
  db	$00, $00	; 0000
  db	$04, $50	; 0001
  db	$08, $54	; 0010
@@ -56,8 +55,7 @@ kinterrupt:
  db	$04, $50	; 1101
  db	$08, $54	; 1110
  db	$04, $50	; 1111
-; IDT_HP
-.IDT_HP:
+.IPT_HP:
  db	$00, $00	; 0000
  db	$01, $40	; 0001
  db	$02, $44	; 0010
@@ -74,7 +72,16 @@ kinterrupt:
  db	$04, $48	; 1101
  db	$02, $44	; 1110
  db	$02, $44	; 1111
-
+.IPT_JP:
+ jp	.irq_resume
+ jp	$0
+ jp	$0
+ jp	$0
+ jp	$0
+ jp	$0
+ jp	$0
+ jp	$0
+ 
 .init:
 	di
 	im	1
@@ -86,45 +93,29 @@ kinterrupt:
 	ld	e, $19
 	ld	(hl), de
 ; also reset handler table
-	ld	hl, KERNEL_INTERRUPT_IDT
+	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	i, hl
 	ex	de, hl
-	ld	hl, .IDT_PAGE
-	ld	bc, 64
+	ld	hl, .IPT_PAGE
+	ld	bc, 96
 	ldir
-	ex	de, hl
-	ld 	de, KERNEL_INTERRUPT_IDT_SIZE
-	ld	b, 8
-	ld	a, $C3
-.init_vector:
-	ld	(hl), a
-	add	hl, de
-	djnz	.init_vector
 	xor	a, a
-	ld	(KERNEL_INTERRUPT_EARLY_SWITCH), a
+	ld	(KERNEL_INTERRUPT_BOOT_HANDLER), a
 	ret
 
 .irq_free:
 ; disable the IRQ then remove the handler
 	call	.irq_disable
-	push	de
 	call    .irq_extract_line
-	ld	a, $C9
-	ld	(hl), a
-	ex	de, hl
-	pop	de
+	ld	de, NULL
+	ld	(hl), de
 	ret
 
 .irq_request:
 ; a = IRQ, hl = interrupt routine
 ; check the interrupt routine is in *RAM*
-	push	de
 	call	.irq_extract_line
-	ld	(hl), $C3
-	inc	hl
 	ld	(hl), de
-	ex	de, hl
-	pop	de
 ; register the handler then enable the IRQ    
 
 .irq_enable:
@@ -205,29 +196,34 @@ kinterrupt:
 	ex	de, hl
 	sbc	hl, hl
 	ld	l, a
-	ld	bc, KERNEL_INTERRUPT_IDT_JP
+	ld	bc, KERNEL_INTERRUPT_IPT_JP
 	add	hl, bc
 	pop	af
 	pop	bc
+	inc	hl
 ; hl = line, de = old hl, bc safe, af safe
 	ret
 
 ; C helper function
 .irq_save:
-	push	af
-	ld	a, i
-	push	af
-	pop	hl
-	pop	af
+	ld	hl, i
 	di
-	ret
+; push af & hl to the stack
+	pop	de
+	push	af
+	push	hl
+	ex	de, hl
+	jp	(hl)
 	
 .irq_restore:
-; last arg is still in hl
-	bit	2, l
-	ret	nz	; po
+	pop	de
+	pop	hl
+	ld	i, hl
+	pop	af
+	ex	de, hl
+	jp	po, $+5
 	ei
-	ret
+	jp	(hl)
 
 .irq_handler:
 	pop	hl
@@ -238,7 +234,7 @@ kinterrupt:
 	bit	4, c
 ; IRQ 0 master
 	jr	nz, .irq_crystal_master
-; b = 00iiii00 ; rtc, lcd, usb, keyboard
+; b = 00iiii00 ; usb, rtc, lcd, keyboard
 ; c = 0000iiii ; on and timer
 	ld	a, b
 	srl	a
@@ -246,7 +242,7 @@ kinterrupt:
 	dec	hl
 	ld	a, c
 	add	a, a
-	set	KERNEL_INTERRUPT_IDT_HP, a
+	or	a, KERNEL_INTERRUPT_IPT_HP and $FF
 .irq_trampoline:
 ; it is up to the irq_handler to clean up with return to irq_resume
 	ex	de, hl
@@ -256,15 +252,15 @@ kinterrupt:
 	ldi
 	ld	l, (hl)
 	jp	(hl)
-.irq_resume:
-; check if a thread need to be waked up
+.irq_resume_thread:
+; check if we need to reschedule for fast response
 	ld	hl, kthread_irq_reschedule
 	sra	(hl)
 	ld	(hl), l
 	inc	hl
 	ld	iy, (hl)
 	jr	c, kscheduler.schedule
-.irq_resume_minimal:
+.irq_resume:
 	pop	iy
 	pop	ix
 	exx

@@ -25,8 +25,6 @@ kinit:
 	ld.sis sp, $0000
 	ld	a, $D0
 	ld	MB, a
-	ld	hl, KERNEL_INTERRUPT_IDT
-	ld	i, hl
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
@@ -89,12 +87,12 @@ kname:
 ; Kernel only init and pass to init thread, so a proper OS will go there ;
 
 
-define	global_mutex		$D00170		; that's just a test
+define	global_mutex		$D3F000		; that's just a test
 define	global_exit_value	$D00180
 
 THREAD_INIT_TEST:
-	ld	hl, global_mutex
-	call	kmutex.init
+; 	ld	hl, global_mutex
+; 	call	atomic_rw.init
 	
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
@@ -177,10 +175,13 @@ THREAD_INIT_TEST:
 TEST_THREAD_C:
 	call __frameset0
 	ld hl, (ix+6)
-	ld	iy, leaf_frozen_file
-	call	leaf.exec
+;	ld	iy, leaf_frozen_file
+;	call	leaf.exec
 
-.spin:	
+.spin:
+; 	ld	hl, global_mutex
+; 	call	atomic_rw.lock_read
+
 ;	ld	hl, 30	; 30 ms is nice
 ;	call	kthread.sleep
 ; trap opcode instruction
@@ -200,6 +201,14 @@ TEST_THREAD_C:
 ; 	call	flash.phy_write
 ; 	ld	hl, $3B0000
 ; 	call	flash.phy_erase
+
+; 	ld	hl, KERNEL_MM_NULL
+; 	ld	de, KERNEL_MM_NULL
+; 	ld	bc, 65536
+; 	ldir
+; 	ld	hl, global_mutex
+; 	call	atomic_rw.unlock_read
+
 	jr	.spin
 	pop ix
 	ret
@@ -210,6 +219,9 @@ TEST_THREAD_C_DEATH:
 ;	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 ; malloc test ;
 .spin:
+; 	ld	hl, global_mutex
+; 	call	atomic_rw.lock_write
+	
 	ld	hl, 512
 	call	kmalloc
 	push	hl
@@ -219,6 +231,9 @@ TEST_THREAD_C_DEATH:
 	call	kmalloc
 	pop	hl
 	call	kfree
+	
+; 	ld	hl, global_mutex
+; 	call	atomic_rw.unlock_write
 	jr	.spin
 ; wait ;
 ; normal path - but not taken

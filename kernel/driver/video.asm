@@ -60,7 +60,7 @@ video:
 ; signal the IRQ to a waiting (helper / or not ) thread
 	ld	a, DRIVER_VIDEO_IRQ
 	call	kthread.resume_from_IRQ
-	jp	kinterrupt.irq_resume
+	jp	kinterrupt.irq_resume_thread
 
 .irq_lock:
 	di

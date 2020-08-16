@@ -62,7 +62,7 @@ rtc:
 	ld	iy, (DRIVER_RTC_IRQ_LOCK_THREAD)
 	ld	a, DRIVER_RTC_IRQ
 	call	kthread.resume_from_IRQ
-	jp	kinterrupt.irq_resume
+	jp	kinterrupt.irq_resume_thread
 	
 .irq_lock:
 	di
