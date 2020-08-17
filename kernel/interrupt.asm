@@ -19,6 +19,7 @@ define	KERNEL_INTERRUPT_USB			00100000b
 
 define	KERNEL_INTERRUPT_CACHE			$D00A00
 
+define	KERNEL_IRQ_CLOCK			0
 define	KERNEL_IRQ_POWER			1
 define	KERNEL_IRQ_TIMER1			2
 define	KERNEL_IRQ_TIMER2			4
@@ -73,7 +74,7 @@ kinterrupt:
  db	$02, $44	; 1110
  db	$02, $44	; 1111
 .IPT_JP:
- jp	.irq_resume
+ jp	.irq_resume	; default for power IRQ
  jp	$0
  jp	$0
  jp	$0
@@ -89,8 +90,8 @@ kinterrupt:
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ISL and $FF
-; just use default
-	ld	e, $19
+; just use default (minus timer 3)
+	ld	e, KERNEL_INTERRUPT_ON or KERNEL_INTERRUPT_TIMER_OS
 	ld	(hl), de
 ; also reset handler table
 	ld	hl, KERNEL_INTERRUPT_IPT
@@ -204,7 +205,7 @@ kinterrupt:
 ; hl = line, de = old hl, bc safe, af safe
 	ret
 
-; C helper function
+; C helper function (broken, btw)
 .irq_save:
 	ld	hl, i
 	di
@@ -229,21 +230,20 @@ kinterrupt:
 	pop	hl
 ; read interrupt sources
 	ld	hl, KERNEL_INTERRUPT_ISR
-	ld	bc, (hl)
-	ld	l, (KERNEL_INTERRUPT_ICR + 1) and $FF
-	bit	4, c
 ; IRQ 0 master
-	jr	nz, .irq_crystal_master
-; b = 00iiii00 ; usb, rtc, lcd, keyboard
-; c = 0000iiii ; on and timer
-	ld	a, b
+	bit	4, (hl)
+	jr	nz, .irq_trampoline_crystal
+	ld	c, (hl)
+	inc	hl
+	ld	a, (hl)
+	ld	l, (KERNEL_INTERRUPT_ICR+1) and $FF
 	srl	a
-	jr	nz, .irq_trampoline
-	dec	hl
+	jr	nz, .irq_trampoline_generic
 	ld	a, c
 	add	a, a
+	dec	l
 	or	a, KERNEL_INTERRUPT_IPT_HP and $FF
-.irq_trampoline:
+.irq_trampoline_generic:
 ; it is up to the irq_handler to clean up with return to irq_resume
 	ex	de, hl
 ; and now, for some black magic
@@ -268,10 +268,11 @@ kinterrupt:
 	ei
 	ret
 	
-.irq_crystal_master:
+.irq_trampoline_crystal:
 ; this is the master clock IRQ handler
-	dec	hl
+	ld	l, KERNEL_INTERRUPT_ICR and $FF
 	set	4, (hl)
+.irq_crystal_clock:
 ; update timer queue first, then check if we need to reschedule
 	ld	hl, ktimer_queue
 	ld	a, (hl)

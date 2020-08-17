@@ -126,6 +126,26 @@ kthread:
 	ldir
 	ret
 
+.IHEADER:
+	db	$00			; ID 0 reserved
+	dl	KERNEL_THREAD_IDLE	; No next
+	dl	KERNEL_THREAD_IDLE	; No prev
+	db	NULL			; No PPID
+	db	$FF			; IRQ all
+	db	TASK_IDLE		; Status
+	db	SCHED_PRIO_MIN		; Special anyway
+	db	$FF			; quantum
+	dl	$D00060			; Stack limit
+	dl	$D000F0			; Stack will be writed at first unschedule
+	dl	$D00043			; Boot/kernel  heap
+	dl	NULL			; No friend
+	db	NULL			; Errno
+	db	NULL			; Sig
+	dl	NULL			; Sig
+	dw	NULL, NULL		; Sig mask 
+; rest is useless for idle thread
+.IHEADER_END:
+
 .yield=kscheduler.yield
 	
 .create_no_mem:
@@ -253,6 +273,31 @@ kthread:
 	sbc	hl, hl
 	ret
 
+; DANGEROUS AREA, helper function ;	
+	
+.reserve_pid:
+; find a free pid
+; this should be called in an atomic / critical code section to be sure it will still be free when used
+; kinda reserved to ASM
+	ld	hl, kthread_pid_map
+	ld	de, 4
+	ld	b, 64
+	xor	a, a
+.reserve_parse_map:
+	cp	a, (hl)
+	jr	z, .reserve_exit
+	add	hl, de
+	djnz	.reserve_parse_map
+.reserve_exit:
+	srl	l
+	srl	l
+	ld	a, l
+; carry is reset
+; if = zero, then we have an error
+	ret	nz
+	scf
+	ret
+    
 .wait_on_IRQ:
 ; suspend till waked by an IRQ
 	di
@@ -306,22 +351,6 @@ kthread:
 ; cause should already have been writed
 	jp	task_yield
 	
-.resume_from_IRQ:
-; resume a thread waiting IRQ
-; interrupt should be DISABLED when calling this routine
-	di
-	lea	hl, iy+KERNEL_THREAD_IRQ
-	cp	a, (hl)
-	ret	nz
-	ld	(hl), 0
-	inc	hl
-	ld	a, (hl)
-	cp	a, TASK_UNINTERRUPTIBLE
-	ret	nz
-	ld	a, $FF
-	ld	(kthread_irq_reschedule), a
-	jp	task_switch_running
-	
 .suspend:
 ; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically, also, IRQ signal will be reset by IRQ handler, not by wake
 	di
@@ -354,10 +383,11 @@ kthread:
 	cp	a, TASK_UNINTERRUPTIBLE
 	jr	nc, .resume_exit
 .resume_wake:
-	ld	(iy+KERNEL_THREAD_IRQ), 0
-	call	task_switch_running
-	ld	a, $FF
+	xor	a, a
+	ld	(iy+KERNEL_THREAD_IRQ), a
+	dec	a
 	ld	(kthread_irq_reschedule), a
+	call	task_switch_running
 .resume_exit:
 ; rsti optimized
 	pop	af
@@ -536,7 +566,24 @@ kthread:
 	ld	de, (hl)
 ; go into the thread directly, without schedule (pop all stack and discard current context)
 	jp	kscheduler.context_restore
-   	
+
+.free_pid:
+; free a pid
+; this should probably be in critical code section if you don't want BAD STUFF TO HAPPEN
+; kinda reserved to ASM
+	add	a, a
+	ret	z   ; don't you dare free pid 0 !
+	add	a, a
+	sbc	hl, hl
+	ld	l, a
+	ld	de, kthread_pid_map
+	add	hl, de
+	mlt	de
+	ld	(hl), e
+	inc	hl
+	ld	(hl), de
+	ret
+	
 .sleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
 	push	iy
@@ -647,67 +694,22 @@ kthread:
 ; 	pop	ix
 ; 	ret
 
-; DANGEROUS AREA, helper function ;	
-	
-.reserve_pid:
-; find a free pid
-; this should be called in an atomic / critical code section to be sure it will still be free when used
-; kinda reserved to ASM
-	ld	hl, kthread_pid_map
-	ld	de, 4
-	ld	b, 64
-	xor	a, a
-.reserve_parse_map:
+.resume_from_IRQ:
+; resume a thread waiting IRQ : IRQ = a
+; interrupt should be DISABLED when calling this routine
+	di
+	lea	hl, iy+KERNEL_THREAD_IRQ
 	cp	a, (hl)
-	jr	z, .reserve_exit
-	add	hl, de
-	djnz	.reserve_parse_map
-.reserve_exit:
-	srl	l
-	srl	l
-	ld	a, l
-; carry is reset
-; if = zero, then we have an error
 	ret	nz
-	scf
-	ret
-    
-.free_pid:
-; free a pid
-; this should probably be in critical code section if you don't want BAD STUFF TO HAPPEN
-; kinda reserved to ASM
-	add	a, a
-	ret	z   ; don't you dare free pid 0 !
-	add	a, a
-	sbc	hl, hl
-	ld	l, a
-	ld	de, kthread_pid_map
-	add	hl, de
-	mlt	de
-	ld	(hl), e
 	inc	hl
-	ld	(hl), de
-	ret
-	
-.IHEADER:
-	db	$00			; ID 0 reserved
-	dl	KERNEL_THREAD_IDLE	; No next
-	dl	KERNEL_THREAD_IDLE	; No prev
-	db	NULL			; No PPID
-	db	$FF			; IRQ all
-	db	TASK_IDLE		; Status
-	db	SCHED_PRIO_MIN		; Special anyway
-	db	$FF			; quantum
-	dl	$D00060			; Stack limit
-	dl	$D000F0			; Stack will be writed at first unschedule
-	dl	$D00043			; Boot/kernel  heap
-	dl	NULL			; No friend
-	db	NULL			; Errno
-	db	NULL			; Sig
-	dl	NULL			; Sig
-	dw	NULL, NULL		; Sig mask 
-; rest is useless for idle thread
-.IHEADER_END:
+	ld	a, TASK_UNINTERRUPTIBLE
+	sub	a, (hl)
+	ret	nz
+	dec	hl
+	ld	(hl), a
+	dec	a
+	ld	(kthread_irq_reschedule), a
+	jr	task_switch_running
 
 task_yield = kthread.yield
 
