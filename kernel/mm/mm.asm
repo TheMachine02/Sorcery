@@ -1,6 +1,5 @@
 ; memory management routine
 ; autor : TheMachine02
-
 define	KERNEL_MM_PAGE_SIZE		1024
 ; mask
 define	KERNEL_MM_PAGE_FREE_MASK	128
@@ -10,7 +9,6 @@ define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	16
 define	KERNEL_MM_PAGE_DIRTY_MASK	8
 define	KERNEL_MM_PAGE_LOCK_MASK	7
 define	KERNEL_MM_PAGE_MAX_READER	6	; 7 is reserved for write lock
-
 ; bit
 define	KERNEL_MM_PAGE_FREE		7
 define	KERNEL_MM_PAGE_CACHE		6
@@ -18,26 +16,24 @@ define	KERNEL_MM_PAGE_SHARED		5
 define	KERNEL_MM_PAGE_UNEVICTABLE	4
 define	KERNEL_MM_PAGE_DIRTY		3
 define	KERNEL_MM_PAGE_LOCK		0	; bit 0 to bit 2
-
 ; physical device
 define	KERNEL_MM_RAM			$D00000
 define	KERNEL_MM_RAM_SIZE		$040000
+define	KERNEL_MM_FLASH			$000000
+define	KERNEL_MM_FLASH_SIZE		$400000
 ; reserved mask : locked, unevictable, to thread 0
 define	KERNEL_MM_RESERVED_MASK		00101000b
 define	KERNEL_MM_RESERVED_SIZE		4096
 ; the first 256 bytes shouldn't be init by mm module
-define	KERNEL_MM_PROTECTED_INIT	256
 define	KERNEL_MM_PROTECTED_SIZE	4096
 ; null adress reading always zero, but faster
 define	KERNEL_MM_NULL			$E40000
+; poison for illegal jp / derefence
+define	KERNEL_HW_POISON		$C7
 
-define	KERNEL_MEMORY_BLOCK_DATA	0
-define	KERNEL_MEMORY_BLOCK_FREE	2
-define	KERNEL_MEMORY_BLOCK_PREV	3
-define	KERNEL_MEMORY_BLOCK_NEXT	6
-define	KERNEL_MEMORY_BLOCK_PTR		9
-define	KERNEL_MEMORY_BLOCK_SIZE	12
-define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
+macro	trap
+	db $FD, $FF
+end	macro
 
 ; link between cache page and inode (so inode can be updated when droping cache pages)
 define	kcache_inode_map		$D00B00
@@ -79,8 +75,10 @@ end if
 	out0	($1D), a
 	out0	($1E), a
 	ld	hl, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE
-	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE
-	call	.poison_memory
+	ld	de, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE + 1
+	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE - 1
+	ld	(hl), KERNEL_HW_POISON
+	ldir
 	ld	hl, .init_ptlb_map
 	ld	de, kmm_ptlb_map
 	inc	b
@@ -683,17 +681,9 @@ end if
 	pop	bc
 	ret
 
-define	KERNEL_HW_POISON		$C7
-
-macro	trap
-	db $FD, $FF
-end	macro
-
 ; rst $0 : trap execute, illegal instruction
-.poison_page:
+.page_flush_poison:
 	ld	bc, KERNEL_MM_PAGE_SIZE - 1
-
-.poison_memory:
 ; hl is address to poison
 	ex	de, hl
 	sbc	hl, hl
