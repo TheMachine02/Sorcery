@@ -15,6 +15,7 @@ define	CONSOLE_STRING		$15
 define	CONSOLE_FLAGS_ALPHA	0
 define	CONSOLE_FLAGS_2ND	1
 define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
+define	CONSOLE_FLAGS_SILENT	6
 define	CONSOLE_FLAGS_ESC	7	; we are writing an esc sequence
 
 define	CONSOLE_BLINK_RATE	1
@@ -65,8 +66,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jr	c, .phy_special_ascii
 ; write the char read
 	push	bc
-; 	ld	c, (iy+CONSOLE_FG_COLOR)
-	call	.glyph_char_address
+	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+	call	z, .glyph_char_address
 	pop	bc
 ; increment cursor position now
 	lea	hl, iy+CONSOLE_CURSOR_COL
@@ -347,6 +348,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ret	nz
 	dec	(hl)
 .phy_shift_screen:
+	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+	ret	nz
 	push	bc
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	hl, 11*320

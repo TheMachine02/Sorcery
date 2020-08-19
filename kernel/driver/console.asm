@@ -17,20 +17,13 @@ console:
 
 .init:
 	di
-	ld	hl, $E40000
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	ld	bc, 76800
-	ldir
 	ld	hl, .PALETTE
 	ld	de, DRIVER_VIDEO_PALETTE
-	ld	c, 36
+	ld	bc, 36
 	ldir
 	ld	hl, console_dev
-	ld	(hl), $00
-	inc	hl
-	ld	(hl), $01
-	inc	hl
-	ld	(hl), $00
+	inc	b
+	ld	(hl), bc
 	ld	l, console_flags and $FF
 	ld	(hl), c
 	inc	hl
@@ -40,6 +33,8 @@ console:
 	call	.phy_init
 	
 .init_splash:
+	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+	ret	nz
 	or	a, a
 	sbc	hl, hl
 	ld	e, l
@@ -187,8 +182,12 @@ console:
 	jr	z, .finish
 	inc	de
 	pop	bc
-	inc	bc
-	jr	.handle_enter_string
+	inc	c
+	ld	a, c
+	cp	a, 63
+	jr	nz, .handle_enter_string
+	push	bc
+	call	ring_buffer.flush
 .finish:
 ; execute the instruction now
 	pop	bc

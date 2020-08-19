@@ -14,6 +14,8 @@ define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
 
 kinit:
+; read kernel paramater
+; silent :: no LCD flashing / console updating, open console only if error
 .reboot:
 ; boot 5.0.1 stupidity power ++
 	di	
@@ -75,7 +77,7 @@ end if
 
 .root_path:
  db "/", 0
-
+ 
 kname:
 	ld	bc, .string
 	ret	
