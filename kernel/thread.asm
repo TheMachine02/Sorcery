@@ -97,7 +97,7 @@ kthread:
 .init:
 	di
 	ld	hl, kthread_mqueue_active
-	ld	(hl), l
+	ld	(hl), $FF
 	ld	de, kthread_mqueue_active + 1
 	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
 	ldir
@@ -542,21 +542,21 @@ kthread:
 	call	kmm.thread_unmap
 ; that will reset everything belonging to the thread
 	ld	bc, QUEUE_SIZE
-	xor	a, a
+	ld	a, $FF
 	ld	hl, kthread_mqueue_active
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .exit_dispatch_thread
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .exit_dispatch_thread
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .exit_dispatch_thread
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .exit_dispatch_thread
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jp	z, nmi
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE

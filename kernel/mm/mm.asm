@@ -396,11 +396,11 @@ end if
 .page_unlock_shared:
 ; notify waiting thread, assume lock was lifted
 	ld	hl, kthread_queue_retire
-	ld	a, (hl)
-	or	a, a
+	ld	b, (hl)
+	inc	b
+; 	or	a, a
 	jr	z, .page_unlock_exit
 	push	iy
-	ld	b, a
 	inc	hl
 	ld	iy, (hl)
 	ld	a, c

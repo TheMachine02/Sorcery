@@ -3,8 +3,8 @@ define	QUEUE_NEXT		$01
 define	QUEUE_PREVIOUS		$04
 ; queue data ;
 define	QUEUE_SIZE		$04
-define	QUEUE_COUNT		$00
-define	QUEUE_CURRENT		$01
+define	QUEUE_COUNT		$00		; marked as $FF = 0, you need to +1 if you want *physical* count
+define	QUEUE_CURRENT		$01		; pointer 24 bits
 
 kqueue:
 
@@ -17,10 +17,8 @@ kqueue:
 ; insert after current pointer if queue is non null, update current to node else
 ; inplace insert of the node
 ; return 
-	ld	a, (hl)
 	inc	(hl)
 	inc	hl
-	or	a, a
 	jr	z, .create
 	push	ix
 ; prev_node.next = new_node
@@ -51,10 +49,8 @@ kqueue:
 ; insert before current pointer if queue is non null, update current to node else
 ; inplace insert of the node
 ; return 
-	ld	a, (hl)
 	inc	(hl)
 	inc	hl
-	or	a, a
 	jr	z, .create
 	push	ix
 ; prev_node.next = new_node
@@ -77,7 +73,7 @@ kqueue:
 ; remove iy as node, update queue head to the next node of iy
 ; can also use as a general 'fast' remove node with random head updating (if you don't need head to point to something particular)
 	dec	(hl)
-	ret	z
+	ret	m
 	push	ix
 	push	hl
 	inc	hl
@@ -98,7 +94,7 @@ kqueue:
 ; hl is queue pointer (count, queue_current)
 ; node MUST belong to the queue
 	dec	(hl)
-	ret	z
+	ret	m
 	push	de
 	push	bc
 	push	ix

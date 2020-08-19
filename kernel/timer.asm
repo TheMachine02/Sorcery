@@ -52,7 +52,7 @@ ktimer:
 	di
 	ld	hl, ktimer_queue
 	ld	de, NULL
-	ld	(hl), e
+	ld	(hl), $FF
 	inc	hl
 	ld	(hl), de
 	ret

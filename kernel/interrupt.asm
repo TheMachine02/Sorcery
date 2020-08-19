@@ -31,7 +31,7 @@ define	KERNEL_IRQ_USB				128
 
 define	KERNEL_INTERRUPT_IPT			$D00600
 define	KERNEL_INTERRUPT_IPT_SIZE		4
-define	KERNEL_INTERRUPT_IPT_LP			$D00610
+define	KERNEL_INTERRUPT_IPT_LP			$D00600
 define	KERNEL_INTERRUPT_IPT_HP			$D00620
 define	KERNEL_INTERRUPT_IPT_JP			$D00640
 
@@ -205,26 +205,26 @@ kinterrupt:
 ; hl = line, de = old hl, bc safe, af safe
 	ret
 
-; C helper function (broken, btw)
-.irq_save:
-	ld	hl, i
-	di
-; push af & hl to the stack
-	pop	de
-	push	af
-	push	hl
-	ex	de, hl
-	jp	(hl)
-	
-.irq_restore:
-	pop	de
-	pop	hl
-	ld	i, hl
-	pop	af
-	ex	de, hl
-	jp	po, $+5
-	ei
-	jp	(hl)
+; ; C helper function (broken, btw)
+; .irq_save:
+; 	ld	hl, i
+; 	di
+; ; push af & hl to the stack
+; 	pop	de
+; 	push	af
+; 	push	hl
+; 	ex	de, hl
+; 	jp	(hl)
+; 	
+; .irq_restore:
+; 	pop	de
+; 	pop	hl
+; 	ld	i, hl
+; 	pop	af
+; 	ex	de, hl
+; 	jp	po, $+5
+; 	ei
+; 	jp	(hl)
 
 .irq_handler:
 	pop	hl
@@ -275,13 +275,12 @@ kinterrupt:
 .irq_crystal_clock:
 ; update timer queue first, then check if we need to reschedule
 	ld	hl, ktimer_queue
-	ld	a, (hl)
-	or	a, a
+	ld	b, (hl)
+	inc	b
 	jr	z, .irq_crystal_resume
 	inc	hl
 ; this is first thread with a timer
 	ld	iy, (hl)
-	ld	b, a
 .irq_crystal_timers:
 	ld	hl, (iy+TIMER_COUNT)
 	dec	hl
@@ -365,19 +364,20 @@ kscheduler:
 	ld	(iy+KERNEL_THREAD_TIME), hl
 	ld	bc, QUEUE_SIZE
 	ld	hl, kthread_mqueue_active
-	or	a, (hl)
+	dec	a
+	cp	a, (hl)
 	jr	nz, .dispatch_queue
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .dispatch_queue
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .dispatch_queue
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jr	nz, .dispatch_queue
 	add	hl, bc
-	or	a, (hl)
+	cp	a, (hl)
 	jp	z, nmi
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
