@@ -1,7 +1,7 @@
 define	KERNEL_POWER_CHARGING		$000B
 define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
-define	KERNEL_POWER_PWM		$F60020
+define	KERNEL_POWER_PWM		$F60024
 
 define	kpower_save_interrupt_mask	$D00008
 ; we need to save the whales (and the palette)
@@ -54,6 +54,11 @@ power:
 ; 	ld	bc, $003114
 ; 	inc	a
 ; 	out	(bc), a
+; reset rtc : enable, but no interrupts
+	ld	hl, DRIVER_RTC_CTRL
+	ld	(hl), $01
+	ld	l, DRIVER_RTC_ISCR and $FF
+	ld	(hl), $FF
 ; set keyboard to idle
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	xor	a, a
@@ -95,13 +100,7 @@ power:
 	ld	a, $FF
 	out0	($07), a
 ; let's setup interrupt now
-; reset rtc : enable, but no interrupts
-	ld	hl, DRIVER_RTC_CTRL
-	ld	(hl), $01
-	ld	l, DRIVER_RTC_ISCR and $FF
-	ld	(hl), a
 ; disable all
-; enable mask
 	ld	de, $01
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
@@ -167,8 +166,8 @@ power:
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
 	ld	(DRIVER_VIDEO_CTRL), hl
 ; setup timings
-	ld	hl, DRIVER_VIDEO_TIMING0 + 1
-	ld	de, video.LCD_TIMINGS
+	ld	hl, video.LCD_TIMINGS
+	ld	de, DRIVER_VIDEO_TIMING0 + 1
 	ld	c, 8
 	ldir
 ; not sure what this is for

@@ -16,8 +16,8 @@ define DRIVER_VIDEO_TIMING2               $E30008
 define DRIVER_VIDEO_TIMING3               $E3000C
 
 define DRIVER_VIDEO_IRQ                   00100000b
-define DRIVER_VIDEO_IRQ_LOCK              $E30C0A
-define DRIVER_VIDEO_IRQ_LOCK_THREAD       $E30C0B
+define DRIVER_VIDEO_IRQ_LOCK              $D00004
+define DRIVER_VIDEO_IRQ_LOCK_THREAD       $D00005
 define DRIVER_VIDEO_IRQ_LOCK_SET          0
 
 video:
@@ -37,8 +37,8 @@ video:
 	ld	hl, DRIVER_VIDEO_VRAM + DRIVER_VIDEO_FRAMEBUFFER_SIZE
 	ld	(DRIVER_VIDEO_BUFFER), hl
 ; setup timings
-	ld	hl, DRIVER_VIDEO_TIMING0 + 1
-	ld	de, .LCD_TIMINGS
+	ld	hl, .LCD_TIMINGS
+	ld	de, DRIVER_VIDEO_TIMING0 + 1
 	ld	c, 8
 	ldir
 ; clear the LCD
