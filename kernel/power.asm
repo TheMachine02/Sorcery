@@ -24,12 +24,14 @@ power:
 ; set backlight level = a, max is $FF, min is $00
 	ld	hl, KERNEL_POWER_PWM
 	ld	(hl), a
-	ret	
-	
+	ret
+
+; return : 0% error c, 20% a= 0, 40% a=1, 60% a=2, 80% a=3, 100% a=4
 .battery_level=$0003B0
 
 .battery_charging:
 	in0	a, (KERNEL_POWER_CHARGING)
+	bit	1, a
 	ret
 
 .cycle_off:
@@ -151,6 +153,9 @@ power:
 	ld	(hl), 10011111b
 	ld	l, DRIVER_RTC_ISCR and $FF
 	ld	(hl), $FF
+; before _boot_InitializeHardware, check battery level
+	call	.battery_level
+	jp	c, .cycle_off
 ; LCD, SPI, backlight
 	call	_boot_InitializeHardware
 ; lot of things broken
