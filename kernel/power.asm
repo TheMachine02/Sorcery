@@ -3,9 +3,9 @@ define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$F60024
 
-define	kpower_save_interrupt_mask	$D00008
+define	kinterrupt_power_mask		$D00008
 ; we need to save the whales (and the palette)
-define	kpower_save_lcd_palette		$D00B00
+define	kpower_lcd_save			$D00B00
 
 macro	wait
 	ld	b, $FF
@@ -39,7 +39,7 @@ power:
 	call	kwatchdog.disarm
 ; backlight / LCD / SPI disable from boot
 	ld	hl, DRIVER_VIDEO_PALETTE
-	ld	de, kpower_save_lcd_palette
+	ld	de, kpower_lcd_save
 	ld	bc, 512
 	ldir
 	call	_boot_TurnOffHardware
@@ -106,7 +106,7 @@ power:
 	ld	de, $01
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
-	ld	(kpower_save_interrupt_mask), bc
+	ld	(kinterrupt_power_mask), bc
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 ; acknowledge
@@ -143,7 +143,7 @@ power:
 ; 	out	(bc), a
 ; interrupts
 	ld	hl, KERNEL_INTERRUPT_IMSC
-	ld	bc, (kpower_save_interrupt_mask)
+	ld	bc, (kinterrupt_power_mask)
 	ld	(hl), bc
 	ld	bc, $FFFFFF
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
@@ -162,7 +162,7 @@ power:
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	de, DRIVER_VIDEO_PALETTE
-	ld	hl, kpower_save_lcd_palette
+	ld	hl, kpower_lcd_save
 	ld	bc, 512
 	ldir
 ; get back our 8 bits LCD + interrupts

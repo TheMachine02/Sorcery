@@ -49,6 +49,12 @@ include	'kernel/mm/slab.asm'
 include	'kernel/vfs.asm'
 include	'kernel/restart.asm'
 include	'kernel/exec/leaf.asm'
+
+kernel_ramfs_src:
+file	'ramfs'
+; end guard
+ db	$00, $00
+
 include	'kernel/nmi.asm'
 
 leaf_frozen_file:

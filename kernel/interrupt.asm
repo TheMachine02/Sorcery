@@ -236,7 +236,7 @@ kinterrupt:
 	ld	c, (hl)
 	inc	hl
 	ld	a, (hl)
-	ld	l, (KERNEL_INTERRUPT_ICR+1) and $FF
+	ld	l, (KERNEL_INTERRUPT_ICR+1) and $FF	; = 9
 	srl	a
 	jr	nz, .irq_trampoline_generic
 	ld	a, c
@@ -254,11 +254,9 @@ kinterrupt:
 	jp	(hl)
 .irq_resume_thread:
 ; check if we need to reschedule for fast response
-	ld	hl, kthread_irq_reschedule
+	ld	hl, i
 	sra	(hl)
-	ld	(hl), l
-	inc	hl
-	ld	iy, (hl)
+	ld	iy, (kthread_current)
 	jr	c, kscheduler.schedule
 .irq_resume:
 	pop	iy
@@ -294,18 +292,13 @@ kinterrupt:
 
 kscheduler:
 .schedule_check_quanta:
-; if we need to reschedule, skip this phase entirely ;
-	ld	hl, kthread_irq_reschedule
-	sra	(hl)
-	ld	(hl), l
-	inc	hl
-; ; load current thread ;
-	ld	iy, (hl)
-	jr	c, .schedule
+; load current thread ;
+	ld	iy, (kthread_current)
 ; do we have idle thread ?
 	lea	hl, iy+KERNEL_THREAD_STATUS
 	ld	a, (hl)
 	inc	a
+; this is idle, just schedule
 	jr	z, .schedule
 	inc	hl
 	inc	hl
@@ -436,15 +429,21 @@ end if
 	ret
 
 .switch:
+	di
+	ex	af, af'
+	exx
+	push	ix
+	push	iy
+	ld	iy, (kthread_current)
+	jp	.schedule
+
 .yield:
 	di
 	ex	af, af'
 	exx
 	push	ix
 	push	iy
-	ld	hl, kthread_irq_reschedule
-	ld	(hl), l
-	inc	hl
+	ld	hl, kthread_current
 	ld	iy, (hl)
 	lea	hl, iy+KERNEL_THREAD_STATUS
 ; hl =status

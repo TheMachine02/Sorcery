@@ -82,12 +82,8 @@ define	kthread_queue_retire			$D00410		; 4 bytes
 ; timer queue
 define	ktimer_queue			$D00414		; 4 bytes
 
-define	kthread_irq_reschedule			$D00000
+define	kinterrupt_irq_reschedule		$D00600
 define	kthread_current				$D00001
-
-; please respect these for kinterrupt optimizations ;
-assert kthread_current = kthread_irq_reschedule + 1
-assert kthread_irq_reschedule and $FF = 0
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
@@ -101,9 +97,9 @@ kthread:
 	ld	de, kthread_mqueue_active + 1
 	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
 	ldir
-	ld	hl, kthread_irq_reschedule
+	ld	hl, kinterrupt_irq_reschedule
 	ld	(hl), e
-	inc	hl
+	ld	hl, kthread_current
 	ld	de, KERNEL_THREAD
 	ld	(hl), de
 ; copy idle thread (ie, kernel thread. Stack is kernel stack, code is init kernel)
@@ -135,15 +131,11 @@ kthread:
 	db	TASK_IDLE		; Status
 	db	SCHED_PRIO_MIN		; Special anyway
 	db	$FF			; quantum
-	dl	$D00060			; Stack limit
+	dl	$D0009F			; Stack limit
 	dl	$D000F0			; Stack will be writed at first unschedule
 	dl	$D00043			; Boot/kernel  heap
-	dl	NULL			; No friend
-	db	NULL			; Errno
-	db	NULL			; Sig
-	dl	NULL			; Sig
-	dw	NULL, NULL		; Sig mask 
-; rest is useless for idle thread
+	dl	NULL			; Time
+; rest is useless for idle thread, size = 24
 .IHEADER_END:
 
 .yield=kscheduler.yield
@@ -385,9 +377,9 @@ kthread:
 .resume_wake:
 	xor	a, a
 	ld	(iy+KERNEL_THREAD_IRQ), a
-	dec	a
-	ld	(kthread_irq_reschedule), a
 	call	task_switch_running
+; try to schedule right now
+	call	kscheduler.switch
 .resume_exit:
 ; rsti optimized
 	pop	af
@@ -708,7 +700,8 @@ kthread:
 	dec	hl
 	ld	(hl), a
 	dec	a
-	ld	(kthread_irq_reschedule), a
+	ld	hl, i
+	ld	(hl), a
 	jr	task_switch_running
 
 task_yield = kthread.yield

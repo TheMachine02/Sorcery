@@ -1,8 +1,9 @@
 define	KERNEL_HEAP			$D00043
 define	KERNEL_THREAD			$D00010
 define	KERNEL_STACK			KERNEL_THREAD + KERNEL_THREAD_STACK
-define	KERNEL_STACK_SIZE		$40
-; from B0 to F0
+define	KERNEL_STACK_SIZE		$57 
+
+define	KERNEL_RAMFS			$D00000
 
 define	KERNEL_BOOT_MEMORY0		$D0009B   ; touched memory by the boot.
 define	KERNEL_BOOT_MEMORY1		$D000AC   ; same, a set somewhere
@@ -21,24 +22,34 @@ kinit:
 	di	
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 ; shift to soft kinit way to reboot ++
-; setup stack for the kernel
+; setup temporary stack for the kernel
+	ld	sp, $D3FFFF
+; setup master interrupt divisor = define jiffies
+	ld	a, KERNEL_CRYSTAL_DIVISOR
+	out0	(KERNEL_CRYSTAL_CTLR), a
+; blank stack protector
+	xor	a, a
+	out0	($3A), a
+	out0	($3B), a
+	out0	($3C), a
+; general system init
+	call	power.init
+; load the ramfs image
+	ld	hl, kernel_ramfs_src
+	ld	de, KERNEL_RAMFS
+	call	lz4.decompress
+; setup the kernel stack & protector
+	ld	a, $A8
+	out0	($3A), a
+	xor	a, a
+	out0	($3B), a
+	ld	a, $D0
+	out0	($3C), a
 	ld	sp, $D000F0
 	ld	(KERNEL_STACK), sp
 	ld.sis sp, $0000
 	ld	a, $D0
 	ld	MB, a
-; setup master interrupt divisor = define jiffies
-	ld	a, KERNEL_CRYSTAL_DIVISOR
-	out0	(KERNEL_CRYSTAL_CTLR), a
-; blank stack protector
-	ld	a, $60
-	out0	($3A), a
-	ld	a, $00
-	out0	($3B), a
-	ld	a, $D0
-	out0	($3C), a
-; general system init
-	call	power.init
 ; memory init ;
 	call	kmm.init
 	call	kslab.init
