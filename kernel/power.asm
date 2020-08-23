@@ -3,21 +3,25 @@ define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$F60024
 
-define	kinterrupt_power_mask		$D00008
+define	kinterrupt_power_mask		$D00020
 ; we need to save the whales (and the palette)
-define	kpower_lcd_save			$D00B00
+define	kpower_lcd_save			$D00100
 
 macro	wait
 	ld	b, $FF
 	djnz	$
 end	macro
 
-power:
+kpower:
 
 .init:
 	di
 	ld	a, $03
 	out0	(KERNEL_POWER_CPU_CLOCK), a
+; default power up IRQ
+	ld	hl, kinterrupt.irq_resume
+	ld	a, KERNEL_IRQ_POWER
+	call	kinterrupt.irq_request
 	ld	a, $80
 	
 .backlight:
@@ -106,7 +110,10 @@ power:
 	ld	de, $01
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
-	ld	(kinterrupt_power_mask), bc
+	ld	a, c
+	ld	(kinterrupt_power_mask), a
+	ld	a, b
+	ld	(kinterrupt_power_mask+1), a
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 ; acknowledge
@@ -143,7 +150,11 @@ power:
 ; 	out	(bc), a
 ; interrupts
 	ld	hl, KERNEL_INTERRUPT_IMSC
-	ld	bc, (kinterrupt_power_mask)
+	ld	a, (kinterrupt_power_mask)
+	ld	bc, 0
+	ld	c, a
+	ld	a, (kinterrupt_power_mask+1)
+	ld	b, a
 	ld	(hl), bc
 	ld	bc, $FFFFFF
 	ld	l, KERNEL_INTERRUPT_ICR and $FF

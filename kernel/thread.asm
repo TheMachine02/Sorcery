@@ -54,7 +54,6 @@ define	KERNEL_THREAD_HEADER_SIZE		$100
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
 define	KERNEL_THREAD_HEAP_SIZE			4096
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	64
-define	KERNEL_THREAD_IDLE			KERNEL_THREAD
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
@@ -76,67 +75,22 @@ define	NICE_PRIO_MAX				-12
 ; D00100 to D00120 is scratch
 
 ; multilevel priority queue ;
-define	kthread_mqueue_active			$D00400		; 16 bytes
+define	kthread_mqueue_active			$D00300		; 16 bytes
 ; retire queue ;
-define	kthread_queue_retire			$D00410		; 4 bytes
+define	kthread_queue_retire			$D00310		; 4 bytes
 ; timer queue
-define	ktimer_queue			$D00414		; 4 bytes
+define	ktimer_queue				$D00314		; 4 bytes
 
-define	kinterrupt_irq_reschedule		$D00600
-define	kthread_current				$D00001
+define	kinterrupt_irq_reschedule		$D00000
+define	kthread_current				$D00318
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
-define	kthread_pid_map				$D00200
+define	kthread_pid_map				$D00400
 
 kthread:
 .init:
-	di
-	ld	hl, kthread_mqueue_active
-	ld	(hl), $FF
-	ld	de, kthread_mqueue_active + 1
-	ld	bc, KERNEL_THREAD_MQUEUE_SIZE - 1
-	ldir
-	ld	hl, kinterrupt_irq_reschedule
-	ld	(hl), e
-	ld	hl, kthread_current
-	ld	de, KERNEL_THREAD
-	ld	(hl), de
-; copy idle thread (ie, kernel thread. Stack is kernel stack, code is init kernel)
-	ld	hl, .IHEADER
-	ld	de, KERNEL_THREAD
-	ld	bc, .IHEADER_END - .IHEADER
-	ldir
-	ld	hl, kthread_pid_map
-; permission of thread (thread 0 is all mighty) >> or maybe process ID in the futur and THREAD_PID being TID
-	ld	(hl), $01
-	inc	hl
-	ld	de, KERNEL_THREAD_IDLE
-	ld	(hl), de
-	inc	hl
-	inc	hl
-	inc	hl
-	ld	(hl), c
-	ld	de, kthread_pid_map+5
-	ld	c, 251
-	ldir
 	ret
-
-.IHEADER:
-	db	$00			; ID 0 reserved
-	dl	KERNEL_THREAD_IDLE	; No next
-	dl	KERNEL_THREAD_IDLE	; No prev
-	db	NULL			; No PPID
-	db	$FF			; IRQ all
-	db	TASK_IDLE		; Status
-	db	SCHED_PRIO_MIN		; Special anyway
-	db	$FF			; quantum
-	dl	$D0009F			; Stack limit
-	dl	$D000F0			; Stack will be writed at first unschedule
-	dl	$D00043			; Boot/kernel  heap
-	dl	NULL			; Time
-; rest is useless for idle thread, size = 24
-.IHEADER_END:
 
 .yield=kscheduler.yield
 	
@@ -699,9 +653,8 @@ kthread:
 	ret	nz
 	dec	hl
 	ld	(hl), a
-	dec	a
 	ld	hl, i
-	ld	(hl), a
+	ld	(hl), $80
 	jr	task_switch_running
 
 task_yield = kthread.yield
@@ -782,4 +735,3 @@ task_switch_running:
 	call	kqueue.remove_head
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 assert kqueue.insert_head = $
-;	jr	kqueue.insert_head

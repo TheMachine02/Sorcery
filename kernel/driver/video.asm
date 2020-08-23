@@ -16,8 +16,8 @@ define DRIVER_VIDEO_TIMING2               $E30008
 define DRIVER_VIDEO_TIMING3               $E3000C
 
 define DRIVER_VIDEO_IRQ                   00100000b
-define DRIVER_VIDEO_IRQ_LOCK              $D00004
-define DRIVER_VIDEO_IRQ_LOCK_THREAD       $D00005
+define DRIVER_VIDEO_IRQ_LOCK              $D00060
+define DRIVER_VIDEO_IRQ_LOCK_THREAD       $D00061
 define DRIVER_VIDEO_IRQ_LOCK_SET          0
 
 video:

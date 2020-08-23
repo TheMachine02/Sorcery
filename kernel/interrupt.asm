@@ -17,8 +17,6 @@ define	KERNEL_INTERRUPT_LCD			00001000b
 define	KERNEL_INTERRUPT_RTC			00010000b
 define	KERNEL_INTERRUPT_USB			00100000b
 
-define	KERNEL_INTERRUPT_CACHE			$D00A00
-
 define	KERNEL_IRQ_CLOCK			0
 define	KERNEL_IRQ_POWER			1
 define	KERNEL_IRQ_TIMER1			2
@@ -29,59 +27,21 @@ define	KERNEL_IRQ_LCD				32
 define	KERNEL_IRQ_RTC				64
 define	KERNEL_IRQ_USB				128
 
-define	KERNEL_INTERRUPT_IPT			$D00600
+define	KERNEL_INTERRUPT_IPT			$D00000
 define	KERNEL_INTERRUPT_IPT_SIZE		4
-define	KERNEL_INTERRUPT_IPT_LP			$D00600
-define	KERNEL_INTERRUPT_IPT_HP			$D00620
-define	KERNEL_INTERRUPT_IPT_JP			$D00640
+define	KERNEL_INTERRUPT_IPT_LP			$D00000
+define	KERNEL_INTERRUPT_IPT_HP			$D00020
+define	KERNEL_INTERRUPT_IPT_JP			$D00040
+define	KERNEL_INTERRUPT_ISR_DATA_VIDEO		$D00060
+define	KERNEL_INTERRUPT_ISR_DATA_USB		$D00066
+define	KERNEL_INTERRUPT_ISR_DATA_RTC		$D0006B
+define	KERNEL_INTERRUPT_ISR_DATA_KEYBOARD	$D00072
+define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER1	$D00078
+define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER2	$D0007E
+define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER3	$D00084
+define	KERNEL_INTERRUPT_ISR_DATA_POWER		$D0008A
 
 kinterrupt:
-
-.IPT_PAGE:
-; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
-.IPT_LP:
- db	$00, $00	; 0000
- db	$04, $50	; 0001
- db	$08, $54	; 0010
- db	$04, $50	; 0011
- db	$10, $58	; 0100
- db	$04, $50	; 0101
- db	$08, $54	; 0110
- db	$04, $50	; 0111
- db	$20, $5C	; 1000
- db	$04, $50	; 1001
- db	$08, $54	; 1010
- db	$04, $50	; 1011
- db	$20, $5C	; 1100
- db	$04, $50	; 1101
- db	$08, $54	; 1110
- db	$04, $50	; 1111
-.IPT_HP:
- db	$00, $00	; 0000
- db	$01, $40	; 0001
- db	$02, $44	; 0010
- db	$02, $44	; 0011
- db	$04, $48	; 0100
- db	$04, $48	; 0101
- db	$02, $44	; 0110
- db	$02, $44	; 0111
- db	$08, $4C	; 1000
- db	$08, $4C	; 1001
- db	$02, $44	; 1010
- db	$02, $44	; 1011
- db	$04, $48	; 1100
- db	$04, $48	; 1101
- db	$02, $44	; 1110
- db	$02, $44	; 1111
-.IPT_JP:
- jp	.irq_resume	; default for power IRQ
- jp	$0
- jp	$0
- jp	$0
- jp	$0
- jp	$0
- jp	$0
- jp	$0
  
 .init:
 	di
@@ -96,10 +56,6 @@ kinterrupt:
 ; also reset handler table
 	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	i, hl
-	ex	de, hl
-	ld	hl, .IPT_PAGE
-	ld	bc, 96
-	ldir
 	xor	a, a
 	ld	(KERNEL_INTERRUPT_BOOT_HANDLER), a
 	ret
@@ -255,7 +211,7 @@ kinterrupt:
 .irq_resume_thread:
 ; check if we need to reschedule for fast response
 	ld	hl, i
-	sra	(hl)
+	sla	(hl)
 	ld	iy, (kthread_current)
 	jr	c, kscheduler.schedule
 .irq_resume:
@@ -443,8 +399,7 @@ end if
 	exx
 	push	ix
 	push	iy
-	ld	hl, kthread_current
-	ld	iy, (hl)
+	ld	iy, (kthread_current)
 	lea	hl, iy+KERNEL_THREAD_STATUS
 ; hl =status
 	ld	a, (hl)

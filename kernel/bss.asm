@@ -86,10 +86,10 @@ kernel_idle:
  db	TASK_IDLE		; Status
  db	12			; Special anyway
  db	$FF			; quantum
- dl	$D0009F			; Stack limit
+ dl	$D000A8			; Stack limit
 kernel_stack_pointer:
- dl	$D000F0			; Stack will be writed at first unschedule
- dl	$D00043			; Boot/kernel  heap
+ dl	$D000FF			; Stack will be writed at first unschedule
+ dl	$D00100			; Boot/kernel  heap
  dl	$00			; Time
 ; up to $A8, end of stack
  db	87	dup	KERNEL_HW_POISON
@@ -99,8 +99,10 @@ KERNEL_STACK:
 ; 512 bytes scrap, used for lot of things
 KERNEL_HEAP:
 kpower_lcd_save:
-nmi_context:
+nmi_context = $+256
  db	512	dup	KERNEL_HW_POISON
+nmi_stack:
+interrupt_stack:
 ; 16 bytes (4x4)
 kthread_mqueue_active:
  db	16	dup	$FF
@@ -127,41 +129,3 @@ kmm_ptlb_map:
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00
 ; $700
- 
- 
-; define	KERNEL_INTERRUPT_IPT			$D00000		; total of 128 bytes table
-; define	KERNEL_INTERRUPT_IPT_LP			$D00000		; 32 bytes
-; define	KERNEL_INTERRUPT_IPT_HP			$D00020		; 32 bytes
-; define	KERNEL_INTERRUPT_IPT_JP			$D00040		; 32 bytes
-; define	KERNEL_INTERRUPT_ISR_DATA		$D00060		; special driver data to be used (8 bytes per driver)
-; define	KERNEL_INTERRUPT_ISR_DATA_VIDEO		$D00060
-; define	KERNEL_INTERRUPT_ISR_DATA_USB		$D00066
-; define	KERNEL_INTERRUPT_ISR_DATA_RTC		$D0006B
-; define	KERNEL_INTERRUPT_ISR_DATA_KEYBOARD	$D00072
-; define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER1	$D00078
-; define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER2	$D0007E
-; define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER3	$D00084
-; define	KERNEL_INTERRUPT_ISR_DATA_POWER		$D0008A
-; ; finish @ A0
-; 
-; define	KERNEL_INTERRUPT_BOOT_HANDLER		$D177BA
-; 
-; define	kinterrupt_irq_reschedule		$D00000
-; define	kinterrupt_power_mask			$D00020
-; 
-; define	kernel_idle				$D00090		; 24 bytes, 8 88> A0 (21 needed, so up to $9B - 9F
-; define	kernel_heap				$D00100		; 512 bytes, to be used by everything
-; define	kernel_stack_pointer			$D0009F
-; define	kernel_stack				$D000FF
-; define	kpower_lcd_save				$D00100
-; define	nmi_context				$D00100
-; 
-; define	kthread_mqueue_active			$D00300		; 16 bytes
-; ; retire queue ;
-; define	kthread_queue_retire			$D00310		; 4 bytes
-; ; timer queue
-; define	ktimer_queue				$D00314		; 4 bytes
-; define	kthread_current				$D00317
-; define	kthread_pid_map				$D00400		; 256 bytes
-; ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
-; define	kmm_ptlb_map				$D00500		; 512 bytes

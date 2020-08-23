@@ -49,13 +49,13 @@ end if
 ktimer:
 
 .init:
-	di
-	ld	hl, ktimer_queue
-	ld	de, NULL
-	ld	(hl), $FF
-	inc	hl
-	ld	(hl), de
-	ret
+; 	di
+; 	ld	hl, ktimer_queue
+; 	ld	de, NULL
+; 	ld	(hl), $FF
+; 	inc	hl
+; 	ld	(hl), de
+; 	ret
 
 ; please note, timer_next is still valid per timer queue
 .notify_default = kthread.resume

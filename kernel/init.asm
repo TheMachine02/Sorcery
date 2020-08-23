@@ -1,18 +1,23 @@
-define	KERNEL_HEAP			$D00043
-define	KERNEL_THREAD			$D00010
-define	KERNEL_STACK			KERNEL_THREAD + KERNEL_THREAD_STACK
-define	KERNEL_STACK_SIZE		$57 
+define	BOOT_DIRTY_MEMORY0		$D0009B		; 1 byte ]
+define	BOOT_DIRTY_MEMORY1		$D000AC		; 1 byte ] on interrupt
+define	BOOT_DIRTY_MEMORY2		$D000FF		; 3 bytes
+define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 
+define	KERNEL_HEAP			$D00100
+define	KERNEL_STACK			$D000FF
+define	KERNEL_STACK_SIZE		$57
 define	KERNEL_RAMFS			$D00000
-
-define	KERNEL_BOOT_MEMORY0		$D0009B   ; touched memory by the boot.
-define	KERNEL_BOOT_MEMORY1		$D000AC   ; same, a set somewhere
 
 define	KERNEL_CRYSTAL_CTLR		$00
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 
 define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
+
+define	KERNEL_THREAD_IDLE		kernel_idle
+
+define	kernel_idle			$D00090
+define	kernel_stack_pointer		$D0009F
 
 kinit:
 ; read kernel paramater
@@ -33,7 +38,6 @@ kinit:
 	out0	($3B), a
 	out0	($3C), a
 ; general system init
-	call	power.init
 ; load the ramfs image
 	ld	hl, kernel_ramfs_src
 	ld	de, KERNEL_RAMFS
@@ -45,8 +49,8 @@ kinit:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
-	ld	sp, $D000F0
-	ld	(KERNEL_STACK), sp
+	ld	sp, KERNEL_STACK
+	ld	(kernel_stack_pointer), sp
 	ld.sis sp, $0000
 	ld	a, $D0
 	ld	MB, a
@@ -54,10 +58,10 @@ kinit:
 	call	kmm.init
 	call	kslab.init
 ; timer and interrupts ;
-	call	ktimer.init
 	call	kinterrupt.init
-	call	kthread.init
 	call	kwatchdog.init
+	call	kpower.init
+; filesystem, should be taken care of with the ramfs
 ;	call	kvfs.init
 ; driver init ;
 	call	video.init

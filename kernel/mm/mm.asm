@@ -36,9 +36,9 @@ macro	trap
 end	macro
 
 ; link between cache page and inode (so inode can be updated when droping cache pages)
-define	kcache_inode_map		$D00B00
+define	kcache_inode_map		$D00F00
 ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
-define	kmm_ptlb_map			$D00E00
+define	kmm_ptlb_map			$D00500
 
 kmm:
 
@@ -79,25 +79,7 @@ end if
 	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE - 1
 	ld	(hl), KERNEL_HW_POISON
 	ldir
-	ld	hl, .init_ptlb_map
-	ld	de, kmm_ptlb_map
-	inc	b
-	inc	b
-	ldir
 	ret
-	
-.init_ptlb_map:
-if CONFIG_USE_BOOT_PATCH
- db 4	dup KERNEL_MM_RESERVED_MASK
- db 252	dup KERNEL_MM_PAGE_FREE_MASK
-else
- db 4	dup KERNEL_MM_RESERVED_MASK
- db 89	dup KERNEL_MM_PAGE_FREE_MASK
-; $D177AE > stupid interrupt check (one day, with some boot patch ..)
- db KERNEL_MM_RESERVED_MASK
- db 162	dup KERNEL_MM_PAGE_FREE_MASK
-end if
- db 256 dup NULL
 
  .page_perm_rw:
 ; b = page

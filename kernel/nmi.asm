@@ -11,7 +11,8 @@ define	CONTEXT_FRAME_BC		18
 define	CONTEXT_FRAME_AF		21
 define	CONTEXT_FRAME_IR		24
 
-define	nmi_context			$D00043
+define	nmi_context			$D00200
+define	nmi_stack			$D00300
 
 assert $ < $0220A8
 rb $0220A8-$
@@ -27,8 +28,8 @@ nmi:
 	pop	hl
 	ld	(ix+CONTEXT_FRAME_PC), hl
 	ld	(nmi_context+CONTEXT_FRAME_SP), sp
-; restore kernel stack pointer to be sure we *have* a valid stack pointer
-	ld	sp, (KERNEL_STACK)
+; restore stack pointer to be sure we *have* a valid stack pointer (within kernel heap, whatever)
+	ld	sp, nmi_stack
 	push	af
 	pop	hl
 	ld	(ix+CONTEXT_FRAME_AF), hl
@@ -41,7 +42,6 @@ nmi:
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; reset major subsystem
-	call    kinterrupt.init
 	call	video.init
 	call	console.init
 ; now, process
@@ -153,7 +153,7 @@ nmi:
 	push	hl
 	ld	hl, console_string
 	push	hl
-	call	_boot_sprintf
+	call	_boot_sprintf_safe
 	ld	hl, 33
 	add	hl, sp
 	ld	sp, hl
@@ -172,7 +172,7 @@ nmi:
 	push	hl
 	ld	hl, console_string
 	push	hl
-	call	_boot_sprintf
+	call	_boot_sprintf_safe
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
@@ -227,3 +227,9 @@ nmi:
  ; size 15 (not counting null)
  .CONTEXT_STACK_STR:
  db 10,"     +0x%06x", 0
+
+_boot_sprintf_safe:
+; the nice _boot_sprintf routine is bugged, and scrap need to be cleared to zero
+	ld	hl, NULL
+	ld	(KERNEL_HEAP+32), hl
+	jp	_boot_sprintf

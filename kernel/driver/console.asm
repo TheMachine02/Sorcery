@@ -250,7 +250,7 @@ console:
 	jr	.clean_command
 
 .shutdown:
-	call	power.cycle_off
+	call	kpower.cycle_off
 	jr	.clean_command
 	
 .color:
@@ -308,7 +308,7 @@ console:
 	push	hl
 	ld	hl, console_string
 	push	hl
-	call	_boot_sprintf
+	call	_boot_sprintf_safe
 	ld	hl, 18
 	add	hl, sp
 	ld	sp, hl
@@ -579,7 +579,7 @@ include 'logo.inc'
 	push	hl
 	ld	hl, console_string
 	push	hl
-	call	_boot_sprintf
+	call	_boot_sprintf_safe
 	ld	hl, 18
 	add	hl, sp
 	ld	sp, hl
@@ -626,7 +626,7 @@ include 'logo.inc'
 	push	hl
 	ld	hl, console_string
 	push	hl
-	call	_boot_sprintf
+	call	_boot_sprintf_safe
 	ld	hl, 12
 	add	hl, sp
 	ld	sp, hl
@@ -639,10 +639,9 @@ include 'logo.inc'
 	add	hl, de
 	pop	bc
 	djnz	.top_data_loop
-	ei
-	halt
 	ld	a, DRIVER_RTC_IRQ
 	call	kthread.wait_on_IRQ
+	ei
 	jp	.top_loop
 	
 .TOP_LINE_STR:
