@@ -32,6 +32,12 @@ kinit:
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
+; setup priviliegied OS code (end of OS)
+	ld	a, $06
+	out0	($1F), a
+	xor	a, a
+	out0	($1D), a
+	out0	($1E), a	
 ; blank stack protector
 	xor	a, a
 	out0	($3A), a
@@ -57,7 +63,7 @@ kinit:
 ; memory init ;
 	call	kmm.init
 	call	kslab.init
-; timer and interrupts ;
+; power, timer and interrupt ;
 	call	kinterrupt.init
 	call	kwatchdog.init
 	call	kpower.init
@@ -81,12 +87,13 @@ kinit:
 ; most dynamic is reduce by one the value
 ; most brutal is directly set to 6Mhz, we'll need to ramp up
 if CONFIG_USE_DYNAMIC_CLOCK
+	di
 	xor	a,a
 	out0	(KERNEL_POWER_CPU_CLOCK),a
 	ld	a, $01
 	ld	(KERNEL_FLASH_CTRL),a
-end if
 	ei
+end if
 	slp
 	jr	.arch_sleep
 
@@ -114,18 +121,18 @@ THREAD_INIT_TEST:
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
-	ld	iy, TEST_THREAD_C ; thread 2
-	call	kthread.create
-; 
-	ld	iy, TEST_THREAD_C_DEATH ; thread 3
-	call	kthread.create
+; 	ld	iy, TEST_THREAD_C ; thread 2
+; 	call	kthread.create
+; ; 
+; 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
+; 	call	kthread.create
+	
 	
 	ld	a, SIGUSR1
 	call	signal.procmask_single
 	
 	call	video.irq_lock
 ;	call	keyboard.irq_lock
-	
 	call	console.run
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
