@@ -641,7 +641,6 @@ include 'logo.inc'
 	djnz	.top_data_loop
 	ld	a, DRIVER_RTC_IRQ
 	call	kthread.wait_on_IRQ
-	ei
 	jp	.top_loop
 	
 .TOP_LINE_STR:

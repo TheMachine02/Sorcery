@@ -102,7 +102,7 @@ kpower_lcd_save:
 nmi_context = $+256
  db	512	dup	KERNEL_HW_POISON
 nmi_stack:
-interrupt_stack:
+kinterrupt_stack:
 ; 16 bytes (4x4)
 kthread_mqueue_active:
  db	16	dup	$FF

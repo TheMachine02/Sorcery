@@ -24,7 +24,7 @@ define	KERNEL_MM_FLASH_SIZE		$400000
 ; reserved mask : locked, unevictable, to thread 0
 define	KERNEL_MM_RESERVED_MASK		00101000b
 define	KERNEL_MM_RESERVED_SIZE		4096
-; the first 256 bytes shouldn't be init by mm module
+; the first 4096 bytes shouldn't be init by mm module
 define	KERNEL_MM_PROTECTED_SIZE	4096
 ; null adress reading always zero, but faster
 define	KERNEL_MM_NULL			$E40000
@@ -68,12 +68,6 @@ else
 	out0 ($22), a
 	out0 ($25), a
 end if
-; setup previleged executable code (end of the OS)
-	ld	a, $06
-	out0	($1F), a
-	xor	a, a
-	out0	($1D), a
-	out0	($1E), a
 	ld	hl, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE
 	ld	de, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE + 1
 	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE - 1
