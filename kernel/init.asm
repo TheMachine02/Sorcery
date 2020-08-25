@@ -82,18 +82,11 @@ kinit:
 	call	kthread.create
 	jp	c, nmi
 ; nice idle thread code
+	ei
 .arch_sleep:
 ; different behaviour are possible
 ; most dynamic is reduce by one the value
 ; most brutal is directly set to 6Mhz, we'll need to ramp up
-if CONFIG_USE_DYNAMIC_CLOCK
-	di
-	xor	a,a
-	out0	(KERNEL_POWER_CPU_CLOCK),a
-	ld	a, $01
-	ld	(KERNEL_FLASH_CTRL),a
-	ei
-end if
 	slp
 	jr	.arch_sleep
 

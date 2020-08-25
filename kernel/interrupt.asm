@@ -330,6 +330,12 @@ kscheduler:
 	jp	z, nmi
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
+if CONFIG_USE_DYNAMIC_CLOCK
+	xor	a,a
+	out0	(KERNEL_POWER_CPU_CLOCK),a
+	inc	a
+	ld	(KERNEL_FLASH_CTRL),a
+end if
 	jr	.dispatch_thread
 .dispatch_queue:
 	inc	hl
