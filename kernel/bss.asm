@@ -13,42 +13,40 @@ define	KERNEL_MM_PAGE_FREE_MASK		128
  org	$D00000
 KERNEL_INTERRUPT_IPT:
 ; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
-KERNEL_INTERRUPT_IPT_LP:
-kinterrupt_irq_reschedule:
+kinterrupt_irq_reschedule	= $
+kinterrupt_power_mask		= $+1
+ db	$00, $00	; 0000
  db	$00, $00	; 0000
  db	$04, $50	; 0001
+  db	$01, $40	; 0001
  db	$08, $54	; 0010
+  db	$02, $44	; 0010
  db	$04, $50	; 0011
+  db	$02, $44	; 0011
  db	$10, $58	; 0100
+  db	$04, $48	; 0100
  db	$04, $50	; 0101
+  db	$04, $48	; 0101
  db	$08, $54	; 0110
+  db	$02, $44	; 0110
  db	$04, $50	; 0111
+  db	$02, $44	; 0111
  db	$20, $5C	; 1000
+  db	$08, $4C	; 1000
  db	$04, $50	; 1001
+  db	$08, $4C	; 1001
  db	$08, $54	; 1010
+  db	$02, $44	; 1010
  db	$04, $50	; 1011
+  db	$02, $44	; 1011
  db	$20, $5C	; 1100
+  db	$04, $48	; 1100
  db	$04, $50	; 1101
+  db	$04, $48	; 1101
  db	$08, $54	; 1110
+  db	$02, $44	; 1110
  db	$04, $50	; 1111
-KERNEL_INTERRUPT_IPT_HP:
-kinterrupt_power_mask:
- db	$00, $00	; 0000
- db	$01, $40	; 0001
- db	$02, $44	; 0010
- db	$02, $44	; 0011
- db	$04, $48	; 0100
- db	$04, $48	; 0101
- db	$02, $44	; 0110
- db	$02, $44	; 0111
- db	$08, $4C	; 1000
- db	$08, $4C	; 1001
- db	$02, $44	; 1010
- db	$02, $44	; 1011
- db	$04, $48	; 1100
- db	$04, $48	; 1101
- db	$02, $44	; 1110
- db	$02, $44	; 1111
+  db	$02, $44	; 1111
 KERNEL_INTERRUPT_IPT_JP:
  jp	$00
  jp	$00
@@ -79,6 +77,7 @@ KERNEL_INTERRUPT_ISR_DATA_POWER:
 ; we are at $90, 24 bytes up to 
 kernel_idle:
  db	$00			; ID 0 reserved
+kthread_current:
  dl	kernel_idle		; No next
  dl	kernel_idle		; No prev
  db	$00			; No PPID
@@ -102,7 +101,6 @@ kpower_lcd_save:
 nmi_context = $+256
  db	512	dup	KERNEL_HW_POISON
 nmi_stack:
-kinterrupt_stack:
 ; 16 bytes (4x4)
 kthread_mqueue_active:
  db	16	dup	$FF
@@ -112,10 +110,10 @@ kthread_queue_retire:
 ; timer queue
 ktimer_queue:
  db	4	dup	$FF
-kthread_current:
- dl	kernel_idle
+; kthread_current:
+;  dl	kernel_idle
 free: 
- db	229	dup	KERNEL_HW_POISON
+ db	232	dup	KERNEL_HW_POISON
 ; $400
 kthread_pid_map:
  db	$01

@@ -1,9 +1,9 @@
 define	KERNEL_POWER_CHARGING		$000B
-define	KERNEL_POWER_BATTERY		$0000
+; define	KERNEL_POWER_BATTERY		$0000
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$F60024
 
-define	kinterrupt_power_mask		$D00020
+define	kinterrupt_power_mask		$D00001
 ; we need to save the whales (and the palette)
 define	kpower_lcd_save			$D00100
 
@@ -17,6 +17,7 @@ kpower:
 .init:
 	di
 	ld	a, $03
+	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; default power up IRQ
 	ld	hl, kinterrupt.irq_resume
@@ -52,7 +53,7 @@ kpower:
 	xor	a, a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 	inc	a
-	ld	($E00005), a
+	ld	(KERNEL_FLASH_CTRL), a
 ; usb stuff ?
 ; 	ld	bc,$003030
 ; 	xor	a, a
@@ -142,7 +143,7 @@ kpower:
 	ld	a, $03
 	out0	($06), a
 	wait
-	ld	($E00005), a
+	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?
 ; 	ld.sis	bc,$3114

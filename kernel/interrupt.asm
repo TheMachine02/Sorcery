@@ -29,8 +29,6 @@ define	KERNEL_IRQ_USB				128
 
 define	KERNEL_INTERRUPT_IPT			$D00000
 define	KERNEL_INTERRUPT_IPT_SIZE		4
-define	KERNEL_INTERRUPT_IPT_LP			$D00000
-define	KERNEL_INTERRUPT_IPT_HP			$D00020
 define	KERNEL_INTERRUPT_IPT_JP			$D00040
 define	KERNEL_INTERRUPT_ISR_DATA_VIDEO		$D00060
 define	KERNEL_INTERRUPT_ISR_DATA_USB		$D00066
@@ -192,13 +190,14 @@ kinterrupt:
 	ld	c, (hl)
 	inc	hl
 	ld	a, (hl)
-	ld	l, (KERNEL_INTERRUPT_ICR+1) and $FF	; = 9
-	srl	a
+	ld	l, (KERNEL_INTERRUPT_ICR+1) and $FF
+	or	a, a
 	jr	nz, .irq_trampoline_generic
 	ld	a, c
+	ccf
+	adc	a, a
 	add	a, a
 	dec	l
-	or	a, KERNEL_INTERRUPT_IPT_HP and $FF
 .irq_trampoline_generic:
 ; it is up to the irq_handler to clean up with return to irq_resume
 	ex	de, hl

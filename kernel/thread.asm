@@ -82,7 +82,7 @@ define	kthread_queue_retire			$D00310		; 4 bytes
 define	ktimer_queue				$D00314		; 4 bytes
 
 define	kinterrupt_irq_reschedule		$D00000
-define	kthread_current				$D00318
+define	kthread_current				$D00091
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
