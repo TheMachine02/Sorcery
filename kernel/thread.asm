@@ -456,16 +456,20 @@ kthread:
 ; cause should already have been writed
 	jp	task_yield
 	
-.wait_on_IRQ:
 .wait:
-; wait on an IRQ
+; wait on an IRQ (or generic suspend if a = NULL)
 	di
 	push	iy
 	push	hl
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_IRQ), a
-; the process to write the thread state and change the queue should be always a critical section
-	call	task_switch_uninterruptible
+	or	a, a
+	jr	z, .wait_generic_suspend
+	ld	a, TASK_UNINTERRUPTIBLE - 1
+.wait_generic_suspend:
+	inc	a
+	ld	(iy+KERNEL_THREAD_STATUS), a
+	call	task_switch_helper
 	pop	hl
 	pop	iy
 ; switch away from current thread to a new active thread
@@ -481,15 +485,15 @@ kthread:
 	ld	(hl), $80
 	inc	hl
 	ld	iy, (hl)
+	ld	(iy+KERNEL_THREAD_IRQ), a
 	or	a, a
 	jr	z, .irq_generic_suspend
-	ld	(iy+KERNEL_THREAD_IRQ), a
 	ld	a, TASK_UNINTERRUPTIBLE - 1
 .irq_generic_suspend:
 	inc	a
+	ld	(iy+KERNEL_THREAD_STATUS), a
 	jr	task_switch_helper
 
-.resume_from_IRQ:
 .irq_resume:
 ; resume a thread from within an irq
 ; either the thread wait for an IRQ (status TASK_UNINTERRUPTIBLE + IRQ set)

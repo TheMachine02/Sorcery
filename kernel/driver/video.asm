@@ -55,14 +55,11 @@ video:
 	set	2, (hl)
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
-;	jp	z, kinterrupt.irq_resume
 	ret	z
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
 ; signal the IRQ to a waiting (helper / or not ) thread
 	ld	a, DRIVER_VIDEO_IRQ
-	call	kthread.resume_from_IRQ
-;	jp	kinterrupt.irq_resume_thread
-	ret
+	jp	kthread.irq_resume
 
 .irq_lock:
 	di
@@ -104,13 +101,13 @@ video:
 	ld	(DRIVER_VIDEO_SCREEN), de
 ; is interrupt enabled ?
 ; quit if not enabled, wait for vsync signal else
-	jp	pe, kthread.wait_on_IRQ
+	jp	pe, kthread.wait
 	jr	.vsync_atomic
 
 .vsync:
 	ld	a, i
 	ld	a, DRIVER_VIDEO_IRQ
-	jp	pe, kthread.wait_on_IRQ
+	jp	pe, kthread.wait
 	
 .vsync_atomic:
 ; wait until the LCD finish displaying the frame

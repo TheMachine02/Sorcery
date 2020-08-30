@@ -639,8 +639,7 @@ include 'logo.inc'
 	add	hl, de
 	pop	bc
 	djnz	.top_data_loop
-	ld	a, DRIVER_RTC_IRQ
-	call	kthread.wait_on_IRQ
+	call	rtc.wait_second
 	jp	.top_loop
 	
 .TOP_LINE_STR:

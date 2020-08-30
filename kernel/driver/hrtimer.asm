@@ -36,7 +36,7 @@ timer:
 	bit	DRIVER_HRTIMER1_IRQ_LOCK_SET, (hl)
 	ret	z
 	ld	iy, (DRIVER_HRTIMER1_IRQ_LOCK_THREAD)
-	jp	kthread.resume_from_IRQ
+	jp	kthread.irq_resume
 	
 .irq_lock:
 	di
@@ -70,4 +70,4 @@ timer:
 	
 .wait:
 	ld	a, DRIVER_HRTIMER1_IRQ
-	jp	kthread.wait_on_IRQ
+	jp	kthread.wait
