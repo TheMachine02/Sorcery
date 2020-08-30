@@ -55,12 +55,14 @@ video:
 	set	2, (hl)
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
-	jp	z, kinterrupt.irq_resume
+;	jp	z, kinterrupt.irq_resume
+	ret	z
 	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
 ; signal the IRQ to a waiting (helper / or not ) thread
 	ld	a, DRIVER_VIDEO_IRQ
 	call	kthread.resume_from_IRQ
-	jp	kinterrupt.irq_resume_thread
+;	jp	kinterrupt.irq_resume_thread
+	ret
 
 .irq_lock:
 	di

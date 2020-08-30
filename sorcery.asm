@@ -48,6 +48,8 @@ include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'
 include	'kernel/vfs.asm'
 include	'kernel/restart.asm'
+include	'kernel/compress/lz4.asm'
+include	'kernel/syscall.asm'
 include	'kernel/exec/leaf.asm'
 
 kernel_ramfs_src:
@@ -63,8 +65,6 @@ file	'demo.leaf'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
 
-include	'kernel/compress/lz4.asm'
-
 include	'kernel/crypto/crc.asm'
 
 include	'kernel/fpu/idiv.asm'
@@ -73,6 +73,7 @@ include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
+include	'kernel/driver/spi.asm'
 ; driver & device
 include	'kernel/driver/console.asm'
 include	'kernel/dev/console.asm'

@@ -58,7 +58,7 @@ ktimer:
 ; 	ret
 
 ; please note, timer_next is still valid per timer queue
-.notify_default = kthread.resume
+.notify_default = kthread.irq_resume
 
 ; it timer attached to thread, used by sleep() and alarm() ;
 
@@ -212,5 +212,6 @@ end if
 .crystal_call:
 	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
 	ld	iy, (iy+TIMER_EV_NOTIFY_THREAD)
+	xor	a, a
 	jp	(hl)
 

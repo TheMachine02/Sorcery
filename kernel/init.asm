@@ -62,7 +62,6 @@ kinit:
 	ld	MB, a
 ; memory init ;
 	call	kmm.init
-	call	kslab.init
 ; power, timer and interrupt ;
 	call	kinterrupt.init
 	call	kwatchdog.init
@@ -239,15 +238,15 @@ TEST_THREAD_C_DEATH:
 ; 	ld	hl, global_mutex
 ; 	call	atomic_rw.lock_write
 	
-	ld	hl, 512
-	call	kmalloc
-	push	hl
-	ld	hl, 512
-	call	kmalloc	
-	ld	hl, 512
-	call	kmalloc
-	pop	hl
-	call	kfree
+; 	ld	hl, 512
+; 	call	kmalloc
+; 	push	hl
+; 	ld	hl, 512
+; 	call	kmalloc	
+; 	ld	hl, 512
+; 	call	kmalloc
+; 	pop	hl
+; 	call	kfree
 	
 ; 	ld	hl, global_mutex
 ; 	call	atomic_rw.unlock_write

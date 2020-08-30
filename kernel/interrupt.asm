@@ -199,21 +199,22 @@ kinterrupt:
 	add	a, a
 	dec	l
 .irq_trampoline_generic:
-; it is up to the irq_handler to clean up with return to irq_resume
 	ex	de, hl
 ; and now, for some black magic
+	ld	hl, .irq_trampoline_return
+	push	hl
 	ld	hl, i
 	ld	l, a
 	ldi
 	ld	l, (hl)
 	jp	(hl)
-.irq_resume_thread:
+.irq_trampoline_return:
 ; check if we need to reschedule for fast response
+	ld	iy, (kthread_current)
 	ld	hl, i
 	sla	(hl)
-	ld	iy, (kthread_current)
-	jr	c, kscheduler.schedule
-.irq_resume:
+	jr	c, kscheduler.do_schedule
+.irq_context_return:
 	pop	iy
 	pop	ix
 	exx
@@ -249,16 +250,19 @@ kscheduler:
 .schedule_check_quanta:
 ; load current thread ;
 	ld	iy, (kthread_current)
+	ld	hl, i
+	sla	(hl)
+	jr	c, .do_schedule
 ; do we have idle thread ?
 	lea	hl, iy+KERNEL_THREAD_STATUS
 	ld	a, (hl)
 	inc	a
 ; this is idle, just schedule
-	jr	z, .schedule
+	jr	z, .do_schedule
 	inc	hl
 	inc	hl
 	dec	(hl)
-	jr	nz, kinterrupt.irq_resume
+	jr	nz, kinterrupt.irq_context_return
 ; lower thread priority and move queue
 .schedule_unpromote:
 	dec	hl
@@ -294,7 +298,7 @@ kscheduler:
 	rla
 	djnz	$-1
 	ld	(hl), a
-.schedule:
+.do_schedule:
 ; reset watchdog
 	ld	hl, KERNEL_WATCHDOG_COUNTER
 	ld	bc, (hl)
@@ -327,6 +331,7 @@ kscheduler:
 	add	hl, bc
 	cp	a, (hl)
 	jp	z, nmi
+.dispatch_idle:
 ; schedule the idle thread
 	ld	de, KERNEL_THREAD_IDLE
 if CONFIG_USE_DYNAMIC_CLOCK
@@ -359,9 +364,8 @@ end if
 	push	de
 	push	af
 ; change thread
-	or	a, a
 	sbc	hl, hl
-	add	hl, sp
+	adc	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
 	exx
 .context_restore:
@@ -389,14 +393,14 @@ end if
 	ei
 	ret
 
-.switch:
+.schedule:
 	di
 	ex	af, af'
 	exx
 	push	ix
 	push	iy
 	ld	iy, (kthread_current)
-	jp	.schedule
+	jp	.do_schedule
 
 .yield:
 	di
@@ -409,7 +413,7 @@ end if
 ; hl =status
 	ld	a, (hl)
 	or	a, a
-	jp	z, .schedule
+	jp	z, .do_schedule
 	inc	hl
 ; hl = priority
 	ld	a, (hl)

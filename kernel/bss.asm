@@ -14,39 +14,40 @@ define	KERNEL_MM_PAGE_FREE_MASK		128
 KERNEL_INTERRUPT_IPT:
 ; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
 kinterrupt_irq_reschedule	= $
+kinterrupt_irq_context_stack	= $+1
 kinterrupt_power_mask		= $+1
  db	$00, $00	; 0000
  db	$00, $00	; 0000
  db	$04, $50	; 0001
-  db	$01, $40	; 0001
+ db	$01, $40	; 0001
  db	$08, $54	; 0010
-  db	$02, $44	; 0010
+ db	$02, $44	; 0010
  db	$04, $50	; 0011
-  db	$02, $44	; 0011
+ db	$02, $44	; 0011
  db	$10, $58	; 0100
-  db	$04, $48	; 0100
+ db	$04, $48	; 0100
  db	$04, $50	; 0101
-  db	$04, $48	; 0101
+ db	$04, $48	; 0101
  db	$08, $54	; 0110
-  db	$02, $44	; 0110
+ db	$02, $44	; 0110
  db	$04, $50	; 0111
-  db	$02, $44	; 0111
+ db	$02, $44	; 0111
  db	$20, $5C	; 1000
-  db	$08, $4C	; 1000
+ db	$08, $4C	; 1000
  db	$04, $50	; 1001
-  db	$08, $4C	; 1001
- db	$08, $54	; 1010
-  db	$02, $44	; 1010
+ db	$08, $4C	; 1001
+ db	$08, $54	; 1010 
+ db	$02, $44	; 1010
  db	$04, $50	; 1011
-  db	$02, $44	; 1011
+ db	$02, $44	; 1011
  db	$20, $5C	; 1100
-  db	$04, $48	; 1100
+ db	$04, $48	; 1100
  db	$04, $50	; 1101
-  db	$04, $48	; 1101
+ db	$04, $48	; 1101
  db	$08, $54	; 1110
-  db	$02, $44	; 1110
+ db	$02, $44	; 1110
  db	$04, $50	; 1111
-  db	$02, $44	; 1111
+ db	$02, $44	; 1111
 KERNEL_INTERRUPT_IPT_JP:
  jp	$00
  jp	$00
@@ -101,6 +102,7 @@ kpower_lcd_save:
 nmi_context = $+256
  db	512	dup	KERNEL_HW_POISON
 nmi_stack:
+isr_stack:
 ; 16 bytes (4x4)
 kthread_mqueue_active:
  db	16	dup	$FF
@@ -127,3 +129,5 @@ kmm_ptlb_map:
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00
 ; $700
+
+ db	2048	dup	$00

@@ -4,3 +4,25 @@ leaf load
 library load
 memory management
 keyboard stdin
+
+
+
+
+
+FIRST :
+- atomic rw lock
+- slab management
+- VFS
+
+
+
+>>>
+
+kthread.wake : for global use
+kthread.wake_irq : for irq use
+
+kthread.suspend
+kthread.suspend_irq
+
+>> wait_on_IRQ
+>> resume_from_IRQ

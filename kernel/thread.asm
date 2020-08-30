@@ -91,8 +91,6 @@ define	kthread_pid_map				$D00400
 kthread:
 .init:
 	ret
-
-.yield=kscheduler.yield
 	
 .create_no_mem:
 	call	kmm.thread_unmap
@@ -219,209 +217,6 @@ kthread:
 	sbc	hl, hl
 	ret
 
-; DANGEROUS AREA, helper function ;	
-	
-.reserve_pid:
-; find a free pid
-; this should be called in an atomic / critical code section to be sure it will still be free when used
-; kinda reserved to ASM
-	ld	hl, kthread_pid_map
-	ld	de, 4
-	ld	b, 64
-	xor	a, a
-.reserve_parse_map:
-	cp	a, (hl)
-	jr	z, .reserve_exit
-	add	hl, de
-	djnz	.reserve_parse_map
-.reserve_exit:
-	srl	l
-	srl	l
-	ld	a, l
-; carry is reset
-; if = zero, then we have an error
-	ret	nz
-	scf
-	ret
-    
-.wait_on_IRQ:
-; suspend till waked by an IRQ
-	di
-	push	iy
-	push	hl
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), a
-; the process to write the thread state and change the queue should be always a critical section
-	call	task_switch_uninterruptible
-	pop	hl
-	pop	iy
-; switch away from current thread to a new active thread
-; cause should already have been writed
-	jp	task_yield
-
-.wait_on_IRQ_timeout:
-; suspend till IRQ or timer (generic resume correct IRQ stuff)
-	di
-	push	iy
-	push	hl
-	push	de
-	push	af
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), a
-	ld	e, l
-	ld	d, TIME_MS_TO_JIFFIES
-	ld	l, d
-	mlt	de
-	mlt	hl
-	xor	a, a
-	sbc	a, e
-	ld	e, d
-	ld	d, 0
-	adc	hl, de
-; add timer
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
-	ld	hl, ktimer.notify_default
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
-	lea	iy, iy+KERNEL_THREAD_TIMER
-	ld	hl, ktimer_queue
-	call	kqueue.insert_head
-	lea	iy, iy-KERNEL_THREAD_TIMER
-; the process to write the thread state and change the queue should be always a critical section
-	call	task_switch_uninterruptible
-	pop	af
-	pop	de
-	pop	hl
-	pop	iy
-; switch away from current thread to a new active thread
-; cause should already have been writed
-	jp	task_yield
-	
-.suspend:
-; suspend till waked by a signal or by an IRQ (you should have writed the one you are waiting for before though and atomically, also, IRQ signal will be reset by IRQ handler, not by wake
-	di
-	push	iy
-	push	hl
-	ld	iy, (kthread_current)
-; the process to write the thread state and change the queue should be always a critical section
-	call	task_switch_interruptible
-; also note that writing THREAD_IRQ doesn't *need to be atomic, but testing is
-	pop	hl
-	pop	iy
-; switch away from current thread to a new active thread
-; cause should already have been writed
-	jp	task_yield
-	
-.resume:
-; wake thread (adress iy)
-; destroy hl, a (probably more)
-	lea	hl, iy+0
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	ret	z
-	tsti
-; this read need to be atomic !
-	ld	a, (iy+KERNEL_THREAD_STATUS)
-; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
-	dec	a
-; 0 or 1 accepted
-	cp	a, TASK_UNINTERRUPTIBLE
-	jr	nc, .resume_exit
-.resume_wake:
-	xor	a, a
-	ld	(iy+KERNEL_THREAD_IRQ), a
-	call	task_switch_running
-; try to schedule right now
-	call	kscheduler.switch
-.resume_exit:
-; rsti optimized
-	pop	af
-	ret	po
-	ei
-	ret
-
-.join:
-; hl = pthread_id, de pointer to pointer to exit value
-	push	ix
-	add	hl, hl
-	add	hl, hl
-	ld	bc, kthread_pid_map
-	add	hl, bc
-	di
-	ld	a, (hl)
-	or	a, a
-	jr	z, .join_no_thread
-	inc	hl
-	ld	ix, (hl)
-	bit	THREAD_JOIGNABLE, (ix+KERNEL_THREAD_ATTRIBUTE)
-	jr	z, .join_detached
-	ld	a, (ix+KERNEL_THREAD_JOINED)
-	or	a, a
-	jr	nz, .join_watching
-	ld	iy, (kthread_current)
-	lea	hl, ix+0
-	lea	bc, iy+0
-	sbc	hl, bc
-	jr	z, .join_itself
-	ld	a, (bc)
-	ld	(ix+KERNEL_THREAD_JOINED), a
-; check status
-	ld	a, (ix+KERNEL_THREAD_STATUS)
-	cp	a, TASK_ZOMBIE
-	jr	z, .join_exit
-.join_block:
-	call	task_switch_interruptible	; we may be waked by signal, etc
-	call	task_yield
-	di
-	ld	a, (ix+KERNEL_THREAD_STATUS)
-	cp	a, TASK_ZOMBIE
-	jr	nz, .join_block
-.join_exit:
-	push	de
-	lea	iy, ix+0
-	call	task_switch_running
-	ld	iy, (iy+KERNEL_THREAD_STACK)
-	ld	de, (iy+9)	; this is hl
-	ei
-	pop	hl
-	ld	(hl), de
-	or	a, a
-	sbc	hl, hl
-	pop	ix
-	ret
-.join_no_thread:
-	ld	a, ESRCH
-	jr	.join_errno
-.join_itself:
-	ld	a, EDEADLK
-	jr	.join_errno
-.join_detached:
-.join_watching:
-	ld	a, EINVAL
-.join_errno:
-	ei
-	ld	(iy+KERNEL_THREAD_ERRNO), a
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	pop	ix
-	ret
-
-.once:
-; int pthread_once(pthread_once_t *once_control, void (*init_routine) (void));   
-; de point to the init routine, hl point to *once_control, destroy all reg based on the init routine
-; return hl=0
-; else swap de and hl
-	sra	(hl)	; tst and set, that's magiiic
-	ex	de, hl
-	call	nc, .once_call
-	or	a, a
-	sbc	hl, hl
-	ret
-.once_call:
-	jp	(hl)
-	
 .core:
 
 .exit:
@@ -471,7 +266,7 @@ kthread:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
-	ld	sp, (KERNEL_STACK)
+	ld	sp, (kernel_stack_pointer)
 	ld	a, (iy+KERNEL_THREAD_PID)
 	call	.free_pid
 ; need to free IRQ locked and mutex locked to thread
@@ -512,23 +307,6 @@ kthread:
 	ld	de, (hl)
 ; go into the thread directly, without schedule (pop all stack and discard current context)
 	jp	kscheduler.context_restore
-
-.free_pid:
-; free a pid
-; this should probably be in critical code section if you don't want BAD STUFF TO HAPPEN
-; kinda reserved to ASM
-	add	a, a
-	ret	z   ; don't you dare free pid 0 !
-	add	a, a
-	sbc	hl, hl
-	ld	l, a
-	ld	de, kthread_pid_map
-	add	hl, de
-	mlt	de
-	ld	(hl), e
-	inc	hl
-	ld	(hl), de
-	ret
 	
 .sleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
@@ -586,69 +364,144 @@ kthread:
 	pop	de
 	pop	iy
 	ret
+
+; DANGEROUS AREA, helper function ;	
 	
-.get_pid:
-; REGSAFE and ERRNO compliant
-; pid_t getpid()
-; return value is register hl
-	push	af
-	ld	hl, (kthread_current)
-	ld	a, (hl)
-	or	a, a
+.reserve_pid:
+; find a free pid
+; this should be called in an atomic / critical code section to be sure it will still be free when used
+; kinda reserved to ASM
+	ld	hl, kthread_pid_map
+	ld	de, 4
+	ld	b, 64
+	xor	a, a
+.reserve_parse_map:
+	cp	a, (hl)
+	jr	z, .reserve_exit
+	add	hl, de
+	djnz	.reserve_parse_map
+.reserve_exit:
+	srl	l
+	srl	l
+	ld	a, l
+; carry is reset
+; if = zero, then we have an error
+	ret	nz
+	scf
+	ret
+	
+.free_pid:
+; free a pid
+; this should probably be in critical code section if you don't want BAD STUFF TO HAPPEN
+; kinda reserved to ASM
+	add	a, a
+	ret	z   ; don't you dare free pid 0 !
+	add	a, a
 	sbc	hl, hl
 	ld	l, a
-	pop	af
+	ld	de, kthread_pid_map
+	add	hl, de
+	mlt	de
+	ld	(hl), e
+	inc	hl
+	ld	(hl), de
 	ret
-    
-.get_ppid:
-; REGSAFE and ERRNO compliant
-; pid_t getppid()
-; return value is register hl
+
+.resume:
+; wake thread (adress iy)
+; destroy hl, a (probably more)
+; resume a waiting thread. This must be called from a thread context and NOT irq. See irq_resume
+; actually, it could be safe to do so, but note that the current thread (and then interruption could be paused)
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ret	z
+	tsti
+; this read need to be atomic !
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
+; task TASK_UNINTERRUPTIBLE is waiting an IRQ and we aren't in IRQ context, so it seems fishy as hell right now.
+	cp	a, TASK_INTERRUPTIBLE
+	jr	z, .resume_do_wake
+; rsti optimized
+	pop	af
+	ret	po
+	ei
+	ret
+.resume_do_wake:
+	pop	af
+; ld a, i put $00 in a
+	ld	(iy+KERNEL_THREAD_IRQ), a
+	call	task_switch_running
+	jp	task_schedule
+
+.suspend:
+	di
 	push	iy
+	push	hl
+	ld	iy, (kthread_current)
+; the process to write the thread state and change the queue should be always a critical section
+	call	task_switch_interruptible
+	pop	hl
+	pop	iy
+; switch away from current thread to a new active thread
+; cause should already have been writed
+	jp	task_yield
+	
+.wait_on_IRQ:
+.wait:
+; wait on an IRQ
+	di
+	push	iy
+	push	hl
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_IRQ), a
+; the process to write the thread state and change the queue should be always a critical section
+	call	task_switch_uninterruptible
+	pop	hl
+	pop	iy
+; switch away from current thread to a new active thread
+; cause should already have been writed
+	jp	task_yield
+
+.irq_wait:
+	di
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_IRQ), a
+	ld	hl, i
+	ld	(hl), $80
+	jr	task_switch_uninterruptible
+	
+.irq_suspend:
+; suspend the current thread, safe from within IRQ
+; if a = 0, suspend generic, else suspend waiting the IRQ set by a
+	di
 	ld	iy, (kthread_current)
 	or	a, a
-	sbc	hl, hl
-	ld	l, (iy+KERNEL_THREAD_PPID)
-	pop	iy
-	ret
-	
-; .get_heap_size:
-; ; parse all block
-; 	push	ix
-; 	push	bc
-; 	ld	ix, (kthread_current)
-; 	ld	ix, (ix+KERNEL_THREAD_HEAP)
-; ; sum of all block is the heap size
-; 	or	a, a
-; 	sbc	hl, hl
-; .heap_size_loop:
-; 	ld	bc, (ix+KERNEL_MEMORY_BLOCK_DATA)
-; 	add	hl, bc
-; 	ld	bc, KERNEL_MEMORY_BLOCK_SIZE
-; 	add	hl, bc
-; 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
-; 	or	a, a
-; 	jr	z, .heap_size_break
-; 	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-; 	jr	.heap_size_loop
-; .heap_size_break:
-; ; clean out the upper bit
-; 	ld	bc, $800000
-; 	add	hl, bc
-; 	jr	nc, $-1
-; 	pop	bc
-; 	pop	ix
-; 	ret
+	jr	z, .irq_generic_suspend
+	ld	(iy+KERNEL_THREAD_IRQ), a
+	ld	a, TASK_UNINTERRUPTIBLE - 1
+.irq_generic_suspend:
+	inc	a
+	ld	hl, i
+	ld	(hl), $80
+	jr	task_switch_helper
 
 .resume_from_IRQ:
-; resume a thread waiting IRQ : IRQ = a
-; interrupt should be DISABLED when calling this routine
+.irq_resume:
+; resume a thread from within an irq
+; either the thread wait for an IRQ (status TASK_UNINTERRUPTIBLE + IRQ set)
+; or the thread is generic paused, so wake it up
 	di
 	lea	hl, iy+KERNEL_THREAD_IRQ
 	cp	a, (hl)
 	ret	nz
+	or	a, a
+	ld	a, TASK_INTERRUPTIBLE
+	jr	z, $+3
+	inc	a
 	inc	hl
-	ld	a, TASK_UNINTERRUPTIBLE
 	sub	a, (hl)
 	ret	nz
 	dec	hl
@@ -657,7 +510,9 @@ kthread:
 	ld	(hl), $80
 	jr	task_switch_running
 
-task_yield = kthread.yield
+.yield		= kscheduler.yield
+task_yield	= kscheduler.yield
+task_schedule	= kscheduler.schedule
 
 ; from TASK_READY to TASK_UNINTERRUPTIBLE
 ; may break if not in this state before
@@ -719,6 +574,7 @@ task_switch_sleep_ms:
 task_switch_interruptible:
 ; actual overhead : only jr
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
+task_switch_helper:
 	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove

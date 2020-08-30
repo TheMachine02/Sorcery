@@ -58,12 +58,14 @@ rtc:
 	ld	(hl), 0xFF
 	ld	hl, DRIVER_RTC_IRQ_LOCK
 	bit	DRIVER_RTC_IRQ_LOCK_SET, (hl)
-	jp	z, kinterrupt.irq_resume
+;	jp	z, kinterrupt.irq_resume
+	ret	z
 	ld	iy, (DRIVER_RTC_IRQ_LOCK_THREAD)
 	ld	a, DRIVER_RTC_IRQ
 	call	kthread.resume_from_IRQ
-	jp	kinterrupt.irq_resume_thread
-	
+;	jp	kinterrupt.irq_resume_thread
+	ret
+
 .irq_lock:
 	di
 	ld	hl, DRIVER_RTC_IRQ_LOCK

@@ -45,12 +45,14 @@ keyboard:
 	ld	(DRIVER_KEYBOARD_ISR), a
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
 	bit	DRIVER_KEYBOARD_IRQ_LOCK_SET, (hl)
-	jp	z, kinterrupt.irq_resume
+;	jp	z, kinterrupt.irq_resume
+	ret	z
 	ld	iy, (DRIVER_KEYBOARD_IRQ_LOCK_THREAD)
 	ld	a, DRIVER_KEYBOARD_IRQ
 	call	kthread.resume_from_IRQ
-	jp	kinterrupt.irq_resume_thread
-		
+;	jp	kinterrupt.irq_resume_thread
+	ret
+
 .irq_lock:
 	di
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK

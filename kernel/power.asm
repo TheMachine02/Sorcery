@@ -20,7 +20,7 @@ kpower:
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; default power up IRQ
-	ld	hl, kinterrupt.irq_resume
+	ld	hl, .irq_handler
 	ld	a, KERNEL_IRQ_POWER
 	call	kinterrupt.irq_request
 	ld	a, $80
@@ -29,6 +29,8 @@ kpower:
 ; set backlight level = a, max is $FF, min is $00
 	ld	hl, KERNEL_POWER_PWM
 	ld	(hl), a
+	
+.irq_handler:
 	ret
 
 ; return : 0% error c, 20% a= 0, 40% a=1, 60% a=2, 80% a=3, 100% a=4
@@ -169,6 +171,9 @@ kpower:
 	call	.battery_level
 	jp	c, .cycle_off
 ; LCD, SPI, backlight
+; we'll do our own _boot_InitializeHardware to avoid white screen flashing. Thanks
+
+
 	call	_boot_InitializeHardware
 ; lot of things broken
 	ld	a, KERNEL_CRYSTAL_DIVISOR

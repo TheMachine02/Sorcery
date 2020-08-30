@@ -668,3 +668,18 @@ end if
 	inc	de
 	ldir
 	ret
+
+.physical_to_ptlb:
+; adress divided by page KERNEL_MM_PAGE_SIZE = 1024
+	push	hl
+	dec	sp
+	pop	hl
+	inc	sp
+	ld	a, l
+	srl	h
+	rra
+	srl	h
+	rra
+	ld	hl, kmm_ptlb_map
+	ld	l, a
+	ret
