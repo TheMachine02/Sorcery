@@ -96,8 +96,9 @@ KERNEL_STACK:
   db	1	dup	KERNEL_HW_POISON
 ; 512 bytes scrap, used for lot of things
 KERNEL_HEAP:
-nmi_context		= $+128
-nmi_stack		= $+256
+nmi_context		= $+64
+nmi_stack		= $+250
+; this stack is supposed to be ~ 256 bytes
 kinterrupt_irq_stack_isr	= $+506
 kinterrupt_irq_ret_ctx		= $+506
 kinterrupt_irq_stack_ctx	= $+509
@@ -129,6 +130,6 @@ kmm_ptlb_map:
  db	256	dup	$00
 ; $700
  db	256	dup	$00
- db	2048	dup	$00
+ db	2048	dup	KERNEL_HW_POISON
 
 kpower_lcd_save:

@@ -232,7 +232,8 @@ TEST_THREAD_C:
 ; 	ldir
 ; 	ld	hl, global_mutex
 ; 	call	atomic_rw.unlock_read
-
+	ld	hl, 2000
+	call	kthread.sleep
 	jr	.spin
 	pop ix
 	ret

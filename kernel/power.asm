@@ -148,6 +148,18 @@ kpower:
 ; 	ld.sis	bc,$3114
 ; 	inc	a
 ; 	out	(bc), a
+; interrupts please
+	ld	hl, KERNEL_INTERRUPT_IMSC
+	ld	bc, (kinterrupt_power_mask)
+	ld	(hl), bc
+	ld	bc, $FFFFFF
+	ld	l, KERNEL_INTERRUPT_ICR and $FF
+	ld	(hl), bc
+; RTC init
+	ld	hl, DRIVER_RTC_CTRL
+	ld	(hl), 10011111b
+	ld	l, DRIVER_RTC_ISCR and $FF
+	ld	(hl), $FF
 ; before _boot_InitializeHardware, check battery level
 	call	.battery_level
 	jp	c, .cycle_off
@@ -162,18 +174,6 @@ kpower:
 	ld	hl, kpower_lcd_save
 	ld	bc, 512
 	ldir
-; interrupts please
-	ld	hl, KERNEL_INTERRUPT_IMSC
-	ld	bc, (kinterrupt_power_mask)
-	ld	(hl), bc
-	ld	bc, $FFFFFF
-	ld	l, KERNEL_INTERRUPT_ICR and $FF
-	ld	(hl), bc
-; RTC init
-	ld	hl, DRIVER_RTC_CTRL
-	ld	(hl), 10011111b
-	ld	l, DRIVER_RTC_ISCR and $FF
-	ld	(hl), $FF
 ; get back our 8 bits LCD + interrupts
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT

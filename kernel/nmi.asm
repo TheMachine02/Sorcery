@@ -11,8 +11,8 @@ define	CONTEXT_FRAME_BC		18
 define	CONTEXT_FRAME_AF		21
 define	CONTEXT_FRAME_IR		24
 
-define	nmi_context			$D00200
-define	nmi_stack			$D00300
+define	nmi_context			$D00140
+define	nmi_stack			$D001FA
 
 assert $ < $0220A8
 rb $0220A8-$
