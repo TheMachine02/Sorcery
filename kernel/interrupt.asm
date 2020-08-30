@@ -5,7 +5,6 @@ define	KERNEL_INTERRUPT_ISL			$F0000C		; signal latch
 define	KERNEL_INTERRUPT_ISR			$F00014
 define	KERNEL_INTERRUPT_REVISION		$F00050
 define	KERNEL_INTERRUPT_REVISION_BASE		$010900
-define	KERNEL_INTERRUPT_BOOT_HANDLER		$D177BA
 
 define	KERNEL_INTERRUPT_ON			00000001b
 define	KERNEL_INTERRUPT_TIMER1			00000010b
@@ -39,6 +38,12 @@ define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER2	$D0007E
 define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER3	$D00084
 define	KERNEL_INTERRUPT_ISR_DATA_POWER		$D0008A
 
+define	kinterrupt_irq_reschedule		$D00000
+define	kinterrupt_irq_stack_isr		$D002FA		; constant, head of stack
+define	kinterrupt_irq_ret_ctx			$D002FA		; written, pls note power need to restore it
+define	kinterrupt_irq_stack_ctx		$D002FD		; written in IRQ handler
+define	kinterrupt_irq_boot_ctx			$D177BA		; 1 byte, if nz, execute boot isr handler
+
 kinterrupt:
  
 .init:
@@ -55,7 +60,9 @@ kinterrupt:
 	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	i, hl
 	xor	a, a
-	ld	(KERNEL_INTERRUPT_BOOT_HANDLER), a
+	ld	(kinterrupt_irq_boot_ctx), a
+	ld	hl, .irq_context_restore
+	ld	(kinterrupt_irq_ret_ctx), hl
 	ret
 
 .irq_free:
@@ -201,20 +208,24 @@ kinterrupt:
 .irq_trampoline_generic:
 	ex	de, hl
 ; and now, for some black magic
-	ld	hl, .irq_trampoline_return
-	push	hl
+	ld	(kinterrupt_irq_stack_ctx), sp
+	ld	sp, kinterrupt_irq_stack_isr
 	ld	hl, i
 	ld	l, a
 	ldi
 	ld	l, (hl)
 	jp	(hl)
-.irq_trampoline_return:
+.irq_context_restore:
+; restore context stack
+	pop	hl
+	ld	sp, hl
 ; check if we need to reschedule for fast response
-	ld	iy, (kthread_current)
 	ld	hl, i
 	sla	(hl)
+	inc	hl
+	ld	iy, (hl)
 	jr	c, kscheduler.do_schedule
-.irq_context_return:
+.irq_context_restore_minimal:
 	pop	iy
 	pop	ix
 	exx
@@ -249,9 +260,10 @@ kinterrupt:
 kscheduler:
 .schedule_check_quanta:
 ; load current thread ;
-	ld	iy, (kthread_current)
 	ld	hl, i
 	sla	(hl)
+	inc	hl
+	ld	iy, (hl)
 	jr	c, .do_schedule
 ; do we have idle thread ?
 	lea	hl, iy+KERNEL_THREAD_STATUS
@@ -262,7 +274,7 @@ kscheduler:
 	inc	hl
 	inc	hl
 	dec	(hl)
-	jr	nz, kinterrupt.irq_context_return
+	jr	nz, kinterrupt.irq_context_restore_minimal
 ; lower thread priority and move queue
 .schedule_unpromote:
 	dec	hl

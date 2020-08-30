@@ -102,10 +102,10 @@ define	KERNEL_SLAB_PAGE_POINTER	-3
 .free:
 ; a > ix
 ; we need to grab page ? per page data : inuse, and freeptr + slab owner ...
-	ld	de, (ix+KERNEL_SLAB_ENTRY)
-	ld	(hl), de
-	ld	(ix+KERNEL_SLAB_ENTRY), hl
-	ret
+; 	ld	de, (ix+KERNEL_SLAB_ENTRY)
+; 	ld	(hl), de
+; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
+; 	ret
 	
 	
 	

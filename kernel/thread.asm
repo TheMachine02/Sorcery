@@ -82,7 +82,7 @@ define	kthread_queue_retire			$D00310		; 4 bytes
 define	ktimer_queue				$D00314		; 4 bytes
 
 define	kinterrupt_irq_reschedule		$D00000
-define	kthread_current				$D00091
+define	kthread_current				$D00001
 
 ; 130 and up is free
 ; 64 x 4 bytes, D00200 to D00300
@@ -466,26 +466,20 @@ kthread:
 	jp	task_yield
 
 .irq_wait:
-	di
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_IRQ), a
-	ld	hl, i
-	ld	(hl), $80
-	jr	task_switch_uninterruptible
-	
 .irq_suspend:
 ; suspend the current thread, safe from within IRQ
 ; if a = 0, suspend generic, else suspend waiting the IRQ set by a
 	di
-	ld	iy, (kthread_current)
+	ld	hl, i
+	ld	(hl), $80
+	inc	hl
+	ld	iy, (hl)
 	or	a, a
 	jr	z, .irq_generic_suspend
 	ld	(iy+KERNEL_THREAD_IRQ), a
 	ld	a, TASK_UNINTERRUPTIBLE - 1
 .irq_generic_suspend:
 	inc	a
-	ld	hl, i
-	ld	(hl), $80
 	jr	task_switch_helper
 
 .resume_from_IRQ:

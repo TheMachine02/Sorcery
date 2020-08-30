@@ -3,9 +3,9 @@ define	KERNEL_POWER_CHARGING		$000B
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$F60024
 
-define	kinterrupt_power_mask		$D00001
+define	kinterrupt_power_mask		$D00418
 ; we need to save the whales (and the palette)
-define	kpower_lcd_save			$D00100
+define	kpower_lcd_save			$D00E00
 
 macro	wait
 	ld	b, $FF
@@ -113,10 +113,7 @@ kpower:
 	ld	de, $01
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
-	ld	a, c
-	ld	(kinterrupt_power_mask), a
-	ld	a, b
-	ld	(kinterrupt_power_mask+1), a
+	ld	(kinterrupt_power_mask), bc
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 ; acknowledge
@@ -151,13 +148,23 @@ kpower:
 ; 	ld.sis	bc,$3114
 ; 	inc	a
 ; 	out	(bc), a
-; interrupts
+; before _boot_InitializeHardware, check battery level
+	call	.battery_level
+	jp	c, .cycle_off
+; LCD, SPI, backlight
+; we'll do our own _boot_InitializeHardware to avoid white screen flashing. Thanks
+	call	_boot_InitializeHardware
+; lot of things broken
+; restore crystal to correct kernel wide defined value
+	ld	a, KERNEL_CRYSTAL_DIVISOR
+	out0	(KERNEL_CRYSTAL_CTLR), a
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	hl, kpower_lcd_save
+	ld	bc, 512
+	ldir
+; interrupts please
 	ld	hl, KERNEL_INTERRUPT_IMSC
-	ld	a, (kinterrupt_power_mask)
-	ld	bc, 0
-	ld	c, a
-	ld	a, (kinterrupt_power_mask+1)
-	ld	b, a
+	ld	bc, (kinterrupt_power_mask)
 	ld	(hl), bc
 	ld	bc, $FFFFFF
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
@@ -167,21 +174,6 @@ kpower:
 	ld	(hl), 10011111b
 	ld	l, DRIVER_RTC_ISCR and $FF
 	ld	(hl), $FF
-; before _boot_InitializeHardware, check battery level
-	call	.battery_level
-	jp	c, .cycle_off
-; LCD, SPI, backlight
-; we'll do our own _boot_InitializeHardware to avoid white screen flashing. Thanks
-
-
-	call	_boot_InitializeHardware
-; lot of things broken
-	ld	a, KERNEL_CRYSTAL_DIVISOR
-	out0	(KERNEL_CRYSTAL_CTLR), a
-	ld	de, DRIVER_VIDEO_PALETTE
-	ld	hl, kpower_lcd_save
-	ld	bc, 512
-	ldir
 ; get back our 8 bits LCD + interrupts
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
@@ -190,7 +182,7 @@ kpower:
 ; setup timings
 	ld	hl, video.LCD_TIMINGS
 	ld	de, DRIVER_VIDEO_TIMING0 + 1
-	ld	c, 8
+	ld	bc, 8
 	ldir
 ; not sure what this is for
 ; 	call	$000080

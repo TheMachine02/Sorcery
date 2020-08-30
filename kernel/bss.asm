@@ -14,10 +14,9 @@ define	KERNEL_MM_PAGE_FREE_MASK		128
 KERNEL_INTERRUPT_IPT:
 ; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
 kinterrupt_irq_reschedule	= $
-kinterrupt_irq_context_stack	= $+1
-kinterrupt_power_mask		= $+1
- db	$00, $00	; 0000
- db	$00, $00	; 0000
+kthread_current			= $+1
+ db	$00, $90
+ db	$00, $D0
  db	$04, $50	; 0001
  db	$01, $40	; 0001
  db	$08, $54	; 0010
@@ -78,7 +77,6 @@ KERNEL_INTERRUPT_ISR_DATA_POWER:
 ; we are at $90, 24 bytes up to 
 kernel_idle:
  db	$00			; ID 0 reserved
-kthread_current:
  dl	kernel_idle		; No next
  dl	kernel_idle		; No prev
  db	$00			; No PPID
@@ -98,11 +96,12 @@ KERNEL_STACK:
   db	1	dup	KERNEL_HW_POISON
 ; 512 bytes scrap, used for lot of things
 KERNEL_HEAP:
-kpower_lcd_save:
-nmi_context = $+256
+nmi_context		= $+128
+nmi_stack		= $+256
+kinterrupt_irq_stack_isr	= $+506
+kinterrupt_irq_ret_ctx		= $+506
+kinterrupt_irq_stack_ctx	= $+509
  db	512	dup	KERNEL_HW_POISON
-nmi_stack:
-isr_stack:
 ; 16 bytes (4x4)
 kthread_mqueue_active:
  db	16	dup	$FF
@@ -112,10 +111,10 @@ kthread_queue_retire:
 ; timer queue
 ktimer_queue:
  db	4	dup	$FF
-; kthread_current:
-;  dl	kernel_idle
-free: 
- db	232	dup	KERNEL_HW_POISON
+kinterrupt_power_mask:
+ dl	0
+unallocated_zero: 
+ db	229	dup	KERNEL_HW_POISON
 ; $400
 kthread_pid_map:
  db	$01
@@ -129,5 +128,7 @@ kmm_ptlb_map:
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00
 ; $700
-
+ db	256	dup	$00
  db	2048	dup	$00
+
+kpower_lcd_save:

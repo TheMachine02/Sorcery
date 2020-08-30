@@ -92,6 +92,14 @@ kinit:
 .root_path:
  db "/", 0
  
+.poison_heap: 
+	ld	hl, KERNEL_HEAP
+	ld	de, KERNEL_HEAP + 1
+	ld	bc, 511
+	ld	(hl), KERNEL_HW_POISON
+	ldir
+	ret
+ 
 kname:
 	ld	bc, .string
 	ret	
@@ -113,8 +121,8 @@ THREAD_INIT_TEST:
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
-; 	ld	iy, TEST_THREAD_C ; thread 2
-; 	call	kthread.create
+	ld	iy, TEST_THREAD_C ; thread 2
+	call	kthread.create
 ; ; 
 ; 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
 ; 	call	kthread.create
