@@ -129,8 +129,7 @@ ktimer:
 .reset_errno:
 	ei
 	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
-	scf
-	sbc	hl, hl
+	dec	hl
 	ret
 	
 .itget:
