@@ -165,6 +165,11 @@ if CONFIG_CRYSTAL_DIVISOR = 0
 	add	hl, hl
 end if
 ; add timer
+; adapt to a pseudo 16 bits counter
+	ld	e, l
+	dec	hl
+	inc	h
+	ld	l, e
 	ld	(iy+TIMER_COUNT), hl
 	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_SIGNAL
 	ld	(iy+TIMER_EV_SIGNO), SIGALRM

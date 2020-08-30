@@ -247,12 +247,16 @@ kinterrupt:
 ; this is first thread with a timer
 	ld	iy, (hl)
 .irq_crystal_timers:
-	ld	hl, (iy+TIMER_COUNT)
-	dec	hl
-	ld	(iy+TIMER_COUNT), hl
-	ld	a, h
-	or	a, l
+; 	ld	hl, (iy+TIMER_COUNT)
+; 	dec	hl
+; 	ld	(iy+TIMER_COUNT), hl
+; 	ld	a, h
+; 	or	a, l
+	dec	(iy+TIMER_COUNT)
+	jr	nz, .irq_crystal_next
+	dec	(iy+TIMER_COUNT+1)
 	call	z, ktimer.trigger
+.irq_crystal_next:
 	ld	iy, (iy+TIMER_NEXT)
 	djnz	.irq_crystal_timers
 .irq_crystal_resume:

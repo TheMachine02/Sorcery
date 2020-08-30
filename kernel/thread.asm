@@ -332,6 +332,13 @@ kthread:
 	ret
 .sleep_intr:
 ; we were interrupted by signal
+; hl is out pseudo 16 bits counter
+; unwind it
+	ld	e, l
+	dec	h
+	inc	hl
+	ld	l, e
+;;
 	ex	de, hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
 	ld	hl, ktimer_queue
@@ -513,6 +520,7 @@ task_schedule	= kscheduler.schedule
 ; need to be fully atomic
 task_switch_uninterruptible:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_UNINTERRUPTIBLE
+task_switch_helper:
 	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
@@ -554,6 +562,11 @@ task_switch_sleep_ms:
 	ld	e, d
 	ld	d, 0
 	adc	hl, de
+; adapt to a pseudo 16 bits counter
+	ld	e, l
+	dec	hl
+	inc	h
+	ld	l, e
 ; add timer
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
 	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
@@ -568,7 +581,6 @@ task_switch_sleep_ms:
 task_switch_interruptible:
 ; actual overhead : only jr
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_INTERRUPTIBLE
-task_switch_helper:
 	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
