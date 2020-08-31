@@ -90,11 +90,8 @@ nmi:
 ; a = last instruction part
 ; check if instruction was rst $0 meaning a probable memory poison corruption
 	cp	a, $C7
-	jr	nz, .illegal_utrap
 	ld	hl, .POISON_MEMORY
-	jr	.core_trampoline
-	
-.illegal_utrap:
+	jr	z, .core_trampoline
 	ld	hl, .ILLEGAL_TRAP
 	jr	.core_trampoline
 
