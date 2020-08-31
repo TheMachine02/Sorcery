@@ -51,6 +51,7 @@ include	'kernel/restart.asm'
 include	'kernel/compress/lz4.asm'
 include	'kernel/syscall.asm'
 include	'kernel/exec/leaf.asm'
+include	'kernel/arch/atomic.asm'
 
 kernel_ramfs_src:
 file	'ramfs'
@@ -62,11 +63,8 @@ include	'kernel/nmi.asm'
 leaf_frozen_file:
 file	'demo.leaf'
 
-include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
-
 include	'kernel/crypto/crc.asm'
-
 include	'kernel/fpu/idiv.asm'
 
 include	'kernel/driver/video.asm'

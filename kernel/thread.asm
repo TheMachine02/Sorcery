@@ -338,7 +338,6 @@ kthread:
 	dec	h
 	inc	hl
 	ld	l, e
-;;
 	ex	de, hl
 	lea	iy, iy+KERNEL_THREAD_TIMER
 	ld	hl, ktimer_queue
@@ -438,8 +437,6 @@ kthread:
 	ret
 .resume_do_wake:
 	pop	af
-; ld a, i put $00 in a
-	ld	(iy+KERNEL_THREAD_IRQ), a
 	call	task_switch_running
 	jp	task_schedule
 
@@ -455,7 +452,7 @@ kthread:
 ; switch away from current thread to a new active thread
 ; cause should already have been writed
 	jp	task_yield
-	
+
 .wait:
 ; wait on an IRQ (or generic suspend if a = NULL)
 	di
@@ -473,11 +470,11 @@ kthread:
 	pop	hl
 	pop	iy
 ; switch away from current thread to a new active thread
-; cause should already have been writed
 	jp	task_yield
 
-.irq_wait:
 .irq_suspend:
+	xor	a, a
+.irq_wait:
 ; suspend the current thread, safe from within IRQ
 ; if a = 0, suspend generic, else suspend waiting the IRQ set by a
 	di

@@ -58,7 +58,6 @@ define	KERNEL_SLAB_PAGE_NEXT		1
 define	KERNEL_SLAB_PAGE_PREVIOUS	4
 define	KERNEL_SLAB_PAGE_POINTER	-3
 
-
 .malloc:
 ; ix is slab found *from slab queue*
 ; first load the pointer to the header page (we know page is partial free)
