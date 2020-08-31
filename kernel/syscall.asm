@@ -3,13 +3,10 @@ _get_pid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getpid()
 ; return value is register hl
-	push	af
 	ld	hl, (kthread_current)
-	ld	a, (hl)
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	pop	af
+	ld	l, (hl)
+	ld	h, 1
+	mlt	hl
 	ret
   
 ; syscall_0arg	_get_ppid

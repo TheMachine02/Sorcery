@@ -120,16 +120,14 @@ nmi:
  
 .exception_write:
 ; hl is exception string
-	ld	bc, 0
-	ld	c, (hl)
-	inc	hl
 	push	hl
-	push	bc
 	ld	hl, .CONTEXT_FRAME_SYSE
 	ld	bc, 24
 	call	console.phy_write
-	pop	bc
 	pop	hl
+	ld	bc, 0
+	ld	c, (hl)
+	inc	hl
 	call	console.phy_write
 	ld	hl, (ix+CONTEXT_FRAME_IR)
 	push	hl

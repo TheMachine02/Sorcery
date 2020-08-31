@@ -180,5 +180,5 @@ ring_buffer:
 	ld	hl, (iy+RING_BUFFER_SIZE)
 	dec	hl
 	ld	(iy+RING_BUFFER_SIZE), hl
-	xor	a, $FF
+	cpl
 	ret

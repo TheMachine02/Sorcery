@@ -27,9 +27,8 @@ kpower:
 	
 .backlight:
 ; set backlight level = a, max is $FF, min is $00
-	ld	hl, KERNEL_POWER_PWM
-	ld	(hl), a
-	
+	ld	(KERNEL_POWER_PWM), a
+		
 .irq_handler:
 	ret
 

@@ -39,7 +39,6 @@ kinit:
 	out0	($1D), a
 	out0	($1E), a	
 ; blank stack protector
-	xor	a, a
 	out0	($3A), a
 	out0	($3B), a
 	out0	($3C), a
