@@ -607,11 +607,10 @@ include 'logo.inc'
 	ld	de, (iy+KERNEL_THREAD_TIME)
 	push	hl
 	ld	a, l
+	sbc	hl, hl
 	rra
 	sra	a
 ; display a
-	or	a, a
-	sbc	hl, hl
 	ld	(iy+KERNEL_THREAD_TIME), hl
 	ld	l, a
 	push	hl
