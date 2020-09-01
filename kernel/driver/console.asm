@@ -40,7 +40,7 @@ console:
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
-	ld	bc, 37
+	ld	c, 37
 	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
