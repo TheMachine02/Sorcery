@@ -60,8 +60,25 @@ ktimer:
 ; please note, timer_next is still valid per timer queue
 .notify_default = kthread.irq_resume
 
-; it timer attached to thread, used by sleep() and alarm() ;
+.set_time:
+	ld	a, l
+	dec	hl
+	inc	h
+	ld	l, a
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ret
 
+.get_time:
+	ld	iy, (kthread_current)
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, l
+	inc	hl
+	dec	h
+	ld	l, a
+	ret
+	
+; it timer attached to thread, used by sleep() and alarm() ;
 .itset:
 ; create a timer attached to the current thread
 ; hl as a seig_ev structure (
@@ -130,11 +147,6 @@ ktimer:
 	ei
 	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
 	dec	hl
-	ret
-	
-.itget:
-	ld	iy, (kthread_current)
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
 	ret
 
 .alarm:
