@@ -282,14 +282,15 @@ console:
 	add	hl, de
 	ex	de, hl
 	ld	a, 10
+	ld	c,220
 .color_copy_block:
-	push	hl
-	ld	bc, 220
 	ldir
-	ld	hl, 100
-	add	hl, de
+	ld	c, 100
 	ex	de, hl
-	pop	hl
+	add	hl, bc
+	ex	de, hl
+	ld	c,220
+	sbc	hl, bc
 	dec	a
 	jr	nz, .color_copy_block
 	ld	iy, console_dev
