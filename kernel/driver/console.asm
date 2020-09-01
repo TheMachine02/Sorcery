@@ -236,7 +236,6 @@ console:
 	xor	a, a
 	ld	bc, 0
 	cpir
-	or	a, a
 	sbc	hl, hl
 	sbc	hl, bc
 	push	hl
