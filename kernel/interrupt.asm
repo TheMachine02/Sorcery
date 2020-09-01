@@ -27,8 +27,8 @@ define	KERNEL_IRQ_RTC				64
 define	KERNEL_IRQ_USB				128
 
 define	KERNEL_INTERRUPT_IPT			$D00000
-define	KERNEL_INTERRUPT_IPT_SIZE		4
 define	KERNEL_INTERRUPT_IPT_JP			$D00040
+define	KERNEL_INTERRUPT_IPT_SIZE		$60
 define	KERNEL_INTERRUPT_ISR_DATA_VIDEO		$D00060
 define	KERNEL_INTERRUPT_ISR_DATA_USB		$D00066
 define	KERNEL_INTERRUPT_ISR_DATA_RTC		$D0006C
@@ -40,7 +40,7 @@ define	KERNEL_INTERRUPT_ISR_DATA_POWER		$D0008A
 
 define	kinterrupt_irq_reschedule		$D00000
 define	kinterrupt_irq_stack_isr		$D002FA		; constant, head of stack
-define	kinterrupt_irq_ret_ctx			$D002FA		; written, pls note power need to restore it
+define	kinterrupt_irq_ret_ctx			$D002FA		; written in the init
 define	kinterrupt_irq_stack_ctx		$D002FD		; written in IRQ handler
 define	kinterrupt_irq_boot_ctx			$D177BA		; 1 byte, if nz, execute boot isr handler
 
@@ -147,7 +147,7 @@ kinterrupt:
 .irq_extract_line:
 	push	af
 	ex	de, hl
-	ld	hl, $34000f	;= (KERNEL_INTERRUPT_IPT_JP / 4) -1
+	ld	hl, (KERNEL_INTERRUPT_IPT_JP shr 2) - 1
 .irq_extract_bit:
 	inc	l
 	rra
@@ -240,11 +240,6 @@ kinterrupt:
 ; this is first thread with a timer
 	ld	iy, (hl)
 .irq_crystal_timers:
-; 	ld	hl, (iy+TIMER_COUNT)
-; 	dec	hl
-; 	ld	(iy+TIMER_COUNT), hl
-; 	ld	a, h
-; 	or	a, l
 	dec	(iy+TIMER_COUNT)
 	jr	nz, .irq_crystal_next
 	dec	(iy+TIMER_COUNT+1)
@@ -354,8 +349,9 @@ end if
 	inc	hl
 if CONFIG_USE_DYNAMIC_CLOCK
 	ld	a, $03
-	out0	(KERNEL_POWER_CPU_CLOCK),a
+; restore flash wait state BEFORE restoring CPU clock
 	ld	(KERNEL_FLASH_CTRL),a
+	out0	(KERNEL_POWER_CPU_CLOCK),a
 end if
 	ld	de, (hl)
 .dispatch_thread:
