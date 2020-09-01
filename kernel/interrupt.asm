@@ -145,20 +145,16 @@ kinterrupt:
 	ret
 
 .irq_extract_line:
-	push	bc
 	push	af
 	ex	de, hl
-	ld	hl, $0000FF
+	ld	hl, $34000f	;= (KERNEL_INTERRUPT_IPT_JP / 4) -1
 .irq_extract_bit:
 	inc	l
 	rra
 	jr	nc, .irq_extract_bit
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_INTERRUPT_IPT_JP
-	add	hl, bc
 	pop	af
-	pop	bc
 	inc	hl
 ; hl = line, de = old hl, bc safe, af safe
 	ret
