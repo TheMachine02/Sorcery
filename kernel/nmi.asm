@@ -19,8 +19,7 @@ rb $0220A8-$
 
 nmi:
 .service:
-	ld	(nmi_context+CONTEXT_FRAME_HL), hl
-	pop	hl
+	ex	(sp), hl
 	ld	(nmi_context+CONTEXT_FRAME_PC), hl
 	ld	(nmi_context+CONTEXT_FRAME_SP), sp
 	ld	sp, nmi_context+CONTEXT_FRAME_HL
@@ -95,22 +94,19 @@ nmi:
 
 .longjump:
 ; restore context
-	ld	hl, (ix+CONTEXT_FRAME_IR)
-	ld	i, hl
-	ld	a, (ix+CONTEXT_FRAME_IR+2)
+	ld	sp, nmi_context+CONTEXT_FRAME_IX
+	pop	ix
+	pop	iy
+	pop	de
+	pop	bc
+	ld	a, (nmi_context+CONTEXT_FRAME_IR+2)
 	ld	MB, a
-	ld	hl, (ix+CONTEXT_FRAME_AF)
-	push	hl
 	pop	af
-	ld	hl, (ix+CONTEXT_FRAME_SP)
-	ld	sp, hl
-	ld	hl, (ix+CONTEXT_FRAME_PC)
-	push	hl
-	ld	hl, (ix+CONTEXT_FRAME_HL)
-	ld	bc, (ix+CONTEXT_FRAME_BC)
-	ld	de, (ix+CONTEXT_FRAME_DE)
-	ld	iy, (ix+CONTEXT_FRAME_IY)
-	ld	ix, (ix+CONTEXT_FRAME_IX)
+	pop	hl
+	ld	i, hl
+	pop	hl
+	ld	sp, (nmi_context+CONTEXT_FRAME_SP)
+	ex	(sp), hl
 	retn
  
 .exception_write:
