@@ -70,7 +70,6 @@ console:
 	jr	nz, .process_key
 	djnz	.wait_keyboard
 	ld	a, $FD
-	ld	hl, console_key
 .process_key:
 	ld	(hl), a
 	call	video.vsync
