@@ -80,17 +80,14 @@ kpower:
 	out0	($06), a
 ; status ?
 	in0	a, ($0F)
-	bit	6, a
-	jr	nz, .cycle_on_label_0
-	bit	7, a
-	jr	z, .cycle_on_label_0
-	ld	b, $FD
-	ld	a, $05
-	jr	.cycle_on_label_1
-.cycle_on_label_0:
+	add	a, a
+	ld	a, $00
 	ld	b, $FC
-	xor	a, a
-.cycle_on_label_1:
+	jp	m, .cycle_on_label_0
+	jr	nc, .cycle_on_label_0
+	inc	b
+	ld	a, $05
+.cycle_on_label_0:
 	out0	($0C), a
 	ld	a, b
 	out0	($0A), a
