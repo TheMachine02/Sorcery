@@ -57,7 +57,6 @@ kinit:
 	ld	sp, KERNEL_STACK
 	ld	(kernel_stack_pointer), sp
 	ld.sis sp, $0000
-	ld	a, $D0
 	ld	MB, a
 ; memory init ;
 	call	kmm.init

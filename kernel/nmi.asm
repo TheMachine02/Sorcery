@@ -20,22 +20,20 @@ rb $0220A8-$
 nmi:
 .service:
 	ld	(nmi_context+CONTEXT_FRAME_IX), ix
-	ld	ix, nmi_context
-	ld	(ix+CONTEXT_FRAME_IY), iy
-	ld	(ix+CONTEXT_FRAME_HL), hl
-	ld	(ix+CONTEXT_FRAME_DE), de
-	ld	(ix+CONTEXT_FRAME_BC), bc
-	pop	hl
-	ld	(ix+CONTEXT_FRAME_PC), hl
+	pop	ix
+	ld	(nmi_context+CONTEXT_FRAME_PC), ix
 	ld	(nmi_context+CONTEXT_FRAME_SP), sp
+	ld	sp, nmi_context+CONTEXT_FRAME_AF+3
+	push	af
+	push	bc
+	push	de
+	push	hl
+	push	iy
 ; restore stack pointer to be sure we *have* a valid stack pointer (within kernel heap, whatever)
 	ld	sp, nmi_stack
-	push	af
-	pop	hl
-	ld	(ix+CONTEXT_FRAME_AF), hl
 ; loading i use MBASE
 	ld	hl, i
-	ld	(ix+CONTEXT_FRAME_IR), hl
+	ld	(nmi_context+CONTEXT_FRAME_IR), hl
 ; perform NMI now that context has been saved
 ; restore CPU power state
 	ld	a, $03
@@ -90,11 +88,8 @@ nmi:
 ; a = last instruction part
 ; check if instruction was rst $0 meaning a probable memory poison corruption
 	cp	a, $C7
-	jr	nz, .illegal_utrap
 	ld	hl, .POISON_MEMORY
-	jr	.core_trampoline
-	
-.illegal_utrap:
+	jr	z, .core_trampoline
 	ld	hl, .ILLEGAL_TRAP
 	jr	.core_trampoline
 
@@ -192,8 +187,8 @@ nmi:
 	ld	l, DRIVER_KEYBOARD_IMSC and $FF
 	res	2, (hl)
 ; idle mode now
-	ld	hl, DRIVER_KEYBOARD_CTRL
-	ld	(hl), 0
+	ld	l, h
+	ld	(hl), l
 ; also restore console state, and return
 	ret
 
