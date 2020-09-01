@@ -1,15 +1,14 @@
-define	CONTEXT_FRAME			0
-define	CONTEXT_FRAME_RET		0	; PC register ;
-define	CONTEXT_FRAME_PC		0
-define	CONTEXT_FRAME_SP		3	; SP register ;
-define	CONTEXT_FRAME_STACKFRAME	6	; IX register ;
-define	CONTEXT_FRAME_IX		6
-define	CONTEXT_FRAME_IY		9	; extended register frame ;
-define	CONTEXT_FRAME_DE		12
-define	CONTEXT_FRAME_BC		15
-define	CONTEXT_FRAME_AF		18
-define	CONTEXT_FRAME_IR		21
-define	CONTEXT_FRAME_HL		24
+define	CONTEXT_FRAME_SP		0	; SP register ;
+define	CONTEXT_FRAME_STACKFRAME	3	; IX register ;
+define	CONTEXT_FRAME_IX		3
+define	CONTEXT_FRAME_IY		6	; extended register frame ;
+define	CONTEXT_FRAME_DE		9
+define	CONTEXT_FRAME_BC		12
+define	CONTEXT_FRAME_AF		15
+define	CONTEXT_FRAME_IR		18
+define	CONTEXT_FRAME			21
+define	CONTEXT_FRAME_RET		21	; PC register ;
+define	CONTEXT_FRAME_PC		21
 
 define	nmi_context			$D00140
 define	nmi_stack			$D001FA
