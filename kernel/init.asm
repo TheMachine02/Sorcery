@@ -54,10 +54,9 @@ kinit:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
-	ld	hl, KERNEL_STACK
-	ld	(kernel_stack_pointer), hl
-	ld	l, h
-	ld	sp, hl
+	ld	sp, KERNEL_STACK
+	ld	(kernel_stack_pointer), sp
+	ld.sis sp, $0000
 	ld	MB, a
 ; memory init ;
 	call	kmm.init
