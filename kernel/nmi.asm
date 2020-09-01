@@ -21,7 +21,7 @@ nmi:
 	ex	(sp), hl
 	ld	(nmi_context+CONTEXT_FRAME_PC), hl
 	ld	(nmi_context+CONTEXT_FRAME_SP), sp
-	ld	sp, nmi_context+CONTEXT_FRAME_HL
+	ld	sp, nmi_context+CONTEXT_FRAME
 ; loading i use MBASE
 	ld	hl, i
 	push	hl
