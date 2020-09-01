@@ -5,11 +5,11 @@ define	CONTEXT_FRAME_SP		3	; SP register ;
 define	CONTEXT_FRAME_STACKFRAME	6	; IX register ;
 define	CONTEXT_FRAME_IX		6
 define	CONTEXT_FRAME_IY		9	; extended register frame ;
-define	CONTEXT_FRAME_HL		12
-define	CONTEXT_FRAME_DE		15
-define	CONTEXT_FRAME_BC		18
-define	CONTEXT_FRAME_AF		21
-define	CONTEXT_FRAME_IR		24
+define	CONTEXT_FRAME_DE		12
+define	CONTEXT_FRAME_BC		15
+define	CONTEXT_FRAME_AF		18
+define	CONTEXT_FRAME_IR		21
+define	CONTEXT_FRAME_HL		24
 
 define	nmi_context			$D00140
 define	nmi_stack			$D001FA
@@ -19,21 +19,21 @@ rb $0220A8-$
 
 nmi:
 .service:
-	ld	(nmi_context+CONTEXT_FRAME_IX), ix
-	pop	ix
-	ld	(nmi_context+CONTEXT_FRAME_PC), ix
+	ld	(nmi_context+CONTEXT_FRAME_HL), hl
+	pop	hl
+	ld	(nmi_context+CONTEXT_FRAME_PC), hl
 	ld	(nmi_context+CONTEXT_FRAME_SP), sp
-	ld	sp, nmi_context+CONTEXT_FRAME_AF+3
+	ld	sp, nmi_context+CONTEXT_FRAME_HL
+; loading i use MBASE
+	ld	hl, i
+	push	hl
 	push	af
 	push	bc
 	push	de
-	push	hl
 	push	iy
-; restore stack pointer to be sure we *have* a valid stack pointer (within kernel heap, whatever)
+	push	ix
+; restore stack pointer (to be sure we *have* a valid stack pointer (within kernel heap, whatever)
 	ld	sp, nmi_stack
-; loading i use MBASE
-	ld	hl, i
-	ld	(nmi_context+CONTEXT_FRAME_IR), hl
 ; perform NMI now that context has been saved
 ; restore CPU power state
 	ld	a, $03
@@ -114,6 +114,7 @@ nmi:
 	retn
  
 .exception_write:
+	ld	ix, nmi_context
 ; hl is exception string
 	push	hl
 	ld	hl, .CONTEXT_FRAME_SYSE
@@ -187,8 +188,7 @@ nmi:
 	ld	l, DRIVER_KEYBOARD_IMSC and $FF
 	res	2, (hl)
 ; idle mode now
-	ld	l, h
-	ld	(hl), l
+	ld	(hl), h
 ; also restore console state, and return
 	ret
 
