@@ -187,8 +187,8 @@ nmi:
 	ld	l, DRIVER_KEYBOARD_IMSC and $FF
 	res	2, (hl)
 ; idle mode now
-	ld	hl, DRIVER_KEYBOARD_CTRL
-	ld	(hl), 0
+	ld	l, h
+	ld	(hl), l
 ; also restore console state, and return
 	ret
 
