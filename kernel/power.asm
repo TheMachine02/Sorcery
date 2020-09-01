@@ -178,7 +178,7 @@ kpower:
 ; setup timings
 	ld	hl, video.LCD_TIMINGS
 	ld	de, DRIVER_VIDEO_TIMING0 + 1
-	ld	bc, 8
+	ld	c, 8
 	ldir
 ; not sure what this is for
 ; 	call	$000080
