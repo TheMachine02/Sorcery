@@ -635,8 +635,10 @@ include 'logo.inc'
 	call	.phy_write
 	pop	hl
 .top_skip:
-	ld	de, 4
-	add	hl, de
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
 	pop	bc
 	djnz	.top_data_loop
 	call	rtc.wait_second
