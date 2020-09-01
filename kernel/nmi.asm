@@ -9,6 +9,7 @@ define	CONTEXT_FRAME_IR		18
 define	CONTEXT_FRAME			21
 define	CONTEXT_FRAME_RET		21	; PC register ;
 define	CONTEXT_FRAME_PC		21
+define	CONTEXT_FRAME_HL		24
 
 define	nmi_context			$D00140
 define	nmi_stack			$D001FA
@@ -18,6 +19,7 @@ rb $0220A8-$
 
 nmi:
 .service:
+	ld	(nmi_context+CONTEXT_FRAME_HL), hl
 	ex	(sp), hl
 	ld	(nmi_context+CONTEXT_FRAME_PC), hl
 	ld	(nmi_context+CONTEXT_FRAME_SP), sp
