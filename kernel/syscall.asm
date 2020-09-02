@@ -1,3 +1,15 @@
+_syscall:
+; jumper to syscall ?
+
+; end syscall here
+	ret	nc
+	push	iy
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), hl		; error path
+	pop	iy
+	sbc	hl, hl
+	ret
+
 ; syscall_0arg	_get_pid
 _get_pid:
 ; REGSAFE and ERRNO compliant
@@ -20,4 +32,12 @@ _get_ppid:
 	sbc	hl, hl
 	ld	l, (iy+KERNEL_THREAD_PPID)
 	pop	iy
+	ret
+
+_uadmin:
+; cmd, fn, mdep
+	ret
+
+; pri
+_nice:
 	ret

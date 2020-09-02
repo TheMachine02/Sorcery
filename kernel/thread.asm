@@ -69,8 +69,8 @@ define	TASK_IDLE				255	; special for the scheduler
 
 define	SCHED_PRIO_MAX				0
 define	SCHED_PRIO_MIN				12
-define	NICE_PRIO_MIN				12
-define	NICE_PRIO_MAX				-12
+define	NICE_PRIO_MIN				19
+define	NICE_PRIO_MAX				-20
 
 ; D00100 to D00120 is scratch
 
@@ -300,7 +300,7 @@ kthread:
 	cp	a, (hl)
 	jp	z, nmi
 ; schedule the idle thread
-	ld	de, KERNEL_THREAD_IDLE
+	ld	de, kernel_idle
 	jp	kscheduler.context_restore
 .exit_dispatch_thread:
 	inc	hl
@@ -388,8 +388,8 @@ kthread:
 	djnz	.reserve_parse_map
 .reserve_exit:
 	srl	l
-	srl	l
 	ld	a, l
+	rra
 ; carry is reset
 ; if = zero, then we have an error
 	ret	nz

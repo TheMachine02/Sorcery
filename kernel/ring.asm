@@ -94,8 +94,6 @@ ring_buffer:
 .update:
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	(hl), a
-	ld	hl, (iy+RING_BUFFER_HEAD)
-	ld	(hl), a
 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
 	inc	hl
 	xor	a, a
@@ -180,5 +178,6 @@ ring_buffer:
 	ld	hl, (iy+RING_BUFFER_SIZE)
 	dec	hl
 	ld	(iy+RING_BUFFER_SIZE), hl
-	cpl
+; cpl could work, but flags aren't correctly set
+	xor	a, $FF
 	ret

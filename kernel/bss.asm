@@ -5,7 +5,6 @@ define	BOOT_DIRTY_MEMORY1			$D000AC		; 1 byte ] on interrupt
 define	BOOT_DIRTY_MEMORY2			$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3			$D00108		; 9 bytes
 
-define	TASK_IDLE				255	; special for the scheduler
 define	KERNEL_HW_POISON			$C7
 define	KERNEL_MM_RESERVED_MASK			00101000b
 define	KERNEL_MM_PAGE_FREE_MASK		128
@@ -15,8 +14,8 @@ KERNEL_INTERRUPT_IPT:
 ; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
 kinterrupt_irq_reschedule	= $
 kthread_current			= $+1
- db	$00, $90
- db	$00, $D0
+ db	$00, $90	; 0000
+ db	$00, $D0	; 0000
  db	$04, $50	; 0001
  db	$01, $40	; 0001
  db	$08, $54	; 0010
@@ -81,7 +80,7 @@ kernel_idle:
  dl	kernel_idle		; No prev
  db	$00			; No PPID
  db	$FF			; IRQ all
- db	TASK_IDLE		; Status
+ db	$FF			; Status
  db	12			; Special anyway
  db	$FF			; quantum
  dl	$D000A8			; Stack limit

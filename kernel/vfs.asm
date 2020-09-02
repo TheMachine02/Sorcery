@@ -83,7 +83,7 @@ kvfs:
 ; two indirection then the adress
 	ld	bc, KERNEL_VSF_INODE_INDIRECT_MAX
 	ex	de, hl
-	call	div
+;	call	div
 ; de = mod, hl = result bc = untouched
 	push	de
 	add	hl, hl

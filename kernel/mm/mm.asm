@@ -42,38 +42,38 @@ define	kmm_ptlb_map			$D00500
 
 kmm:
 
-.init:
-; setup memory protection
-	di
-if CONFIG_USE_BOOT_PATCH=1
-	xor	a, a
-	out0	($20), a
-	out0	($21), a
-	dec	a
-	out0	($23), a
-	ld	a, $0F
-	out0	($24), a
-	ld	a, $D0
-	out0	($22), a
-	out0	($25), a
-else
-	ld	a, $00
-	out0 ($20), a
-	dec	a
-	out0 ($23), a
-	ld	a, $88
-	out0 ($21), a
-	out0 ($24), a
-	ld	a, $D1
-	out0 ($22), a
-	out0 ($25), a
-end if
-	ld	hl, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE
-	ld	de, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE + 1
-	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE - 1
-	ld	(hl), KERNEL_HW_POISON
-	ldir
-	ret
+; .init:
+; ; setup memory protection
+; 	di
+; if CONFIG_USE_BOOT_PATCH=1
+; 	xor	a, a
+; 	out0	($20), a
+; 	out0	($21), a
+; 	dec	a
+; 	out0	($23), a
+; 	ld	a, $0F
+; 	out0	($24), a
+; 	ld	a, $D0
+; 	out0	($22), a
+; 	out0	($25), a
+; else
+; 	ld	a, $00
+; 	out0 ($20), a
+; 	dec	a
+; 	out0 ($23), a
+; 	ld	a, $88
+; 	out0 ($21), a
+; 	out0 ($24), a
+; 	ld	a, $D1
+; 	out0 ($22), a
+; 	out0 ($25), a
+; end if
+; 	ld	hl, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE
+; 	ld	de, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE + 1
+; 	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE - 1
+; 	ld	(hl), KERNEL_HW_POISON
+; 	ldir
+; 	ret
 
  .page_perm_rw:
 ; b = page

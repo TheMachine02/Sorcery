@@ -14,8 +14,6 @@ define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
 
-define	KERNEL_THREAD_IDLE		kernel_idle
-
 define	kernel_idle			$D00090
 define	kernel_stack_pointer		$D0009F
 
@@ -24,8 +22,8 @@ kinit:
 ; silent :: no LCD flashing / console updating, open console only if error
 .reboot:
 ; boot 5.0.1 stupidity power ++
-	di	
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
+	di	
 ; shift to soft kinit way to reboot ++
 ; setup temporary stack for the kernel
 	ld	sp, $D3FFFF
@@ -38,10 +36,6 @@ kinit:
 	xor	a, a
 	out0	($1D), a
 	out0	($1E), a	
-; blank stack protector
-	out0	($3A), a
-	out0	($3B), a
-	out0	($3C), a
 ; general system init
 ; load the ramfs image
 	ld	hl, kernel_ramfs_src
@@ -58,8 +52,22 @@ kinit:
 	ld	(kernel_stack_pointer), sp
 	ld.sis sp, $0000
 	ld	MB, a
-; memory init ;
-	call	kmm.init
+; memory init, memory protection
+	xor	a, a
+	out0	($20), a
+	out0	($21), a
+	dec	a
+	out0	($23), a
+	ld	a, $0F
+	out0	($24), a
+	ld	a, $D0
+	out0	($22), a
+	out0	($25), a
+	ld	hl, $D01000
+	ld	de, $D01001
+	ld	bc, KERNEL_MM_RAM_SIZE - 4097
+	ld	(hl), KERNEL_HW_POISON
+	ldir
 ; power, timer and interrupt ;
 	call	kinterrupt.init
 	call	kwatchdog.init
@@ -86,9 +94,6 @@ kinit:
 ; most brutal is directly set to 6Mhz, we'll need to ramp up
 	slp
 	jr	.arch_sleep
-
-.root_path:
- db "/", 0
  
 .poison_heap: 
 	ld	hl, KERNEL_HEAP

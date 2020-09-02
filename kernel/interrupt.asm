@@ -159,26 +159,25 @@ kinterrupt:
 ; hl = line, de = old hl, bc safe, af safe
 	ret
 
-; ; C helper function (broken, btw)
 ; .irq_save:
+; ; we also need to restore i register
+; 	push	hl
 ; 	ld	hl, i
 ; 	di
-; ; push af & hl to the stack
-; 	pop	de
+; 	pop	hl
 ; 	push	af
-; 	push	hl
-; 	ex	de, hl
-; 	jp	(hl)
+; 	pop	hl
+; 	ret	
 ; 	
 ; .irq_restore:
-; 	pop	de
-; 	pop	hl
+; 	push	hl
+; 	ld	hl, KERNEL_INTERRUPT_IPT
 ; 	ld	i, hl
-; 	pop	af
-; 	ex	de, hl
-; 	jp	po, $+5
+; 	pop	hl
+; 	bit	2, l
+; 	ret	z	; po
 ; 	ei
-; 	jp	(hl)
+; 	ret
 
 .irq_handler:
 	pop	hl
@@ -272,16 +271,17 @@ kscheduler:
 	dec	hl
 	ld	de, kthread_mqueue_active
 	ld	e, (hl)
-	ld	a, e
+	ld	a, (iy+KERNEL_THREAD_NICE)
+	sra	a
 	add	a, QUEUE_SIZE
-	add	a, (iy+KERNEL_THREAD_NICE)
+	add	a, e
 	cp	a, SCHED_PRIO_MIN
 	jr	c, .schedule_move_queue
 	rla
 	sbc	a, a
 	cpl
-	and	a, SCHED_PRIO_MIN
 .schedule_move_queue:
+	and	a, SCHED_PRIO_MIN
 	ld	(hl), a
 	inc	hl
 	ex	de, hl
@@ -337,7 +337,7 @@ kscheduler:
 	jp	z, nmi
 .dispatch_idle:
 ; schedule the idle thread
-	ld	de, KERNEL_THREAD_IDLE
+	ld	de, kernel_idle
 if CONFIG_USE_DYNAMIC_CLOCK
 	xor	a,a
 	out0	(KERNEL_POWER_CPU_CLOCK),a
@@ -421,16 +421,17 @@ end if
 	jp	z, .do_schedule
 	inc	hl
 ; hl = priority
-	ld	a, (hl)
+	ld	a, (iy+KERNEL_THREAD_NICE)
+	sra	a
 	sub	a, QUEUE_SIZE
-	add	a, (iy+KERNEL_THREAD_NICE)
+	add	a, (hl)
 	cp	a, SCHED_PRIO_MIN
 	jr	c, .schedule_clamp_prio
 	rla
 	sbc	a, a
 	cpl
-	and	a, SCHED_PRIO_MIN
 .schedule_clamp_prio:
+	and	a, SCHED_PRIO_MIN
 	ld	(hl), a
 	inc	hl
 	jp	.schedule_give_quanta

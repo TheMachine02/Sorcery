@@ -6,3 +6,5 @@ memory management
 atomic rw lock
 slab management
 VFS
+
+keyboard stdin

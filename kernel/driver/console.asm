@@ -540,6 +540,9 @@ include 'logo.inc'
  db " PID  %cpu" ,10, $1B, "[39m", $1B, "[49m"
 
 .builtin_top:
+	jp	.clean_command
+
+if 0
 .top_init:
 	call	rtc.irq_lock
 	ld	b, 18
@@ -644,3 +647,4 @@ include 'logo.inc'
 	
 .TOP_LINE_STR:
  db " %3d  %3d", 10, 0
+end if

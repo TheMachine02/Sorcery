@@ -50,7 +50,7 @@ nmi:
 	or	a, a
 	jr	nz, .watchdog_violation
 	in0	a, ($3D)
-	and	$03
+	and	a, $03
 	out0	($3E), a
 	rra
 	jr	c, .stack_overflow
@@ -155,7 +155,7 @@ nmi:
 	ld	bc, 183
 	call	console.phy_write
 ; unwind stack frame
-	ld	ix, (nmi_context+CONTEXT_FRAME_SP)
+	ld	ix, (ix+CONTEXT_FRAME_SP)
 	ld	b, 8
 .exception_unwind:
 	push	bc
@@ -223,6 +223,7 @@ nmi:
 
 _boot_sprintf_safe:
 ; the nice _boot_sprintf routine is bugged, and scrap need to be cleared to zero
-	ld	hl, NULL
+	or	a, a
+	sbc	hl, hl
 	ld	(KERNEL_HEAP+32), hl
 	jp	_boot_sprintf
