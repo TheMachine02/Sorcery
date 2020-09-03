@@ -33,6 +33,7 @@ console:
 	call	.phy_init
 	
 .init_splash:
+	ld	iy, console_stdin
 	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ret	nz
 	or	a, a

@@ -81,7 +81,9 @@ kvfs:
 	lea	hl, ix+phy_sync
 	call	.inode_call
 ; and put the inode, decrement reference
-	jp	.inode_put
+	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
+	ret	nz
+	jp	.inode_destroy
 
 .sync:
 	ret

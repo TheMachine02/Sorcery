@@ -23,8 +23,8 @@ define	CONSOLE_CURSOR_MAX_COL	50
 define	CONSOLE_CURSOR_MAX_ROW	20
 
 .phy_init:
-	ld	hl, .phy_mem_ops
-	ld	bc, .CONSOLE_DEV
+	ld	bc, .phy_mem_ops
+	ld	hl, .CONSOLE_DEV
 ; inode capabilities flags
 ; single dev block, (so write / read / seek only), no seek capabilities exposed
 	ld	a, KERNEL_VFS_BLOCK_DEVICE

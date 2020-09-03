@@ -1,6 +1,6 @@
 .phy_init:
-	ld	hl, .phy_mem_ops
-	ld	bc, .FLASH_DEV
+	ld	bc, .phy_mem_ops
+	ld	hl, .FLASH_DEV
 ; inode capabilities flags
 ; single dev block, (so write / read / seek only), seek capabilities exposed
 	ld	a, KERNEL_VFS_BLOCK_DEVICE or KERNEL_VFS_SEEK

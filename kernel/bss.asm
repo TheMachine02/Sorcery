@@ -122,10 +122,10 @@ kvfs_root:
  dl	$000000	; size, it is a directory, so count of data holded
  dl	$000000	; parent
 ; atomic lock
- db	$00, $00
- db	$00, $00
- db	$00, $00
- db	$00, $00
+ db	$00, $FF
+ db	$FF, $FF
+ db	$FF, $FF
+ db	$FF, $FF
 ; data, 15 * 3, there is nothing in this directory
  dl	$000000
  dl	$000000

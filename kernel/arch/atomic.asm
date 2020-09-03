@@ -6,8 +6,15 @@ define	KERNEL_MUTEX_OWNER		1
 define	KERNEL_MUTEX_LIST		2
 define	KERNEL_MUTEX_LIST_COUNT		2
 define	KERNEL_MUTEX_LIST_HEAD		3
-
 define	KERNEL_MUTEX_MAGIC		$FE
+
+define	KERNEL_ATOMIC_RW_SIZE		5
+define	KERNEL_ATOMIC_RW_LOCK		0
+define	KERNEL_ATOMIC_RW_WAIT_COUNT	1
+define	KERNEL_ATOMIC_RW_WAIT_HEAD	2
+
+define	KERNEL_ATOMIC_RW_MAGIC_READ	$00
+define	KERNEL_ATOMIC_RW_MAGIC_WRITE	$FF
 
 macro	tsti
 	ld	a, i
@@ -21,15 +28,9 @@ macro	rsti
 	ei
 end	macro
 
+; TODO : crazily optimize all this segment please +++
+
 atomic_rw:
-
-define	KERNEL_ATOMIC_RW_SIZE		5
-define	KERNEL_ATOMIC_RW_LOCK		0
-define	KERNEL_ATOMIC_RW_WAIT_COUNT	1
-define	KERNEL_ATOMIC_RW_WAIT_HEAD	2
-
-define	KERNEL_ATOMIC_RW_MAGIC_READ	$00
-define	KERNEL_ATOMIC_RW_MAGIC_WRITE	$FF
 
 .lock_read:
 	tsti

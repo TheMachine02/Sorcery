@@ -82,8 +82,6 @@ kinit:
 	call	keyboard.init
 	call	rtc.init
 ; device & driver init ;
-	call	console.init
-	call	flash.init
 ;	call	null.init
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
@@ -124,9 +122,10 @@ node:
  db "/dev/",0
 
 THREAD_INIT_TEST:
-
 ; 	ld	hl, global_mutex
 ; 	call	atomic_rw.init
+	call	console.init
+	call	flash.init	
 	
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
@@ -211,18 +210,18 @@ TEST_THREAD_C:
 	ld hl, (ix+6)
 ;	ld	iy, leaf_frozen_file
 ;	call	leaf.exec
-	ld	hl, global_lock
-	call	atomic_rw.init
-	
-	ld	iy, TEST_THREAD_C_DEATH ; thread 3
-	call	kthread.create	
-	
+; 	ld	hl, global_lock
+; 	call	atomic_rw.init
+; 	
+; 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
+; 	call	kthread.create	
+; 	
 .spin:
-	ld	hl, global_lock
-	call	atomic_rw.lock_read
-
-	ld	hl, 30	; 30 ms is nice
-	call	kthread.sleep
+; 	ld	hl, global_lock
+; 	call	atomic_rw.lock_read
+; 
+; 	ld	hl, 30	; 30 ms is nice
+; 	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF
 ; need to catch rst 00h for that !
@@ -245,8 +244,8 @@ TEST_THREAD_C:
 ; 	ld	de, KERNEL_MM_NULL
 ; 	ld	bc, 65536
 ; 	ldir
-	ld	hl, global_lock
-	call	atomic_rw.unlock_read
+; 	ld	hl, global_lock
+; 	call	atomic_rw.unlock_read
 	jr	.spin
 	pop ix
 	ret
