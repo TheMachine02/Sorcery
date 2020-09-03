@@ -23,36 +23,126 @@ end	macro
 
 atomic_rw:
 
-define	KERNEL_ATOMIC_RW_SIZE		8
+define	KERNEL_ATOMIC_RW_SIZE		5
 define	KERNEL_ATOMIC_RW_LOCK		0
-define	KERNEL_ATOMIC_RW_COUNT		1
-define	KERNEL_ATOMIC_RW_WAIT_TAIL	2
-define	KERNEL_ATOMIC_RW_WAIT_HEAD	5
+define	KERNEL_ATOMIC_RW_WAIT_COUNT	1
+define	KERNEL_ATOMIC_RW_WAIT_HEAD	2
+
+define	KERNEL_ATOMIC_RW_MAGIC_READ	$00
+define	KERNEL_ATOMIC_RW_MAGIC_WRITE	$FF
 
 .lock_read:
+	tsti
+.lock_read_test:
+	inc	(hl)
+	jr	z, .rlock_wait
+	rsti
 	ret
 	
 .lock_write:
+	tsti
+.lock_write_test:
+	ld	a, (hl)
+	or	a, a
+	jr	nz, .wlock_wait
+	ld	(hl), $FF
+	rsti
 	ret
 
-
 .unlock_read:
+	tsti
+	dec	(hl)
+	jr	z, .unlock_notify
+	rsti
 	ret
 	
 .unlock_write:
+	tsti
+	ld	(hl), $00
+.unlock_notify:
+	inc	hl
+	ld	a, (hl)
+	inc	a
+	jr	nz, .unlock_do_wake
+	dec	hl
+	rsti
 	ret
+
+.rlock_wait:
+; make us wait on the lock
+	dec	(hl)
+	push	iy
+	ld	iy, (kthread_current)
+; add ourselves to lock structure
+	ld	(iy+KERNEL_THREAD_LIST_DATA), KERNEL_ATOMIC_RW_MAGIC_READ
+	inc	hl
+	lea	iy, iy+KERNEL_THREAD_LIST_DATA
+	call	kqueue.insert_tail
+	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	dec	hl
+	push	hl
+	call	task_switch_interruptible
+	pop	hl
+	call	task_yield
+	pop	iy
+	di
+	jr	.lock_read_test
+	
+.wlock_wait:
+	push	iy
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_LIST_DATA), KERNEL_ATOMIC_RW_MAGIC_WRITE
+	inc	hl
+	lea	iy, iy+KERNEL_THREAD_LIST_DATA
+	call	kqueue.insert_tail
+	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	dec	hl
+	push	hl
+	call	task_switch_interruptible
+	pop	hl
+	call	task_yield
+	pop	iy
+	di
+	jr	.lock_write_test
+	
+.unlock_do_wake:
+; unqueue and wake thread while we dont have a WRITER thread
+	push	iy
+; grab the head and update
+.unlock_do_loop:
+	call	kqueue.retire_head
+; m = no more to retire
+	jp	m, .unlock_do_wake_exit
+; iy is the thread
+; first, wake it
+	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	push	hl
+	call	kthread.irq_resume
+	pop	hl
+	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
+	cp	a, KERNEL_ATOMIC_RW_MAGIC_WRITE	; stop at a writer
+; TODO, optimize so we don't wake a writer if readers as been awake ?
+	jr	nz, .unlock_do_loop
+.unlock_do_wake_exit:
+; no more thread or a blocker thread
+	pop	iy
+	dec	hl
+	rsti
+	jp	task_schedule
 
 .init:
-	push	bc
+	push	de
 	push	hl
-	ex	de, hl
-	ld	hl, KERNEL_MM_NULL
-	ld	bc, 8
-	ldir
+	ld	(hl), $00
+	inc	hl
+	ld	(hl), $FF
+	inc	hl
+	ld	de, NULL
+	ld	(hl), de
 	pop	hl
-	pop	bc
+	pop	de
 	ret
-
+	
 atomic_op:
 	ret
 

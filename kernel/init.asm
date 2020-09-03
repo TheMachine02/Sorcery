@@ -117,7 +117,7 @@ kname:
 ; Kernel only init and pass to init thread, so a proper OS will go there ;
 
 
-define	global_mutex		$D3F000		; that's just a test
+define	global_lock		$D3F000		; that's just a test
 define	global_exit_value	$D00180
 
 node:
@@ -211,13 +211,18 @@ TEST_THREAD_C:
 	ld hl, (ix+6)
 ;	ld	iy, leaf_frozen_file
 ;	call	leaf.exec
-
+	ld	hl, global_lock
+	call	atomic_rw.init
+	
+	ld	iy, TEST_THREAD_C_DEATH ; thread 3
+	call	kthread.create	
+	
 .spin:
-; 	ld	hl, global_mutex
-; 	call	atomic_rw.lock_read
+	ld	hl, global_lock
+	call	atomic_rw.lock_read
 
-;	ld	hl, 30	; 30 ms is nice
-;	call	kthread.sleep
+	ld	hl, 30	; 30 ms is nice
+	call	kthread.sleep
 ; trap opcode instruction
 ;db	$DD, $FF
 ; need to catch rst 00h for that !
@@ -240,10 +245,8 @@ TEST_THREAD_C:
 ; 	ld	de, KERNEL_MM_NULL
 ; 	ld	bc, 65536
 ; 	ldir
-; 	ld	hl, global_mutex
-; 	call	atomic_rw.unlock_read
-	ld	hl, 2000
-	call	kthread.sleep
+	ld	hl, global_lock
+	call	atomic_rw.unlock_read
 	jr	.spin
 	pop ix
 	ret
@@ -254,8 +257,8 @@ TEST_THREAD_C_DEATH:
 ;	set	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
 ; malloc test ;
 .spin:
-; 	ld	hl, global_mutex
-; 	call	atomic_rw.lock_write
+	ld	hl, global_lock
+	call	atomic_rw.lock_write
 	
 ; 	ld	hl, 512
 ; 	call	kmalloc
@@ -266,9 +269,10 @@ TEST_THREAD_C_DEATH:
 ; 	call	kmalloc
 ; 	pop	hl
 ; 	call	kfree
-	
-; 	ld	hl, global_mutex
-; 	call	atomic_rw.unlock_write
+	ld	hl, 15
+	call	kthread.sleep
+	ld	hl, global_lock
+	call	atomic_rw.unlock_write
 	jr	.spin
 ; wait ;
 ; normal path - but not taken

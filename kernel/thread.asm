@@ -45,7 +45,11 @@ define	KERNEL_THREAD_JOINED			$35	; joined thread waiting for exit()
 define	KERNEL_THREAD_LIST_PRIORITY		$36
 define	KERNEL_THREAD_LIST			$37
 
-define	KERNEL_THREAD_IO			$3A
+define	KERNEL_THREAD_IO			$36
+define	KERNEL_THREAD_LIST_DATA			$36
+define	KERNEL_THREAD_LIST_NEXT			$37
+define	KERNEL_THREAD_LIST_PREVIOUS		$3A
+
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 24 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 21 descriptors usables ;
@@ -436,8 +440,9 @@ kthread:
 	ei
 	ret
 .resume_do_wake:
-	pop	af
 	call	task_switch_running
+	pop	af
+	ret	po
 	jp	task_schedule
 
 .suspend:

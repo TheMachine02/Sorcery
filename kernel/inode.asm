@@ -232,7 +232,7 @@ define	phy_destroy_inode	28
 	sbc	hl, hl
 	add	hl, de
 	inc	de
-	ld	(hl), $00
+	ld	(hl), $FF
 	ld	bc, KERNEL_VFS_INODE_NODE_SIZE - 1
 	ldir
 	pop	ix

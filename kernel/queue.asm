@@ -68,6 +68,19 @@ kqueue:
 	pop	ix
 	ret
 
+.retire_head:
+; remove the head node and update queue to the next node. return iy = node
+	ld	a, (hl)
+	or	a, a
+	ret	m	; if m = no more node to retire in this list
+	dec	(hl)
+	or	a, a	; we reforce flag to be correct (ie p set describing action as been successfull)
+	push	ix
+	push	hl
+	inc	hl
+	ld	iy, (hl)
+	jr	.remove_jp
+	
 .remove_head:
 ; iy assumed to be queue head
 ; remove iy as node, update queue head to the next node of iy
@@ -77,6 +90,7 @@ kqueue:
 	push	ix
 	push	hl
 	inc	hl
+.remove_jp:
 	ld	ix, (iy+QUEUE_NEXT)
 	ld	(hl), ix
 	ld	hl, (iy+QUEUE_PREVIOUS)
