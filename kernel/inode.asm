@@ -4,17 +4,17 @@ define	KERNEL_VFS_INODE_FLAGS			0	; 1 byte, inode flag
 define	KERNEL_VFS_INODE_REFERENCE		1	; 1 byte, number of reference to this inode
 define	KERNEL_VFS_INODE_SIZE			2	; 3 bytes, size of the inode
 define	KERNEL_VFS_INODE_PARENT			5	; 3 bytes, parent of the inode, NULL mean root
-define	KERNEL_VFS_INODE_ATOMIC_LOCK		8	; rw lock, 8 bytes
+define	KERNEL_VFS_INODE_ATOMIC_LOCK		8	; rw lock, 5 bytes
+define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer
 define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all block are indirect)
-; 3*15, 45 bytes
-define	KERNEL_VFS_INODE_OP			61
+; 3*16, 48 bytes
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_FLAGS		0	; flags
 define	KERNEL_VFS_DIRECTORY_INODE		1	; 3 bytes pointer to inode
 define	KERNEL_VFS_DIRECTORY_NAME		4	; name, 
 
-define	KERNEL_VFS_INODE_FILE_SIZE		15*16*KERNEL_MM_PAGE_SIZE	; maximum file size
+define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
 define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		16	; 16 bytes per entries, or 4 entries per slab entries
 define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
@@ -109,7 +109,7 @@ define	phy_destroy_inode	28
 ; bc is size, hl is string (not NULL terminated)
 	push	iy
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
-	ld	a, 15
+	ld	a, 16
 .inode_get_directory_loop:
 ; 15 times
 	ld	ix, (iy+0)
@@ -236,7 +236,7 @@ define	phy_destroy_inode	28
 	push	iy
 	push	ix
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
-	ld	a, 15
+	ld	a, 16
 .inode_directory_free:
 	ld	ix, (iy+0)
 ; check if ix is NULL, else, skip
@@ -434,4 +434,7 @@ define	phy_destroy_inode	28
 	jp	kfree
 	
 .inode_dup:
+	ret
+
+.inode_symlink:
 	ret

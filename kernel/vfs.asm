@@ -12,7 +12,6 @@ define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
 define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags
 define	KERNEL_VFS_FILE_PADDING			7	; 1 byte, padding
 
-
 kvfs:
 
 .mkdir:
