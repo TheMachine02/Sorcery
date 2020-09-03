@@ -12,15 +12,6 @@ define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
 define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags
 define	KERNEL_VFS_FILE_PADDING			7	; 1 byte, padding
 
-;	typedef struct _iofile
-;	{
-;		char*  _read;		; current reading pointer
-;		int    _roffset		; reading offset within the file
-;		char*  _write;		; current writing pointer
-;		int    _woffset;	; current inode index for block data
-;		int    _flag;		; opened flags
-;		int    _fd;		; file descriptor
-;	} FILE;
 
 kvfs:
 
@@ -35,7 +26,7 @@ kvfs:
 .open:
 ; find the inode
 	push	hl
-	call	.inode_get
+	call	.inode_find
 	pop	hl
 	jr	nc, .open_continue
 	call	.inode_create
@@ -113,10 +104,7 @@ kvfs:
 	ld	hl, (hl)
 	pop	de
 ; hl is offset in file, iy is inode, de is buffer, bc is count
-; restrict bc to maximum file size ++
-
-; TODO
-
+; TODO : restrict bc to maximum file size ++
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
 ; hl / 1024 : offset in block
 	push	hl

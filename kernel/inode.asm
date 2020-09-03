@@ -66,7 +66,7 @@ define	phy_destroy_inode	28
 ; inode searching can sleep with parent inode lock waiting for child inode to be free'd for read
 ; best is always locking only ONE inode
 ; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
-.inode_get:
+.inode_find:
 ; start at root inode, hl is path
 	ld	iy, kvfs_root
 	push	hl
@@ -95,7 +95,7 @@ define	phy_destroy_inode	28
 ; push the new position of next name and restore previous name
 	ex	(sp), hl
 ; check if inode is a directory (if not, error out)
-	bit	2, (iy+KERNEL_VFS_INODE_FLAGS)
+	bit	KERNEL_VFS_DIRECTORY, (iy+KERNEL_VFS_INODE_FLAGS)
 	jr	z, .inode_get_unknown
 ; now, parse the directory to find we have a entry corresponding to it
 ; hl is our string, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1 - bc is the size of it
@@ -177,7 +177,14 @@ define	phy_destroy_inode	28
 	pop	bc
 	pop	hl
 	ret
-	
+
+.inode_get:
+; use read to be faster because the dec is in itself atomic
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
+	jp	atomic_rw.unlock_read
+
 .inode_put:
 ; iy is inode
 ; decrement reference, but doesn't clear lock
@@ -322,10 +329,69 @@ define	phy_destroy_inode	28
 	or	a, a
 	ret
 
-.inode_create:
-; you only need to lock the PARENT inode here
-; hl is path, a is flags
+.inode_device:
+; create a device
+; hl path, a is flags, bc is mem op
+; IT WILL CRASH SO ABORT TODO
+	ret
+	push	bc
+	call	.inode_create
+	pop	bc
+	ret	c
+	ld	(iy+KERNEL_VFS_INODE_OP), bc
+	ret
+	
+.inode_create_error_exist:
+; unlock the referenced parent
+	pop	af
+	call	.inode_put
+	scf
+	ret
+.inode_create_alloc_error:
+	pop	af
+	pop	hl
+	scf
 	ret
 
+.inode_create:
+	push	af	; inode flags
+	call	.inode_find
+	jr	nc, .inode_create_error_exist	; already exist
+; hl is partial string, iy is the PARENT node
+; sanity check, does we have a directory on partial find ?
+	bit	KERNEL_VFS_DIRECTORY, (iy+KERNEL_VFS_INODE_FLAGS)
+	jr	z, .inode_create_error_exist
+.inode_create_directory_chain:
+; here, we have to : extract name
+	ld	a, '/'
+	push	hl
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	cpir
+	jp	pe, .inode_create_continue
+	pop	hl
+	push	hl
+	xor	a, a
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	cpir
+.inode_create_continue:
+	ld	a, (hl)
+	or	a, a
+; if zero, final inode AT LAST, else zero's the '/'
+	jr	z, .inode_create_final
+	dec	hl
+	ld	(hl), $00
+	ex	(sp), hl
+	ld	a, KERNEL_VFS_DIRECTORY
+	call	.inode_allocate
+	jr	c, .inode_create_alloc_error
+; iy is new parent, get the inode, aaaannnnnd loop back
+	call	.inode_get
+	pop	hl
+	jr	.inode_create_directory_chain
+.inode_create_final:
+	pop	hl
+	pop	af
+	jp	.inode_allocate
+	
 .inode_dup:
 	ret

@@ -30,99 +30,16 @@ define	KERNEL_ATOMIC_RW_WAIT_TAIL	2
 define	KERNEL_ATOMIC_RW_WAIT_HEAD	5
 
 .lock_read:
-	di
-	ld	a, (hl)
-	inc	a
-; 	call	z, .lock_read_wait
-	inc	(hl)
-	ei
 	ret
 	
-.lock_read_wait:
-; 	call	.lock_generic_wait
-; we resume here. Try to get the lock
-	di
-	
-	
-	
-	
 .lock_write:
-	di
-	ld	a, (hl)
-	or	a, a
-; 	call	z, .lock_write_wait
-	dec	(hl)
-	ei
 	ret
 
 
 .unlock_read:
-	di
-	dec	(hl)
-	inc	hl
-	ld	a, (hl)
-	or	a, a
-	jr	nz, .unlock_wake
-	dec	hl
-	ei
 	ret
 	
 .unlock_write:
-	di
-	inc	(hl)
-	inc	hl
-	ld	a, (hl)
-	or	a, a
-	jr	nz, .unlock_wake
-	dec	hl
-	ei
-	ret
-
-.lock_wait:
-; it means it failed
-; append ourself to the list of waiter
-	inc	hl
-	ld	a, (hl)
-	inc	(hl)
-	inc	hl
-	push	de
-	jr	z, .lock_wait_create
-	push	iy
-	ld	iy, (hl)
-	ld	de, (kthread_current)
-	ld	(iy+KERNEL_THREAD_LIST), de
-	ld	(hl), de
-	pop	de
-	pop	iy
-	dec	hl
-	dec	hl
-	ret
-.lock_wait_create:
-	push	bc
-	ld	bc, 3
-	ld	de, (kthread_current)
-	ld	(hl), de
-	add	hl, bc
-	ld	(hl), de
-	sbc	hl, bc
-	pop	bc
-	pop	de
-	dec	hl
-	dec	hl
-	ret
-
-.unlock_wake:
-; unlock the first waiter
-	ld	bc, KERNEL_ATOMIC_RW_WAIT_HEAD
-	add	hl, bc
-	ld	iy, (hl)	; first waiter (hold the list address)
-	ld	de, (iy+0)
-	ld	(hl), de	; new waiter
-; now, wake the waiter \o/
-	sbc	hl, bc
-	lea	iy, iy-KERNEL_THREAD_LIST
-	call	kthread.resume
-	ei
 	ret
 
 .init:

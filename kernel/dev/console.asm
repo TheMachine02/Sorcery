@@ -28,7 +28,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 ; inode capabilities flags
 ; single dev block, (so write / read / seek only), no seek capabilities exposed
 	ld	a, KERNEL_VFS_BLOCK_DEVICE
-	jp	kvfs.inode_create
+	jp	kvfs.inode_device
 
 .CONSOLE_DEV:
  db "/dev/console", 0
