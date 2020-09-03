@@ -114,7 +114,36 @@ ktimer_queue:
 kinterrupt_power_mask:
  dl	0
 unallocated_zero: 
- db	229	dup	KERNEL_HW_POISON
+ db	165	dup	KERNEL_HW_POISON
+kvfs_root:
+; 64 bytes
+ db	$04	; directory
+ db	$01	; reference
+ dl	$000000	; size, it is a directory, so count of data holded
+ dl	$000000	; parent
+; atomic lock
+ db	$00, $00
+ db	$00, $00
+ db	$00, $00
+ db	$00, $00
+; data, 15 * 3, there is nothing in this directory
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+; operation lookup table, null physical operation (ie device callback are here)
+ dl	$000000
 ; $400
 kthread_pid_map:
  db	$01

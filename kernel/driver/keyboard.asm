@@ -97,3 +97,10 @@ keyboard:
 ; 	ld	hl, DRIVER_KEYBOARD_IMSC
 ; 	res	0, (hl)
 ; 	ret
+
+
+.load_keymap:
+	ret
+
+.getchar:
+	ret

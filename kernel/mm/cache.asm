@@ -46,7 +46,7 @@
 	ld	a, i
 	push	af
 	di
-	call	kvfs.inode_page_entry
+; 	call	kvfs.inode_page_entry
 ; hl = entry of the node
 	ld	a, (hl)
 	or	a, a
@@ -105,7 +105,7 @@
 	ld	a, i
 	push	af
 	di
-	call	kvfs.inode_page_entry
+; 	call	kvfs.inode_page_entry
 ; hl = entry of the node
 	ld	a, (hl)
 	or	a, a

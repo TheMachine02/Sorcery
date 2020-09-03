@@ -47,8 +47,8 @@ define	KERNEL_THREAD_LIST			$37
 
 define	KERNEL_THREAD_IO			$3A
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
-; up to $100, table is 192 bytes or 64 descriptor, 3 reserved as stdin, stdout, stderr ;
-; 61 descriptors usables ;
+; up to $100, table is 192 bytes or 24 descriptor, 3 reserved as stdin, stdout, stderr ;
+; 21 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$100
 define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable

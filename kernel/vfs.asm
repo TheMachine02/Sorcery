@@ -1,30 +1,3 @@
-define	KERNEL_VFS_PAGE_SIZE		1024
-define	KERNEL_VSF_INODE_INDIRECT_MAX	14		; 56 bytes node, 14 entries of 4 bytes
-define	KERNEL_VFS_INODE_DIRECT_MAX	6
-define	KERNEL_VFS_MAX_INDEX		KERNEL_VFS_IDIRECT_SIZE + (KERNEL_VSF_IENTRIES_PER_NODE)*(KERNEL_VSF_IENTRIES_PER_NODE)+KERNEL_VSF_IENTRIES_PER_NODE
-
-
-define	KERNEL_VFS_INODE			0
-define	KERNEL_VFS_INODE_SIZE			56
-
-define	KERNEL_VFS_INODE_FLAGS			0	; inode flag
-define	KERNEL_VFS_INODE_REFERENCE		1	; number of reference to this inode (up to 256)
-define	KERNEL_VFS_INODE_DATA_SIZE		2	; 3 bytes, size of the inode
-define	KERNEL_VFS_INODE_PARENT			5	; parent of the inode, NULL mean root
-; data block ;
-define	KERNEL_VFS_INODE_DATA_DIRECT		8
-; 8 direct data block, 32 bytes : block_device_adress : page_cache
-define	KERNEL_VFS_INODE_DATA_SDIRECT		40
-define	KERNEL_VFS_INODE_DATA_DDIRECT		44
-define	KERNEL_VFS_INODE_OP			53
-
-define	KERNEL_VFS_DIRECTORY_ENTRY		0
-define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		14	; 4 entries for 56 bytes in total > or 64 bytes for the slab entry
-
-define	KERNEL_VFS_DIRECTORY_FLAGS		0
-define	KERNEL_VFS_DIRECTORY_INODE		1
-define	KERNEL_VFS_DIRECTORY_NAME		4
-
 ; type (4 first bit)
 define	KERNEL_VFS_BLOCK_DEVICE			1
 define	KERNEL_VFS_FILE				2
@@ -33,11 +6,11 @@ define	KERNEL_VFS_SYMLINK			8
 ; capabilities
 define	KERNEL_VFS_SEEK				16
 
-
-
-; for directories :
-; also allocate data block, 64 bytes 4 directories per node > 2 byte flags, > 3 bytes inode > 10 bytes names + NULL >
-
+define	KERNEL_VFS_FILE_DESCRIPTOR		0
+define	KERNEL_VFS_FILE_INODE			0	; 3 bytes, inode pointer
+define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
+define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags
+define	KERNEL_VFS_FILE_PADDING			7	; 1 byte, padding
 
 ;	typedef struct _iofile
 ;	{
@@ -49,140 +22,179 @@ define	KERNEL_VFS_SEEK				16
 ;		int    _fd;		; file descriptor
 ;	} FILE;
 
-define	kvfs_root_inode			$D001C0
-
 kvfs:
-
-.inode_page_entry:
-; iy is node, hl is offset in file
-; interrupt disabled please
-; please note that we need to allocate the entry if not allocated
-; (ie max two slab alloc)
-	dec	sp
-	push	hl
-	inc	sp
-	ex	(sp), hl
-	pop	bc
-	srl	h
-	rr	l
-	srl	h
-	rr	l
-	ex	de, hl
-	xor	a, a
-	sbc	hl, hl
-	ld	h, d
-	ld	l, e
-	ld	bc, KERNEL_VFS_INODE_DIRECT_MAX
-	sbc	hl, bc
-	jr	c, .inode_direct
-	ld	c, KERNEL_VSF_INODE_INDIRECT_MAX and $FF
-	sbc	hl, bc
-	jr	c, .inode_indirect_single
-.inode_indirect_double:
-; divide by KERNEL_VSF_INODE_INDIRECT_MAX and get the modulo KERNEL_VSF_INODE_INDIRECT_MAX
-; two indirection then the adress
-	ld	bc, KERNEL_VSF_INODE_INDIRECT_MAX
-	ex	de, hl
-;	call	div
-; de = mod, hl = result bc = untouched
-	push	de
-	add	hl, hl
-	add	hl, hl
-	or	a, (iy+KERNEL_VFS_INODE_DATA_DDIRECT+2)
-	jr	nz, .inode_double_indirect_first
-	push	hl
-	push	iy
-	ld	hl, 56
-	call	kslab.malloc
-	pop	iy
-	ld	(iy+KERNEL_VFS_INODE_DATA_DDIRECT), hl
-	pop	hl
-.inode_double_indirect_first:
-	ld	bc, (iy+KERNEL_VFS_INODE_DATA_DDIRECT)
-	add	hl, bc
-; check the data on the first indirect page
-	inc	hl
-	inc	hl
-	ld	a, (hl)
-	dec	hl
-	dec	hl
-	or	a, a
-	jr	nz, .inode_double_indirect_second
-	push	iy
-	push	hl
-	ld	hl, 56
-	call	kslab.malloc
-	pop	de
-	ex	de, hl
-	ld	(hl), de
-	pop	iy
-.inode_double_indirect_second:
-	ld	de, (hl)
-	pop	hl
-	add	hl, hl
-	add	hl, hl
-	add	hl, de
-	ret
-.inode_direct:
-	add	hl, bc
-	add	hl, hl
-	add	hl, hl
-	lea	bc, iy+KERNEL_VFS_INODE_DATA_DIRECT
-	add	hl, bc
-	ret
-.inode_indirect_single:
-	add	hl, bc
-	add	hl, hl
-	add	hl, hl
-	or	a, (iy+KERNEL_VFS_INODE_DATA_SDIRECT+2)
-	jr	nz, .inode_indirect_find_index
-	push	hl
-	push	iy
-	ld	hl, 56
-	call	kslab.malloc
-	pop	iy
-	ld	(iy+KERNEL_VFS_INODE_DATA_SDIRECT), hl
-	pop	hl
-.inode_indirect_find_index:
-	ld	bc, (iy+KERNEL_VFS_INODE_DATA_SDIRECT)
-	add	hl, bc
-	ret
-
-.find_inode:
-; bc is path "/xxxxx/xxxxxx/file.x", 0 or "/xxxx/xxxx", 0 for a directory
-	ld	iy, kvfs_root_inode
-
-.find_loop:
-; extract next name : is next name is null, then return current iy node
-; else
-; lock the inode, try to find the path in the inode data (if inode is directory)
-	ret
-
-.create_inode:
-	ret
-	
-.destroy_inode:
-	ret
 
 .mkdir:
 	ret
 	
 .rmdir:
-	ret	
+	ret
 
+.open_error:
+	
 .open:
-	call	.find_inode
-	ret	c
-
+; find the inode
+	push	hl
+	call	.inode_get
+	pop	hl
+	jr	nc, .open_continue
+	call	.inode_create
+	jr	c, .open_error
+.open_continue:
+; iy = node
+; now find free file descriptor
+	ld	ix, (kthread_current)
+	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR + 24
+	ld	b, 21
+	ld	de, 8
+.open_descriptor:
+	lea	hl, ix+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .open_descriptor_found
+	add	ix, de
+	djnz	.open_descriptor
+; no descriptor found
+	jr	.open_error
+.open_descriptor_found:
+	ld	(ix+KERNEL_VFS_FILE_INODE), iy
+	ld	e, 0
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
+	ld	(ix+KERNEL_VFS_FILE_FLAGS), e
+; get our flag descriptor
+	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR - 24
+	ld	de, (kthread_current)
+	or	a, a
+	sbc	hl, de
+	srl	h
+	rr	l
+	srl	h
+	rr	l
+	srl	h
+	rr	l
+; hl is fd
 	ret
 
 .close:
-	ret	
+; hl is fd
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	de, (kthread_current)
+	add	hl, de
+	ld	de, KERNEL_THREAD_FILE_DESCRIPTOR
+	add	hl, de
+	ld	iy, (hl)	; get inode
+	ld	ix, (iy+KERNEL_VFS_INODE_OP)
+	lea	hl, ix+phy_sync
+	call	.inode_call
+; and put the inode, decrement reference
+	jp	.inode_put
+
+.sync:
+	ret
 	
 .read:
-;;size_t read(FILE* file, void *buf, size_t count);
-; iy is file, void *buf is de, size_t count is bc
+;;size_t read(int fd, void *buf, size_t count);
+; hl is fd, void *buf is de, size_t count is bc
 ; pad count to inode_file_size
+	push	de
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	de, (kthread_current)
+	add	hl, de
+	ld	de, KERNEL_THREAD_FILE_DESCRIPTOR
+	add	hl, de
+	ld	iy, (hl)	; get inode
+	ld	de, 3
+	add	hl, de
+	ld	hl, (hl)
+	pop	de
+; hl is offset in file, iy is inode, de is buffer, bc is count
+; restrict bc to maximum file size ++
+
+; TODO
+
+; convert hl to block (16 blocks per indirect, 1024 bytes per block)
+; hl / 1024 : offset in block
+	push	hl
+	dec	sp
+	pop	hl
+	inc	sp
+	ld	a, l
+	srl	h
+	rra
+	srl	h
+	rra
+; a = block offset, de buffer, bc count
+; now, let's ldir and lock
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	push	bc
+	pop	hl
+.read_copy:
+	ld	bc, KERNEL_MM_PAGE_SIZE
+	or	a, a
+	sbc	hl, bc
+	jr	c, .read_copy_end
+	push	hl
+	call	.block_address
+	inc	hl
+	ld	hl, (hl)
+	ld	bc, KERNEL_MM_PAGE_SIZE
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	nz, .read_not_null
+	ld	hl, KERNEL_MM_NULL
+.read_not_null:
+	ldir
+	pop	hl
+	inc	a
+	jr	.read_copy
+.read_copy_end:
+; end copy
+	add	hl, bc
+	push	hl
+	pop	bc
+	call	.block_address
+	inc	hl
+	ld	hl, (hl)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	nz, .read_not_null2
+	ld	hl, KERNEL_MM_NULL
+.read_not_null2:
+	ldir
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	jp	atomic_rw.unlock_read
+	
+.block_address:
+; hl is block number, iy is inode, extract the block_address
+	push	de
+	push	af
+	and	a, 1111000b
+	rra
+	rra
+	rra
+	rra
+	ld	h, 3
+	ld	l, a
+	mlt	hl
+	lea	de, iy+KERNEL_VFS_INODE_DATA
+	add	hl, de
+	ld	hl, (hl)
+	pop	af
+	and	a, 00001111b
+	ld	e, 4
+	ld	d, a
+	mlt	de
+	add	hl, de
+	pop	de
+; this is block
 	ret
 	
 .write:

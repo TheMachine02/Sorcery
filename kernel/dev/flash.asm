@@ -4,7 +4,7 @@
 ; inode capabilities flags
 ; single dev block, (so write / read / seek only), seek capabilities exposed
 	ld	a, KERNEL_VFS_BLOCK_DEVICE or KERNEL_VFS_SEEK
-	jp	kvfs.create_inode
+	jp	kvfs.inode_create
 
 .FLASH_DEV:
  db "/dev/flash", 0

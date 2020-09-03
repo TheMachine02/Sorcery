@@ -68,6 +68,9 @@ kinit:
 	ld	bc, KERNEL_MM_RAM_SIZE - 4097
 	ld	(hl), KERNEL_HW_POISON
 	ldir
+; small init for the vfs
+	ld	hl, kvfs.phy_none
+	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
 ; power, timer and interrupt ;
 	call	kinterrupt.init
 	call	kwatchdog.init
@@ -117,7 +120,11 @@ kname:
 define	global_mutex		$D3F000		; that's just a test
 define	global_exit_value	$D00180
 
+node:
+ db "/dev/",0
+
 THREAD_INIT_TEST:
+
 ; 	ld	hl, global_mutex
 ; 	call	atomic_rw.init
 	
