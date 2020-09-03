@@ -360,7 +360,6 @@ define	phy_destroy_inode	28
 	ret
 
 .inode_create:
-	dbg_open
 	push	af	; inode flags
 	call	.inode_find
 	jr	nc, .inode_create_error_exist	; already exist
