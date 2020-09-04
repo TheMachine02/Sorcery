@@ -12,7 +12,16 @@
 .phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
+	ret		; phy_sync (sync file)
+	dl	$0
 	jp	.phy_seek
+	ret		; phy_read_inode (from backing device)
+	dl	$0
+	ret		; phy_write_inode (from backing device)
+	dl	$00
+	ret		; phy_create_inode
+	dl	$00
+	ret		; phy_destroy_inode
 
 ; no op
 .phy_seek:

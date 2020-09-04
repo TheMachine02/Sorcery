@@ -3,8 +3,8 @@ null:
 .init:
 
 .phy_init:
-	ld	hl, .phy_mem_ops
-	ld	bc, .NULL_DEV
+	ld	bc, .phy_mem_ops
+	ld	hl, .NULL_DEV
 ; inode capabilities flags
 ; single dev block, (so write / read / seek only), seek capabilities not exposed
 	ld	a, KERNEL_VFS_BLOCK_DEVICE
@@ -16,6 +16,17 @@ null:
 .phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
+	ret		; phy_sync (sync file)
+	dl	$0
+	ret		; phy_seek (do a seek in file)
+	dl	$0
+	ret		; phy_read_inode (from backing device)
+	dl	$0
+	ret		; phy_write_inode (from backing device)
+	dl	$00
+	ret		; phy_create_inode
+	dl	$00
+	ret		; phy_destroy_inode
 
 .phy_read:
 ; offset hl to de for bc size
@@ -23,6 +34,5 @@ null:
 	ldir
 	
 .phy_write:
-; no op
 	ret
  
