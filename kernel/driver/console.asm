@@ -8,19 +8,83 @@ define	console_cursor_xy	$D00703
 define	console_blink		$D00706
 define	console_flags		$D00707
 define	console_key		$D00708
-define	console_string		$D00715
+define	console_takeover	$D00715
+define	console_string		$D00718
 
 define	CONSOLE_GLYPH_X		50
 define	CONSOLE_GLYPH_Y		20
 
 console:
 
+.fb_takeover:
+	di
+	ld	iy, console_stdin
+; take control of the video driver mutex
+	ld	hl, 64
+	call	kmalloc
+	ret	c
+	ld	(iy+CONSOLE_TAKEOVER), hl
+	ex	de, hl
+; save LCD state
+	ld	hl, DRIVER_VIDEO_SCREEN
+	ld	bc, $10
+	ldir
+; and now the palette state
+	ld	hl, DRIVER_VIDEO_PALETTE
+	ld	c, 36
+	ldir
+	ld	hl, KERNEL_INTERRUPT_ISR_DATA_VIDEO
+	ld	c, 6
+	ldir
+; 58 + 3 bytes in grand total, free 3 bytes
+; mark console as present
+	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+; take lcd mutex control
+; TODO
+; init the screen now
+	call	.init_screen
+	ld	iy, .thread
+	call	kthread.create
+; carry if error
+	jr	c, .fb_restore
+	ld	(hl), iy
+	ret
+	
+.fb_restore:
+; need to exit the console thread
+; restore the mutex and the propriety
+	di
+	ld	iy, console_stdin
+	ld	hl, (iy+CONSOLE_TAKEOVER)
+	push	hl
+; restore status
+	ld	de, DRIVER_VIDEO_SCREEN
+	ld	bc, $10
+	ldir
+; restore palette
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	c, 36
+	ldir
+; restore mutex
+	ld	de, KERNEL_INTERRUPT_ISR_DATA_VIDEO
+	ld	c, 6
+	ldir
+; kill the thread now
+	ld	hl, (hl)
+	or	a, a
+	add	hl, de
+	sbc	hl, de
+	jr	z, .fb_restore_set_flags
+	ld	c, (hl)
+	ld	a, SIGKILL
+	call	signal.kill
+.fb_restore_set_flags:
+	set	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+	pop	hl
+	jp	kfree
+	
 .init:
 	di
-	ld	hl, .PALETTE
-	ld	de, DRIVER_VIDEO_PALETTE
-	ld	bc, 36
-	ldir
 	ld	hl, console_dev
 	inc	b
 	ld	(hl), bc
@@ -32,7 +96,12 @@ console:
 	call	ring_buffer.create
 	call	.phy_init
 	
-.init_splash:
+.init_screen:
+	ld	hl, .PALETTE
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	bc, 36
+	ldir
+	call	video.clear_screen
 	ld	iy, console_stdin
 	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ret	nz
@@ -45,7 +114,7 @@ console:
 	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
-.run:
+.thread:
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
