@@ -213,8 +213,13 @@ kthread:
 	ld	(iy-18), hl
 	ld	(iy-21), bc
 	ld	(iy-24), de
-	rsti
-	lea	iy, ix+0
+; pop the interrupt status
+; if interrupt = on, try to reschedule immediately
+	pop	af
+	call	pe, task_schedule
+; return iy = new thread
+	ld	de, -KERNEL_THREAD_STACK_SIZE
+	add	iy, de
 	pop	ix
 	pop	af
 	or	a, a

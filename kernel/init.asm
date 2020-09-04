@@ -142,7 +142,7 @@ THREAD_INIT_TEST:
 	
 	call	video.irq_lock
 ;	call	keyboard.irq_lock
-	call	console.run
+	call	console.thread
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
 ; 	
