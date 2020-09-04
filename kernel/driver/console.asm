@@ -109,7 +109,7 @@ console:
 	ld	e, l
 	ld	bc, .SPLASH
 	call	.blit
-	ld	bc, 37
+	ld	c, 37
 	ld	hl, .SPLASH_NAME
 	jp	.phy_write
 
@@ -139,7 +139,6 @@ console:
 	jr	nz, .process_key
 	djnz	.wait_keyboard
 	ld	a, $FD
-	ld	hl, console_key
 .process_key:
 	ld	(hl), a
 	call	video.vsync
@@ -306,7 +305,6 @@ console:
 	xor	a, a
 	ld	bc, 0
 	cpir
-	or	a, a
 	sbc	hl, hl
 	sbc	hl, bc
 	push	hl
@@ -351,14 +349,15 @@ console:
 	add	hl, de
 	ex	de, hl
 	ld	a, 10
+	ld	c,220
 .color_copy_block:
-	push	hl
-	ld	bc, 220
 	ldir
-	ld	hl, 100
-	add	hl, de
+	ld	c, 100
 	ex	de, hl
-	pop	hl
+	add	hl, bc
+	ex	de, hl
+	ld	c,220
+	sbc	hl, bc
 	dec	a
 	jr	nz, .color_copy_block
 	ld	iy, console_dev
@@ -678,11 +677,10 @@ if 0
 	ld	de, (iy+KERNEL_THREAD_TIME)
 	push	hl
 	ld	a, l
+	sbc	hl, hl
 	rra
 	sra	a
 ; display a
-	or	a, a
-	sbc	hl, hl
 	ld	(iy+KERNEL_THREAD_TIME), hl
 	ld	l, a
 	push	hl
@@ -707,8 +705,10 @@ if 0
 	call	.phy_write
 	pop	hl
 .top_skip:
-	ld	de, 4
-	add	hl, de
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
 	pop	bc
 	djnz	.top_data_loop
 	call	rtc.wait_second
