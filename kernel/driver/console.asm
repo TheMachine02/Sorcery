@@ -279,9 +279,6 @@ console:
 	ld	hl, .ECHO
 	call	.check_builtin
 	jr	z, .echo
-	ld	hl, .TOP
-	call	.check_builtin
-	jp	z, .builtin_top
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
 	call	.phy_write
@@ -362,7 +359,7 @@ console:
 	jr	nz, .color_copy_block
 	ld	iy, console_dev
 	call	.phy_new_line
-	jp	.clean_command
+	jp	.prompt
 .uptime:
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
 	push	hl
@@ -602,118 +599,3 @@ include 'logo.inc'
  db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
 
 .KEYMAP_2ND:
-
-.TOP_STR:
- db $1B,"[47m", $1B, "[30m" 
- db " PID  %cpu" ,10, $1B, "[39m", $1B, "[49m"
-
-.builtin_top:
-	jp	.clean_command
-
-if 0
-.top_init:
-	call	rtc.irq_lock
-	ld	b, 18
-	ld	hl, kthread_pid_map+4
-	ld	de, 0
-.top_init_time_loop:
-	ld	a, (hl)
-	or	a, a
-	jr	z, .top_init_skip
-	inc	hl
-	ld	iy, (hl)
-	ld	(iy+KERNEL_THREAD_TIME), de
-	inc	hl
-	inc	hl
-	inc	hl
-.top_init_skip:
-	djnz	.top_init_time_loop
-.top_loop:
-; clear all console
-	call	video.vsync
-
-	ld	hl, $E40000
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	ld	bc, 76800
-	ldir
-	ld	(console_cursor_xy), bc
-; display the str
-	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
-	push	hl
-	ld	hl, (DRIVER_RTC_COUNTER_MINUTE)
-	push	hl
-	ld	hl, (DRIVER_RTC_COUNTER_HOUR)
-	push	hl
-	ld	hl, (DRIVER_RTC_COUNTER_DAY)
-	push	hl
-	ld	hl, .UPTIME_STR
-	push	hl
-	ld	hl, console_string
-	push	hl
-	call	_boot_sprintf_safe
-	ld	hl, 18
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, console_string
-	ld	bc, 34
-	call	.phy_write
-
-	ld	hl, .TOP_STR
-	ld	bc, 31
-	call	.phy_write
-	
-	di
-	ld	b, 18
-	ld	hl, kthread_pid_map+4
-.top_data_loop:
-	push	bc
-
-	ld	a, (hl)
-	or	a, a
-	jr	z, .top_skip
-	inc	hl
-	ld	iy, (hl)
-	dec	hl
-	ld	de, (iy+KERNEL_THREAD_TIME)
-	push	hl
-	ld	a, l
-	sbc	hl, hl
-	rra
-	sra	a
-; display a
-	ld	(iy+KERNEL_THREAD_TIME), hl
-	ld	l, a
-	push	hl
-; de / 32768 * 100
-	ex	de, hl
-	ld	l, 200
-	mlt	hl
-	ld	l, h
-	ld	h, 0
-	ex	(sp), hl
-	push	hl
-	ld	hl, .TOP_LINE_STR
-	push	hl
-	ld	hl, console_string
-	push	hl
-	call	_boot_sprintf_safe
-	ld	hl, 12
-	add	hl, sp
-	ld	sp, hl
-	ld	hl, console_string
-	ld	bc, 10
-	call	.phy_write
-	pop	hl
-.top_skip:
-	inc	hl
-	inc	hl
-	inc	hl
-	inc	hl
-	pop	bc
-	djnz	.top_data_loop
-	call	rtc.wait_second
-	jp	.top_loop
-	
-.TOP_LINE_STR:
- db " %3d  %3d", 10, 0
-end if
