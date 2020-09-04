@@ -1,5 +1,4 @@
 define	console_stdin		$D00800
-
 define	console_dev		$D00700
 define	console_style		$D00700
 define	console_fg_color	$D00701
@@ -18,7 +17,7 @@ console:
 
 .fb_takeover:
 	di
-	ld	iy, console_stdin
+	ld	iy, console_dev
 ; take control of the video driver mutex
 	ld	hl, 64
 	call	kmalloc
@@ -54,7 +53,7 @@ console:
 ; need to exit the console thread
 ; restore the mutex and the propriety
 	di
-	ld	iy, console_stdin
+	ld	iy, console_dev
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	push	hl
 ; restore status
@@ -102,7 +101,7 @@ console:
 	ld	bc, 36
 	ldir
 	call	video.clear_screen
-	ld	iy, console_stdin
+	ld	iy, console_dev
 	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ret	nz
 	or	a, a
