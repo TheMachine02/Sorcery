@@ -96,14 +96,14 @@ console:
 	call	.phy_init
 	
 .init_screen:
+	ld	iy, console_dev
+	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+	ret	nz
 	ld	hl, .PALETTE
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	bc, 36
 	ldir
 	call	video.clear_screen
-	ld	iy, console_dev
-	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
-	ret	nz
 	or	a, a
 	sbc	hl, hl
 	ld	e, l
