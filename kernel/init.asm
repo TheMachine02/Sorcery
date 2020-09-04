@@ -119,13 +119,14 @@ define	global_lock		$D3F000		; that's just a test
 define	global_exit_value	$D00180
 
 node:
- db "/dev/",0
+ db "/dev/console",0
 
 THREAD_INIT_TEST:
 ; 	ld	hl, global_mutex
 ; 	call	atomic_rw.init
 	call	console.init
-	call	flash.init	
+	call	flash.init
+	call	null.init
 	
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
@@ -135,7 +136,6 @@ THREAD_INIT_TEST:
 ; ; 
 ; 	ld	iy, TEST_THREAD_C_DEATH ; thread 3
 ; 	call	kthread.create
-	
 	
 	ld	a, SIGUSR1
 	call	signal.procmask_single

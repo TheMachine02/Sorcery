@@ -128,8 +128,9 @@ atomic_rw:
 ; no more thread or a blocker thread
 	pop	iy
 	dec	hl
-	rsti
-	jp	task_schedule
+	pop	af
+	jp	pe, task_schedule
+	ret
 
 .init:
 	push	de

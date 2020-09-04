@@ -154,6 +154,11 @@ kthread:
 ; timer ;
 	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
+	lea	de, iy+KERNEL_THREAD_FILE_DESCRIPTOR
+	ld	hl, KERNEL_MM_NULL
+	ld	bc, $C0
+	ldir
+	ld	de, NULL
 ; stack limit set first ;
 	lea	hl, iy + 13
 ; we are block aligned. Do +256

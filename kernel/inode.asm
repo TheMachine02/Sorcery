@@ -49,7 +49,6 @@ define	phy_destroy_inode	28
 	ret		; phy_create_inode
 	dl	$00
 	ret		; phy_destroy_inode
-	dl	$00
 	
 .inode_get_found:
 ; increment the reference
@@ -91,6 +90,7 @@ define	phy_destroy_inode	28
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
 ; we also need to stop if we catch a NULL
 	cpir
+	dec	hl
 .inode_get_continue:
 ; push the new position of next name and restore previous name
 	ex	(sp), hl
@@ -190,8 +190,6 @@ define	phy_destroy_inode	28
 .inode_call:
 	jp	(hl)
 
-
-; VERIFIED
 .inode_allocate_error_malloc:
 	pop	hl
 .inode_allocate_error_nodir:

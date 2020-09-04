@@ -12,6 +12,8 @@ define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
 define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags
 define	KERNEL_VFS_FILE_PADDING			7	; 1 byte, padding
 
+define	KERNEL_VFS_FILE_DESCRIPTOR_SIZE		8
+
 kvfs:
 
 .mkdir:
@@ -38,7 +40,7 @@ kvfs:
 	ld	b, 21
 	ld	de, 8
 .open_descriptor:
-	lea	hl, ix+0
+	ld	hl, (ix+0)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
@@ -52,8 +54,8 @@ kvfs:
 	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 	ld	(ix+KERNEL_VFS_FILE_FLAGS), e
-; get our flag descriptor
-	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR - 24
+; get our file descriptor
+	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR
 	ld	de, (kthread_current)
 	or	a, a
 	sbc	hl, de
@@ -76,6 +78,11 @@ kvfs:
 	ld	de, KERNEL_THREAD_FILE_DESCRIPTOR
 	add	hl, de
 	ld	iy, (hl)	; get inode
+; null the file descriptor
+	ex	de, hl
+	ld	hl, KERNEL_MM_NULL
+	ld	bc, KERNEL_VFS_FILE_DESCRIPTOR_SIZE
+	ldir
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
 	lea	hl, ix+phy_sync
 	call	.inode_call

@@ -72,6 +72,7 @@ include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
 include	'kernel/driver/spi.asm'
 ; driver & device
+include	'kernel/dev/null.asm'
 include	'kernel/driver/console.asm'
 include	'kernel/dev/console.asm'
 include	'kernel/driver/flash.asm'
