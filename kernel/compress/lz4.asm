@@ -36,7 +36,7 @@ lz4:
 .decompress:
 ; hl : src, de : dest
 ; check the magic number
-	ld	bc, 0
+	ld	bc, 1
 	ld	a, (hl)
 	inc	hl
 	cp	a, LZ4_VERSION4
@@ -73,7 +73,7 @@ lz4:
 	bit	4, a
 	jr	z, .no_content_size
 ; skip content size
-	ld	c, 8
+	ld	c, 9
 .no_content_size:
 	bit	1, a
 	jr	z, .no_preset_dictionary
@@ -89,10 +89,9 @@ lz4:
 	jr	z, .version_not_supported
 	inc	hl
 ; skip header checksum
-	inc	bc
 	jr	.start_decompression
 .version_3_legacy:
-	ld	c, 8
+	ld	c, 9
 .version_2_legacy:
 	ld	a, (hl)
 	cp	$21
@@ -105,7 +104,6 @@ lz4:
 	ld	a, (hl)
 	cp	$18
 	jr	nz, .version_not_supported
-	inc	hl
 .start_decompression:
 	add	hl, bc
 ; load low 24 bit of compressed block size to bc
