@@ -28,6 +28,13 @@ macro	rsti
 	ei
 end	macro
 
+macro	rstiRET
+	pop	af
+	ret	po
+	ei
+	ret
+end	macro
+
 ; TODO : crazily optimize all this segment please +++
 
 atomic_rw:
@@ -37,9 +44,8 @@ atomic_rw:
 .lock_read_test:
 	inc	(hl)
 	jr	z, .rlock_wait
-	rsti
-	ret
-	
+	rstiRET
+		
 .lock_write:
 	tsti
 .lock_write_test:
@@ -47,16 +53,14 @@ atomic_rw:
 	or	a, a
 	jr	nz, .wlock_wait
 	ld	(hl), $FF
-	rsti
-	ret
-
+	rstiRET
+	
 .unlock_read:
 	tsti
 	dec	(hl)
 	jr	z, .unlock_notify
-	rsti
-	ret
-	
+	rstiRET
+		
 .unlock_write:
 	tsti
 	ld	(hl), $00
@@ -66,9 +70,8 @@ atomic_rw:
 	inc	a
 	jr	nz, .unlock_do_wake
 	dec	hl
-	rsti
-	ret
-
+	rstiRET
+	
 .rlock_wait:
 ; make us wait on the lock
 	dec	(hl)
