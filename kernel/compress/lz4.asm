@@ -39,12 +39,12 @@ lz4:
 	ld	bc, 1
 	ld	a, (hl)
 	inc	hl
-	cp	a, LZ4_VERSION4
-	jr	z, .version_4
-	cp	a, LZ4_VERSION3
-	jr	z, .version_3_legacy
-	cp	a, LZ4_VERSION2
+	sub	a, 2
 	jr	z, .version_2_legacy
+	dec	a
+	jr	z, .version_3_legacy
+	dec	a
+	jr	z, .version_4
 .version_not_supported:
 	ld	a,2
 	ret
