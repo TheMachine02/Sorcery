@@ -138,11 +138,11 @@ atomic_rw:
 .init:
 	push	de
 	push	hl
-	ld	(hl), $00
+	ld	de, NULL
+	ld	(hl), e
 	inc	hl
 	ld	(hl), $FF
 	inc	hl
-	ld	de, NULL
 	ld	(hl), de
 	pop	hl
 	pop	de
@@ -183,10 +183,10 @@ kmutex:
 
 .init:
 	inc	hl
-	ld	(hl), NULL
+	xor	a, a
+	ld	(hl), a
 	dec	hl
 	ld	(hl), KERNEL_MUTEX_MAGIC
-	or	a, a
 	sbc	hl, hl
 	ret
 
