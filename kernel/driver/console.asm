@@ -96,9 +96,9 @@ console:
 	call	.phy_init
 	
 .init_screen:
-	ld	iy, console_dev
-	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
-	ret	nz
+	ld	a, (console_dev+CONSOLE_FLAGS)
+	add	a, a
+	ret	m
 	ld	hl, .PALETTE
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	bc, 36
@@ -172,30 +172,28 @@ console:
 	add	hl, de
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	add	hl, de
-	ld	a, (bc)
-	ld	e, a
-	inc	bc
-	ld	a, (bc)
-; e = h, a = vsize
-	push	bc
-	inc.s	bc
-	ld	b, a
-	ld	c, e
-	pop	de
+	ex	de, hl	; hl -> de
+	sbc	hl, hl
+	add	hl, bc	; bc -> hl
+	ld	a, (hl)
+	ld	iyl, a
+	inc	hl
+	ld	a, (hl)
+	inc	hl
+; iyl = h, a = vsize
+	ld	bc, 0
 .blit_loop:
-	push	bc
-	push	hl
-	ld	b, 0
-	ex	de, hl
+	ld	c, iyl
 	ldir
+	dec	a
+	ret	z
 	ex	de, hl
-	pop	hl
+	sbc	hl,bc
 	ld	c, 64
 	inc	b
 	add	hl, bc
-	pop	bc
+	ex	de, hl
 	djnz	.blit_loop
-	ret
 
 .read_keyboard:
 	ld	de, console_flags
