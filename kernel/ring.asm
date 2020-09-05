@@ -146,8 +146,7 @@ ring_buffer:
 .remove_head:
 ; suppr behaviour
 	ld	hl, (iy+RING_BUFFER_HEAD)
-	ld	a, (hl)
-	or	a, a
+	and	a, (hl)
 	ret	z
 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
 	jr	.remove_collapse
