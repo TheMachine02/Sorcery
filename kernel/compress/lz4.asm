@@ -38,6 +38,7 @@ lz4:
 ; check the magic number
 	ld	bc, 0
 	ld	a, (hl)
+	inc	hl
 	cp	a, LZ4_VERSION4
 	jr	z, .version_4
 	cp	a, LZ4_VERSION3
@@ -46,41 +47,35 @@ lz4:
 	jr	z, .version_2_legacy
 .version_not_supported:
 	ld	a,2
-	jr	.decompress_finished
-.decompress_error:
-	ld	a, 1
-.decompress_finished:
 	ret
 .version_4:
 ; check version 1.41 magic 
-	inc	hl
 	ld	a, (hl)
-	inc	hl
 	cp	a, $22
 	jr	nz, .version_not_supported
-	ld	a, (hl)
 	inc	hl
+	ld	a, (hl)
 	cp	a, $4D
 	jr	nz, .version_not_supported
-	ld	a, (hl)
 	inc	hl
+	ld	a, (hl)
 	cp	a, $18
 	jr	nz, .version_not_supported
+	inc	hl
 ; parse version 1.41 spec header
 	ld	a, (hl)
-	inc	hl
 ; check version bits for version 01
-	bit	7, a
-	jr	nz, .version_not_supported
-	bit	6, a
-	jr	z, .version_not_supported
+	add	a, a
+	jr	c, .version_not_supported
+	jp	p, .version_not_supported
+	inc	hl
 ; is content size set?
-	bit	3, a
+	bit	4, a
 	jr	z, .no_content_size
 ; skip content size
 	ld	c, 8
 .no_content_size:
-	bit	0, a
+	bit	1, a
 	jr	z, .no_preset_dictionary
 ; skip dictionary id
 	inc	c
@@ -89,29 +84,28 @@ lz4:
 	inc	c
 .no_preset_dictionary:
 	ld	a, (hl)
-	inc	hl
 ; strip reserved bits (and $70)
 	and	$40
 	jr	z, .version_not_supported
+	inc	hl
 ; skip header checksum
 	inc	bc
 	jr	.start_decompression
 .version_3_legacy:
 	ld	c, 8
 .version_2_legacy:
-	inc	hl
 	ld	a, (hl)
-	inc	hl
 	cp	$21
 	jr	nz, .version_not_supported
-	ld	a, (hl)
 	inc	hl
+	ld	a, (hl)
 	cp	$4c
 	jr	nz, .version_not_supported
-	ld	a, (hl)
 	inc	hl
+	ld	a, (hl)
 	cp	$18
 	jr	nz, .version_not_supported
+	inc	hl
 .start_decompression:
 	add	hl, bc
 ; load low 24 bit of compressed block size to bc
@@ -125,7 +119,7 @@ lz4:
 if CONFIG_USE_LZ4_STRICT = 1
 	push	hl
 	add	hl, bc
-	ex	hl, (sp)
+	ex	(sp), hl
 end if
 	ld	bc, 0
 	jr	.get_token
