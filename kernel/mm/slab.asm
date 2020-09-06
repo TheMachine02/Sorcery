@@ -1,4 +1,33 @@
-define	KERNEL_SLAB_CACHE	0
+; 8 bytes per cache structure
+define	KERNEL_SLAB_CACHE		0
+define	KERNEL_SLAB_PAGE_COUNT		0
+define	KERNEL_SLAB_PAGE_QUEUE		1
+define	KERNEL_SLAB_DATA_MAX_SIZE	4	; 3 bytes
+define	KERNEL_SLAB_DATA_MAX_COUNT	7	; 1 byte
+; bss defined location
+define	kmem_cache_buffctl		$D00340
+define	kmem_cache_s8			$D00340
+define	kmem_cache_s16			$D00348
+define	kmem_cache_s32			$D00350
+define	kmem_cache_s64			$D00358
+define	kmem_cache_s128			$D00360
+; per slab structure
+; 7 bytes + 3 special
+define	KERNEL_SLAB_PAGE_HEADER		0	; header
+define	KERNEL_SLAB_PAGE_HEADER_SIZE	8	; size
+define	KERNEL_SLAB_PAGE_TLB		0	; direct page tlb
+define	KERNEL_SLAB_PAGE_NEXT		1	; queue pointer
+define	KERNEL_SLAB_PAGE_PREVIOUS	4	; queue pointer
+define	KERNEL_SLAB_PAGE_POINTER	8	; free pointer reside in the *next* free block
+; as such :
+; if we are allocating
+; count = 2, return the pointer free block and decrement (should point to itself)
+; count = 1, free from the queue and return the header block
+; if we are freeing
+; count = 0, create the header block and add slab to the structure queue
+; count = 1, create the free pointer and made it point itself
+; count > 1, update the free pointer
+; count = max_count, free the slab entirely and remove it from queue
 
 ;kmalloc:
 .get_cache:
@@ -81,75 +110,53 @@ kslab:
 ; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
 ; 	ret
 
-; 8 bytes structure
-define	KERNEL_SLAB_CACHE		0
-define	KERNEL_SLAB_PAGE_COUNT		0
-define	KERNEL_SLAB_PAGE_QUEUE		1
-define	KERNEL_SLAB_DATA_MAX_SIZE	4	; 3 bytes
-define	KERNEL_SLAB_DATA_MAX_COUNT	7	; 1 byte
-	
-define	kmem_cache_buffctl		$D00340
-define	kmem_cache_s8			$D00340
-define	kmem_cache_s16			$D00348
-define	kmem_cache_s32			$D00350
-define	kmem_cache_s64			$D00358
-define	kmem_cache_s128			$D00360
-	
-; 7 bytes + 3 special
-define	KERNEL_SLAB_PAGE_HEADER		0
-define	KERNEL_SLAB_PAGE_HEADER_SIZE	8
-define	KERNEL_SLAB_PAGE_TLB		0	; direct page tlb
-define	KERNEL_SLAB_PAGE_NEXT		1
-define	KERNEL_SLAB_PAGE_PREVIOUS	4
-define	KERNEL_SLAB_PAGE_POINTER	-3
-
-.malloc:
-; ix is slab found *from slab queue*
-; first load the pointer to the header page (we know page is partial free)
-	ld	iy, (ix+KERNEL_SLAB_PAGE_QUEUE)
-	ld	bc, (ix+KERNEL_SLAB_DATA_MAX_SIZE)
-; get actual free count in page
-	ld	a, (iy+KERNEL_SLAB_PAGE_FREE)
-; if it is = 1, then we don't have an actual free pointer to use, but the free pointer is the *last* block
-	dec	a
-	jr	z, .malloc_last_block
-; load the free pointer & grab new free pointer
-; if a = 1, no new free
-	ld	(iy+KERNEL_SLAB_PAGE_FREE), a
-	ld	hl, (iy+KERNEL_SLAB_PAGE_POINTER)
-	dec	a
-	jr	z, .malloc_zeroes
-	ld	de, (hl)
-	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
-.malloc_zeroes:
-	ex	de, hl
-	sbc	hl, hl
-	adc	hl, de
-	push	hl
-	inc	de
-	ld	(hl), $00
-	ldir
-	pop	hl
-	ret
-.malloc_last_block:
-; we also need to remove the page from the queue
-	lea	hl, ix+KERNEL_SLAB_PAGE_COUNT
-	call	kqueue.remove_head
-; node remove, nice
-; so now, fetch adress of the last block
-	lea	hl, iy+KERNEL_SLAB_DATA_MAX_SIZE
-	or	a, a
-	sbc	hl, bc
-; hl is our block adress, clean and return
-	jr	.malloc_zeroes
-	
-.free:
-; a > ix
-; we need to grab page ? per page data : inuse, and freeptr + slab owner ...
-; 	ld	de, (ix+KERNEL_SLAB_ENTRY)
-; 	ld	(hl), de
-; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
+; .malloc:
+; ; ix is slab found *from slab queue*
+; ; first load the pointer to the header page (we know page is partial free)
+; 	ld	iy, (ix+KERNEL_SLAB_PAGE_QUEUE)
+; 	ld	bc, (ix+KERNEL_SLAB_DATA_MAX_SIZE)
+; ; get actual free count in page
+; 	ld	a, (iy+KERNEL_SLAB_PAGE_TLB)
+; ; if it is = 1, then we don't have an actual free pointer to use, but the free pointer is the *last* block
+; 	dec	a
+; 	jr	z, .malloc_last_block
+; ; load the free pointer & grab new free pointer
+; ; if a = 1, no new free
+; 	ld	(iy+KERNEL_SLAB_PAGE_FREE), a
+; 	ld	hl, (iy+KERNEL_SLAB_PAGE_POINTER)
+; 	dec	a
+; 	jr	z, .malloc_zeroes
+; 	ld	de, (hl)
+; 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
+; .malloc_zeroes:
+; 	ex	de, hl
+; 	sbc	hl, hl
+; 	adc	hl, de
+; 	push	hl
+; 	inc	de
+; 	ld	(hl), $00
+; 	ldir
+; 	pop	hl
 ; 	ret
+; .malloc_last_block:
+; ; we also need to remove the page from the queue
+; 	lea	hl, ix+KERNEL_SLAB_PAGE_COUNT
+; 	call	kqueue.remove_head
+; ; node remove, nice
+; ; so now, fetch adress of the last block
+; 	lea	hl, iy+KERNEL_SLAB_DATA_MAX_SIZE
+; 	or	a, a
+; 	sbc	hl, bc
+; ; hl is our block adress, clean and return
+; 	jr	.malloc_zeroes
+; 	
+; .free:
+; ; a > ix
+; ; we need to grab page ? per page data : inuse, and freeptr + slab owner ...
+; ; 	ld	de, (ix+KERNEL_SLAB_ENTRY)
+; ; 	ld	(hl), de
+; ; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
+; ; 	ret
 	
 define	KERNEL_MEMORY_BLOCK_DATA	0
 define	KERNEL_MEMORY_BLOCK_FREE	2
