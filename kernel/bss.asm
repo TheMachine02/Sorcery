@@ -119,17 +119,29 @@ unallocated_zero:
 kmem_cache_buffctl:
 ; 16 slub buffers, 6 defined, 10 user defined
 kmem_cache_s8:
- db	8	dup	$FF
+ db	4	dup	$FF
+ db	126
+ dl	-8
 kmem_cache_s16:
- db	8	dup	$FF
+ db	4	dup	$FF
+ db	62
+ dl	-16
 kmem_cache_s32:
- db	8	dup	$FF
+ db	4	dup	$FF
+ db	30
+ dl	-32
 kmem_cache_s64:
- db	8	dup	$FF
+ db	4	dup	$FF
+ db	14
+ dl	-64
 kmem_cache_s128:
- db	8	dup	$FF
+ db	4	dup	$FF
+ db	6
+ dl	-128
 kmem_cache_s256:
- db	8	dup	$FF
+ db	4	dup	$FF
+ db	2
+ dl	-256
 kmem_cache_user:
  db	80	dup	KERNEL_HW_POISON
 kvfs_root:

@@ -82,7 +82,9 @@ kinit:
 	call	keyboard.init
 	call	rtc.init
 ; device & driver init ;
-;	call	null.init
+	call	console.init
+	call	flash.init
+	call	null.init
 ; create init thread : ie, first program to run (/bin/init/)
 	ld	iy, THREAD_INIT_TEST
 	call	kthread.create
@@ -123,11 +125,7 @@ node:
 
 THREAD_INIT_TEST:
 ; 	ld	hl, global_mutex
-; 	call	atomic_rw.init
-	call	console.init
-	call	flash.init
-	call	null.init
-	
+; 	call	atomic_rw.init	
 ; load frozen elf example
 ;	call	kexec.load_elf	; thread  2
 ; C pthread_create exemple, called from asm (syscall, let's look at you really hard)
@@ -246,6 +244,25 @@ TEST_THREAD_C:
 ; 	ldir
 ; 	ld	hl, global_lock
 ; 	call	atomic_rw.unlock_read
+		
+	ld	hl, 7
+	call	kmalloc_a
+	push	hl
+	
+	ld	hl, 7
+	call	kmalloc_a
+	push	hl
+	
+	ld	hl, 7
+	call	kmalloc_a
+	
+
+	call	kfree_a
+	pop	hl
+	call	kfree_a
+	pop	hl
+	call	kfree_a
+	
 	jr	.spin
 	pop ix
 	ret

@@ -1,9 +1,10 @@
 ; 8 bytes per cache structure
 define	KERNEL_SLAB_CACHE		0
-define	KERNEL_SLAB_PAGE_COUNT		0
-define	KERNEL_SLAB_PAGE_QUEUE		1
-define	KERNEL_SLAB_DATA_MAX_SIZE	4	; 3 bytes
-define	KERNEL_SLAB_DATA_MAX_COUNT	7	; 1 byte
+define	KERNEL_SLAB_CACHE_COUNT		0
+define	KERNEL_SLAB_CACHE_QUEUE		1
+define	KERNEL_SLAB_CACHE_MAX_COUNT	4	; 1 byte, max number of block per slab (-2)
+define	KERNEL_SLAB_CACHE_MAX_SIZE	5	; 3 bytes, max size of block per slab (negated)
+
 ; bss defined location
 define	kmem_cache_buffctl		$D00340
 define	kmem_cache_s8			$D00340
@@ -15,9 +16,10 @@ define	kmem_cache_s128			$D00360
 ; 7 bytes + 3 special
 define	KERNEL_SLAB_PAGE_HEADER		0	; header
 define	KERNEL_SLAB_PAGE_HEADER_SIZE	8	; size
-define	KERNEL_SLAB_PAGE_TLB		0	; direct page tlb
+define	KERNEL_SLAB_PAGE_NULL		0	; nothing here
 define	KERNEL_SLAB_PAGE_NEXT		1	; queue pointer
 define	KERNEL_SLAB_PAGE_PREVIOUS	4	; queue pointer
+define	KERNEL_SLAB_PAGE_NULL2		7	; nothing here either
 define	KERNEL_SLAB_PAGE_POINTER	8	; free pointer reside in the *next* free block
 ; as such :
 ; if we are allocating
@@ -29,14 +31,56 @@ define	KERNEL_SLAB_PAGE_POINTER	8	; free pointer reside in the *next* free block
 ; count > 1, update the free pointer
 ; count = max_count, free the slab entirely and remove it from queue
 
-;kmalloc:
+;define	KERNEL_MM_PAGE_FREE		7
+;define	KERNEL_MM_PAGE_CACHE		6
+define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
+define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
+
+define	KERNEL_MEMORY_BLOCK_DATA	0
+define	KERNEL_MEMORY_BLOCK_FREE	2
+define	KERNEL_MEMORY_BLOCK_PREV	3
+define	KERNEL_MEMORY_BLOCK_NEXT	6
+define	KERNEL_MEMORY_BLOCK_PTR		9
+define	KERNEL_MEMORY_BLOCK_SIZE	12
+define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
+
+
+kmalloc:
+	push	af
+	push	de
+	push	bc
+	push	ix
+	push	iy
+	call	kmalloc_a
+	pop	iy
+	pop	ix
+	pop	bc
+	pop	de
+	pop	af
+	ret
+
+kfree:
+	push	af
+	push	de
+	push	bc
+	push	ix
+	push	iy
+	call	kfree_a
+	pop	iy
+	pop	ix
+	pop	bc
+	pop	de
+	pop	af
+	ret
+	
+kmalloc_a:
 .get_cache:
 ; hl is size
 ; find highest bit set, and if lower bit are set, do + 1
 	ld	a, l
 	or	a, a
 	ret	z
-	ld	hl, ( kmem_cache_buffctl shr 3 ) + (8 - 3)	; no 1, 2, 4 bytes caches
+	ld	hl, kmem_cache_buffctl shr 3 + 5	; no 1, 2, 4 bytes caches
 .get_cache_log:
 	dec	l
 	add	a, a
@@ -55,80 +99,48 @@ define	KERNEL_SLAB_PAGE_POINTER	8	; free pointer reside in the *next* free block
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
+
 kmem_cache_alloc:
+	tsti
 ; alloc from cache (hl)
+	or	a, a
 	ld	a, (hl)
 	inc	a
-;	jr	z, kmem_cache_grow
+	call	z, kmem_cache_grow
+	jr	c, .cache_exit
 	inc	hl
 ; grab first usable slab
 	ld	iy, (hl)
-
-
-
-
-
-;; Slab : we have a in stone slab 
-
-; kmem_cache_create
-; kmem_cache_destroy
-; kmem_cache_alloc
-; kmem_cache_free
-; kmem_cache_shrink
-; kmme_cache_grow
-; 
-; Cache can be increase easily >> alloc a new page, add up free index
-; > need to have info on each page on the number of inuse object
-; 
-; >> cache slab
-; >> last free block is a special BLOCK_HEADER
-; holding info about the queue, inuse block, and the free ptr in the page
-; partial >> in the queue
-; full >> dropped out of the queue, when inuse drop, add it again to the queue
-; when inuse drop to zero >> drop the page
-
-; kmem_cache structure hold the page queue, info about the slab
-
-; to grow cache, add the page and add it to the queue
-; 3 ptr, 3 list, 1 inuse
-
-; latest free will be filled first (so fill old page first ++ )
-
-kslab: 
-.init:
-	ret
- 
-; .free:
-; 	call	kmm.physical_to_ptlb
-; 	inc	hl
-; 	dec	(hl)
-; 	dec	hl
-; 	ld	a, (hl)
-; ; a > ix
-; 	ld	de, (ix+KERNEL_SLAB_ENTRY)
-; 	ld	(hl), de
-; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
-; 	ret
-
-; .malloc:
-; ; ix is slab found *from slab queue*
-; ; first load the pointer to the header page (we know page is partial free)
-; 	ld	iy, (ix+KERNEL_SLAB_PAGE_QUEUE)
-; 	ld	bc, (ix+KERNEL_SLAB_DATA_MAX_SIZE)
-; ; get actual free count in page
-; 	ld	a, (iy+KERNEL_SLAB_PAGE_TLB)
-; ; if it is = 1, then we don't have an actual free pointer to use, but the free pointer is the *last* block
-; 	dec	a
-; 	jr	z, .malloc_last_block
-; ; load the free pointer & grab new free pointer
-; ; if a = 1, no new free
-; 	ld	(iy+KERNEL_SLAB_PAGE_FREE), a
-; 	ld	hl, (iy+KERNEL_SLAB_PAGE_POINTER)
-; 	dec	a
-; 	jr	z, .malloc_zeroes
-; 	ld	de, (hl)
-; 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
-; .malloc_zeroes:
+; get the ptlb of the page
+	push	iy
+	ld	bc, -$D00000
+	add	iy, bc
+	ex	(sp), iy
+	inc	sp
+	pop	bc
+	dec	sp
+	ld	a, c
+	srl	b
+	rra
+	srl	b
+	rra
+	ld	bc, kmm_ptlb_map + 256
+	ld	c, a
+; get the counter
+	ld	a, (bc)
+; count = 2, return the pointer free block and decrement (should point to itself)
+; count = 1, free from the queue and return the header block
+	dec	a
+	ld	(bc), a
+	jr	z, .cache_full_page
+; grab the free pointer
+	ld	hl, (iy+KERNEL_SLAB_PAGE_POINTER)
+; get the *next* free pointer
+	ld	de, (hl)
+; and write it
+	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
+; note that if now count = 1, those last two operation are useless, and could be skipped (but we'll lose cycles in the main case). No side effects anyway
+.cache_zero_data:
 ; 	ex	de, hl
 ; 	sbc	hl, hl
 ; 	adc	hl, de
@@ -137,301 +149,146 @@ kslab:
 ; 	ld	(hl), $00
 ; 	ldir
 ; 	pop	hl
-; 	ret
-; .malloc_last_block:
-; ; we also need to remove the page from the queue
-; 	lea	hl, ix+KERNEL_SLAB_PAGE_COUNT
-; 	call	kqueue.remove_head
-; ; node remove, nice
-; ; so now, fetch adress of the last block
-; 	lea	hl, iy+KERNEL_SLAB_DATA_MAX_SIZE
-; 	or	a, a
-; 	sbc	hl, bc
-; ; hl is our block adress, clean and return
-; 	jr	.malloc_zeroes
-; 	
-; .free:
-; ; a > ix
-; ; we need to grab page ? per page data : inuse, and freeptr + slab owner ...
-; ; 	ld	de, (ix+KERNEL_SLAB_ENTRY)
-; ; 	ld	(hl), de
-; ; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
-; ; 	ret
-	
-define	KERNEL_MEMORY_BLOCK_DATA	0
-define	KERNEL_MEMORY_BLOCK_FREE	2
-define	KERNEL_MEMORY_BLOCK_PREV	3
-define	KERNEL_MEMORY_BLOCK_NEXT	6
-define	KERNEL_MEMORY_BLOCK_PTR		9
-define	KERNEL_MEMORY_BLOCK_SIZE	12
-define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
-
-kmalloc:
-; Memory allocation routine
-; REGSAFE and ERRNO compliant
-; void* malloc(size_t size)
-; register HL is size
-; return NULL if failed and errno set or void* otherwise
-; also set carry if failed
-	push	af
-	push	de
-	ex	de, hl
-	push	ix
-	push	bc
-	ld	ix, (kthread_current)
-	ld	ix, (ix+KERNEL_THREAD_HEAP)
-; reset carry flag for loop sbc
-	or	a, a
-.malloc_loop:
-	bit	7, (ix+KERNEL_MEMORY_BLOCK_FREE)
-	jr	z, .malloc_test_block
-.malloc_next_block:
-	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
-	or	a, a
-	jr	z, .malloc_errno
-	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-	jr	.malloc_loop
-; so, we didn't find any memory block large enough for us
-; let's try to map more memory to the thread
-; first, get size+BLOCK_HEADER / block size 
-; ix is the last block, it's important !
-; .malloc_break:
-; 	ld	hl, KERNEL_MEMORY_BLOCK_SIZE
-; 	add	hl, de
-; 	dec	sp
-; 	push	hl
-; 	ld	a, l
-; 	inc	sp
-; 	ex	(sp), hl
-; ; we need to round UP here	
-; 	or	a, a
-; 	jr	z, $+3
-; 	inc	hl
-; 	srl	h
-; 	rr	l
-; 	jr	nc, $+3
-; 	inc	hl
-; 	srl	h
-; 	rr	l
-; 	jr	nc, $+3
-; 	inc	hl
-; 	ld	b, l
-; 	pop	hl
-; 	ld	hl, KERNEL_MMU_RAM
-; 	call	kmmu.map_block
-; ; block a certain number of block
-; ; return hl as the adress
-; ; de is still size
-; 	jp	c, .malloc_errno
-; 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
-; ; there is a *new block*
-; ; create the block, point it to ix, and then jump to test block
-; 	push	hl
-; ; b * KERNEL_MMU_PAGE_SIZE/256 > bc
-; 	or	a, a
-; 	sbc	hl, hl
-; 	ld	h, b
-; 	add	hl, hl
-; 	add	hl, hl
-; 	ld	bc, -KERNEL_MEMORY_BLOCK_SIZE
-; 	add	hl, bc
-; ; this is the size of the block
-; 	lea	bc, ix+0
-; 	pop	ix
-; 	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), hl
-; 	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), bc
-; 	ld	hl, NULL
-; 	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), hl
-; 	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
-; 	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
-.malloc_test_block:
-	ld	hl, (ix+KERNEL_MEMORY_BLOCK_DATA)
-	sbc	hl, de
-	jr	c, .malloc_next_block    
-.malloc_mark_block:
-; thresold to slipt the block. If the size left is >= 64 bytes, then slipt
-	ld	bc, KERNEL_MEMORY_MALLOC_THRESHOLD
-	sbc	hl, bc
-	jr	nc, .malloc_split_block
-; no split, so just return current block \o/ mark it used
-	set	7, (ix+KERNEL_MEMORY_BLOCK_FREE)
-	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
-	pop	bc
-	pop	ix
-	pop	de
-	pop	af
-	or	a, a
+.cache_exit:
+	rsti
 	ret
-.malloc_split_block:
+.cache_full_page:
+	dec	hl
+	call	kqueue.remove_head
 	push	iy
-	ld	bc, KERNEL_MEMORY_MALLOC_THRESHOLD - KERNEL_MEMORY_BLOCK_SIZE
-	add	hl, bc
-	lea	iy, ix+KERNEL_MEMORY_BLOCK_SIZE
-	add	iy, de	; this is the new block adress
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), de
-	set	7, (ix+KERNEL_MEMORY_BLOCK_FREE)
-	ld	(iy+KERNEL_MEMORY_BLOCK_DATA), hl
-	ld	hl, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), iy
-	ld	(iy+KERNEL_MEMORY_BLOCK_PREV), ix
-	ld	(iy+KERNEL_MEMORY_BLOCK_NEXT), hl
-	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), hl
-	lea	bc, iy+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(iy+KERNEL_MEMORY_BLOCK_PTR), bc
-	pop	iy
-	pop	bc
-	pop	ix
-	pop	de
-	pop	af
-	or	a, a
-	ret
-.malloc_errno:
-	ld	ix, (kthread_current)
-	ld	(ix+KERNEL_THREAD_ERRNO), ENOMEM
-	pop	bc
-	pop	ix
-	pop	de
-	pop	af
-	scf
-	sbc	hl, hl
-	ret
-
-; krealloc:
-; ; Memory realloc routine
-; ; REGSAFE and ERRNO compliant
-; ; void* realloc(void* ptr, size_t newsize)
-; ; if ptr is NULL, return silently
-; 	push	ix
-; 	push	de
-; 	push	hl
-; 	pop	ix
-; ; try to mask the adress, ie >= D00000
-; 	ex	de, hl
-; 	ld	hl, $300000
-; 	add	hl, de
-; 	jr	nc, .realloc_error
-; ; check if adress is valid
-; 	ld	hl, (ix-3)
-; 	or	a, a
-; 	sbc	hl, de
-; 	jr	nz, .realloc_error
-; ; invalid adress, return quietly
-; ; TODO try to merge with the next block, if free, to avoid copy
-; ; TODO if resize to smaller size, shrink the current block instead allocating new one
-; ; read the next block size and if it is free
-; ; else, malloc and copy and free
-; ; 	lea	ix, ix-KERNEL_MEMORY_BLOCK_SIZE
-; ; 	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
-; ; 	or	a, a
-; ; 	jr	z, .realloc_malloc_cpy
-; ; 	ld	iy, (iy+KERNEL_MEMORY_BLOCK_NEXT)
-; ; 	bit	7, (iy+KERNEL_MEMORY_BLOCK_FREE)
-; ; 	jr	nz, .realloc_malloc_cpy
-; ; is size enough ?
-; ; 	ld	hl, (ix+KERNEL_MEMORY_BLOCK_DATA)
-; ; 	ld	de, (iy+KERNEL_MEMORY_BLOCK_DATA)
-; ; 	add	hl, de
-; ; clean out the *used* mask
-; ; 	ld	de, $800000
-; ; 	add	hl, de
-; ; 	or	a, a
-; ; 	sbc	hl, bc	; if nc, we are good ! merge ix and iy, return ix+12
-; ; 	jr	c, .realloc_malloc_cpy
-; .realloc_malloc_cpy:
-; 	or	a, a
-; 	sbc	hl, hl
-; 	adc	hl, bc
-; 	jr	z, .realloc_free
-; 	call	kmalloc
-; 	jr	c, .realloc_error
-; 	push	hl
-; 	ex	de, hl
-; 	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
-; ; copy for the new size only
-; 	ldir
-; 	pop	de
-; .realloc_free:
-; 	lea	hl, ix+KERNEL_MEMORY_BLOCK_SIZE
-; 	call	kfree
-; 	ex	de, hl
-; 	pop	de
-; 	pop	ix
-; 	or	a, a
-; 	ret
-; .realloc_error:
-; ; set hl = NULL, ERRNO set appropriately
-; 	or	a, a
-; 	sbc	hl, hl
-; 	pop	de
-; 	pop	ix
-; 	scf
-; 	ret
-	
-kfree:
-; Memory free routine
-; REGSAFE and ERRNO compliant
-; void free(void* ptr)
-; if ptr is NULL, return silently
-; behaviour is undetermined if ptr wasn't malloc'ed before
-	push	af
-	push	ix
-	push	iy
-	push	de
-	push	hl
-; try to mask the adress, ie >= D00000
-	ex	de, hl
-	ld	hl, $300000
-	add	hl, de
-	jr	nc, .free_exit
-; check if adress is valid
-	push	de
-	pop	ix
-	ld	hl, (ix-3)
-	xor	a, a
-	sbc	hl, de
-	jr	nz, .free_exit	; invalid adress, return quietly
-; else, free the block and try to merge with prev & next
-	lea	ix, ix-KERNEL_MEMORY_BLOCK_SIZE
-	res	7, (ix+KERNEL_MEMORY_BLOCK_FREE)
-	ld	iy, (ix+KERNEL_MEMORY_BLOCK_PREV)
-	or	a, (ix+KERNEL_MEMORY_BLOCK_PREV+2)
-	jr	z, .free_merge_pblock
-	bit	7, (iy+KERNEL_MEMORY_BLOCK_FREE)
-	jr	nz, .free_merge_pblock	
-	ld	hl, (iy+KERNEL_MEMORY_BLOCK_DATA)
-	ld	de, (ix+KERNEL_MEMORY_BLOCK_DATA)
-	add	hl, de
-	ld	de, KERNEL_MEMORY_BLOCK_SIZE
-	add	hl, de
-	ld	(iy+KERNEL_MEMORY_BLOCK_DATA), hl
-	ld	ix, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-	ld	(iy+KERNEL_MEMORY_BLOCK_NEXT), ix
-; changed the prev of the next block
-	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), iy
-	lea	ix, iy+0
-.free_merge_pblock:
-	ld	iy, (ix+KERNEL_MEMORY_BLOCK_NEXT)
-	ld	a, (ix+KERNEL_MEMORY_BLOCK_NEXT+2)
-	or	a, a
-	jr	z, .free_exit
-	bit	7, (iy+KERNEL_MEMORY_BLOCK_FREE)
-	jr	nz, .free_exit
-	ld	hl, (iy+KERNEL_MEMORY_BLOCK_DATA)
-	ld	de, (ix+KERNEL_MEMORY_BLOCK_DATA)
-	add	hl, de
-	ld	de, KERNEL_MEMORY_BLOCK_SIZE
-	add	hl, de
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), hl
-	ld	iy, (iy+KERNEL_MEMORY_BLOCK_NEXT)
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), iy
-; changed the prev of the next block
-	ld	(iy+KERNEL_MEMORY_BLOCK_PREV), ix
-.free_exit:
 	pop	hl
-	pop	de
+	jr	.cache_zero_data
+
+kmem_cache_grow:
+; allocate a page, prepare it
+	ld	a, l
+	rra
+	rra
+	rra
+	and	a, KERNEL_MM_PAGE_OWNER_MASK
+	or	a, KERNEL_MM_PAGE_CACHE_MASK
+	ld	e, a
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	a, (hl)
+	add	a, 2
+	push	hl
+	ld	b, 0
+	call	kmm.page_map_single
+	push	hl
 	pop	iy
+	pop	hl
+	ret	c
+; iy is page, hl is still slab
+; de is -block size
+; b is count of block
+	push	iy
+	ld	de, 1024
+	add	iy, de
+	ld	b, (hl)
+	inc	hl
+	ld	de, (hl)
+	add	iy, de
+	push	iy
+	inc	b
+; iy is first block, point to block - 1
+.cache_grow_init:
+	lea	ix, iy+0
+	add	ix, de
+	ld	(iy+0), ix
+	lea	iy, ix+0
+	djnz	.cache_grow_init
+; last pointer, point to last data block
 	pop	ix
-	pop	af
+	pop	iy
+	ld	(iy+KERNEL_SLAB_PAGE_POINTER), ix
+	ld	bc, -5
+	add	hl, bc
+	call	kqueue.insert_head
+	or	a, a
+	ret
+
+kfree_a:
+kmem_cache_free:
+; hl is free data adress
+	tsti
+	push	hl
+	ld	bc, -$D00000
+	add	hl, bc
+	ex	(sp), hl
+	inc	sp
+	pop	bc
+	dec	sp
+	ld	a, c
+	srl	b
+	rra
+	srl	b
+	rra
+	ld	bc, kmm_ptlb_map
+	ld	c, a
+	ld	iy, KERNEL_MM_RAM shr 2
+	ld	iyh, a
+	add	iy, iy
+	add	iy, iy
+	ex	de, hl
+; iy is our *base* page adress
+	ld	a, (bc)
+	and	a, KERNEL_MM_PAGE_OWNER_MASK
+	ld	hl, kmem_cache_buffctl shr 3
+	or	a, l
+	ld	l, a
+	add	hl, hl
+	inc	hl	; +4, KERNEL_SLAB_CACHE_MAX_COUNT
+	add	hl, hl
+	add	hl, hl
+; de is pointer, hl is our slab, bc is ptlb
+	inc	b
+; get counter
+	ld	a, (bc)
+; count = 0, create the header block and add slab to the structure queue
+; count = 1, create the free pointer and made it point itself
+; count > 1, update the free pointer
+	inc	a
+	ld	(bc), a
+	dec	a
+	jr	z, .cache_free_link
+	dec	a
+	jr	z, .cache_free_ptr
+	cp	a, (hl)	; max - 2
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	hl
+	jr	z, kmem_cache_shrink
+; default pointer updating
+; grab page base adress	(mask 1024)
+; hl = our free pointer
+	ex	de, hl
+	ld	de, (iy+KERNEL_SLAB_PAGE_POINTER)
+	ld	(hl), de
+	ld	(iy+KERNEL_SLAB_PAGE_POINTER), hl
+	rsti
+	ret
+.cache_free_ptr:
+	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
+	rsti
+	ret	
+.cache_free_link:
+	call	kqueue.insert_head
+	rsti
+	ret
+
+kmem_cache_shrink:
+	call	kqueue.remove
+	dec	b
+	push	bc
+	pop	hl
+	call	kmm.page_flush
+	rsti
+	ret
+
+kmem_cache_create:
+kmem_cache_destroy:
 	ret
