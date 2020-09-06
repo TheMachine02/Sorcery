@@ -80,14 +80,14 @@ kernel_idle:
  dl	kernel_idle		; No prev
  db	$00			; No PPID
  db	$FF			; IRQ all
- db	$FF			; Status
+ db	$FF			; Status		; 9B is here, we DONT care
  db	12			; Special anyway
  db	$FF			; quantum
  dl	$D000A8			; Stack limit
 kernel_stack_pointer:
  dl	$D000FF			; Stack will be writed at first unschedule
  dl	$D00100			; Boot/kernel  heap
- dl	$00			; Time
+ dl	$000000			; Time
 ; up to $A8, end of stack
  db	87	dup	KERNEL_HW_POISON
 KERNEL_STACK:
@@ -102,6 +102,7 @@ kinterrupt_irq_stack_isr	= $+506
 kinterrupt_irq_ret_ctx		= $+506
 kinterrupt_irq_stack_ctx	= $+509
  db	512	dup	KERNEL_HW_POISON
+; we are at $D00300 
 ; 16 bytes (4x4)
 kthread_mqueue_active:
  db	16	dup	$FF
@@ -112,9 +113,25 @@ kthread_queue_retire:
 ktimer_queue:
  db	4	dup	$FF
 kinterrupt_power_mask:
- dl	0
+ db	3	dup	KERNEL_HW_POISON
 unallocated_zero: 
- db	165	dup	KERNEL_HW_POISON
+ db	37	dup	KERNEL_HW_POISON
+kmem_cache_buffctl:
+; 16 slub buffers, 6 defined, 10 user defined
+kmem_cache_s8:
+ db	8	dup	$FF
+kmem_cache_s16:
+ db	8	dup	$FF
+kmem_cache_s32:
+ db	8	dup	$FF
+kmem_cache_s64:
+ db	8	dup	$FF
+kmem_cache_s128:
+ db	8	dup	$FF
+kmem_cache_s256:
+ db	8	dup	$FF
+kmem_cache_user:
+ db	80	dup	KERNEL_HW_POISON
 kvfs_root:
 ; 64 bytes
  db	$04	; directory

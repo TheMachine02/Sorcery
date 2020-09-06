@@ -1,5 +1,43 @@
 define	KERNEL_SLAB_CACHE	0
 
+;kmalloc:
+.get_cache:
+; hl is size
+; find highest bit set, and if lower bit are set, do + 1
+	ld	a, l
+	or	a, a
+	ret	z
+	ld	hl, ( kmem_cache_buffctl shr 3 ) + (8 - 3)	; no 1, 2, 4 bytes caches
+.get_cache_log:
+	dec	l
+	add	a, a
+	jr	nc, .get_cache_log
+	or	a, a
+	jr	z, .get_cache_lowbit
+	inc	l
+.get_cache_lowbit:
+; can get l < 0
+	ld	a, l
+	add	a, a
+	jr	nc, .get_cache_default
+	xor	a, a
+	ld	l, a
+.get_cache_default:	
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+kmem_cache_alloc:
+; alloc from cache (hl)
+	ld	a, (hl)
+	inc	a
+;	jr	z, kmem_cache_grow
+	inc	hl
+; grab first usable slab
+	ld	iy, (hl)
+
+
+
+
 
 ;; Slab : we have a in stone slab 
 
@@ -42,18 +80,25 @@ kslab:
 ; 	ld	(hl), de
 ; 	ld	(ix+KERNEL_SLAB_ENTRY), hl
 ; 	ret
-; 
+
+; 8 bytes structure
 define	KERNEL_SLAB_CACHE		0
-define	KERNEL_SLAB_ID			0	; from 0 to 127
-define	KERNEL_SLAB_PAGE_COUNT		1
-define	KERNEL_SLAB_PAGE_QUEUE		2
-define	KERNEL_SLAB_BLOCK_SIZE		5	; 3 bytes
-define	KERNEL_SLAB_MAX_COUNT		8	; 1 byte
+define	KERNEL_SLAB_PAGE_COUNT		0
+define	KERNEL_SLAB_PAGE_QUEUE		1
+define	KERNEL_SLAB_DATA_MAX_SIZE	4	; 3 bytes
+define	KERNEL_SLAB_DATA_MAX_COUNT	7	; 1 byte
+	
+define	kmem_cache_buffctl		$D00340
+define	kmem_cache_s8			$D00340
+define	kmem_cache_s16			$D00348
+define	kmem_cache_s32			$D00350
+define	kmem_cache_s64			$D00358
+define	kmem_cache_s128			$D00360
 	
 ; 7 bytes + 3 special
 define	KERNEL_SLAB_PAGE_HEADER		0
 define	KERNEL_SLAB_PAGE_HEADER_SIZE	8
-define	KERNEL_SLAB_PAGE_FREE		0
+define	KERNEL_SLAB_PAGE_TLB		0	; direct page tlb
 define	KERNEL_SLAB_PAGE_NEXT		1
 define	KERNEL_SLAB_PAGE_PREVIOUS	4
 define	KERNEL_SLAB_PAGE_POINTER	-3
@@ -62,7 +107,7 @@ define	KERNEL_SLAB_PAGE_POINTER	-3
 ; ix is slab found *from slab queue*
 ; first load the pointer to the header page (we know page is partial free)
 	ld	iy, (ix+KERNEL_SLAB_PAGE_QUEUE)
-	ld	bc, (ix+KERNEL_SLAB_BLOCK_SIZE)
+	ld	bc, (ix+KERNEL_SLAB_DATA_MAX_SIZE)
 ; get actual free count in page
 	ld	a, (iy+KERNEL_SLAB_PAGE_FREE)
 ; if it is = 1, then we don't have an actual free pointer to use, but the free pointer is the *last* block
@@ -92,7 +137,7 @@ define	KERNEL_SLAB_PAGE_POINTER	-3
 	call	kqueue.remove_head
 ; node remove, nice
 ; so now, fetch adress of the last block
-	lea	hl, iy+KERNEL_SLAB_BLOCK_SIZE
+	lea	hl, iy+KERNEL_SLAB_DATA_MAX_SIZE
 	or	a, a
 	sbc	hl, bc
 ; hl is our block adress, clean and return
