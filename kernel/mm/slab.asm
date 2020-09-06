@@ -16,7 +16,7 @@ define	kmem_cache_s128			$D00360
 ; 7 bytes + 3 special
 define	KERNEL_SLAB_PAGE_HEADER		0	; header
 define	KERNEL_SLAB_PAGE_HEADER_SIZE	8	; size
-define	KERNEL_SLAB_PAGE_NULL		0	; nothing here
+define	KERNEL_SLAB_PAGE_PTLB		0	; ptlb identifier
 define	KERNEL_SLAB_PAGE_NEXT		1	; queue pointer
 define	KERNEL_SLAB_PAGE_PREVIOUS	4	; queue pointer
 define	KERNEL_SLAB_PAGE_NULL2		7	; nothing here either
@@ -109,29 +109,16 @@ kmem_cache_alloc:
 	call	z, kmem_cache_grow
 	jr	c, .cache_exit
 	inc	hl
+	push	iy
+	push	de
 ; grab first usable slab
 	ld	iy, (hl)
+	ex	de, hl
 ; get the ptlb of the page
-	push	iy
-	ld	bc, -$D00000
-	add	iy, bc
-	ex	(sp), iy
-	inc	sp
-	pop	bc
-	dec	sp
-	ld	a, c
-	srl	b
-	rra
-	srl	b
-	rra
-	ld	bc, kmm_ptlb_map + 256
-	ld	c, a
+	ld	hl, kmm_ptlb_map + 256
+	ld	l, (iy+KERNEL_SLAB_PAGE_PTLB)
 ; get the counter
-	ld	a, (bc)
-; count = 2, return the pointer free block and decrement (should point to itself)
-; count = 1, free from the queue and return the header block
-	dec	a
-	ld	(bc), a
+	dec	(hl)
 	jr	z, .cache_full_page
 ; grab the free pointer
 	ld	hl, (iy+KERNEL_SLAB_PAGE_POINTER)
@@ -141,25 +128,23 @@ kmem_cache_alloc:
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
 ; note that if now count = 1, those last two operation are useless, and could be skipped (but we'll lose cycles in the main case). No side effects anyway
 .cache_zero_data:
-; 	ex	de, hl
-; 	sbc	hl, hl
-; 	adc	hl, de
-; 	push	hl
-; 	inc	de
-; 	ld	(hl), $00
-; 	ldir
-; 	pop	hl
+; clean up the data (hl) for data_size
+; TODO
+	pop	de
+	pop	iy
 .cache_exit:
 	rsti
 	ret
 .cache_full_page:
+	ex	de, hl
 	dec	hl
 	call	kqueue.remove_head
-	push	iy
-	pop	hl
+; the last one in the slab
+	lea	hl, iy+KERNEL_SLAB_PAGE_HEADER
 	jr	.cache_zero_data
 
 kmem_cache_grow:
+	di
 ; allocate a page, prepare it
 	ld	a, l
 	rra
@@ -181,6 +166,19 @@ kmem_cache_grow:
 	pop	iy
 	pop	hl
 	ret	c
+	push	iy
+	ld	bc, -$D00000
+	add	iy, bc
+	ex	(sp), iy
+	inc	sp
+	pop	bc
+	dec	sp
+	ld	a, c
+	srl	b
+	rra
+	srl	b
+	rra
+; a is tlb
 ; iy is page, hl is still slab
 ; de is -block size
 ; b is count of block
@@ -192,7 +190,6 @@ kmem_cache_grow:
 	ld	de, (hl)
 	add	iy, de
 	push	iy
-	inc	b
 ; iy is first block, point to block - 1
 .cache_grow_init:
 	lea	ix, iy+0
@@ -201,9 +198,11 @@ kmem_cache_grow:
 	lea	iy, ix+0
 	djnz	.cache_grow_init
 ; last pointer, point to last data block
+	ld	(iy+0), iy
 	pop	ix
 	pop	iy
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), ix
+	ld	(iy+KERNEL_SLAB_PAGE_PTLB), a
 	ld	bc, -5
 	add	hl, bc
 	call	kqueue.insert_head
