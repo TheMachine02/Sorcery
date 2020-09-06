@@ -275,6 +275,8 @@ kmem_cache_free:
 	rsti
 	ret	
 .cache_free_link:
+	dec	b
+	ld	(iy+KERNEL_SLAB_PAGE_PTLB), b
 	call	kqueue.insert_head
 	rsti
 	ret
