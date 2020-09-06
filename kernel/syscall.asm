@@ -26,12 +26,13 @@ _get_ppid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getppid()
 ; return value is register hl
-	push	iy
-	ld	iy, (kthread_current)
-	or	a, a
-	sbc	hl, hl
-	ld	l, (iy+KERNEL_THREAD_PPID)
-	pop	iy
+	push	de
+	ld	hl, (kthread_current)
+	ld	de, KERNEL_THREAD_PPID
+	add	hl, de
+	ld	e, (hl)
+	ex	de, hl
+	pop	de
 	ret
 
 _uadmin:

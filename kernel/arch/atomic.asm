@@ -28,6 +28,13 @@ macro	rsti
 	ei
 end	macro
 
+macro	rstiRET
+	pop	af
+	ret	po
+	ei
+	ret
+end	macro
+
 ; TODO : crazily optimize all this segment please +++
 
 atomic_rw:
@@ -37,9 +44,8 @@ atomic_rw:
 .lock_read_test:
 	inc	(hl)
 	jr	z, .rlock_wait
-	rsti
-	ret
-	
+	rstiRET
+		
 .lock_write:
 	tsti
 .lock_write_test:
@@ -47,16 +53,14 @@ atomic_rw:
 	or	a, a
 	jr	nz, .wlock_wait
 	ld	(hl), $FF
-	rsti
-	ret
-
+	rstiRET
+	
 .unlock_read:
 	tsti
 	dec	(hl)
 	jr	z, .unlock_notify
-	rsti
-	ret
-	
+	rstiRET
+		
 .unlock_write:
 	tsti
 	ld	(hl), $00
@@ -66,9 +70,8 @@ atomic_rw:
 	inc	a
 	jr	nz, .unlock_do_wake
 	dec	hl
-	rsti
-	ret
-
+	rstiRET
+	
 .rlock_wait:
 ; make us wait on the lock
 	dec	(hl)
@@ -135,11 +138,11 @@ atomic_rw:
 .init:
 	push	de
 	push	hl
-	ld	(hl), $00
+	ld	de, NULL
+	ld	(hl), e
 	inc	hl
 	ld	(hl), $FF
 	inc	hl
-	ld	de, NULL
 	ld	(hl), de
 	pop	hl
 	pop	de
@@ -180,10 +183,10 @@ kmutex:
 
 .init:
 	inc	hl
-	ld	(hl), NULL
+	xor	a, a
+	ld	(hl), a
 	dec	hl
 	ld	(hl), KERNEL_MUTEX_MAGIC
-	or	a, a
 	sbc	hl, hl
 	ret
 
