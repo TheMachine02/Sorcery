@@ -172,29 +172,31 @@ console:
 	add	hl, de
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	add	hl, de
-	ex	de, hl	; hl -> de
-	sbc	hl, hl
-	add	hl, bc	; bc -> hl
-	ld	a, (hl)
-	ld	iyl, a
-	inc	hl
-	ld	a, (hl)
-	inc	hl
-; iyl = h, a = vsize
-	ld	bc, 0
+	ld	a, (bc)
+	ld	e, a
+	inc	bc
+	ld	a, (bc)
+; e = h, a = vsize
+	push	bc
+	inc.s	bc
+	ld	b, a
+	ld	c, e
+	pop	de
 .blit_loop:
-	ld	c, iyl
-	ldir
-	dec	a
-	ret	z
+	push	bc
+	push	hl
+	ld	b, 0
 	ex	de, hl
-	sbc	hl,bc
+	ldir
+	ex	de, hl
+ 	pop	hl
 	ld	c, 64
 	inc	b
 	add	hl, bc
-	ex	de, hl
-	djnz	.blit_loop
-
+ 	pop	bc
+ 	djnz	.blit_loop
+	ret
+ 	
 .read_keyboard:
 	ld	de, console_flags
 	ld	a, (de)
