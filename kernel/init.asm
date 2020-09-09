@@ -26,7 +26,8 @@ kinit:
 	di	
 ; shift to soft kinit way to reboot ++
 ; setup temporary stack for the kernel
-	ld	sp, $D3FFFF
+	ld.sis	sp, $0000
+	ld	sp, $D30000
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
@@ -37,17 +38,16 @@ kinit:
 	out0	($1D), a
 	out0	($1E), a
 ; disable
-	xor	a, a
 	out0	($3A), a
-	xor	a, a
 	out0	($3B), a
-	xor	a, a
 	out0	($3C), a
 ; general system init
 ; load the ramfs image
 	ld	hl, kernel_ramfs_src
 	ld	de, KERNEL_RAMFS
 	call	lz4.decompress
+	ld	sp, KERNEL_STACK
+	ld	(kernel_stack_pointer), sp
 ; setup the kernel stack & protector
 	ld	a, $A8
 	out0	($3A), a
@@ -55,9 +55,6 @@ kinit:
 	out0	($3B), a
 	ld	a, $D0
 	out0	($3C), a
-	ld	sp, KERNEL_STACK
-	ld	(kernel_stack_pointer), sp
-	ld.sis sp, $0000
 	ld	MB, a
 ; memory init, memory protection
 	xor	a, a
@@ -80,8 +77,8 @@ kinit:
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
 ; power, timer and interrupt ;
 	call	kinterrupt.init
-	call	kwatchdog.init
 	call	kpower.init
+	call	kwatchdog.init
 ; filesystem, should be taken care of with the ramfs
 ;	call	kvfs.init
 ; driver init ;

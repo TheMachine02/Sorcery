@@ -9,6 +9,7 @@ null:
 ; single dev block, (so write / read / seek only), seek capabilities not exposed
 	ld	a, KERNEL_VFS_BLOCK_DEVICE
 	jp	kvfs.inode_device
+	ret
 
 .NULL_DEV:
  db "/dev/null", 0

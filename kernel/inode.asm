@@ -121,6 +121,7 @@ define	phy_destroy_inode	28
 	sbc	hl, de
 	pop	hl
 	jr	z, .inode_get_directory_skip
+	push	af
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
 	jr	z, .inode_get_directory_found
@@ -136,6 +137,7 @@ define	phy_destroy_inode	28
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
 	jr	z, .inode_get_directory_found
+	pop	af
 .inode_get_directory_skip:
 	lea	iy, iy+3
 	dec	a
@@ -150,6 +152,7 @@ define	phy_destroy_inode	28
 	scf
 	ret
 .inode_get_directory_found:
+	pop	af
 ; ix is the directory found, so use it as new parent inode
 	ld	iy, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
@@ -191,7 +194,6 @@ define	phy_destroy_inode	28
 	jp	(hl)
 
 .inode_allocate_error_malloc:
-	pop	hl
 .inode_allocate_error_nodir:
 	scf
 	ret

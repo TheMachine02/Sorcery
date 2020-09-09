@@ -152,26 +152,25 @@ kvfs_root:
  dl	$000000	; parent
 ; atomic lock
  db	$00, $FF
- db	$FF, $FF
- db	$FF, $FF
- db	$FF, $FF
-; data, 15 * 3, there is nothing in this directory
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
- dl	$000000
  dl	$000000
 ; operation lookup table, null physical operation (ie device callback are here)
+ dl	$000000
+; data, 16 * 3, there is nothing in this directory 
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
+ dl	$000000
  dl	$000000
 ; $400
 kthread_pid_map:

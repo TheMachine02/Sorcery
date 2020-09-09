@@ -63,8 +63,8 @@ file	'ramfs'
 
 include	'kernel/nmi.asm'
 
-leaf_frozen_file:
-file	'demo.leaf'
+; leaf_frozen_file:
+; file	'demo.leaf'
 
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
@@ -83,6 +83,4 @@ include	'kernel/dev/flash.asm'
 ; include	'kernel/exec/kelf.asm'
 
 ; rb	$060000 - $
-
-org $060000
 _endos:

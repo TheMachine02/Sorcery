@@ -49,31 +49,35 @@ define	KERNEL_MEMORY_MALLOC_THRESHOLD	64
 
 
 kmalloc:
-	push	af
 	push	de
 	push	bc
 	push	ix
 	push	iy
+	ld	b, a
+	push	bc
 	call	kmalloc_a
+	pop	bc
+	ld	a, b
 	pop	iy
 	pop	ix
 	pop	bc
 	pop	de
-	pop	af
 	ret
 
 kfree:
-	push	af
 	push	de
 	push	bc
 	push	ix
 	push	iy
+	ld	b, a
+	push	bc
 	call	kfree_a
+	pop	bc
+	ld	a, b
 	pop	iy
 	pop	ix
 	pop	bc
 	pop	de
-	pop	af
 	ret
 	
 kmalloc_a:
