@@ -41,7 +41,7 @@ nmi:
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; reset major subsystem
 	call	video.init
-	call	console.fb_takeover_nmi
+	call	console.nmi_takeover
 ; now, process
 	ld	hl, KERNEL_WATCHDOG_CTRL
 	res	0, (hl)

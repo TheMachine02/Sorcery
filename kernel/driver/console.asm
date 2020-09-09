@@ -15,7 +15,15 @@ define	CONSOLE_GLYPH_Y		20
 
 console:
 
+.nmi_takeover:
+	xor	a, a
+	dec	a
+	jr	.fb_takeover_entry
+	
 .fb_takeover:
+	di
+	xor	a, a
+.fb_takeover_entry:
 	ld	iy, console_dev
 ; check CONSOLE_TAKEOVER is null
 	ld	hl, (iy+CONSOLE_TAKEOVER)
@@ -45,18 +53,22 @@ console:
 	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 ; init the screen now
 	push	de
+	push	af
 	call	.init_screen
+	pop	af
+	or	a, a
 	ld	iy, .thread
-	call	kthread.create
+	call	z, kthread.create
 	pop	hl
 ; carry if error
 	ret	c
 ; take lcd mutex control
 	ld	(hl), iy
 	ld	(DRIVER_VIDEO_IRQ_LOCK_THREAD), iy
-	xor	a, a
-	dec	a
+	ld	a, $FF
 	ld	(DRIVER_VIDEO_IRQ_LOCK), a
+	or	a, a
+	ret	nz
 	ei
 	ret
 	
@@ -112,12 +124,6 @@ console:
 	ld	iy, console_stdin
 	call	ring_buffer.create
 	jp	.phy_init
-
-.fb_takeover_nmi:
-; prepare the console for displaying a NMI
-	call	console.init
-	ld	iy, console_dev
-	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 
 .init_screen:
 	ld	a, (console_dev+CONSOLE_FLAGS)
@@ -484,6 +490,10 @@ console:
 	jr	z, .handle_key_no_mod
 	ld	bc, .KEYMAP_ALPHA
 .handle_key_no_mod:
+	bit	1, (hl)
+	jr	z, .handle_key_no_2nd
+	ld	bc, .KEYMAP_2ND
+.handle_key_no_2nd:
 	ld	(hl), 0
 	sbc	hl, hl
 	ld	l, a
@@ -617,6 +627,10 @@ include 'logo.inc'
  db ' ', '.', ';', 'X', 'Y', 'Z', '!', 'S', 'T', 'U', 'V', 'W', 'N', 'O', 'P', 'Q', 'R', 'I', 'J', 'K', 'L', 'M'
  db 'D', 'E', 'F', 'G', 'H', 'A', 'B', 'C'
 
+.KEYMAP_2ND:
+ db ' ', '|', '%', '@', '1', '2', '#', '\', '4', '5', '6', ']', '~', '7', '8', '9', '[', '(', ')', '{', '}', '/'
+ db '$', '&', '*', '_', '^', '-', '+', '`'
+ 
 .KEYBOARD_KEY:
  db $FD, $FD, $FD, $FD, $FD, $FD, $F7, $FF
  db $FD, $03, $07, $0C, $11, $16, $1B, $FD
@@ -625,5 +639,3 @@ include 'logo.inc'
  db $02, $FD, $0A, $0F, $14, $19, $FD, $FD
  db $FE, $06, $0B, $10, $15, $1A, $FC, $FD
  db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
-
-.KEYMAP_2ND:
