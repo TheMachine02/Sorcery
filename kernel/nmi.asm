@@ -41,7 +41,7 @@ nmi:
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; reset major subsystem
 	call	video.init
-	call	console.init
+	call	console.fb_takeover_nmi
 ; now, process
 	ld	hl, KERNEL_WATCHDOG_CTRL
 	res	0, (hl)
@@ -193,7 +193,7 @@ nmi:
 	ret
 
 .THREAD_DEADLOCK:
- db 14, "system deadlock"
+ db 15, "system deadlock"
 .WATCHDOG_EXCEPTION:
  db 18, "watchdog violation"
 .STACKOVERFLOW_EXCEPTION:

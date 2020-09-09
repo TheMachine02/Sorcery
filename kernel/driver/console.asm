@@ -16,8 +16,13 @@ define	CONSOLE_GLYPH_Y		20
 console:
 
 .fb_takeover:
-	di
 	ld	iy, console_dev
+; check CONSOLE_TAKEOVER is null
+	ld	hl, (iy+CONSOLE_TAKEOVER)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ret	nz
 ; take control of the video driver mutex
 	ld	hl, 64
 	call	kmalloc
@@ -26,7 +31,7 @@ console:
 	ex	de, hl
 ; save LCD state
 	ld	hl, DRIVER_VIDEO_SCREEN
-	ld	bc, $10
+	ld	bc, 16
 	ldir
 ; and now the palette state
 	ld	hl, DRIVER_VIDEO_PALETTE
@@ -38,27 +43,35 @@ console:
 ; 58 + 3 bytes in grand total, free 3 bytes
 ; mark console as present
 	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
-; take lcd mutex control
-; TODO
 ; init the screen now
+	push	de
 	call	.init_screen
 	ld	iy, .thread
 	call	kthread.create
+	pop	hl
 ; carry if error
-	jr	c, .fb_restore
+	ret	c
+; take lcd mutex control
 	ld	(hl), iy
+	ld	(DRIVER_VIDEO_IRQ_LOCK_THREAD), iy
+	xor	a, a
+	dec	a
+	ld	(DRIVER_VIDEO_IRQ_LOCK), a
+	ei
 	ret
 	
 .fb_restore:
-; need to exit the console thread
+; need to exit the console thread (signal are efficient, since you can raise to your own thread)
 ; restore the mutex and the propriety
-	di
 	ld	iy, console_dev
+	set	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	push	hl
+	ld	de, NULL
+	ld	(iy+CONSOLE_TAKEOVER), de
 ; restore status
 	ld	de, DRIVER_VIDEO_SCREEN
-	ld	bc, $10
+	ld	bc, 16
 	ldir
 ; restore palette
 	ld	de, DRIVER_VIDEO_PALETTE
@@ -68,33 +81,44 @@ console:
 	ld	de, KERNEL_INTERRUPT_ISR_DATA_VIDEO
 	ld	c, 6
 	ldir
+; restore keyboard ?
+	push	hl
+	ld	hl, DRIVER_KEYBOARD_CTRL
+	ld	(hl), DRIVER_KEYBOARD_SCAN_CONTINUOUS
+	pop	hl
 ; kill the thread now
-	ld	hl, (hl)
-	or	a, a
-	add	hl, de
-	sbc	hl, de
-	jr	z, .fb_restore_set_flags
+	ld	de, (hl)
+	pop	hl
+	call	kfree
+	ex	de, hl
 	ld	c, (hl)
 	ld	a, SIGKILL
-	call	signal.kill
-.fb_restore_set_flags:
-	set	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
-	pop	hl
-	jp	kfree
+	jp	signal.kill
 	
 .init:
+	ld	bc, 0
 	di
 	ld	hl, console_dev
 	inc	b
 	ld	(hl), bc
 	ld	l, console_flags and $FF
 	ld	(hl), c
+	set	CONSOLE_FLAGS_SILENT, (hl)
 	inc	hl
 	ld	(hl), $FD
+	ld	l, console_takeover and $FF
+	dec	b
+	ld	(hl), bc
 	ld	iy, console_stdin
 	call	ring_buffer.create
-	call	.phy_init
-	
+	jp	.phy_init
+
+.fb_takeover_nmi:
+; prepare the console for displaying a NMI
+	call	console.init
+	ld	iy, console_dev
+	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+
 .init_screen:
 	ld	a, (console_dev+CONSOLE_FLAGS)
 	add	a, a
@@ -279,6 +303,9 @@ console:
 	ld	hl, .ECHO
 	call	.check_builtin
 	jr	z, .echo
+	ld	hl, .EXIT
+	call	.check_builtin
+	jp	z, .fb_restore
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
 	call	.phy_write
@@ -518,6 +545,7 @@ console:
  dl .REBOOT
  dl .ECHO
  dl .COLOR
+ dl .EXIT
  
 .REBOOT:
  db 7, "reboot", 0
@@ -529,8 +557,8 @@ console:
  db 7, "uptime", 0
 .SHUTDOWN:
  db 9, "shutdown", 0
-.TOP:
- db 4, "top",0
+.EXIT:
+ db 5, "exit", 0
  
 .UPTIME_STR:
 ; db "Up since 0000 day(s), 00h 00m 00s", 0

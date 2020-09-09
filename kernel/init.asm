@@ -35,7 +35,14 @@ kinit:
 	out0	($1F), a
 	xor	a, a
 	out0	($1D), a
-	out0	($1E), a	
+	out0	($1E), a
+; disable
+	xor	a, a
+	out0	($3A), a
+	xor	a, a
+	out0	($3B), a
+	xor	a, a
+	out0	($3C), a
 ; general system init
 ; load the ramfs image
 	ld	hl, kernel_ramfs_src
@@ -86,8 +93,10 @@ kinit:
 	call	flash.init
 	call	null.init
 ; create init thread : ie, first program to run (/bin/init/)
-	ld	iy, THREAD_INIT_TEST
-	call	kthread.create
+; 	ld	iy, THREAD_INIT_TEST
+; 	call	kthread.create
+; 	jp	c, nmi
+	call	console.fb_takeover
 	jp	c, nmi
 ; nice idle thread code
 	ei
@@ -139,8 +148,12 @@ THREAD_INIT_TEST:
 	call	signal.procmask_single
 	
 	call	video.irq_lock
+	
+.spin:
+	jr	.spin
+	
 ;	call	keyboard.irq_lock
-	call	console.thread
+; 	call	console.thread
 ; 	ld	hl, global_mutex
 ; 	call	kmutex.lock
 ; 	

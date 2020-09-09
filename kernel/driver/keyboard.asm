@@ -20,7 +20,7 @@ keyboard:
 .init:
 	di
 	ld	hl, DRIVER_KEYBOARD_CTRL
-	ld	(hl), DRIVER_KEYBOARD_SCAN_IDLE
+	ld	(hl), DRIVER_KEYBOARD_SCAN_CONTINUOUS
 	ld	de, $08080F
 	inc	l
 	ld	(hl), e
@@ -45,6 +45,14 @@ keyboard:
 	ld	a, (hl)
 	ld	(hl), 0x07
 	ld	(DRIVER_KEYBOARD_ISR), a
+; check register
+	ld	hl, $F50014
+	bit	7, (hl)
+	jr	z, .no_ctrl
+	ld	hl, $F50012
+	bit	0, (hl)
+	call	nz, console.fb_takeover
+.no_ctrl:
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
 	bit	DRIVER_KEYBOARD_IRQ_LOCK_SET, (hl)
 	ret	z

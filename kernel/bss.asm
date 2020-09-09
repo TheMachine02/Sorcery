@@ -143,7 +143,7 @@ kmem_cache_s256:
  db	2
  dl	-256
 kmem_cache_user:
- db	80	dup	KERNEL_HW_POISON
+ db	80	dup	$00	; null is reference to not allocated
 kvfs_root:
 ; 64 bytes
  db	$04	; directory

@@ -274,7 +274,7 @@ kthread:
 ; interrupts should be definitely stopped here !
 	di
 ; first disable stack protector (load the kernel_stack stack protector)
-	ld	a, $B0
+	ld	a, $A8
 	out0	($3A), a
 	xor	a, a
 	out0	($3B), a

@@ -1,5 +1,6 @@
 ; 8 bytes per cache structure
 define	KERNEL_SLAB_CACHE		0
+define	KERNEL_SLAB_CACHE_SIZE		8
 define	KERNEL_SLAB_CACHE_COUNT		0
 define	KERNEL_SLAB_CACHE_QUEUE		1
 define	KERNEL_SLAB_CACHE_MAX_COUNT	4	; 1 byte, max number of block per slab (-2)
@@ -12,6 +13,9 @@ define	kmem_cache_s16			$D00348
 define	kmem_cache_s32			$D00350
 define	kmem_cache_s64			$D00358
 define	kmem_cache_s128			$D00360
+define	kmem_cache_s256			$D00368
+define	kmem_cache_user			$D00370
+
 ; per slab structure
 ; 7 bytes + 3 special
 define	KERNEL_SLAB_PAGE_HEADER		0	; header
@@ -19,7 +23,6 @@ define	KERNEL_SLAB_PAGE_HEADER_SIZE	8	; size
 define	KERNEL_SLAB_PAGE_PTLB		0	; ptlb identifier
 define	KERNEL_SLAB_PAGE_NEXT		1	; queue pointer
 define	KERNEL_SLAB_PAGE_PREVIOUS	4	; queue pointer
-define	KERNEL_SLAB_PAGE_NULL2		7	; nothing here either
 define	KERNEL_SLAB_PAGE_POINTER	8	; free pointer reside in the *next* free block
 ; as such :
 ; if we are allocating
@@ -291,5 +294,44 @@ kmem_cache_shrink:
 	ret
 
 kmem_cache_create:
+	push	iy
+	push	de
+	push	bc
+	push	hl
+	ld	iy, kmem_cache_user
+	ld	de, KERNEL_SLAB_CACHE_SIZE
+; 10 users defined cache are possible
+	ld	b, 10
+.find_free:
+	ld	hl, (iy)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .find_slot
+	lea	iy, iy+KERNEL_SLAB_CACHE_SIZE
+	djnz	.find_free
+	pop	hl
+	or	a, a
+	sbc	hl, hl
+	pop	bc
+	pop	de
+	pop	iy
+	ret
+.find_slot:
+	pop	hl
+; hl is the block size of the cache
+	ld	(iy+KERNEL_SLAB_CACHE_COUNT), $FF
+; 1024 / hl -2 = KERNEL_SLAB_CACHE_MAX_COUNT
+; -hl = KERNEL_SLAB_CACHE_MAX_SIZE
+	ld	(iy+KERNEL_SLAB_CACHE_MAX_SIZE), -64
+	ld	(iy+KERNEL_SLAB_CACHE_MAX_COUNT), 14
+	lea	hl, iy+KERNEL_SLAB_CACHE
+	pop	bc
+	pop	de
+	pop	iy
+	ret
+
 kmem_cache_destroy:
+; hl is cache, just null it and free all the page allocate to it ?
+; assert(no_page_left)=true
 	ret
