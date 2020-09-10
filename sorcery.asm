@@ -56,8 +56,8 @@ include	'kernel/compress/lz4.asm'
 include	'kernel/crypto/crc.asm'
 include	'kernel/exec/leaf.asm'
 
-kernel_ramfs_src:
-file	'ramfs'
+kernel_initramfs:
+file	'initramfs'
 ; end guard
  db	$00, $00
 

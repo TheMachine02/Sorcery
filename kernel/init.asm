@@ -6,7 +6,7 @@ define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 define	KERNEL_HEAP			$D00100
 define	KERNEL_STACK			$D000FF
 define	KERNEL_STACK_SIZE		$57
-define	KERNEL_RAMFS			$D00000
+define	KERNEL_INITRAMFS		$D00000
 
 define	KERNEL_CRYSTAL_CTLR		$00
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
@@ -23,11 +23,11 @@ kinit:
 .reboot:
 ; boot 5.0.1 stupidity power ++
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
-	di	
+	di
+; load up boot stack
+	ld	sp, $D1A87E
 ; shift to soft kinit way to reboot ++
-; setup temporary stack for the kernel
-	ld.sis	sp, $0000
-	ld	sp, $D30000
+; we will use temporary boot code stack
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
@@ -37,18 +37,25 @@ kinit:
 	xor	a, a
 	out0	($1D), a
 	out0	($1E), a
-; disable
+; disable stack protector to be able to write the whole RAM image
 	out0	($3A), a
 	out0	($3B), a
 	out0	($3C), a
-; general system init
-; load the ramfs image
-	ld	hl, kernel_ramfs_src
-	ld	de, KERNEL_RAMFS
+; load the initramfs image, 4K
+	ld	hl, kernel_initramfs
+	ld	de, KERNEL_INITRAMFS
 	call	lz4.decompress
+; and init the rest of memory with poison
+	ld	hl, $D01000
+	ld	de, $D01001
+	ld	bc, KERNEL_MM_RAM_SIZE - 4097
+	ld	(hl), KERNEL_HW_POISON
+	ldir
+; right now, the RAM image is complete
+; setup the kernel stack protector
+	ld.sis	sp, $0000
 	ld	sp, KERNEL_STACK
 	ld	(kernel_stack_pointer), sp
-; setup the kernel stack & protector
 	ld	a, $A8
 	out0	($3A), a
 	xor	a, a
@@ -56,7 +63,7 @@ kinit:
 	ld	a, $D0
 	out0	($3C), a
 	ld	MB, a
-; memory init, memory protection
+; setup memory protection
 	xor	a, a
 	out0	($20), a
 	out0	($21), a
@@ -67,20 +74,13 @@ kinit:
 	ld	a, $D0
 	out0	($22), a
 	out0	($25), a
-	ld	hl, $D01000
-	ld	de, $D01001
-	ld	bc, KERNEL_MM_RAM_SIZE - 4097
-	ld	(hl), KERNEL_HW_POISON
-	ldir
 ; small init for the vfs
 	ld	hl, kvfs.phy_none
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
-; power, timer and interrupt ;
+; power, timer and interrupt
 	call	kinterrupt.init
 	call	kpower.init
 	call	kwatchdog.init
-; filesystem, should be taken care of with the ramfs
-;	call	kvfs.init
 ; driver init ;
 	call	video.init
 	call	keyboard.init
