@@ -23,7 +23,7 @@ kvfs:
 	ret
 
 .open_error:
-	
+	ret
 .open:
 ; find the inode
 	push	hl

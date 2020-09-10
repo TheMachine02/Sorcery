@@ -2,8 +2,8 @@
 	ld	bc, .phy_mem_ops
 	ld	hl, .FLASH_DEV
 ; inode capabilities flags
-; single dev block, (so write / read / seek only), seek capabilities exposed
-	ld	a, KERNEL_VFS_BLOCK_DEVICE or KERNEL_VFS_SEEK
+; single dev block
+	ld	a, KERNEL_VFS_BLOCK_DEVICE
 	jp	kvfs.inode_device
 
 .FLASH_DEV:
@@ -12,19 +12,11 @@
 .phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
-	ret		; phy_sync (sync file)
-	dl	$0
-	jp	.phy_seek
-	ret		; phy_read_inode (from backing device)
-	dl	$0
-	ret		; phy_write_inode (from backing device)
-	dl	$00
-	ret		; phy_create_inode
-	dl	$00
-	ret		; phy_destroy_inode
+	jp	.phy_ioctl
 
+.phy_ioctl:
+	ret
 ; no op
-.phy_seek:
 .phy_read:
 	ret
 

@@ -32,6 +32,11 @@ define	phy_write_inode		20
 define	phy_create_inode	24
 define	phy_destroy_inode	28
 
+; block device operation ;
+define	phy_read		0
+define	phy_write		4
+define	phy_ioctl		8
+
 ; jump table for physical operation
 .phy_none:
 	ret		; phy_read (physical read from backing device)
@@ -49,7 +54,7 @@ define	phy_destroy_inode	28
 	ret		; phy_create_inode
 	dl	$00
 	ret		; phy_destroy_inode
-	
+
 .inode_get_found:
 ; increment the reference
 ; we don't care if it is atomic or not, we are at least read locked
@@ -343,6 +348,7 @@ define	phy_destroy_inode	28
 	call	.inode_create
 	pop	bc
 	ret	c
+; TODO : fix the possible race condition here were the inode is already open when it has just been created
 	ld	(iy+KERNEL_VFS_INODE_OP), bc
 	ret
 	

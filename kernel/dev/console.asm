@@ -37,18 +37,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 .phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
-	ret		; phy_sync (sync file)
-	dl	$0
-	ret		; phy_seek (do a seek in file)
-	dl	$0
-	ret		; phy_read_inode (from backing device)
-	dl	$0
-	ret		; phy_write_inode (from backing device)
-	dl	$00
-	ret		; phy_create_inode
-	dl	$00
-	ret		; phy_destroy_inode
-	
+	jp	.phy_ioctl
+
 .phy_read:
 ; offset hl, de, bc
 	ld	hl, $E40000
@@ -374,4 +364,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	pop	bc
 	ret
 
+.phy_ioctl:
+	ret	
+	
 include 'console_glyph.asm'

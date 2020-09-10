@@ -16,18 +16,8 @@ null:
 .phy_mem_ops:
 	jp	.phy_read
 	jp	.phy_write
-	ret		; phy_sync (sync file)
-	dl	$0
-	ret		; phy_seek (do a seek in file)
-	dl	$0
-	ret		; phy_read_inode (from backing device)
-	dl	$0
-	ret		; phy_write_inode (from backing device)
-	dl	$00
-	ret		; phy_create_inode
-	dl	$00
-	ret		; phy_destroy_inode
-
+	jp	.phy_ioctl
+	
 .phy_read:
 ; offset hl to de for bc size
 	ld	hl, KERNEL_MM_NULL
@@ -35,4 +25,13 @@ null:
 	
 .phy_write:
 	ret
- 
+	
+.phy_ioctl:
+	push	iy
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), ENOTTY
+	scf
+	sbc	hl, hl
+	ld	l, ENOTTY
+	pop	iy
+	ret
