@@ -87,15 +87,11 @@ define	ktimer_queue				$D00314		; 4 bytes
 
 define	kinterrupt_irq_reschedule		$D00000
 define	kthread_current				$D00001
-
-; 130 and up is free
-; 64 x 4 bytes, D00200 to D00300
+; 64 x 4 bytes, D00400 to D00500
 define	kthread_pid_map				$D00400
 
 kthread:
-.init:
-	ret
-	
+
 .create_no_mem:
 	call	kmm.thread_unmap
 .create_no_pid:

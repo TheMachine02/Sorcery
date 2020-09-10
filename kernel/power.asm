@@ -28,7 +28,7 @@ kpower:
 .backlight:
 ; set backlight level = a, max is $FF, min is $00
 	ld	(KERNEL_POWER_PWM), a
-		
+
 .irq_handler:
 	ret
 
@@ -41,6 +41,8 @@ kpower:
 	ret
 
 .cycle_off:
+; TODO save and restore LCD parameters
+; TODO use kmalloc for the 512 bytes buffer (2x256 bytes) of the LCD palette
 	di
 	call	kwatchdog.disarm
 ; backlight / LCD / SPI disable from boot

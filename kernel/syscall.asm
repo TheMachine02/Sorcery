@@ -41,4 +41,24 @@ _uadmin:
 
 ; pri
 _nice:
+; hl = nice, return the new nice value
+	ld	iy, (kthread_current)
+	ld	a, (iy+KERNEL_THREAD_NICE)
+	add	a, l
+; between -20 and 19
+	jp	m, .check_max
+	cp	a, 20
+	jr	c, .return
+	ld	a, NICE_PRIO_MIN
+	jr	.return
+.check_max:
+	cp	a, -20
+	jr	nc, .return
+	ld	a, NICE_PRIO_MAX
+.return:
+	ld	(iy+KERNEL_THREAD_NICE), a
+	add	a, a
+	sbc	hl, hl
+	rra
+	ld	l, a
 	ret

@@ -1,7 +1,7 @@
 include	'include/ez80.inc'
 
-define	BOOT_DIRTY_MEMORY0			$D0009B		; 1 byte ]
-define	BOOT_DIRTY_MEMORY1			$D000AC		; 1 byte ] on interrupt
+define	BOOT_DIRTY_MEMORY0			$D0009B		; 1 byte
+define	BOOT_DIRTY_MEMORY1			$D000AC		; 1 byte on interrupt
 define	BOOT_DIRTY_MEMORY2			$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3			$D00108		; 9 bytes
 
