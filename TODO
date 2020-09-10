@@ -1,10 +1,7 @@
-VFS Device flash and console
 FAT 12 flash
 leaf load
 library load
 memory management
-atomic rw lock
-slab management
 VFS
 
 keyboard stdin

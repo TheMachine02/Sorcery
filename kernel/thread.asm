@@ -76,6 +76,8 @@ define	SCHED_PRIO_MIN				12
 define	NICE_PRIO_MIN				19
 define	NICE_PRIO_MAX				-20
 
+define	ROOT_USER				$01
+
 ; D00100 to D00120 is scratch
 
 ; multilevel priority queue ;
@@ -89,6 +91,8 @@ define	kinterrupt_irq_reschedule		$D00000
 define	kthread_current				$D00001
 ; 64 x 4 bytes, D00400 to D00500
 define	kthread_pid_map				$D00400
+; utilisateur : thread adress
+; root is user $01
 
 kthread:
 
@@ -391,44 +395,35 @@ kthread:
 	add	a, a
 	ret	z   ; don't you dare free pid 0 !
 	add	a, a
-	sbc	hl, hl
+	ld	hl, kthread_pid_map
 	ld	l, a
-	ld	de, kthread_pid_map
-	add	hl, de
-	mlt	de
-	ld	(hl), e
-	inc	hl
-	ld	(hl), de
+	xor	a, a
+	ld	(hl), a
 	ret
 
 .resume:
 ; wake thread (adress iy)
 ; destroy hl, a (probably more)
 ; resume a waiting thread. This must be called from a thread context and NOT irq. See irq_resume
-; actually, it could be safe to do so, but note that the current thread (and then interruption could be paused)
+; Please enforce this restriction as lot of bad thing could happen (well, pausing an interrupt mostly)
 	lea	hl, iy+0
 	add	hl, de
 	or	a, a
 	sbc	hl, de
 	ret	z
-	tsti
+	di
 ; this read need to be atomic !
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
 ; task TASK_UNINTERRUPTIBLE is waiting an IRQ and we aren't in IRQ context, so it seems fishy as hell right now.
 	cp	a, TASK_INTERRUPTIBLE
-	jr	nz, .resume_do_exit
-.resume_do_wake:
-	call	task_switch_running
-	pop	af
-	ret	po
-	jp	task_schedule
-; rsti optimized
-.resume_do_exit:
-	pop	af
-	ret	po
+	jr	nz, .resume_do_wake
 	ei
 	ret
+.resume_do_wake:
+	call	task_switch_running
+; skip the first di of schedule, we are already in disabled state
+	jp	task_schedule + 1
 
 .suspend:
 	di

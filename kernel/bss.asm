@@ -174,7 +174,7 @@ kvfs_root:
  dl	$000000
 ; $400
 kthread_pid_map:
- db	$01
+ db	$01		; ROOT_USER
  dl	kernel_idle
  db	252	dup	$00
 ; $500
