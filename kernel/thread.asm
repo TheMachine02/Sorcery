@@ -15,6 +15,7 @@ define	KERNEL_THREAD_QUANTUM			$0B
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
 define	KERNEL_THREAD_STACK_LIMIT		$0C
+define	KERNEL_THREAD_BREAK			$0C
 define	KERNEL_THREAD_STACK			$0F
 define	KERNEL_THREAD_HEAP			$12
 define	KERNEL_THREAD_TIME			$15
@@ -55,8 +56,7 @@ define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; 21 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$100
-define	KERNEL_THREAD_STACK_SIZE		4096	; 3964 bytes usable
-define	KERNEL_THREAD_HEAP_SIZE			4096
+define	KERNEL_THREAD_STACK_SIZE		8192	; 3964 bytes usable
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	64
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
@@ -131,51 +131,30 @@ kthread:
 ; hl is adress    
 	push	hl
 	pop	iy
-	ld	bc, KERNEL_THREAD_HEAP_SIZE/KERNEL_MM_PAGE_SIZE
-	call	kmm.thread_map
-	jr	c, .create_no_mem
-	push	hl
-	ex	(sp), ix
-	ld	de, NULL
+; setup the default parameter
+	ld	bc, $100
+	ex	de, hl
+	ld	hl, KERNEL_MM_NULL
+	ldir
 	ld	(iy+KERNEL_THREAD_PID), a
-	ld	(iy+KERNEL_THREAD_IRQ), e
 	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
-	ld	(iy+KERNEL_THREAD_NICE), e
-	ld	(iy+KERNEL_THREAD_ATTRIBUTE), e
-; sig mask ;
-	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
-	ld	(iy+KERNEL_THREAD_SIGNAL_MASK+3), e
-; timer ;
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), de
+; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
-	lea	de, iy+KERNEL_THREAD_FILE_DESCRIPTOR
-	ld	hl, KERNEL_MM_NULL
-	ld	bc, $C0
-	ldir
-	ld	de, NULL
-; stack limit set first ;
+; we are memory aligned
+; please note write affect memory, so do a iy + 256 + 13 stack limit to be safe, boot code need some stack left
+; note : we have TLS : Heap : Break = Stack limit : Stack
 	lea	hl, iy + 13
-; we are block aligned. Do +256
 	inc	h
-; please note write affect memory, so do a + 13 to be safe, boot code need some stack left
+; also brk
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
-; heap (début)
-	ld	(ix+KERNEL_MEMORY_BLOCK_NEXT), de
-	ld	(ix+KERNEL_MEMORY_BLOCK_PREV), de
-; stack ;
-	lea	hl, iy - 27
-	ld	d, KERNEL_THREAD_STACK_SIZE/256
-	add	hl, de
+	ld	(iy+KERNEL_THREAD_HEAP), hl
+; the stack adress is iy + STACK_SIZE - 27
+	lea	hl, iy-27
+	ld	b, KERNEL_THREAD_STACK_SIZE/256
+	add	hl, bc
 	ld	(iy+KERNEL_THREAD_STACK), hl
-; heap (suite)
-	ld	(iy+KERNEL_THREAD_HEAP), ix
-	ld	de, KERNEL_THREAD_HEAP_SIZE - KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_DATA), de
-	lea	de, ix+KERNEL_MEMORY_BLOCK_SIZE
-	ld	(ix+KERNEL_MEMORY_BLOCK_PTR), de
-	pop	ix
 ; map the thread to be transparent to the scheduler
 ; iy is thread adress, a is still PID    
 ; map the pid
@@ -396,14 +375,13 @@ kthread:
 	jr	z, .reserve_exit
 	add	hl, de
 	djnz	.reserve_parse_map
+	scf
+	ret
 .reserve_exit:
+; carry is reset
 	srl	l
 	ld	a, l
 	rra
-; carry is reset
-; if = zero, then we have an error
-	ret	nz
-	scf
 	ret
 	
 .free_pid:
@@ -439,17 +417,18 @@ kthread:
 ; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
 ; task TASK_UNINTERRUPTIBLE is waiting an IRQ and we aren't in IRQ context, so it seems fishy as hell right now.
 	cp	a, TASK_INTERRUPTIBLE
-	jr	z, .resume_do_wake
-; rsti optimized
-	pop	af
-	ret	po
-	ei
-	ret
+	jr	nz, .resume_do_exit
 .resume_do_wake:
 	call	task_switch_running
 	pop	af
 	ret	po
 	jp	task_schedule
+; rsti optimized
+.resume_do_exit:
+	pop	af
+	ret	po
+	ei
+	ret
 
 .suspend:
 	di
