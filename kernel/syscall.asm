@@ -2,13 +2,6 @@ _syscall:
 ; jumper to syscall ?
 
 ; end syscall here
-	ret	nc
-	push	iy
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_ERRNO), hl		; error path
-	pop	iy
-	sbc	hl, hl
-	ret
 
 ; syscall_0arg	_get_pid
 _get_pid:
@@ -61,4 +54,34 @@ _nice:
 	sbc	hl, hl
 	rra
 	ld	l, a
+	ret
+
+_sbrk:
+; increment as hl
+	ld	iy, (kthread_current)
+	ld	de, (iy+KERNEL_THREAD_BREAK)
+	add	hl, de
+; now check : that sp - 512 > hl and that hl > iy + 256+13
+	lea	bc, iy+13
+	inc	d
+	or	a, a
+	sbc	hl, bc
+	jr	c, .break_error
+	add	hl, bc
+; now check with sp
+	push	hl
+	ld	hl, -512
+	add	hl, sp
+	pop	bc
+	or	a, a
+	sbc	hl, bc
+	jr	c, .break_error
+; all good, return the old break value
+	ex	de, hl
+	ret	
+.break_error:
+	scf
+	sbc	hl, hl
+	ld	l, ENOMEM
+	ld	(iy+KERNEL_THREAD_ERRNO), hl
 	ret
