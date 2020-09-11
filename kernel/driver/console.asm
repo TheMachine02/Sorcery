@@ -10,9 +10,6 @@ define	console_key		$D00708
 define	console_takeover	$D00715
 define	console_string		$D00718
 
-define	CONSOLE_GLYPH_X		50
-define	CONSOLE_GLYPH_Y		20
-
 console:
 
 .nmi_takeover:
@@ -448,7 +445,7 @@ console:
 	call	.glyph_char_address
 	pop	hl
 	ld	a, (console_cursor_xy)
-	cp	a, CONSOLE_GLYPH_X
+	cp	a, CONSOLE_CURSOR_MAX_COL
 	jr	nz, .refresh_line_loop
 .refresh_new_line:
 	push	hl
@@ -538,12 +535,10 @@ console:
 .handle_key_clear:
 .clear:
 ; reset cursor xy and put prompt
-	ld	hl, $E40000
-	ld	de, (DRIVER_VIDEO_SCREEN)
-	ld	bc, 76800
-	ldir
-	ld	(console_cursor_xy), bc
-	
+	ld	hl, .KEY_CLEAR_CSI
+	ld	bc, 4
+	call	.phy_write
+
 .prompt:
 	ld	iy, console_stdin
 	call	ring_buffer.flush
@@ -551,6 +546,9 @@ console:
 	ld	hl, .PROMPT
 	jp	.phy_write
 
+.KEY_CLEAR_CSI:
+ db $1B, "[2J"	
+	
 .COMMAND:
  dl .REBOOT
  dl .ECHO

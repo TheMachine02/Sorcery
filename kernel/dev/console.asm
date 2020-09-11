@@ -240,8 +240,8 @@ define	CONSOLE_CURSOR_MAX_ROW	20
  dd	.phy_cursor_habs	; 
  dd	.phy_cursor_position
  dd	.phy_none
- dd	.phy_none		; erase in display
- dd	.phy_none		; erase in line
+ dd	.phy_erase_display	; erase in display
+ dd	.phy_erase_line		; erase in line
 
 .phy_cursor_down:
 	lea	hl, iy+CONSOLE_CURSOR_ROW
@@ -364,6 +364,44 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ld	bc, 11*320
 	ldir
 	pop	bc
+	ret
+
+; CSI n J 	ED 	Erase in Display 	Clears part of the screen. If n is 0 (or missing), clear from cursor to end of screen. If n is 1, clear from cursor to beginning of the screen. If n is 2, clear entire screen (and moves cursor to upper left on DOS ANSI.SYS). If n is 3, clear entire screen and delete all lines saved in the scrollback buffer (this feature was added for xterm and is supported by other terminal applications).
+.phy_erase_display:
+	dec	e
+	jp	m, .phy_erase_cursor_end_screen
+	jr	z, .phy_erase_cursor_begin_screen
+.phy_erase_all_display:
+; reset cursor xy and delete the screen
+	ld	hl, KERNEL_MM_NULL
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	ld	bc, 76800
+	ldir
+	ld	(iy+CONSOLE_CURSOR), bc
+	ret
+.phy_erase_cursor_end_screen:
+	ret
+.phy_erase_cursor_begin_screen:
+	ret
+
+; CSI n K 	EL 	Erase in Line 	Erases part of the line. If n is 0 (or missing), clear from cursor to the end of the line. If n is 1, clear from cursor to beginning of the line. If n is 2, clear entire line. Cursor position does not change. 
+.phy_erase_line:
+	dec	e
+	jp	m, .phy_erase_cursor_end_line
+	jr	z, .phy_erase_cursor_begin_line
+.phy_erase_all_line:
+	or	a, a
+	sbc	hl, hl
+; load only row, and we will clear the line
+	ld	h, (iy+CONSOLE_CURSOR_ROW)
+	call	.glyph_adress
+	ld	hl, KERNEL_MM_NULL
+	ld	bc, 320*11
+	ldir
+	ret
+.phy_erase_cursor_end_line:
+	ret
+.phy_erase_cursor_begin_line:
 	ret
 
 .phy_ioctl:
