@@ -637,13 +637,10 @@ kmm:
 	push	bc
 	push	hl
 	ld	c, l
-	or	a, a
-	sbc	hl, hl
+	ld	hl, KERNEL_MM_RAM/4
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
 	ex	de, hl
 	ld	hl, KERNEL_MM_NULL
 	ld	bc, KERNEL_MM_PAGE_SIZE
