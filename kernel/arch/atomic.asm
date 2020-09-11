@@ -136,16 +136,19 @@ atomic_rw:
 	ret
 
 .init:
-	push	de
-	push	hl
-	ld	de, NULL
-	ld	(hl), e
+	ld	(hl), 0
 	inc	hl
 	ld	(hl), $FF
 	inc	hl
-	ld	(hl), de
-	pop	hl
-	pop	de
+	ld	(hl), 0
+	inc	hl
+	ld	(hl), 0
+	inc	hl
+	ld	(hl), 0
+	dec	hl
+	dec	hl
+	dec	hl
+	dec	hl
 	ret
 	
 atomic_op:

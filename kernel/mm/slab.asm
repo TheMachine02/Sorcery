@@ -92,7 +92,6 @@ kmalloc_a:
 	dec	l
 	add	a, a
 	jr	nc, .get_cache_log
-	or	a, a
 	jr	z, .get_cache_lowbit
 	inc	l
 .get_cache_lowbit:
@@ -140,8 +139,7 @@ kmem_cache_alloc:
 	pop	de
 	pop	iy
 .cache_exit:
-	rsti
-	ret
+	rstiRET
 .cache_full_page:
 	ex	de, hl
 	dec	hl
@@ -275,18 +273,16 @@ kmem_cache_free:
 	ld	de, (iy+KERNEL_SLAB_PAGE_POINTER)
 	ld	(hl), de
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), hl
-	rsti
-	ret
+	rstiRET
 .cache_free_ptr:
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
-	rsti
-	ret	
+	rstiRET
+
 .cache_free_link:
 	dec	b
 	ld	(iy+KERNEL_SLAB_PAGE_PTLB), b
 	call	kqueue.insert_head
-	rsti
-	ret
+	rstiRET
 
 kmem_cache_shrink:
 	call	kqueue.remove
@@ -294,14 +290,12 @@ kmem_cache_shrink:
 	push	bc
 	pop	hl
 	call	kmm.page_flush
-	rsti
-	ret
+	rstiRET
 
 kmem_cache_create:
 	push	iy
 	push	de
 	push	bc
-	push	hl
 	ld	iy, kmem_cache_user
 	ld	de, KERNEL_SLAB_CACHE_SIZE
 ; 10 users defined cache are possible
@@ -314,7 +308,6 @@ kmem_cache_create:
 	jr	z, .find_slot
 	lea	iy, iy+KERNEL_SLAB_CACHE_SIZE
 	djnz	.find_free
-	pop	hl
 	or	a, a
 	sbc	hl, hl
 	pop	bc
@@ -322,14 +315,13 @@ kmem_cache_create:
 	pop	iy
 	ret
 .find_slot:
-	pop	hl
 ; hl is the block size of the cache
-	ld	(iy+KERNEL_SLAB_CACHE_COUNT), $FF
+	lea	hl, iy+KERNEL_SLAB_CACHE_COUNT 		; = "lea hl, iy+KERNEL_SLAB_CACHE"
+	ld	(hl), $FF
 ; 1024 / hl -2 = KERNEL_SLAB_CACHE_MAX_COUNT
 ; -hl = KERNEL_SLAB_CACHE_MAX_SIZE
 	ld	(iy+KERNEL_SLAB_CACHE_MAX_SIZE), -64
 	ld	(iy+KERNEL_SLAB_CACHE_MAX_COUNT), 14
-	lea	hl, iy+KERNEL_SLAB_CACHE
 	pop	bc
 	pop	de
 	pop	iy
