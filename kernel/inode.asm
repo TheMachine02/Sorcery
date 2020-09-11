@@ -129,19 +129,15 @@ define	phy_ioctl		8
 	push	af
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
 	pop	af
 .inode_get_directory_skip:
 	lea	iy, iy+3
@@ -157,6 +153,10 @@ define	phy_ioctl		8
 	scf
 	ret
 .inode_get_directory_found:
+	pop	bc
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
 	pop	af
 ; ix is the directory found, so use it as new parent inode
 	ld	iy, (ix+KERNEL_VFS_DIRECTORY_INODE)
@@ -177,7 +177,7 @@ define	phy_ioctl		8
 	ld	a, (de)
 	cpi
 	jr	nz, .inode_helper_comp_restore
-	jp	po, .inode_helper_comp_restore
+	jp	po, .inode_get_directory_found
 	inc	de
 	jr	.inode_helper_comp_loop
 .inode_helper_comp_restore:
