@@ -16,15 +16,15 @@ define	CONSOLE_GLYPH_Y		20
 console:
 
 .nmi_takeover:
-	xor	a, a
-	dec	a
+	ld	iy, console_dev
+	res	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
 	jr	.fb_takeover_entry
 	
 .fb_takeover:
 	di
-	xor	a, a
-.fb_takeover_entry:
 	ld	iy, console_dev
+	set	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
+.fb_takeover_entry:
 ; check CONSOLE_TAKEOVER is null
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	add	hl, de
@@ -53,22 +53,22 @@ console:
 	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 ; init the screen now
 	push	de
-	push	af
 	call	.init_screen
-	pop	af
-	or	a, a
+	ld	a, (iy+CONSOLE_FLAGS)
+	bit	CONSOLE_FLAGS_THREADED, a
 	ld	iy, .thread
-	call	z, kthread.create
+	call	nz, kthread.create
 	pop	hl
 ; carry if error
 	ret	c
 ; take lcd mutex control
 	ld	(hl), iy
-	ld	(DRIVER_VIDEO_IRQ_LOCK_THREAD), iy
-	ld	a, $FF
-	ld	(DRIVER_VIDEO_IRQ_LOCK), a
-	or	a, a
-	ret	nz
+	ld	hl, DRIVER_VIDEO_IRQ_LOCK
+	ld	(hl), $FF
+	inc	hl
+	ld	(hl), iy
+	bit	CONSOLE_FLAGS_THREADED, a
+	ret	z
 	ei
 	ret
 	

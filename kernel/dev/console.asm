@@ -16,6 +16,8 @@ define	CONSOLE_STRING		$18
 define	CONSOLE_FLAGS_ALPHA	0
 define	CONSOLE_FLAGS_2ND	1
 define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
+
+define	CONSOLE_FLAGS_THREADED	5
 define	CONSOLE_FLAGS_SILENT	6
 define	CONSOLE_FLAGS_ESC	7	; we are writing an esc sequence
 
