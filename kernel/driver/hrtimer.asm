@@ -35,7 +35,8 @@ timer:
 	ld	hl, DRIVER_HRTIMER1_IRQ_LOCK
 	bit	DRIVER_HRTIMER1_IRQ_LOCK_SET, (hl)
 	ret	z
-	ld	iy, (DRIVER_HRTIMER1_IRQ_LOCK_THREAD)
+	inc	hl
+	ld	iy, (hl)
 	jp	kthread.irq_resume
 	
 .irq_lock:

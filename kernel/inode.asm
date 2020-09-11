@@ -127,21 +127,10 @@ define	phy_ioctl		8
 	pop	hl
 	jr	z, .inode_get_directory_skip
 	push	af
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
+	call	.inode_helper_compare_1st_time
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
-	call	.inode_helper_compare
-	jr	z, .inode_get_directory_found
 	pop	af
 .inode_get_directory_skip:
 	lea	iy, iy+3
@@ -157,6 +146,10 @@ define	phy_ioctl		8
 	scf
 	ret
 .inode_get_directory_found:
+	pop	bc
+	ld	hl, 6
+	add	hl, sp
+	ld	sp, hl
 	pop	af
 ; ix is the directory found, so use it as new parent inode
 	ld	iy, (ix+KERNEL_VFS_DIRECTORY_INODE)
@@ -171,13 +164,16 @@ define	phy_ioctl		8
 	jp	.inode_parse_directory
 
 .inode_helper_compare:
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+.inode_helper_compare_1st_time:
+	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	push	hl
 	push	bc
 .inode_helper_comp_loop:
 	ld	a, (de)
 	cpi
 	jr	nz, .inode_helper_comp_restore
-	jp	po, .inode_helper_comp_restore
+	jp	po, .inode_get_directory_found
 	inc	de
 	jr	.inode_helper_comp_loop
 .inode_helper_comp_restore:
@@ -220,8 +216,8 @@ define	phy_ioctl		8
 	sbc	hl, hl
 	add	hl, de
 	inc	de
-	ld	(hl), $00
 	ld	bc, KERNEL_VFS_INODE_NODE_SIZE - 1
+	ld	(hl), b
 	ldir
 	pop	de
 	pop	ix
@@ -301,8 +297,8 @@ define	phy_ioctl		8
 	sbc	hl, hl
 	add	hl, de
 	inc	de
-	ld	(hl), $00
 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4 -1
+	ld	(hl), b
 	ldir
 	pop	de
 	pop	hl
@@ -412,7 +408,7 @@ define	phy_ioctl		8
 	push	de
 	ldir
 	ex	de, hl
-	ld	(hl), $00
+	ld	(hl), c
 	pop	de
 	ld	a, KERNEL_VFS_DIRECTORY
 	push	de
@@ -431,7 +427,7 @@ define	phy_ioctl		8
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1
 	ldir
 	ex	de, hl
-	ld	(hl), $00
+	ld	(hl), c
 	pop	hl
 	push	hl
 	call	.inode_allocate

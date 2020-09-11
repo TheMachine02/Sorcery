@@ -63,13 +63,13 @@ rtc:
 	ld	a, DRIVER_RTC_IRQ
 	jp	kthread.irq_resume
 
+.loop_irq_lock:
+	call	kthread.yield
 .irq_lock:
 	di
 	ld	hl, DRIVER_RTC_IRQ_LOCK
 	sra	(hl)
-	jr	nc, .irq_lock_acquire
-	call	kthread.yield
-	jr	.irq_lock
+	jr	c, .loop_irq_lock
 .irq_lock_acquire:
 	ld	hl, (kthread_current)
 	ld	(DRIVER_RTC_IRQ_LOCK_THREAD), hl

@@ -38,7 +38,8 @@ video:
 	ld	(DRIVER_VIDEO_BUFFER), hl
 ; setup timings
 	ld	hl, .LCD_TIMINGS
-	ld	de, DRIVER_VIDEO_TIMING0 + 1
+	ld	d, e
+	inc	e
 	ld	c, 8
 	ldir
 ; clear the LCD
