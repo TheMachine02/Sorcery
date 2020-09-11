@@ -127,16 +127,9 @@ define	phy_ioctl		8
 	pop	hl
 	jr	z, .inode_get_directory_skip
 	push	af
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
+	call	.inode_helper_compare_1st_time
 	call	.inode_helper_compare
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
-	call	.inode_helper_compare
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	call	.inode_helper_compare
 	pop	af
 .inode_get_directory_skip:
@@ -171,6 +164,9 @@ define	phy_ioctl		8
 	jp	.inode_parse_directory
 
 .inode_helper_compare:
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+.inode_helper_compare_1st_time:
+	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	push	hl
 	push	bc
 .inode_helper_comp_loop:
