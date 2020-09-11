@@ -216,8 +216,8 @@ define	phy_ioctl		8
 	sbc	hl, hl
 	add	hl, de
 	inc	de
-	ld	(hl), $00
 	ld	bc, KERNEL_VFS_INODE_NODE_SIZE - 1
+	ld	(hl), b
 	ldir
 	pop	de
 	pop	ix
@@ -297,8 +297,8 @@ define	phy_ioctl		8
 	sbc	hl, hl
 	add	hl, de
 	inc	de
-	ld	(hl), $00
 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4 -1
+	ld	(hl), b
 	ldir
 	pop	de
 	pop	hl
@@ -408,7 +408,7 @@ define	phy_ioctl		8
 	push	de
 	ldir
 	ex	de, hl
-	ld	(hl), $00
+	ld	(hl), c
 	pop	de
 	ld	a, KERNEL_VFS_DIRECTORY
 	push	de
@@ -427,7 +427,7 @@ define	phy_ioctl		8
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1
 	ldir
 	ex	de, hl
-	ld	(hl), $00
+	ld	(hl), c
 	pop	hl
 	push	hl
 	call	.inode_allocate
