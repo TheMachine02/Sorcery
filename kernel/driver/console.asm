@@ -75,9 +75,6 @@ console:
 	ld	iy, console_dev
 	set	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ld	hl, (iy+CONSOLE_TAKEOVER)
-	push	hl
-	ld	de, NULL
-	ld	(iy+CONSOLE_TAKEOVER), de
 ; restore status
 	ld	de, DRIVER_VIDEO_SCREEN
 	ld	bc, 16
@@ -91,13 +88,12 @@ console:
 	ld	c, 6
 	ldir
 ; restore keyboard ?
-	push	hl
-	ld	hl, DRIVER_KEYBOARD_CTRL
-	ld	(hl), DRIVER_KEYBOARD_SCAN_CONTINUOUS
-	pop	hl
+	ld	a, DRIVER_KEYBOARD_SCAN_CONTINUOUS
+	ld	(DRIVER_KEYBOARD_CTRL), a
 ; kill the thread now
 	ld	de, (hl)
-	pop	hl
+	ld	hl, (iy+CONSOLE_TAKEOVER)
+	ld	(iy+CONSOLE_TAKEOVER), bc
 	call	kfree
 	ex	de, hl
 	ld	c, (hl)
@@ -105,10 +101,9 @@ console:
 	jp	signal.kill
 	
 .init:
-	ld	bc, 0
+	ld	bc, $0100
 	di
 	ld	hl, console_dev
-	inc	b
 	ld	(hl), bc
 	ld	l, console_flags and $FF
 	ld	(hl), c
