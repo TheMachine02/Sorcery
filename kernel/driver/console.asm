@@ -104,10 +104,9 @@ console:
 	jp	signal.kill
 	
 .init:
-	ld	bc, 0
+	ld	bc, $0100
 	di
 	ld	hl, console_dev
-	inc	b
 	ld	(hl), bc
 	ld	l, console_flags and $FF
 	ld	(hl), c
