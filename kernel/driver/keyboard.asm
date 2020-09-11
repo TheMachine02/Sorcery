@@ -46,10 +46,10 @@ keyboard:
 	ld	(hl), 0x07
 	ld	(DRIVER_KEYBOARD_ISR), a
 ; check register
-	ld	hl, $F50014
+	ld	l, $14
 	bit	7, (hl)
 	jr	z, .no_ctrl
-	ld	hl, $F50012
+	ld	l, $12
 	bit	0, (hl)
 	call	nz, console.fb_takeover
 .no_ctrl:
@@ -60,13 +60,13 @@ keyboard:
 	ld	a, DRIVER_KEYBOARD_IRQ
 	jp	kthread.irq_resume
 
+.loop_irq_lock:
+	call	kthread.yield
 .irq_lock:
 	di
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
 	sra	(hl)
-	jr	nc, .irq_lock_acquire
-	call	kthread.yield
-	jr	.irq_lock
+	jr	c, .loop_irq_lock
 .irq_lock_acquire:
 	ld	hl, (kthread_current)
 	ld	(DRIVER_KEYBOARD_IRQ_LOCK_THREAD), hl
