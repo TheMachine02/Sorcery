@@ -32,7 +32,7 @@ define	phy_write_inode		20
 define	phy_create_inode	24
 define	phy_destroy_inode	28
 
-; block device operation ;
+; block device & char device operation ;
 define	phy_read		0
 define	phy_write		4
 define	phy_ioctl		8
@@ -439,3 +439,33 @@ define	phy_ioctl		8
 
 .inode_symlink:
 	ret
+	
+.inode_block_data:
+; iy is inode number (adress of the inode)
+; a is block number (ie, file adress divided by KERNEL_MM_PAGE_SIZE)
+; about alignement : block are at last 1024 bytes aligned
+; block data is aligned to 4 bytes
+; inode data is 64 bytes aligned
+; destroy a, bc, hl
+	ld	b, a
+	rra
+	rra
+	rra
+	and	a, 00011110b
+	ld	c, a
+	rra
+	add	a, c
+	lea	hl, iy+KERNEL_VFS_INODE_DATA
+	add	a, l
+	ld	l, a
+	ld	a, b
+	and	a, 00001111b
+; hl adress should be aligned to 64 bytes
+	add	a, a
+	add	a, a
+	ld	hl, (hl)
+	add	a, l
+	ld	l, a
+; hl is the block_data adress structure in cache
+	ret
+
