@@ -117,33 +117,44 @@ kinterrupt_power_mask:
 unallocated_zero: 
  db	37	dup	KERNEL_HW_POISON
 kmem_cache_buffctl:
-; 16 slub buffers, 6 defined, 10 user defined
+; 16 slub buffers, 7 defined, 9 user defined
 kmem_cache_s8:
  db	4	dup	$FF
- db	126
- dl	-8
+ dw	8
+ db	128
+ db	0
 kmem_cache_s16:
  db	4	dup	$FF
- db	62
- dl	-16
+ dw	16
+ db	64
+ db	0
 kmem_cache_s32:
  db	4	dup	$FF
- db	30
- dl	-32
+ dw	32
+ db	32
+ db	0
 kmem_cache_s64:
  db	4	dup	$FF
- db	14
- dl	-64
+ dw	64
+ db	16
+ db	0
 kmem_cache_s128:
  db	4	dup	$FF
- db	6
- dl	-128
+ dw	128
+ db	8
+ db	0
 kmem_cache_s256:
  db	4	dup	$FF
- db	2
- dl	-256
+ dw	256
+ db	4
+ db	0
+kmem_cache_s512:
+ db	4	dup	$FF
+ dw	512
+ db	4
+ db	0
 kmem_cache_user:
- db	80	dup	$00	; null is reference to not allocated
+ db	72	dup	$00	; null is reference to not allocated
 kvfs_root:
 ; 64 bytes
  db	$04	; directory

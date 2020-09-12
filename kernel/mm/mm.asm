@@ -31,6 +31,12 @@ define	KERNEL_MM_NULL			$E40000
 ; poison for illegal jp / derefence
 define	KERNEL_HW_POISON		$C7
 
+define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
+define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
+
+define	KERNEL_MM_GFP_KERNEL		0
+define	KERNEL_MM_GFP_USER		128
+
 macro	trap
 	db $FD, $FF
 end	macro
@@ -632,6 +638,7 @@ kmm:
 	jp	nz, .segfault
 	ex	de, hl
 	
+; rst $0 : trap execute, illegal instruction
 .page_flush:
 ; hl as the ptlb adress
 	push	bc
@@ -644,9 +651,12 @@ kmm:
 	add	hl, hl
 	ld	bc, KERNEL_MM_RAM
 	add	hl, bc
-	ex	de, hl
-	ld	hl, KERNEL_MM_NULL
 	ld	bc, KERNEL_MM_PAGE_SIZE
+	ex	de, hl
+	sbc	hl, hl
+	adc	hl, de
+	ld	(hl), KERNEL_HW_POISON
+	inc	de
 	ldir
 	pop	hl
 ; write first free_mask, so the page will be considered as free even if hell break loose and the thread is killed between the two following write
@@ -655,18 +665,6 @@ kmm:
 	ld	(hl), c
 	dec	h
 	pop	bc
-	ret
-
-; rst $0 : trap execute, illegal instruction
-.page_flush_poison:
-	ld	bc, KERNEL_MM_PAGE_SIZE - 1
-; hl is address to poison
-	ex	de, hl
-	sbc	hl, hl
-	adc	hl, de
-	ld	(hl), KERNEL_HW_POISON
-	inc	de
-	ldir
 	ret
 
 .physical_to_ptlb:
