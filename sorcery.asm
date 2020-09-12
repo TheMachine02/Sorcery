@@ -53,9 +53,7 @@ include	'kernel/inode.asm'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
 include	'kernel/compress/lz4.asm'
-include	'kernel/crypto/crc.asm'
 include	'kernel/exec/leaf.asm'
-
 kernel_initramfs:
 file	'initramfs'
 ; end guard
@@ -75,6 +73,7 @@ include	'kernel/driver/spi.asm'
 include	'kernel/dev/null.asm'
 include	'kernel/driver/console.asm'
 include	'kernel/dev/console.asm'
+include	'kernel/font/gohufont.inc'
 include	'kernel/driver/flash.asm'
 include	'kernel/dev/flash.asm'
 
