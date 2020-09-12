@@ -171,7 +171,7 @@ console:
 	ld	a, (hl)
 	ld	hl, console_blink
 	bit	CONSOLE_BLINK_RATE, (hl)
-	call	z, .glyph_char
+	call	z, .putchar
 		
 	ld	a, (console_key)
 	cp	a, $FD
@@ -182,10 +182,10 @@ console:
 	bit	CONSOLE_BLINK_RATE, (hl)
 
 	ld	a, '_'
-	call	z, .glyph_char
+	call	z, .putchar
 	
 	jr	.run_loop
-
+	
 .blit:
 ; hl,e ; bc is data as hsize,vsize,data
 	ld	d, 160

@@ -1,7 +1,6 @@
 null:
 
 .init:
-
 .phy_init:
 	ld	bc, .phy_mem_ops
 	ld	hl, .NULL_DEV
@@ -20,10 +19,14 @@ null:
 	
 .phy_read:
 ; offset hl to de for bc size
-	ld	hl, KERNEL_MM_NULL
-	ldir
-	
+; return hl = bc
+	sbc	hl, hl
+	adc	hl, bc
+	ret
+
 .phy_write:
+	or	a, a
+	sbc	hl, hl
 	ret
 	
 .phy_ioctl:

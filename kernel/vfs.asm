@@ -136,7 +136,7 @@ kvfs:
 	sbc	hl, bc
 	jr	c, .read_copy_end
 	push	hl
-	call	.block_address
+	call	.inode_block_data
 	inc	hl
 	ld	hl, (hl)
 	ld	bc, KERNEL_MM_PAGE_SIZE
@@ -155,7 +155,7 @@ kvfs:
 	add	hl, bc
 	push	hl
 	pop	bc
-	call	.block_address
+	call	.inode_block_data
 	inc	hl
 	ld	hl, (hl)
 	add	hl, de
@@ -167,32 +167,7 @@ kvfs:
 	ldir
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	jp	atomic_rw.unlock_read
-	
-.block_address:
-; hl is block number, iy is inode, extract the block_address
-	push	de
-	push	af
-	and	a, 1111000b
-	rra
-	rra
-	rra
-	rra
-	ld	h, 3
-	ld	l, a
-	mlt	hl
-	lea	de, iy+KERNEL_VFS_INODE_DATA
-	add	hl, de
-	ld	hl, (hl)
-	pop	af
-	and	a, 00001111b
-	ld	e, 4
-	ld	d, a
-	mlt	de
-	add	hl, de
-	pop	de
-; this is block
-	ret
-	
+
 .write:
 	ret
 
