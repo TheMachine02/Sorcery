@@ -158,26 +158,25 @@ kinterrupt:
 	inc	hl
 ; hl = line, de = old hl, bc safe, af safe
 	ret
+	
+;; C function : irqstate_t irq_save(void)
+.irq_save:
+; destroy only flags
+	ld	hl, i
+	di
+	push	af
+	pop	hl
+	ret
 
-; .irq_save:
-; ; we also need to restore i register
-; 	push	hl
-; 	ld	hl, i
-; 	di
-; 	pop	hl
-; 	push	af
-; 	pop	hl
-; 	ret	
-; 	
-; .irq_restore:
-; 	push	hl
-; 	ld	hl, KERNEL_INTERRUPT_IPT
-; 	ld	i, hl
-; 	pop	hl
-; 	bit	2, l
-; 	ret	z	; po
-; 	ei
-; 	ret
+; C function : void irq_restore(irqstate_t flags)
+.irq_restore:
+	pop	hl
+	pop	af
+	push	af
+	push	hl
+	ret	po
+	ei
+	ret
 
 .irq_handler:
 	pop	hl
