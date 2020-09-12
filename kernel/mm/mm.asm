@@ -644,13 +644,10 @@ kmm:
 	push	bc
 	push	hl
 	ld	c, l
-	or	a, a
-	sbc	hl, hl
+ 	ld	hl, KERNEL_MM_RAM shr 2
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
 	ld	bc, KERNEL_MM_PAGE_SIZE
 	ex	de, hl
 	sbc	hl, hl
