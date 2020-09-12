@@ -210,16 +210,6 @@ define	phy_ioctl		8
 	jr	c, .inode_allocate_error_malloc
 ; hl is our node inode
 	push	hl
-	push	de
-	ex	de, hl
-	or	a, a
-	sbc	hl, hl
-	add	hl, de
-	inc	de
-	ld	bc, KERNEL_VFS_INODE_NODE_SIZE - 1
-	ld	(hl), b
-	ldir
-	pop	de
 	pop	ix
 ; right here, we have the new inode as ix, the parent as iy, and name of inode as de
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
@@ -289,19 +279,6 @@ define	phy_ioctl		8
 	ld	hl, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4
 	call	kmalloc
 	jr	c, .inode_directory_error_no_free
-; zero's
-	push	hl
-	push	de
-	ex	de, hl
-	or	a, a
-	sbc	hl, hl
-	add	hl, de
-	inc	de
-	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4 -1
-	ld	(hl), b
-	ldir
-	pop	de
-	pop	hl
 ; iy is the directory entry, write it
 	ld	(iy+0), hl
 ; copy hl to ix
@@ -356,8 +333,9 @@ define	phy_ioctl		8
 	scf
 	ret
 .inode_create_alloc_error:
-	pop	af
 	pop	hl
+.inode_create_alloc_error2:
+	pop	af
 	scf
 	ret
 
@@ -375,6 +353,7 @@ define	phy_ioctl		8
 	call	kmalloc	; grab a place to copy our temporary name
 	ex	de, hl
 	pop	hl
+	jr	c, .inode_create_alloc_error2
 	
 .inode_create_directory_chain:
 ; here, we have to : extract name
