@@ -98,19 +98,15 @@ kvfs:
 ;;size_t read(int fd, void *buf, size_t count);
 ; hl is fd, void *buf is de, size_t count is bc
 ; pad count to inode_file_size
-	push	de
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	ld	de, (kthread_current)
-	add	hl, de
-	ld	de, KERNEL_THREAD_FILE_DESCRIPTOR
-	add	hl, de
-	ld	iy, (hl)	; get inode
-	ld	de, 3
-	add	hl, de
-	ld	hl, (hl)
-	pop	de
+	ld	iy, (kthread_current)
+	ex	de, hl
+	add	iy, de
+	ex	de, hl
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+3)
+	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)	; get inode
 ; hl is offset in file, iy is inode, de is buffer, bc is count
 ; TODO : restrict bc to maximum file size ++
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
