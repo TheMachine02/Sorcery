@@ -34,16 +34,16 @@ kinit:
 ; setup priviliegied OS code (end of OS)
 	ld	a, $06
 	out0	($1F), a
-	xor	a, a
-	out0	($1D), a
-	out0	($1E), a
+	ld	de, KERNEL_INITRAMFS
+	out0	($1D), e
+	out0	($1E), e
 ; disable stack protector to be able to write the whole RAM image
-	out0	($3A), a
-	out0	($3B), a
-	out0	($3C), a
+	out0	($3A), e
+	out0	($3B), e
+	out0	($3C), e
 ; load the initramfs image, 4K
 	ld	hl, kernel_initramfs
-	ld	de, KERNEL_INITRAMFS
+;	ld	de, KERNEL_INITRAMFS
 	call	lz4.decompress
 ; and init the rest of memory with poison
 	ld	hl, $D01000
@@ -58,22 +58,20 @@ kinit:
 	ld	(kernel_stack_pointer), sp
 	ld	a, $A8
 	out0	($3A), a
-	xor	a, a
-	out0	($3B), a
+	out0	($3B), c
 	ld	a, $D0
+	ld	b, a
 	out0	($3C), a
 	ld	MB, a
 ; setup memory protection
-	xor	a, a
-	out0	($20), a
-	out0	($21), a
-	dec	a
-	out0	($23), a
+	out0	($20), c
+	out0	($21), c
+	dec	c
+	out0	($23), c
 	ld	a, $0F
 	out0	($24), a
-	ld	a, $D0
-	out0	($22), a
-	out0	($25), a
+	out0	($22), b
+	out0	($25), b
 ; small init for the vfs
 	ld	hl, kvfs.phy_none
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
