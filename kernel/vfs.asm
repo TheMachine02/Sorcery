@@ -22,8 +22,6 @@ kvfs:
 .rmdir:
 	ret
 
-.open_error:
-	ret
 .open:
 ; find the inode
 	push	hl
@@ -48,7 +46,10 @@ kvfs:
 	add	ix, de
 	djnz	.open_descriptor
 ; no descriptor found
-	jr	.open_error
+
+.open_error:
+	ret
+
 .open_descriptor_found:
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	e, 0
