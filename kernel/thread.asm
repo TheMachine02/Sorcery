@@ -175,7 +175,7 @@ kthread:
 	ldi
 ; setup the queue
 ; insert the thread to the ready queue
-	ld	h, 3
+	ld	h, ( kthread_mqueue_active and $00FF00 ) shr 8
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call   kqueue.insert_head
 ; setup the stack \o/
