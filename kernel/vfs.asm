@@ -151,7 +151,6 @@ kvfs:
 ; end copy
 	add	hl, bc
 	push	hl
-	pop	bc
 	call	.inode_block_data
 	inc	hl
 	ld	hl, (hl)
@@ -161,6 +160,7 @@ kvfs:
 	jr	nz, .read_not_null2
 	ld	hl, KERNEL_MM_NULL
 .read_not_null2:
+	pop	bc
 	ldir
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	jp	atomic_rw.unlock_read
