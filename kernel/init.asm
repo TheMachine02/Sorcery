@@ -56,11 +56,10 @@ kinit:
 	ld.sis	sp, $0000
 	ld	sp, KERNEL_STACK
 	ld	(kernel_stack_pointer), sp
-	ld	a, $A8
-	out0	($3A), a
+	ld	hl, $A80F
+	out0	($3A), h
 	out0	($3B), c
 	ld	a, $D0
-	ld	b, a
 	out0	($3C), a
 	ld	MB, a
 ; setup memory protection
@@ -68,10 +67,9 @@ kinit:
 	out0	($21), c
 	dec	c
 	out0	($23), c
-	ld	a, $0F
-	out0	($24), a
-	out0	($22), b
-	out0	($25), b
+	out0	($24), l
+	out0	($22), a
+	out0	($25), a
 ; small init for the vfs
 	ld	hl, kvfs.phy_none
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
