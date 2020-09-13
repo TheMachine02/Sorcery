@@ -133,16 +133,16 @@ kthread:
 	call	kmm.thread_map
 	jr	c, .create_no_mem
 ; hl is adress    
-	push	hl
-	pop	iy
+	ex	de, hl
+	ld	iy, 0
+	add	iy, de
 ; setup the default parameter
 	ld	bc, $100
-	ex	de, hl
 	ld	hl, KERNEL_MM_NULL
 	ldir
 	ld	(iy+KERNEL_THREAD_PID), a
-	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
+	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
 ; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
@@ -164,20 +164,18 @@ kthread:
 ; map the pid
 	add	a, a
 	add	a, a
-	sbc	hl, hl
+	ld	hl, kthread_pid_map
 	ld	l, a
-	ld	de, kthread_pid_map
-	add	hl, de
 	ld	(hl), $FF
 	inc	hl
 	ld	(hl), iy
 ; write parent pid    
-	ld	hl, (kthread_current)
-	ld	a, (hl)
-	ld	(iy+KERNEL_THREAD_PPID), a
+	ld	hl, kthread_current
+	lea	de, iy+KERNEL_THREAD_PPID
+	ldi
 ; setup the queue
 ; insert the thread to the ready queue
-	ld	hl, kthread_mqueue_active
+	ld	h, 3
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call   kqueue.insert_head
 ; setup the stack \o/
