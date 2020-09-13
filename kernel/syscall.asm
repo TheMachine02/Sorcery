@@ -80,8 +80,6 @@ _sbrk:
 	ex	de, hl
 	ret	
 .break_error:
-	scf
-	sbc	hl, hl
-	ld	l, -ENOMEM
+	ld	hl, $FFFF00 or -ENOMEM
 	ld	(iy+KERNEL_THREAD_ERRNO), hl
 	ret
