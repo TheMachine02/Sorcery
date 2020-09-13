@@ -82,6 +82,6 @@ _sbrk:
 .break_error:
 	scf
 	sbc	hl, hl
-	ld	l, ENOMEM
+	ld	l, -ENOMEM
 	ld	(iy+KERNEL_THREAD_ERRNO), hl
 	ret

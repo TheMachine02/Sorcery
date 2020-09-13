@@ -417,32 +417,21 @@ kthread:
 ; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
 ; task TASK_UNINTERRUPTIBLE is waiting an IRQ and we aren't in IRQ context, so it seems fishy as hell right now.
 	cp	a, TASK_INTERRUPTIBLE
-	jr	nz, .resume_do_wake
-	ei
-	ret
-.resume_do_wake:
+	jr	nz, .resume_exit
 	call	task_switch_running
 ; skip the first di of schedule, we are already in disabled state
 	jp	task_schedule + 1
+.resume_exit:
+	ei
+	ret
 
+; suspend, wait, resume destroy hl, iy and a	
+	
 .suspend:
-	di
-	push	iy
-	push	hl
-	ld	iy, (kthread_current)
-; the process to write the thread state and change the queue should be always a critical section
-	call	task_switch_interruptible
-	pop	hl
-	pop	iy
-; switch away from current thread to a new active thread
-; cause should already have been writed
-	jp	task_yield
-
+	xor	a, a
 .wait:
 ; wait on an IRQ (or generic suspend if a = NULL)
 	di
-	push	iy
-	push	hl
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_IRQ), a
 	or	a, a
@@ -451,9 +440,7 @@ kthread:
 .wait_generic_suspend:
 	inc	a
 	ld	(iy+KERNEL_THREAD_STATUS), a
-	call	task_switch_helper
-	pop	hl
-	pop	iy
+	call	task_switch_paused
 ; switch away from current thread to a new active thread
 	jp	task_yield
 
@@ -474,7 +461,7 @@ kthread:
 .irq_generic_suspend:
 	inc	a
 	ld	(iy+KERNEL_THREAD_STATUS), a
-	jr	task_switch_helper
+	jr	task_switch_paused
 
 .irq_resume:
 ; resume a thread from within an irq
@@ -506,7 +493,7 @@ task_schedule	= kscheduler.schedule
 ; need to be fully atomic
 task_switch_uninterruptible:
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_UNINTERRUPTIBLE
-task_switch_helper:
+task_switch_paused:
 	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
