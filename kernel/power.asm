@@ -66,24 +66,23 @@ kpower:
 ; 	out	(bc), a
 ; reset rtc : enable, but no interrupts
 	ld	hl, DRIVER_RTC_CTRL
-	ld	(hl), $01
+	ld	(hl), a
 	ld	l, DRIVER_RTC_ISCR and $FF
 	ld	(hl), $FF
 ; set keyboard to idle
 	ld	hl, DRIVER_KEYBOARD_CTRL
-	xor	a, a
-	ld	(hl), a
+	ld	(hl), l
 ; let's do shady stuff
 ; various zeroing
-	out0	($2C), a
+	out0	($2C), l
 ; power to who ? DUNNO
-	out0	($05), a
+	out0	($05), l
 ; disable display refresh
-	out0	($06), a
+	out0	($06), l
 ; status ?
 	in0	a, ($0F)
 	add	a, a
-	ld	a, $00
+	ld	a, l
 	ld	b, $FC
 	jp	m, .cycle_on_label_0
 	jr	nc, .cycle_on_label_0
@@ -91,8 +90,7 @@ kpower:
 	ld	a, $05
 .cycle_on_label_0:
 	out0	($0C), a
-	ld	a, b
-	out0	($0A), a
+	out0	($0A), b
 ; 0b1101
 	ld	a, $0D
 	out0	($0D), a
