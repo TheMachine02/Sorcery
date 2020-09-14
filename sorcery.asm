@@ -54,11 +54,7 @@ include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
 include	'kernel/compress/lz4.asm'
 include	'kernel/exec/leaf.asm'
-kernel_initramfs:
-file	'initramfs'
-; end guard
- db	$00, $00
-
+include	'fs/romfs.asm'
 include	'kernel/nmi.asm'
 
 ; leaf_frozen_file:
@@ -81,5 +77,11 @@ include	'kernel/dev/flash.asm'
 ; include	'kernel/exec/kso.asm'
 ; include	'kernel/exec/kelf.asm'
 
-; rb	$060000 - $
+kernel_initramfs:
+file	'initramfs'
+; end guard
+ db	$00, $00
+kernel_romfs:
+file	'rootfs'
+
 _endos:
