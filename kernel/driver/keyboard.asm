@@ -56,7 +56,8 @@ keyboard:
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
 	bit	DRIVER_KEYBOARD_IRQ_LOCK_SET, (hl)
 	ret	z
-	ld	iy, (DRIVER_KEYBOARD_IRQ_LOCK_THREAD)
+	inc	hl
+	ld	iy, (hl)	; (DRIVER_KEYBOARD_IRQ_LOCK_THREAD)
 	ld	a, DRIVER_KEYBOARD_IRQ
 	jp	kthread.irq_resume
 
