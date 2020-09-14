@@ -96,6 +96,7 @@ kpower:
 	djnz	$	; wait
 	ld	de, $000001
 	ld	hl, KERNEL_INTERRUPT_IMSC
+	dec	b
 ; let's got back to various power stuff
 ; disable screen ?
 	in0	a, ($09)
@@ -103,7 +104,6 @@ kpower:
 	or	a, $E6
 	out0	($09), a
 ; most likely do something
-	dec	b
 	out0	($07), b
 ; let's setup interrupt now
 ; disable all
