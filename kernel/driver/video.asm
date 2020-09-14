@@ -29,7 +29,7 @@ video:
 	ld	bc, 512
 	ldir
 	ld	hl, DRIVER_VIDEO_IMSC
-	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
+	ld	(hl), d			; DRIVER_VIDEO_IMSC_DEFAULT
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
 	ld	(DRIVER_VIDEO_CTRL), hl
 	ld	hl, DRIVER_VIDEO_VRAM
@@ -136,9 +136,8 @@ video:
 
 .clear_color:
 	ld	de, (DRIVER_VIDEO_BUFFER)
-	or	a, a
 	sbc	hl, hl
-	add	hl, de
+	adc	hl, de
 	inc	de
 	ld	(hl), c
 	ld	bc, 76799
