@@ -97,15 +97,15 @@ kpower:
 ; let's got back to various power stuff
 ; disable screen ?
 	in0	a, ($09)
-	ld	de, $FF01
+	ld	de, $000001
 	and	a, e
 	or	a, $E6
 	out0	($09), a
 ; most likely do something
-	out0	($07), d
+	dec	b
+	out0	($07), b
 ; let's setup interrupt now
 ; disable all
-	inc	d
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
 	ld	(kinterrupt_power_mask), bc
