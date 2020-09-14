@@ -82,14 +82,13 @@ kpower:
 ; status ?
 	in0	a, ($0F)
 	add	a, a
-	ld	a, l
 	ld	b, $FC
 	jp	m, .cycle_on_label_0
 	jr	nc, .cycle_on_label_0
 	inc	b
-	ld	a, $05
+	ld	l, $05
 .cycle_on_label_0:
-	out0	($0C), a
+	out0	($0C), l
 	out0	($0A), b
 ; 0b1101
 	ld	a, $0D
@@ -98,15 +97,15 @@ kpower:
 ; let's got back to various power stuff
 ; disable screen ?
 	in0	a, ($09)
-	and	a, $01
+	ld	de, $FF01
+	and	a, e
 	or	a, $E6
 	out0	($09), a
 ; most likely do something
-	ld	a, $FF
-	out0	($07), a
+	out0	($07), d
 ; let's setup interrupt now
 ; disable all
-	ld	de, $01
+	inc	d
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
 	ld	(kinterrupt_power_mask), bc
@@ -155,7 +154,7 @@ kpower:
 	ld	hl, DRIVER_RTC_CTRL
 	ld	(hl), 10011111b
 	ld	l, DRIVER_RTC_ISCR and $FF
-	ld	(hl), $FF
+	ld	(hl), c
 ; before _boot_InitializeHardware, check battery level
 	call	.battery_level
 	jp	c, .cycle_off
