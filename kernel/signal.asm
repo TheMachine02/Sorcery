@@ -191,22 +191,21 @@ signal:
 	add	ix, sp
 	ld	hl, (hl)
 	ld	sp, hl
-	sbc	hl, hl
 	push	de
-	ld	l, a
-	push	hl
+	ld	c, a
+	push	bc
 	ld	hl, _sigreturn
 	push	hl
 	ld	hl, _sighandler
 	push	hl
-	sbc	hl, hl
-	push	hl
+	ld	c, b
+	push	bc
 	push	iy
 	push	de
-	push	hl
-	push	hl
-	ld	h, a
-	push	hl
+	push	bc
+	push	bc
+	ld	b, a
+	push	bc
 	sbc	hl, hl
 	add	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
