@@ -112,10 +112,12 @@ kthread_queue_retire:
 ; timer queue
 ktimer_queue:
  db	4	dup	$FF
-kinterrupt_power_mask:
+kpower_interrupt_mask:
+ db	3	dup	KERNEL_HW_POISON
+kpower_lcd_mask:
  db	3	dup	KERNEL_HW_POISON
 unallocated_zero: 
- db	37	dup	KERNEL_HW_POISON
+ db	34	dup	KERNEL_HW_POISON
 kmem_cache_buffctl:
 ; 16 slub buffers, 7 defined, 9 user defined
 kmem_cache_s8:
@@ -151,7 +153,7 @@ kmem_cache_s256:
 kmem_cache_s512:
  db	4	dup	$FF
  dw	512
- db	4
+ db	2
  db	0
 kmem_cache_user:
  db	72	dup	$00	; null is reference to not allocated
@@ -198,5 +200,3 @@ kmm_ptlb_map:
 ; $700
  db	256	dup	$00
  db	2048	dup	KERNEL_HW_POISON
-
-kpower_lcd_save:

@@ -3,9 +3,9 @@ define	KERNEL_POWER_CHARGING		$000B
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$F60024
 
-define	kinterrupt_power_mask		$D00418
+define	kpower_interrupt_mask		$D00418
+define	kpower_lcd_mask			$D0041B
 ; we need to save the whales (and the palette)
-define	kpower_lcd_save			$D00E00
 
 macro	wait
 	ld	b, $FF
@@ -46,8 +46,12 @@ kpower:
 	di
 	call	kwatchdog.disarm
 ; backlight / LCD / SPI disable from boot
+	ld	hl, kmem_cache_s512
+	call	kmem.cache_alloc
+; TODO use emergency memory if this carry
+	ld	(kpower_lcd_mask), hl
+	ex	de, hl
 	ld	hl, DRIVER_VIDEO_PALETTE
-	ld	de, kpower_lcd_save
 	ld	bc, 512
 	ldir
 	call	_boot_TurnOffHardware
@@ -108,7 +112,7 @@ kpower:
 ; let's setup interrupt now
 ; disable all
 	ld	bc, (hl)
-	ld	(kinterrupt_power_mask), bc
+	ld	(kpower_interrupt_mask), bc
 	ld	(hl), de
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 ; acknowledge
@@ -145,7 +149,7 @@ kpower:
 ; 	out	(bc), a
 ; interrupts please
 	ld	hl, KERNEL_INTERRUPT_IMSC
-	ld	bc, (kinterrupt_power_mask)
+	ld	bc, (kpower_interrupt_mask)
 	ld	(hl), bc
 	ld	bc, $FFFFFF
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
@@ -165,10 +169,12 @@ kpower:
 ; restore crystal to correct kernel wide defined value
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
+	ld	hl, (kpower_lcd_mask)
 	ld	de, DRIVER_VIDEO_PALETTE
-	ld	hl, kpower_lcd_save
 	ld	bc, 512
 	ldir
+	ld	hl, (kpower_lcd_mask)
+	call	kmem.cache_free
 ; get back our 8 bits LCD + interrupts
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
