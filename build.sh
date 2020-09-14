@@ -6,7 +6,8 @@ echo "define CONFIG_KERNEL_NAME \"Sorcery.0.0.1-slp-"$str"\"" >> config
 cat config_build >> config
 echo "Generating initramfs..."
 ./fasmg kernel/bss.asm kernel/initramfs
-lz4 -f -l --rm --best kernel/initramfs initramfs
+lz4 -f -l --best kernel/initramfs initramfs
+rm kernel/initramfs
 echo "Generating initial root..."
 genromfs -d root -V root -f rootfs
 echo "Building kernel..."
