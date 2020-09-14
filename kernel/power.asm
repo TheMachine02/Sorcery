@@ -66,50 +66,47 @@ kpower:
 ; 	out	(bc), a
 ; reset rtc : enable, but no interrupts
 	ld	hl, DRIVER_RTC_CTRL
-	ld	(hl), $01
+	ld	(hl), a
 	ld	l, DRIVER_RTC_ISCR and $FF
 	ld	(hl), $FF
 ; set keyboard to idle
 	ld	hl, DRIVER_KEYBOARD_CTRL
-	xor	a, a
-	ld	(hl), a
+	ld	(hl), l
 ; let's do shady stuff
 ; various zeroing
-	out0	($2C), a
+	out0	($2C), l
 ; power to who ? DUNNO
-	out0	($05), a
+	out0	($05), l
 ; disable display refresh
-	out0	($06), a
+	out0	($06), l
 ; status ?
 	in0	a, ($0F)
 	add	a, a
-	ld	a, $00
 	ld	b, $FC
 	jp	m, .cycle_on_label_0
 	jr	nc, .cycle_on_label_0
 	inc	b
-	ld	a, $05
+	ld	l, $05
 .cycle_on_label_0:
-	out0	($0C), a
-	ld	a, b
-	out0	($0A), a
+	out0	($0C), l
+	out0	($0A), b
 ; 0b1101
 	ld	a, $0D
 	out0	($0D), a
-	wait
+	djnz	$	; wait
+	ld	de, $000001
+	ld	hl, KERNEL_INTERRUPT_IMSC
+	dec	b
 ; let's got back to various power stuff
 ; disable screen ?
 	in0	a, ($09)
-	and	a, $01
+	and	a, e
 	or	a, $E6
 	out0	($09), a
 ; most likely do something
-	ld	a, $FF
-	out0	($07), a
+	out0	($07), b
 ; let's setup interrupt now
 ; disable all
-	ld	de, $01
-	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
 	ld	(kinterrupt_power_mask), bc
 	ld	(hl), de
@@ -132,14 +129,14 @@ kpower:
 	ld	a, $0F
 	out0	($0D), a
 .wait_for_port_0D:
-	in0	a, ($0D)
-	inc	a
+	in0	b, ($0D)
+	inc	b
 	jr	nz, .wait_for_port_0D
 	ld	a, $76
 	out0	($05), a
 	ld	a, $03
 	out0	($06), a
-	wait
+	djnz	$	; wait
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?
@@ -157,7 +154,7 @@ kpower:
 	ld	hl, DRIVER_RTC_CTRL
 	ld	(hl), 10011111b
 	ld	l, DRIVER_RTC_ISCR and $FF
-	ld	(hl), $FF
+	ld	(hl), c
 ; before _boot_InitializeHardware, check battery level
 	call	.battery_level
 	jp	c, .cycle_off
