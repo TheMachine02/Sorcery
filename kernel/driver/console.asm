@@ -15,13 +15,13 @@ console:
 .nmi_takeover:
 	ld	iy, console_dev
 	res	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
+	ld	hl, nmi_console
 	jr	.fb_takeover_entry
 	
 .fb_takeover:
 	di
 	ld	iy, console_dev
 	set	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
-.fb_takeover_entry:
 ; check CONSOLE_TAKEOVER is null
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	add	hl, de
@@ -32,6 +32,7 @@ console:
 	ld	hl, 64
 	call	kmalloc
 	ret	c
+.fb_takeover_entry:
 	ld	(iy+CONSOLE_TAKEOVER), hl
 	ex	de, hl
 ; save LCD state

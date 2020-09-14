@@ -57,8 +57,12 @@ include	'kernel/exec/leaf.asm'
 include	'fs/romfs.asm'
 include	'kernel/nmi.asm'
 
-; leaf_frozen_file:
-; file	'demo.leaf'
+kernel_initramfs:
+file	'initramfs'
+; end guard
+ db	$00, $00
+kernel_romfs:
+file	'rootfs'
 
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
@@ -73,15 +77,11 @@ include	'kernel/font/gohufont.inc'
 include	'kernel/driver/flash.asm'
 include	'kernel/dev/flash.asm'
 
+; WARNING, flash breakage right here !
+
 ; include	'kernel/exec/kexec.asm'
 ; include	'kernel/exec/kso.asm'
 ; include	'kernel/exec/kelf.asm'
 
-kernel_initramfs:
-file	'initramfs'
-; end guard
- db	$00, $00
-kernel_romfs:
-file	'rootfs'
 
 _endos:
