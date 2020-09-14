@@ -306,9 +306,8 @@ kmem:
 .cache_shrink:
 	lea	hl, ix+KERNEL_SLAB_CACHE
 	call	kqueue.remove
-	or	a, a
 	sbc	hl, hl
-	add	hl, bc
+	adc	hl, bc
 	call	kmm.page_flush
 	jr	.cache_free_restore
 
