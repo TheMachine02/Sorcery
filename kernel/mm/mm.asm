@@ -499,13 +499,10 @@ kmm:
 	pop	af
 	jp	po, $+5
 	ei
-	or	a, a
-	sbc	hl, hl
+	ld	hl, KERNEL_MM_RAM shr 2
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
 	ret
 .page_map_except:
 	jp	nz, .page_map_no_free
@@ -541,15 +538,11 @@ kmm:
 	ld	(hl), a
 	jp	po, $+5
 	ei
-	dec	h
 	ld	b, l
-	or	a, a
-	sbc	hl, hl
+	ld	hl, KERNEL_MM_RAM shr 2
 	ld	h, b
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_MM_RAM
-	add	hl, bc
 	ret
 .page_map_no_free:
 ; will need to reclaim cache memory page
