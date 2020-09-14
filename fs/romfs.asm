@@ -22,23 +22,85 @@ define	ROMFS_BLOCK_DEVICE	4	; 16 bits major / minor number
 define	ROMFS_CHAR_DEVICE	5	; 16 bits major / minor number
 define	ROMFS_SOCKET		6	; 0
 define	ROMFS_FIFO		7	; 0
-
-
-;   452 static __u32 romfs_checksum(const void *data, int size)
-;   453 {
-;   454     const __be32 *ptr = data;
-;   455     __u32 sum;
-;   456 
-;   457     sum = 0;
-;   458     size >>= 2;
-;   459     while (size > 0) {
-;   460         sum += be32_to_cpu(*ptr++);
-;   461         size--;
-;   462     }
-;   463     return sum;
-;   464 }
-;   
-;   
+   
 ;   559 static struct dentry *romfs_mount(struct file_system_type *fs_type,
 ;   560             int flags, const char *dev_name,
 ;   561             void *data)
+
+romfs:
+
+.IDENTIFIER:
+ db	"-rom1fs-"
+
+.compare:
+	ld	a, (de)
+	cpi
+	ret	nz
+	inc	de
+	jp	pe, .compare
+	ret
+
+.verify:
+; z if it is, nz otherwise
+; check if the given adress (ix) hold a ROMFS file system and if the checksum match
+	lea	hl, ix+ROMFS_MAGIC
+	ld	de, .IDENTIFIER
+	ld	bc, 8
+	call	.compare
+	ret	nz
+	ld	hl, 512
+	ld	bc, (ix+ROMFS_SIZE)
+	or	a, a
+	sbc	hl, bc
+	jr	nc, .smaller_fs
+	ld	bc, 512
+.smaller_fs:
+	lea	hl, ix+ROMFS_MAGIC
+	call	.checksum
+; compare the checksum and the value stored
+	ld	de, (ix+ROMFS_CHECKSUM)
+	ld	c, (ix+ROMFS_CHECKSUM+3)
+	sub	a, c
+	sbc	hl, de
+	ret
+	
+.checksum:
+; ix is void*, bc is size
+; add up 32 bits value in BIG ENDIAN
+	srl	b
+	rr	c
+	srl	b
+	rr	c
+	ld	a, b
+	or	a, c
+	sbc	hl, hl
+	ret	z
+	ld	a, c
+	dec	bc
+	inc	b
+	ld	c, b
+	ld	b, a
+	xor	a, a
+.checksum_outer_loop:
+	push	bc
+.checksum_inner_loop:
+; load ix + 1 in deu
+	ld	de, (ix-2)
+; then big endian ordering
+	ld	c, (ix+0)
+	ld	d, (ix+2)
+	ld	e, (ix+3)
+; add up the 32 bits value
+	add	hl, de
+	adc	a, c
+	djnz	.checksum_inner_loop
+	pop	bc
+	dec	c
+	jr	nz, .checksum_outer_loop
+; ahl is the 32 bits checksum
+	ret
+
+
+
+
+
