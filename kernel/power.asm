@@ -93,11 +93,12 @@ kpower:
 ; 0b1101
 	ld	a, $0D
 	out0	($0D), a
-	wait
+	djnz	$	; wait
+	ld	de, $000001
+	ld	hl, KERNEL_INTERRUPT_IMSC
 ; let's got back to various power stuff
 ; disable screen ?
 	in0	a, ($09)
-	ld	de, $000001
 	and	a, e
 	or	a, $E6
 	out0	($09), a
@@ -106,7 +107,6 @@ kpower:
 	out0	($07), b
 ; let's setup interrupt now
 ; disable all
-	ld	hl, KERNEL_INTERRUPT_IMSC
 	ld	bc, (hl)
 	ld	(kinterrupt_power_mask), bc
 	ld	(hl), de
@@ -129,14 +129,14 @@ kpower:
 	ld	a, $0F
 	out0	($0D), a
 .wait_for_port_0D:
-	in0	a, ($0D)
-	inc	a
+	in0	b, ($0D)
+	inc	b
 	jr	nz, .wait_for_port_0D
 	ld	a, $76
 	out0	($05), a
 	ld	a, $03
 	out0	($06), a
-	wait
+	djnz	$	; wait
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?
