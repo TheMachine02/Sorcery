@@ -85,7 +85,7 @@ keyboard:
 .irq_lock_reset:
 ; set them freeeeee
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK
-	ld	(hl), KERNEL_MUTEX_MAGIC
+	ld	(hl), KERNEL_ATOMIC_MUTEX_MAGIC
 	inc	hl
 	ld	de, NULL
 	ld	(hl), de

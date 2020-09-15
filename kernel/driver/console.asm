@@ -10,6 +10,9 @@ define	console_key		$D00708
 define	console_takeover	$D00715
 define	console_string		$D00718
 
+; TODO : remove the use of the complex circular buffer for line buffer
+; TODO : remove the special function of circular buffer added for console
+
 console:
 
 .nmi_takeover:

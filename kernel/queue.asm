@@ -1,4 +1,4 @@
-define	QUEUE_ID		$00
+define	QUEUE_DATA		$00
 define	QUEUE_NEXT		$01
 define	QUEUE_PREVIOUS		$04
 ; queue data ;
@@ -8,15 +8,13 @@ define	QUEUE_CURRENT		$01		; pointer 24 bits
 
 kqueue:
 
-; those routine destroy a
-; all other register are preserved
+; all register are preserved
 
 .insert_head:
 ; iy is node to insert
 ; hl is queue pointer (count, queue_current)
 ; insert after current pointer if queue is non null, update current to node else
 ; inplace insert of the node
-; return 
 	inc	(hl)
 	inc	hl
 	jr	z, .create
@@ -48,7 +46,6 @@ kqueue:
 ; hl is queue pointer (count, queue_current)
 ; insert before current pointer if queue is non null, update current to node else
 ; inplace insert of the node
-; return 
 	inc	(hl)
 	inc	hl
 	jr	z, .create
@@ -68,19 +65,6 @@ kqueue:
 	pop	ix
 	ret
 
-.retire_head:
-; remove the head node and update queue to the next node. return iy = node
-	ld	a, (hl)
-	or	a, a
-	ret	m	; if m = no more node to retire in this list
-	dec	(hl)
-	or	a, a	; we reforce flag to be correct (ie p set describing action as been successfull)
-	push	ix
-	push	hl
-	inc	hl
-	ld	iy, (hl)
-	jr	.remove_jp
-	
 .remove_head:
 ; iy assumed to be queue head
 ; remove iy as node, update queue head to the next node of iy
@@ -90,7 +74,6 @@ kqueue:
 	push	ix
 	push	hl
 	inc	hl
-.remove_jp:
 	ld	ix, (iy+QUEUE_NEXT)
 	ld	(hl), ix
 	ld	hl, (iy+QUEUE_PREVIOUS)
@@ -139,71 +122,37 @@ kqueue:
 	pop	de
 	ret
 
-define	LIST_PRIORITY		$00
-define	LIST_NEXT		$01
-; queue data ;
-define	LIST_SIZE		$04
-define	LIST_COUNT		$00
-define	LIST_HEAD		$01
-
-klist:
-; priority list
-
-.append:
-; hl is list, iy is node, c is node priority (0 is highest priority)
-	ld	(iy+LIST_PRIORITY), c
-	ld	a, (hl)
+.insert_priority:
+; iy is node to insert, a is node priority
+; hl is queue pointer (count, queue_current)
+; insert before lower priority node, starting at head
 	inc	(hl)
-	or	a, a
+	inc	hl
+	ld	(iy+QUEUE_DATA), a
 	jr	z, .create
+	dec	hl
 	push	hl
-; parse from LIST_START to find where to insert our node
+	push	bc
+	ld	b, (hl)
 	inc	hl
+	push	ix
 	ld	ix, (hl)
-	ld	b, a
-	ld	a, c
-; compare ix priority to priority (register c)
-	cp	a, (ix+LIST_PRIORITY)
-	jr	c, .append_head
-	djnz	.append_end
-.append_parse:
-	ld	hl, (ix+LIST_NEXT)
-	cp	a, (hl)
-	jr	c, .append_end
-	ld	ix, (ix+LIST_NEXT)
-	djnz	.append_parse
-.append_end:
-; node should be next of ix
-	ld	hl, (ix+LIST_NEXT)
-	ld	(ix+LIST_NEXT), iy
-	ld	(iy+LIST_NEXT), hl
-	pop	hl
-	ret
-.append_head:
-; head = node, node next = previous_head
-	ld	(hl), iy
-	ld	(iy+LIST_NEXT), ix
-	pop	hl
-	ret
-
-.create:
+; check against queue data
+.insert_priority_cmp:
+	cp	a, (ix+QUEUE_DATA)
+	jr	c, .insert_priority_node
+	ld	ix, (ix+QUEUE_NEXT)
+	djnz	.insert_priority_cmp
+.insert_priority_node:
+; insert the node before node ix
+	ld	hl, (ix+QUEUE_PREVIOUS)
+	ld	(iy+QUEUE_PREVIOUS), hl
 	inc	hl
+; write to previous node the next node
 	ld	(hl), iy
-	dec	hl
-	ret
-
-.retire:
-; retire the first node >> iy
-; return z if none to retire, else, iy is the node retired
-; hl is list
-	ld	a, (hl)
-	or	a, a
-	ret	z
-	dec	(hl)
-	inc	hl
-	ld	iy, (hl)
-	ld	bc, (iy+LIST_NEXT)
-	ld	(hl), bc
-	dec	hl
-	or	a, a
+	ld	(iy+QUEUE_NEXT), ix
+	ld	(ix+QUEUE_PREVIOUS), iy
+	pop	ix
+	pop	bc
+	pop	hl
 	ret

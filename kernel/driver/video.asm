@@ -20,6 +20,8 @@ define DRIVER_VIDEO_IRQ_LOCK              $D00060
 define DRIVER_VIDEO_IRQ_LOCK_THREAD       $D00061
 define DRIVER_VIDEO_IRQ_LOCK_SET          0
 
+; TODO fix race condition in lock and make use of kernel atomic_mutex
+
 video:
 
 .init:
@@ -86,7 +88,7 @@ video:
 ; set them freeeeee
 .irq_lock_reset:
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
-	ld	(hl), KERNEL_MUTEX_MAGIC
+	ld	(hl), KERNEL_ATOMIC_MUTEX_MAGIC
 	inc	hl
 	ld	de, NULL
 	ld	(hl), de
