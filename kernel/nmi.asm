@@ -13,7 +13,7 @@ define	CONTEXT_FRAME_HL		24
 
 define	nmi_context			$D00140	; 64 bytes
 define	nmi_console			$D00160	; 64 bytes
-define	nmi_stack			$D0027A	; interrupt stack. Anyway, if we were in a interrupt, we'll reboot (TODO : detect interrupt context and reboot)
+define	nmi_stack			$D0027A	; interrupt stack. Anyway, if we were in a interrupt, we'll reboot
 
 assert $ < $0220A8
 rb $0220A8-$
@@ -44,12 +44,19 @@ nmi:
 	call	video.init
 	call	console.nmi_takeover
 ; now, process
+	ld	ix, nmi_context
 	ld	hl, KERNEL_WATCHDOG_CTRL
 	res	0, (hl)
 	ld	l, KERNEL_WATCHDOG_ISR and $FF
 	ld	a, (hl)
 	or	a, a
 	jr	nz, .watchdog_violation
+; are we in the ISR stack ?
+	ld	bc, (ix+CONTEXT_FRAME_SP)
+	ld	hl, nmi_stack
+	or	a, a
+	sbc	hl, bc
+	jr	nc, .irq_error
 	in0	a, ($3D)
 	and	a, $03
 	out0	($3E), a
@@ -57,7 +64,7 @@ nmi:
 	jr	c, .stack_overflow
 	rra
 	jr	c, .memory_protection
-
+.irq_error:
 .deadlock:
 	ld	hl, .THREAD_DEADLOCK
 .reboot_trampoline:
@@ -115,7 +122,6 @@ nmi:
 	retn
  
 .exception_write:
-	ld	ix, nmi_context
 ; hl is exception string
 	push	hl
 	ld	hl, .CONTEXT_FRAME_SYSE
@@ -226,5 +232,5 @@ _boot_sprintf_safe:
 ; the nice _boot_sprintf routine is bugged, and scrap need to be cleared to zero
 	or	a, a
 	sbc	hl, hl
-	ld	(KERNEL_HEAP+32), hl
+	ld	(kernel_heap+32), hl
 	jp	_boot_sprintf
