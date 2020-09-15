@@ -12,7 +12,7 @@ define	KERNEL_MM_PAGE_FREE_MASK		128
  org	$D00000
 KERNEL_INTERRUPT_IPT:
 ; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
-kinterrupt_irq_reschedule	= $
+kinterrupt_irq_reschedule:
 kthread_current			= $+1
  db	$00, $90	; 0000
  db	$00, $D0	; 0000
@@ -73,7 +73,7 @@ KERNEL_INTERRUPT_ISR_DATA_HRTIMER3:
  db	6	dup	KERNEL_HW_POISON
 KERNEL_INTERRUPT_ISR_DATA_POWER:
  db	6	dup	KERNEL_HW_POISON
-; we are at $90, 24 bytes up to 
+; we are at $90, 24 bytes
 kernel_idle:
  db	$00			; ID 0 reserved
  dl	kernel_idle		; No next
@@ -90,18 +90,23 @@ kernel_stack_pointer:
  dl	$000000			; Time
 ; up to $A8, end of stack
  db	87	dup	KERNEL_HW_POISON
-KERNEL_STACK:
+kernel_stack:
 ; $FF, scrap
   db	1	dup	KERNEL_HW_POISON
 ; 512 bytes scrap, used for lot of things
-KERNEL_HEAP:
-nmi_context		= $+64
-nmi_stack		= $+250
-; this stack is supposed to be ~ 256 bytes
-kinterrupt_irq_stack_isr	= $+506
-kinterrupt_irq_ret_ctx		= $+506
-kinterrupt_irq_stack_ctx	= $+509
- db	512	dup	KERNEL_HW_POISON
+kernel_heap:
+ db	64	dup	KERNEL_HW_POISON
+nmi_context:
+ db	64	dup	KERNEL_HW_POISON
+nmi_console:
+ db	375	dup	KERNEL_HW_POISON
+nmi_stack:
+kinterrupt_irq_stack_isr: 
+ db	3	dup	KERNEL_HW_POISON 
+kinterrupt_irq_ret_ctx: 
+ db	3	dup	KERNEL_HW_POISON 
+kinterrupt_irq_stack_ctx:
+ db	3	dup	KERNEL_HW_POISON
 ; we are at $D00300 
 ; 16 bytes (4x4)
 kthread_mqueue_active:

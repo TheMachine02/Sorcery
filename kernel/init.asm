@@ -3,10 +3,10 @@ define	BOOT_DIRTY_MEMORY1		$D000AC		; 1 byte ] on interrupt
 define	BOOT_DIRTY_MEMORY2		$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 
-define	KERNEL_HEAP			$D00100
-define	KERNEL_STACK			$D000FF
+define	kernel_heap			$D00100
+define	kernel_stack			$D000FF
 define	KERNEL_STACK_SIZE		$57
-define	KERNEL_INITRAMFS		$D00000
+define	kernel_data			$D00000
 
 define	KERNEL_CRYSTAL_CTLR		$00
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
@@ -34,7 +34,7 @@ kinit:
 ; setup priviliegied OS code (end of OS)
 	ld	a, $06
 	out0	($1F), a
-	ld	de, KERNEL_INITRAMFS
+	ld	de, kernel_data
 	out0	($1D), e
 	out0	($1E), e
 ; disable stack protector to be able to write the whole RAM image
@@ -43,7 +43,6 @@ kinit:
 	out0	($3C), e
 ; load the initramfs image, 4K
 	ld	hl, kernel_initramfs
-;	ld	de, KERNEL_INITRAMFS
 	call	lz4.decompress
 ; and init the rest of memory with poison
 	ld	hl, $D01000
@@ -54,7 +53,7 @@ kinit:
 ; right now, the RAM image is complete
 ; setup the kernel stack protector
 	ld.sis	sp, $0000
-	ld	sp, KERNEL_STACK
+	ld	sp, kernel_stack
 	ld	(kernel_stack_pointer), sp
 	ld	hl, $A80F
 	out0	($3A), h
@@ -101,8 +100,8 @@ kinit:
 	jr	.arch_sleep
  
 .poison_heap: 
-	ld	hl, KERNEL_HEAP
-	ld	de, KERNEL_HEAP + 1
+	ld	hl, kernel_heap
+	ld	de, kernel_heap + 1
 	ld	bc, 511
 	ld	(hl), KERNEL_HW_POISON
 	ldir
