@@ -155,3 +155,110 @@ atomic_rw:
 	
 atomic_op:
 	ret
+	
+atomic_mutex:
+; mutex lock :
+;	ld	hl, xxxx
+;	sra	(hl)
+;	call	c, atomic_mutex.wait
+
+; mutex unlock is a bit more complicated
+;	ld	hl, xxxx
+;	call	atomic_mutex.wake
+
+; please note :
+; - one task can hold the mutex
+; - only the owner can unlock the mutex.
+; - Do not exit with a mutex held.
+; - Do not use mutexes in irq or other interrupt disable area
+
+.wait:
+; signal to wait on the mutex
+; get the return adress
+	push	ix
+	push	iy
+	push	af
+	ld	iy, (kthread_current)
+; save hl for later
+.wait_again:
+	push	hl
+	inc	hl
+	lea	iy, iy+KERNEL_THREAD_LIST_DATA
+; we delayed the critical section at our best
+	di
+	ld	a, (iy+KERNEL_THREAD_PRIORITY-KERNEL_THREAD_LIST_DATA)
+; insert the node at the correct priority
+	call	kqueue.insert_priority
+	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+; right here we should compare the arriving thread priority with the owner priority to alleviate priority inversion issue
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	ix, (hl)	; owner
+; load priority of the current thread
+	ld	a, (iy+KERNEL_THREAD_PRIORITY)
+	sub	a, (ix+KERNEL_THREAD_PRIORITY)
+; find a nice value to boost thread priority to be at least >= of the highest priority waiting thread
+; if the result carry, the priority of waiter is > of owner. The diff *2 should be the nice value
+	jr	nc, .wait_switch
+; TODO : save the previous (lowest) nice value
+	add	a, a
+	ld	(ix+KERNEL_THREAD_NICE), a
+.wait_switch:
+	call	task_switch_uninterruptible
+	pop	hl
+	call	task_yield
+; we are back, try to acquire the lock again
+	sra	(hl)
+	jr	c, .wait_again
+; mutex acquired, return
+	pop	af
+	pop	iy
+	pop	ix
+	ret
+
+.wake:
+; unlock a mutex
+; destroy a, iy
+; TODO : restore priority of owning thread (only if there is actual waiter)
+; TODO : check if it is the correct owner
+	di
+	ld	(hl), $FE
+	inc	hl
+	ld	a, (hl)
+	inc	a
+	jr	nz, .wake_queue
+	dec	hl
+	ei
+	ret
+.wake_queue:
+	push	iy
+	inc	hl
+	ld	iy, (hl)
+	dec	hl
+	call	kqueue.remove_head
+	ei
+	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	push	hl
+	call	kthread.resume
+	pop	hl
+	dec	hl
+	pop	iy
+	ret
+
+.init:
+	push	hl
+	push	de
+	push	bc
+	ex	de, hl
+	ld	hl, .init_data
+	ld	bc, KERNEL_ATOMIC_MUTEX_SIZE
+	ldir
+	pop	bc
+	pop	de
+	pop	hl
+	ret
+	
+.init_data:
+ db	$FE, $FF, $00, $00, $00, $00, $00, $00
