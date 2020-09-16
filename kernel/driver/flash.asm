@@ -16,7 +16,6 @@ flash:
 	ld	de, $D18800
 	ld	bc, 256
 	ldir
-	call	.phy_init
 
 ; flash unlock and lock
 .lock:

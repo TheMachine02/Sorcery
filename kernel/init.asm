@@ -80,16 +80,19 @@ kinit:
 	call	video.init
 	call	keyboard.init
 	call	rtc.init
-; device & driver init ;
 	call	console.init
 	call	flash.init
-	call	null.init	
 ; create init thread : ie, first program to run (/bin/init/)
 ; 	ld	iy, THREAD_INIT_TEST
 ; 	call	kthread.create
 ; 	jp	c, nmi
 	call	console.fb_takeover
 	jp	c, nmi
+; device init (delayed right now due to creating inode)
+	call	console.phy_init
+	call	flash.phy_init
+	call	null.phy_init
+	
 ; nice idle thread code
 	ei
 .arch_sleep:
