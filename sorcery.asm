@@ -21,9 +21,8 @@ format	ti executable 'SORCERY'
 Sorcery:
 include 'sorcery_certificate.asm'
 ; we'll set as occupying 4 sectors - or 256KB
-.start:
-	db	$5a,$a5,$ff,$04
-	jp	_endos
+	db	$5A, $A5, $FF, $04
+	jp	__end
 .syscall:
 	jp	kinit
 	jp	kinterrupt.irq_handler
@@ -32,7 +31,7 @@ include 'sorcery_certificate.asm'
 	jp	restart.20h
 	jp	restart.28h
 	jp	restart.30h
-	jp	nmi
+	jp	nmi.handler
 	
 include	'kernel/init.asm'
 include	'kernel/interrupt.asm'
@@ -84,4 +83,4 @@ include	'kernel/dev/flash.asm'
 ; include	'kernel/exec/kelf.asm'
 
 
-_endos:
+__end:

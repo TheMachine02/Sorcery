@@ -19,7 +19,7 @@ assert $ < $0220A8
 rb $0220A8-$
 
 nmi:
-.service:
+.handler:
 	ld	(nmi_context+CONTEXT_FRAME_HL), hl
 	pop	hl
 	ld	(nmi_context+CONTEXT_FRAME_PC), hl
