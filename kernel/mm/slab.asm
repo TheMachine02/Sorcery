@@ -41,7 +41,7 @@ kfree	= kmem.cache_free
 
 kmem:
 
-.cache_malloc_error_null:
+.__cache_malloc_error_null:
 	pop	af
 	scf
 	ret
@@ -52,29 +52,30 @@ kmem:
 	push	af
 	ld	a, l
 	or	a, a
-	jr	z, .cache_malloc_error_null
+	jr	z, .__cache_malloc_error_null
 	ld	hl, kmem_cache_buffctl shr 3 + 5	; no 1, 2, 4 bytes caches
-.get_cache_log:
+.__get_cache_log:
 	dec	l
 	add	a, a
-	jr	nc, .get_cache_log
-	jr	z, .get_cache_lowbit
+	jr	nc, .__get_cache_log
+	jr	z, .__get_cache_lowbit
 	inc	l
-.get_cache_lowbit:
+.__get_cache_lowbit:
 ; can get l < 0
 	ld	a, l
 	add	a, a
-	jr	nc, .get_cache_default
+	jr	nc, .__get_cache_default
 	xor	a, a
 	ld	l, a
-.get_cache_default:
+.__get_cache_default:
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	pop	af
+	jr	.__cache_alloc_entry
 
 .cache_alloc:
 	push	af
+.__cache_alloc_entry:
 	push	de
 	push	bc
 	push	iy
@@ -86,7 +87,7 @@ kmem:
 	inc	a
 	call	z, .cache_grow
 ; return z if allocated, nz if not
-	jr	c, .cache_alloc_error
+	jr	c, .__cache_alloc_error
 	inc	hl
 	ld	iy, (hl)
 ; block size now
@@ -101,20 +102,20 @@ kmem:
 	ld	hl, kmm_ptlb_map + 256
 	ld	l, (iy+KERNEL_SLAB_PAGE_PTLB)
 	dec	(hl)
-	jr	z, .cache_alloc_full_page
+	jr	z, .__cache_alloc_full_page
 ; grab the current free pointer and write the next free pointer
 	ld	hl, (iy+KERNEL_SLAB_PAGE_POINTER)
 	ld	de, (hl)
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
 	ex	de, hl
-.cache_alloc_zero:
+.__cache_alloc_zero:
 ; we can restore interrupts now
 	rsti
 	push	de
 	ld	hl, KERNEL_MM_NULL
 	ldir
 	pop	hl
-.cache_alloc_restore:
+.__cache_alloc_restore:
 	pop	iy
 	pop	bc
 	pop	de
@@ -122,16 +123,16 @@ kmem:
 	or	a, a
 	ret
 
-.cache_alloc_full_page:
+.__cache_alloc_full_page:
 	ex	de, hl
 	ld	de, -5
 	add	hl, de
 	call	kqueue.remove_head
 ; the last one in the slab
 	lea	de, iy+KERNEL_SLAB_PAGE_HEADER
-	jr	.cache_alloc_zero 
+	jr	.__cache_alloc_zero 
 
-.cache_alloc_error:
+.__cache_alloc_error:
 	rsti
 	or	a, a
 	sbc	hl, hl
@@ -142,7 +143,7 @@ kmem:
 	scf
 	ret
 	
-.cache_grow_error:
+.__cache_grow_error:
 	pop	ix
 	pop	hl
 	scf
@@ -157,7 +158,7 @@ kmem:
 ; ix = cache structure
 	ld	a, (ix+KERNEL_SLAB_CACHE_DATA_PAGE)
 	inc	a
-	jp	m, .cache_grow_error
+	jp	m, .__cache_grow_error
 	ld	(ix+KERNEL_SLAB_CACHE_DATA_PAGE), a
 	ld	a, l
 	rra
@@ -169,7 +170,7 @@ kmem:
 	ld	a, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
 	ld	b, KERNEL_MM_GFP_KERNEL
 	call	kmm.page_map_single
-	jr	c, .cache_grow_error
+	jr	c, .__cache_grow_error
 	push	hl
 	ld	bc, -$D00000
 	add	hl, bc
@@ -204,11 +205,11 @@ kmem:
 	ex	(sp), iy
 	push	hl
 	add	hl, de
-.cache_grow_init:
+.__cache_grow_init:
 	ld	(iy+0), hl
 	add	iy, de
 	add	hl, de
-	djnz	.cache_grow_init
+	djnz	.__cache_grow_init
 ; mark the KERNEL_SLAB_PAGE_POINTER with the *last* page block
 	pop	hl
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), hl
@@ -268,13 +269,13 @@ kmem:
 	ld	(bc), a
 	dec	b
 	dec	a
-	jr	z, .cache_free_link
+	jr	z, .__cache_free_link
 	dec	a
-	jr	z, .cache_free_ptr
+	jr	z, .__cache_free_ptr
 	inc	a
 	inc	a
 	cp	a, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
-	jr	z, .cache_shrink
+	jr	z, .__cache_shrink
 ; default pointer updating
 ; grab page base adress	(mask 1024)
 ; hl = our free pointer
@@ -282,7 +283,7 @@ kmem:
 	ld	bc, (iy+KERNEL_SLAB_PAGE_POINTER)
 	ld	(hl), bc
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), hl
-.cache_free_restore:
+.__cache_free_restore:
 	pop	ix
 	pop	iy
 	pop	de
@@ -293,23 +294,23 @@ kmem:
 	sbc	hl, hl
 	ret
 
-.cache_free_ptr:
+.__cache_free_ptr:
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
-	jr	.cache_free_restore
+	jr	.__cache_free_restore
 
-.cache_free_link:
+.__cache_free_link:
 	lea	hl, ix+KERNEL_SLAB_CACHE
 	call	kqueue.insert_head
 	ld	(iy+KERNEL_SLAB_PAGE_PTLB), b
-	jr	.cache_free_restore
+	jr	.__cache_free_restore
 
-.cache_shrink:
+.__cache_shrink:
 	lea	hl, ix+KERNEL_SLAB_CACHE
 	call	kqueue.remove
 	sbc	hl, hl
 	adc	hl, bc
 	call	kmm.page_flush
-	jr	.cache_free_restore
+	jr	.__cache_free_restore
 
 .cache_create:
 	push	iy
@@ -319,12 +320,12 @@ kmem:
 	ld	de, KERNEL_SLAB_CACHE_SIZE
 ; 9 users defined cache are possible
 	ld	b, 9
-.find_free:
+.__find_free:
 	ld	a, (iy+KERNEL_SLAB_CACHE_DATA_COUNT) 
 	or	a, a
-	jr	z, .find_slot
+	jr	z, .__find_slot
 	lea	iy, iy+KERNEL_SLAB_CACHE_SIZE
-	djnz	.find_free
+	djnz	.__find_free
 	pop	bc
 	pop	de
 	pop	iy
@@ -332,12 +333,12 @@ kmem:
 	sbc	hl, hl
 	scf
 	ret
-.find_slot:
+.__find_slot:
 ; hl is the block size of the cache
 	ld	(iy+KERNEL_SLAB_CACHE_COUNT), $FF
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_SIZE), hl
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_PAGE), $00
-; KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
+; TODO : KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_COUNT), $00
 	pop	bc
 	pop	de

@@ -105,7 +105,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_ERRNO), l
 ; restore register and pop all the stack
 	exx
-	rsti
+	ei
 	lea	iy, ix+0
 	pop	ix
 	pop	af
@@ -121,15 +121,16 @@ kthread:
 ; error -1 and c set, 0 and nc otherwise, ERRNO set
 ; HL, BC, DE copied from current context to the new thread
 ; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
+; please note that you can't call create thread in a interrupt disabled context
 	push	af
 	push	ix
-	tsti
+	di
 ; save hl, de, bc registers
 	exx
 	lea	ix, iy+0
 	call	.reserve_pid
 	jr	c, .create_no_pid
-	ld	bc, KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE
+	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	kmm.thread_map
 	jr	c, .create_no_mem
 ; hl is adress    
@@ -195,10 +196,6 @@ kthread:
 	ld	(iy-18), hl
 	ld	(iy-21), bc
 	ld	(iy-24), de
-; pop the interrupt status
-; if interrupt = on, try to reschedule immediately
-	pop	af
-	call	pe, task_schedule
 ; return iy = new thread
 	ld	de, -KERNEL_THREAD_STACK_SIZE
 	add	iy, de
@@ -206,7 +203,8 @@ kthread:
 	pop	af
 	or	a, a
 	sbc	hl, hl
-	ret
+; try to reschedule immediately
+	jp	task_schedule
 
 .core:
 

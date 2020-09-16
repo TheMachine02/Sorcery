@@ -35,7 +35,10 @@ define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
 define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 
 define	KERNEL_MM_GFP_KERNEL		0
-define	KERNEL_MM_GFP_USER		128
+define	KERNEL_MM_GFP_USER		64
+; $D0 ... $D1 should be reserved to kernel / cache
+; $D1 and after is thread and program memory
+; this partition reduce fragmentation in the cache area (always map 1K at the time) and general memory fragmentation
 
 macro	trap
 	db $FD, $FF
