@@ -118,8 +118,9 @@ console:
 	dec	b
 	ld	(hl), bc
 	ld	iy, console_stdin
-	jp	ring_buffer.create
-
+	call	ring_buffer.create
+	jp	.phy_init
+	
 .init_screen:
 	ld	a, (console_dev+CONSOLE_FLAGS)
 	add	a, a
