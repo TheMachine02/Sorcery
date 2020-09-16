@@ -644,7 +644,7 @@ kmm:
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_MM_PAGE_SIZE
+	ld	bc, KERNEL_MM_PAGE_SIZE - 1
 	ex	de, hl
 	sbc	hl, hl
 	adc	hl, de
