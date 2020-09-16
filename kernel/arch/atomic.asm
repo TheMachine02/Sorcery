@@ -3,8 +3,8 @@ define	KERNEL_ATOMIC_RW_SIZE		5
 define	KERNEL_ATOMIC_RW_LOCK		0
 define	KERNEL_ATOMIC_RW_WAIT_COUNT	1
 define	KERNEL_ATOMIC_RW_WAIT_HEAD	2
-define	KERNEL_ATOMIC_RW_MAGIC_READ	$00
-define	KERNEL_ATOMIC_RW_MAGIC_WRITE	$FF
+define	KERNEL_ATOMIC_RW_MAGIC_READ	$00	; or null
+define	KERNEL_ATOMIC_RW_MAGIC_WRITE	$FF	; or any non zero
 
 ; mutex are quite similar : 8 bytes
 define	KERNEL_ATOMIC_MUTEX_SIZE	8
@@ -26,116 +26,102 @@ macro	rsti
 	ei
 end	macro
 
-macro	rstiRET
-	pop	af
-	ret	po
-	ei
-	ret
-end	macro
-
 ; TODO : crazily optimize all this segment please +++
 
 atomic_rw:
 
 .lock_read:
-	tsti
-.lock_read_test:
+	di
+	xor	a, a
 	inc	(hl)
-	jr	z, .rlock_wait
-	rstiRET
-		
+	call	z, .wait_read
+	ei
+	ret
+
 .lock_write:
-	tsti
-.lock_write_test:
+	di
 	xor	a, a
 	or	a, (hl)
-	jr	nz, .wlock_wait
-	ld	(hl), $FF
-	rstiRET
-	
+	call	nz, .wait_write
+; if arrive here, the lock is null, so dec it to make it = $FF
+	dec	(hl)
+	ei
+	ret
+
 .unlock_read:
-	tsti
+	di
 	dec	(hl)
-	jr	z, .unlock_notify
-	rstiRET
-		
+	jr	z, .__unlock_slow_path
+	ei
+	ret
+
 .unlock_write:
-	tsti
-	ld	(hl), $00
-.unlock_notify:
+	di
+	xor	a, a
+	ld	(hl), a
+.__unlock_slow_path:
 	inc	hl
 	ld	a, (hl)
 	inc	a
-	jr	nz, .unlock_do_wake
+	jr	nz, .wake
 	dec	hl
-	rstiRET
+	ei
+	ret
 	
-.rlock_wait:
 ; make us wait on the lock
+.wait_read:
+; restore first the lock
 	dec	(hl)
-	push	iy
-	ld	iy, (kthread_current)
+.wait_write:
+; get the return adress
+	ex	(sp), iy
+	pea	iy+5
+	push	hl
+	inc	hl
 ; add ourselves to lock structure
-	ld	(iy+KERNEL_THREAD_LIST_DATA), KERNEL_ATOMIC_RW_MAGIC_READ
-	inc	hl
-	lea	iy, iy+KERNEL_THREAD_LIST_DATA
-	call	kqueue.insert_tail
-	lea	iy, iy-KERNEL_THREAD_LIST_DATA
-	dec	hl
-	push	hl
-	call	task_switch_interruptible
-	pop	hl
-	call	task_yield
-	pop	iy
-	di
-	jr	.lock_read_test
-	
-.wlock_wait:
-	push	iy
 	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_LIST_DATA), KERNEL_ATOMIC_RW_MAGIC_WRITE
-	inc	hl
+	ld	(iy+KERNEL_THREAD_LIST_DATA), a
 	lea	iy, iy+KERNEL_THREAD_LIST_DATA
 	call	kqueue.insert_tail
 	lea	iy, iy-KERNEL_THREAD_LIST_DATA
-	dec	hl
-	push	hl
-	call	task_switch_interruptible
+; and switch to uninterruptible
+	call	task_switch_uninterruptible
 	pop	hl
 	call	task_yield
+	xor	a, a
+; we were waked up if we are here, interrupt are on
+; unwind stack to get the return adress and our saved iy
 	pop	iy
+	ex	(sp), iy
 	di
-	jr	.lock_write_test
-	
-.unlock_do_wake:
+; right here, we'll return exactly at the inc (hl) or the or a, (hl)
+	ret
+
+.wake:
 ; unqueue and wake thread while we dont have a WRITER thread
+	push	bc
+	ld	b, a
 	push	iy
-; grab the head and update
-.unlock_do_loop:
-	ld	a, (hl)
-	inc	a
-	jr	z, .unlock_do_wake_exit
+.__wake_waiter:
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
 	call	kqueue.remove_head
-; iy is the thread
-; first, wake it
 	lea	iy, iy-KERNEL_THREAD_LIST_DATA
 	push	hl
 	call	kthread.irq_resume
 	pop	hl
-	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
-	cp	a, KERNEL_ATOMIC_RW_MAGIC_WRITE	; stop at a writer
+; stop if the thread waked is a writer
 ; TODO, optimize so we don't wake a writer if readers as been awake ?
-	jr	nz, .unlock_do_loop
-.unlock_do_wake_exit:
-; no more thread or a blocker thread
+	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
+	or	a, a
+	jr	nz, .__wake_done
+	djnz	.__wake_waiter
+.__wake_done:
 	pop	iy
-	dec	hl
-	pop	af
-	jp	pe, task_schedule
-	ret
+	pop	bc
+; reschedule right now
+	jp	task_schedule
 
 .init:
 	ld	(hl), 0
@@ -157,14 +143,6 @@ atomic_op:
 	ret
 	
 atomic_mutex:
-; mutex lock :
-;	ld	hl, xxxx
-;	sra	(hl)
-;	call	c, atomic_mutex.wait
-
-; mutex unlock is a bit more complicated
-;	ld	hl, xxxx
-;	call	atomic_mutex.wake
 
 ; please note :
 ; - one task can hold the mutex
@@ -174,13 +152,12 @@ atomic_mutex:
 
 .wait:
 ; signal to wait on the mutex
-; get the return adress
 	push	ix
 	push	iy
 	push	af
 	ld	iy, (kthread_current)
 ; save hl for later
-.wait_again:
+.__wait_again:
 	push	hl
 	inc	hl
 	lea	iy, iy+KERNEL_THREAD_LIST_DATA
@@ -201,38 +178,43 @@ atomic_mutex:
 	sub	a, (ix+KERNEL_THREAD_PRIORITY)
 ; find a nice value to boost thread priority to be at least >= of the highest priority waiting thread
 ; if the result carry, the priority of waiter is > of owner. The diff *2 should be the nice value
-	jr	nc, .wait_switch
+	jr	nc, .__wait_switch
 ; TODO : save the previous (lowest) nice value
 	add	a, a
 	ld	(ix+KERNEL_THREAD_NICE), a
-.wait_switch:
+.__wait_switch:
 	call	task_switch_uninterruptible
 	pop	hl
 	call	task_yield
 ; we are back, try to acquire the lock again
 	sra	(hl)
-	jr	c, .wait_again
+	jr	c, .__wait_again
 ; mutex acquired, return
 	pop	af
 	pop	iy
 	pop	ix
 	ret
 
-.wake:
+.unlock:
 ; unlock a mutex
-; destroy a, iy
-; TODO : restore priority of owning thread (only if there is actual waiter)
-; TODO : check if it is the correct owner
+; destroy a, bc
 	di
 	ld	(hl), $FE
 	inc	hl
+	ld	de, (kthread_current)
+	ld	a, (de)
+	cp	a, (hl)
+; TODO broken, fix it	
 	ld	a, (hl)
 	inc	a
-	jr	nz, .wake_queue
+	jr	nz, .wake
 	dec	hl
 	ei
 	ret
-.wake_queue:
+	
+.wake:
+; TODO : restore priority of owning thread (only if there is actual waiter)
+; TODO : check if it is the correct owner
 	push	iy
 	inc	hl
 	ld	iy, (hl)
