@@ -75,7 +75,7 @@ atomic_rw:
 .wait_write:
 ; get the return adress
 	ex	(sp), iy
-	pea	iy+5
+	pea	iy-5
 	push	hl
 	inc	hl
 ; add ourselves to lock structure
@@ -84,7 +84,7 @@ atomic_rw:
 	lea	iy, iy+KERNEL_THREAD_LIST_DATA
 	call	kqueue.insert_tail
 	lea	iy, iy-KERNEL_THREAD_LIST_DATA
-; and switch to uninterruptible
+; and switch to interruptible
 	call	task_switch_uninterruptible
 	pop	hl
 	call	task_yield
@@ -109,6 +109,7 @@ atomic_rw:
 	call	kqueue.remove_head
 	lea	iy, iy-KERNEL_THREAD_LIST_DATA
 	push	hl
+	xor	a, a
 	call	kthread.irq_resume
 	pop	hl
 ; stop if the thread waked is a writer

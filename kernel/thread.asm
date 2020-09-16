@@ -467,15 +467,14 @@ kthread:
 	lea	hl, iy+KERNEL_THREAD_IRQ
 	cp	a, (hl)
 	ret	nz
-	or	a, a
-	ld	a, TASK_INTERRUPTIBLE
-	jr	z, $+3
-	inc	a
 	inc	hl
-	sub	a, (hl)
-	ret	nz
+	ld	a, (hl)
+;  status interruptible or uninterruptible
+	dec	a
+	cp	a, TASK_UNINTERRUPTIBLE
+	ret	nc
 	dec	hl
-	ld	(hl), a
+	ld	(hl), $00
 	ld	hl, i
 	ld	(hl), $80
 	jr	task_switch_running
