@@ -42,7 +42,6 @@ kpower:
 
 .cycle_off:
 ; TODO save and restore LCD parameters
-; TODO use kmalloc for the 512 bytes buffer (2x256 bytes) of the LCD palette
 	di
 	call	kwatchdog.disarm
 ; backlight / LCD / SPI disable from boot
@@ -97,7 +96,7 @@ kpower:
 ; 0b1101
 	ld	a, $0D
 	out0	($0D), a
-	djnz	$	; wait
+	wait
 	ld	de, $000001
 	ld	hl, KERNEL_INTERRUPT_IMSC
 	dec	b
@@ -140,7 +139,7 @@ kpower:
 	out0	($05), a
 	ld	a, $03
 	out0	($06), a
-	djnz	$	; wait
+	wait
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?

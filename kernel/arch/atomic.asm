@@ -84,7 +84,7 @@ atomic_rw:
 	lea	iy, iy+KERNEL_THREAD_LIST_DATA
 	call	kqueue.insert_tail
 	lea	iy, iy-KERNEL_THREAD_LIST_DATA
-; and switch to interruptible
+; and switch to uninterruptible
 	call	task_switch_uninterruptible
 	pop	hl
 	call	task_yield

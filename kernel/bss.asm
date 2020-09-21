@@ -99,10 +99,9 @@ kernel_heap:
 nmi_context:
  db	64	dup	KERNEL_HW_POISON
 nmi_console:
- db	375	dup	KERNEL_HW_POISON
+ db	378	dup	KERNEL_HW_POISON
 nmi_stack:
 kinterrupt_irq_stack_isr: 
- db	3	dup	KERNEL_HW_POISON 
 kinterrupt_irq_ret_ctx: 
  db	3	dup	KERNEL_HW_POISON 
 kinterrupt_irq_stack_ctx:
@@ -121,7 +120,7 @@ kpower_interrupt_mask:
  db	3	dup	KERNEL_HW_POISON
 kpower_lcd_mask:
  db	3	dup	KERNEL_HW_POISON
-unallocated_zero: 
+unallocated_zero:
  db	34	dup	KERNEL_HW_POISON
 kmem_cache_buffctl:
 ; 16 slub buffers, 7 defined, 9 user defined

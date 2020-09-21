@@ -3,19 +3,20 @@ define	BOOT_DIRTY_MEMORY1		$D000AC		; 1 byte ] on interrupt
 define	BOOT_DIRTY_MEMORY2		$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 
-define	kernel_heap			$D00100
-define	kernel_stack			$D000FF
-define	KERNEL_STACK_SIZE		$57
-define	kernel_data			$D00000
+define	kernel_data			$D00000		; start of the init image
+define	kernel_idle			$D00090		; location of the idle thread image
+define	kernel_stack_pointer		$D0009F		; stack pointer within idle thread
+define	kernel_stack			$D000FF		; kernel stack
+define	kernel_heap			$D00100		; kernel heap
 
-define	KERNEL_CRYSTAL_CTLR		$00
+define	KERNEL_STACK_SIZE		87		; size of the stack
+
+define	KERNEL_CRYSTAL_CTLR		$00		; port 00 is master control
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 
 define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
 
-define	kernel_idle			$D00090
-define	kernel_stack_pointer		$D0009F
 
 kinit:
 ; read kernel paramater
@@ -33,7 +34,7 @@ kinit:
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 ; setup priviliegied OS code (end of OS)
-	ld	a, $06
+	ld	a, $03
 	out0	($1F), a
 	ld	de, kernel_data
 	out0	($1D), e
@@ -56,7 +57,7 @@ kinit:
 	ld.sis	sp, $0000
 	ld	sp, kernel_stack
 	ld	(kernel_stack_pointer), sp
-	ld	hl, $A80F
+	ld	hl, $00A80F
 	out0	($3A), h
 	out0	($3B), c
 	ld	a, $D0
@@ -79,17 +80,13 @@ kinit:
 	call	kwatchdog.init
 ; create the kernel init thread
 	ld	iy, .arch_init
-; thread create should enable interrupts
 	call	kthread.create
 ; if this thread create carry, it will get to the arch_sleep and NMI as deadlock
 ; so, optimise out a jp c, nmi
 ; nice idle thread code
-	ei
 
 .arch_sleep:
-; different behaviour are possible
-; most dynamic is reduce by one the value
-; most brutal is directly set to 6Mhz, we'll need to ramp up
+	ei
 	slp
 	jr	.arch_sleep
  
@@ -102,16 +99,25 @@ kinit:
 	call	rtc.init
 	call	console.init
 	call	flash.init
+; debug thread & other debugging stuff
+; 	ld	hl, $D30000
+; 	call	atomic_rw.init
+; 	ld	iy, DEBUG_THREAD
+; 	call	kthread.create
+; 	ld	iy, DEBUG_THREAD_2
+; 	call	kthread.create	
 ; TODO : if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	jp	console.fb_takeover
  
 .arch_poison_heap:
+	di
 	ld	hl, kernel_heap
 	ld	de, kernel_heap + 1
-	ld	bc, 511
+	ld	bc, 256
 	ld	(hl), KERNEL_HW_POISON
 	ldir
+	ei
 	ret
  
 kname:
@@ -122,3 +128,25 @@ kname:
  db CONFIG_KERNEL_NAME, 0
 .arch_tag:
  db "ez80", 0
+ 
+; DEBUG_THREAD:
+; 	ld	hl, 30
+; 	call	kthread.sleep
+; 	ld	hl, $D30000
+; 	call	atomic_rw.lock_read
+; 	ld	hl, 10
+; 	call	kthread.sleep
+; 	ld	hl, $D30000
+; 	call	atomic_rw.unlock_read 
+; 	jr	DEBUG_THREAD
+; 	
+; DEBUG_THREAD_2:
+; 	ld	hl, 200
+; 	call	kthread.sleep
+; 	ld	hl, $D30000
+; 	call	atomic_rw.lock_write
+; 	ld	hl, 100
+; 	call	kthread.sleep
+; 	ld	hl, $D30000
+; 	call	atomic_rw.unlock_write 
+; 	jr	DEBUG_THREAD_2

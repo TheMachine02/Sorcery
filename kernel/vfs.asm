@@ -106,7 +106,7 @@ kvfs:
 	ex	de, hl
 	add	iy, de
 	ex	de, hl
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+3)
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
 	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)	; get inode
 ; hl is offset in file, iy is inode, de is buffer, bc is count
 ; TODO : restrict bc to maximum file size ++
