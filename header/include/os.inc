@@ -1,7 +1,5 @@
 ; ----------------------
 
-include 'boot.inc'
-
 macro os_private
 	local os
 	element os.base

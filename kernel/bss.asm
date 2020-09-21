@@ -1,4 +1,4 @@
-include	'include/ez80.inc'
+include	'header/include/ez80.inc'
 
 define	BOOT_DIRTY_MEMORY0			$D0009B		; 1 byte
 define	BOOT_DIRTY_MEMORY1			$D000AC		; 1 byte on interrupt

@@ -1,10 +1,11 @@
-include	'include/ez80.inc'
-include	'include/tiformat.inc'
-include	'include/os.inc'
+include	'header/include/ez80.inc'
+include	'header/include/tiformat.inc'
+include	'header/include/os.inc'
 ; kernel header
 include	'header/asm-errno.inc'
 include	'header/asm-signal.inc'
 include	'header/asm-leaf-def.inc'
+include	'header/asm-boot.inc'
 ; kernel build config
 include 'config'
 
