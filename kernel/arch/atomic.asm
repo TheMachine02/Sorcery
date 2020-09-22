@@ -6,12 +6,12 @@ define	KERNEL_ATOMIC_RW_WAIT_HEAD	2
 define	KERNEL_ATOMIC_RW_MAGIC_READ	$00	; or null
 define	KERNEL_ATOMIC_RW_MAGIC_WRITE	$FF	; or any non zero
 
-; mutex are quite similar : 8 bytes
-define	KERNEL_ATOMIC_MUTEX_SIZE	8
+; mutex are quite similar : 6 bytes
+define	KERNEL_ATOMIC_MUTEX_SIZE	6
 define	KERNEL_ATOMIC_MUTEX_LOCK	0
-define	KERNEL_ATOMIC_MUTEX_WAIT_COUNT	1
-define	KERNEL_ATOMIC_MUTEX_WAIT_HEAD	2
-define	KERNEL_ATOMIC_MUTEX_OWNER	5
+define	KERNEL_ATOMIC_MUTEX_OWNER	1
+define	KERNEL_ATOMIC_MUTEX_WAIT_COUNT	2
+define	KERNEL_ATOMIC_MUTEX_WAIT_HEAD	3
 define	KERNEL_ATOMIC_MUTEX_MAGIC	$FE
 
 macro	tsti
@@ -151,11 +151,27 @@ atomic_mutex:
 ; - Do not exit with a mutex held.
 ; - Do not use mutexes in irq or other interrupt disable area
 
+.lock:
+	push	iy
+	push	af
+	di
+	sra	(hl)
+	call	c, .wait
+	ld	iy, (kthread_current)
+	ld	a, (iy+KERNEL_THREAD_PID)
+	inc	hl
+	ld	(hl), a
+	dec	hl
+	ld	a, (iy+KERNEL_THREAD_NICE)
+	ld	(iy+KERNEL_THREAD_LIST_DATA), a
+	ei
+	pop	af
+	pop	iy
+	ret
+
 .wait:
 ; signal to wait on the mutex
 	push	ix
-	push	iy
-	push	af
 	ld	iy, (kthread_current)
 ; save hl for later
 .__wait_again:
@@ -163,24 +179,26 @@ atomic_mutex:
 	inc	hl
 	lea	iy, iy+KERNEL_THREAD_LIST_DATA
 ; we delayed the critical section at our best
+; get the owner
+	ld	a, (hl)
+	inc	hl
+	add	a, a
+	add	a, a
+	ld	ix, kthread_pid_map
+	ld	ixl, a
 	di
 	ld	a, (iy+KERNEL_THREAD_PRIORITY-KERNEL_THREAD_LIST_DATA)
 ; insert the node at the correct priority
 	call	kqueue.insert_priority
 	lea	iy, iy-KERNEL_THREAD_LIST_DATA
 ; right here we should compare the arriving thread priority with the owner priority to alleviate priority inversion issue
-	inc	hl
-	inc	hl
-	inc	hl
-	inc	hl
-	ld	ix, (hl)	; owner
 ; load priority of the current thread
 	ld	a, (iy+KERNEL_THREAD_PRIORITY)
 	sub	a, (ix+KERNEL_THREAD_PRIORITY)
 ; find a nice value to boost thread priority to be at least >= of the highest priority waiting thread
 ; if the result carry, the priority of waiter is > of owner. The diff *2 should be the nice value
 	jr	nc, .__wait_switch
-; TODO : save the previous (lowest) nice value
+; save of the previous (lowest) nice value is in THREAD_LIST_DATA of the owner, so we can write it
 	add	a, a
 	ld	(ix+KERNEL_THREAD_NICE), a
 .__wait_switch:
@@ -188,35 +206,45 @@ atomic_mutex:
 	pop	hl
 	call	task_yield
 ; we are back, try to acquire the lock again
+	di
 	sra	(hl)
 	jr	c, .__wait_again
 ; mutex acquired, return
-	pop	af
-	pop	iy
 	pop	ix
 	ret
 
 .unlock:
 ; unlock a mutex
 ; destroy a, bc
-	di
-	ld	(hl), $FE
-	inc	hl
+	push	de
 	ld	de, (kthread_current)
 	ld	a, (de)
+	inc	hl
 	cp	a, (hl)
-; TODO broken, fix it	
+	dec	hl
+	pop	de
+	ret	nz
+	di
+	ld	(hl), KERNEL_ATOMIC_MUTEX_MAGIC
+	inc	hl
+	ld	(hl), $00
+	inc	hl
 	ld	a, (hl)
 	inc	a
-	jr	nz, .wake
-	dec	hl
+	jr	nz, .__wake
 	ei
+	dec	hl
+	dec	hl
 	ret
 	
-.wake:
-; TODO : restore priority of owning thread (only if there is actual waiter)
-; TODO : check if it is the correct owner
+.__wake:
 	push	iy
+	push	af
+	ld	iy, (kthread_current)
+; estore priority of owning thread (only if there is actual waiter, so only if we are here)
+	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
+	ld	(iy+KERNEL_THREAD_NICE), a
+	pop	af
 	inc	hl
 	ld	iy, (hl)
 	dec	hl
@@ -226,6 +254,7 @@ atomic_mutex:
 	push	hl
 	call	kthread.resume
 	pop	hl
+	dec	hl
 	dec	hl
 	pop	iy
 	ret
@@ -244,4 +273,4 @@ atomic_mutex:
 	ret
 	
 .init_data:
- db	$FE, $FF, $00, $00, $00, $00, $00, $00
+ db	$FE, $00, $FF, $00, $00, $00

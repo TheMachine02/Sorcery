@@ -1,7 +1,7 @@
-; RAM reallocated routine for PIC code in library and user process and most essentially XIP
+; RAM reallocated routine for runtime virtual to physical translation, code in library and user process and most essentially XIP
 ; see doc in doc/pic
 
-; swap interrupt and all shadow in 3F
+; swap interrupt and all shadow in cycles = 3F
 macro	exxi
 	if defined SWAP
 		ex	af, af'
@@ -90,6 +90,19 @@ __sorcery_extern_call_C:
 	add	ix, sp
 	jp	(hl)
 
+; jump to a C function, with ix framesetting
+; de, hl, ix can be destroyed
+__sorcery_extern_jp_C:
+	ex	(sp), ix
+	ld	ix, (ix+0)
+	exx
+	add	ix, bc
+	exx
+	lea	hl, ix+0
+	ld	ix, 0
+	add	ix, sp
+	jp	(hl)	
+	
 ; stack : pc+4, ix, ix = sp, jp (pc)+offset
 ; stack : pc
 __sorcery_relative_call_C:
@@ -104,19 +117,6 @@ __sorcery_relative_call_C:
 ; get the offset and add it to the pc
 	ld	de, (ix+0)
 	add	ix, de
-	lea	hl, ix+0
-	ld	ix, 0
-	add	ix, sp
-	jp	(hl)
-
-; jump to a C function, with ix framesetting
-; de, hl, ix can be destroyed
-__sorcery_extern_jp_C:
-	ex	(sp), ix
-	ld	ix, (ix+0)
-	exx
-	add	ix, bc
-	exx
 	lea	hl, ix+0
 	ld	ix, 0
 	add	ix, sp

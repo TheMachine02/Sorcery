@@ -412,8 +412,9 @@ kthread:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
 ; task TASK_UNINTERRUPTIBLE is waiting an IRQ and we aren't in IRQ context, so it seems fishy as hell right now.
-	cp	a, TASK_INTERRUPTIBLE
-	jr	nz, .resume_exit
+	dec	a
+	cp	a, TASK_UNINTERRUPTIBLE
+	jr	nc, .resume_exit
 	call	task_switch_running
 ; skip the first di of schedule, we are already in disabled state
 	jp	task_schedule + 1

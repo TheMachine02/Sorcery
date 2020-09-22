@@ -101,7 +101,7 @@ kinit:
 	call	flash.init
 ; debug thread & other debugging stuff
 ; 	ld	hl, $D30000
-; 	call	atomic_rw.init
+; 	call	atomic_mutex.init
 ; 	ld	iy, DEBUG_THREAD
 ; 	call	kthread.create
 ; 	ld	iy, DEBUG_THREAD_2
@@ -133,20 +133,20 @@ kname:
 ; 	ld	hl, 30
 ; 	call	kthread.sleep
 ; 	ld	hl, $D30000
-; 	call	atomic_rw.lock_read
+; 	call	atomic_mutex.lock
 ; 	ld	hl, 10
 ; 	call	kthread.sleep
 ; 	ld	hl, $D30000
-; 	call	atomic_rw.unlock_read 
+; 	call	atomic_mutex.unlock 
 ; 	jr	DEBUG_THREAD
 ; 	
 ; DEBUG_THREAD_2:
 ; 	ld	hl, 200
 ; 	call	kthread.sleep
 ; 	ld	hl, $D30000
-; 	call	atomic_rw.lock_write
+; 	call	atomic_mutex.lock
 ; 	ld	hl, 100
 ; 	call	kthread.sleep
 ; 	ld	hl, $D30000
-; 	call	atomic_rw.unlock_write 
+; 	call	atomic_mutex.unlock
 ; 	jr	DEBUG_THREAD_2
