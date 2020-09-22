@@ -116,8 +116,8 @@ __sorcery_relative_call_C:
 ; now ix and hl are free
 ; get the offset and add it to the pc
 	ld	de, (ix+0)
-	add	ix, de
 	lea	hl, ix+0
+	add	hl, de
 	ld	ix, 0
 	add	ix, sp
 	jp	(hl)
@@ -125,6 +125,7 @@ __sorcery_relative_call_C:
 __sorcery_relative_jp_C:
 	ex	(sp), ix
 	ld	de, (ix+0)
+	lea	hl, ix+0
 	add	hl, de
 	ld	ix, 0
 	add	ix, sp
