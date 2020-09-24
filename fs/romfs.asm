@@ -100,7 +100,8 @@ romfs:
 ; ahl is the 32 bits checksum
 	ret
 
-
-
+.mount:
+; mount the file system at the given directory
+; for exemple, in root /
 
 

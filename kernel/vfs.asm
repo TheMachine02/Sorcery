@@ -18,7 +18,7 @@ kvfs:
 
 .mkdir:
 	ret
-	
+
 .rmdir:
 	ret
 

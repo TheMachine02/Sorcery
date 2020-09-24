@@ -1,4 +1,3 @@
-define	console_stdin		$D00800
 define	console_dev		$D00700
 define	console_style		$D00700
 define	console_fg_color	$D00701
@@ -175,7 +174,6 @@ console:
 	ld	hl, console_blink
 	bit	CONSOLE_BLINK_RATE, (hl)
 	call	z, .putchar
-		
 	ld	a, (console_key)
 	cp	a, $FD
 	call	nz, .handle_console_stdin
@@ -183,10 +181,8 @@ console:
 	ld	hl, console_blink
 	inc	(hl)
 	bit	CONSOLE_BLINK_RATE, (hl)
-
 	ld	a, '_'
 	call	z, .putchar
-	
 	jr	.run_loop
 	
 .blit:
@@ -264,12 +260,11 @@ console:
 .handle_key_enter:
 	ld	iy, console_dev
 	call	.phy_new_line
-	ld	hl, (console_line_head)
-	ld	bc, console_line
-	or	a, a
-	sbc	hl, bc
-	ld	b, h
-	ld	c, l
+	ld	hl, console_line
+	ld	bc, 0
+	xor	a, a
+	cpir
+	inc	bc
 	ld	a, b
 	or	a, c
 	jr	z, .clean_command
