@@ -5,6 +5,7 @@ _syscall:
 
 ; syscall_0arg	_get_pid
 _get_pid:
+kthread.get_pid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getpid()
 ; return value is register hl
@@ -16,6 +17,7 @@ _get_pid:
   
 ; syscall_0arg	_get_ppid
 _get_ppid:
+kthread.get_ppid:
 ; REGSAFE and ERRNO compliant
 ; pid_t getppid()
 ; return value is register hl
@@ -34,6 +36,7 @@ _uadmin:
 
 ; pri
 _nice:
+kthread.nice:
 ; hl = nice, return the new nice value
 	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_NICE)
@@ -82,4 +85,36 @@ _sbrk:
 .break_error:
 	ld	hl, $FFFF00 or -ENOMEM
 	ld	(iy+KERNEL_THREAD_ERRNO), hl
+	ret
+	
+_usleep:
+kthread.usleep:
+; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
+; EINTR, or EINVAL
+	push	iy
+	push	af
+	ld	iy, (kthread_current)
+	push	de
+	di
+	call	task_switch_sleep_ms
+	pop	de
+	call	task_yield
+; we are back with interrupt
+; this one is risky with interrupts, so disable them the time to do it
+	di
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, l
+	or	a, h
+	jr	nz, .usleep_errno_wake
+	ei
+	sbc	hl, hl
+	pop	af
+	pop	iy
+	ret
+.usleep_errno_wake:
+	pop	af
+	scf
+	sbc	hl, hl
+	ld	(iy+KERNEL_THREAD_ERRNO), EINTR
+	pop	iy
 	ret

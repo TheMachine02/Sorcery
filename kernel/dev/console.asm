@@ -11,7 +11,10 @@ define	CONSOLE_ESC_OFFSET	$9	; describe the current offset inside the buffer (3 
 define	CONSOLE_ESC_BUFFER	$C	; 9 bytes max, two paramaters + 1 output + 1 master (partial buffer)
 define	CONSOLE_ESC_BUFFER_MAX_SIZE	9
 define	CONSOLE_TAKEOVER	$15
-define	CONSOLE_STRING		$18
+define	CONSOLE_LINE_HEAD	$18
+define	CONSOLE_LINE		$20
+
+define	CONSOLE_LINE_SIZE	$E0
 
 define	CONSOLE_FLAGS_ALPHA	0
 define	CONSOLE_FLAGS_2ND	1

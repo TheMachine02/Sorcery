@@ -152,13 +152,13 @@ nmi:
 	push	hl
 	ld	hl, .CONTEXT_FRAME_STR
 	push	hl
-	ld	hl, console_string
+	ld	hl, console_line
 	push	hl
 	call	_boot_sprintf_safe
 	ld	hl, 33
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, console_string
+	ld	hl, console_line
 	ld	bc, 183
 	call	console.phy_write
 ; unwind stack frame
@@ -171,13 +171,13 @@ nmi:
 	push	hl
 	ld	hl, .CONTEXT_STACK_STR
 	push	hl
-	ld	hl, console_string
+	ld	hl, console_line
 	push	hl
 	call	_boot_sprintf_safe
 	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, console_string
+	ld	hl, console_line
 	ld	bc, 15
 	call	console.phy_write
 	pop	ix

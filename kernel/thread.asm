@@ -299,6 +299,8 @@ kthread:
 	
 .sleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
+; carry is set if we haven't sleep enough time
+; note that the kernel will wake you always *after* this time elapsed, or if a not blocked signal reached you
 	push	iy
 	push	de
 	push	af
@@ -358,6 +360,7 @@ kthread:
 	pop	af
 	pop	de
 	pop	iy
+	scf
 	ret
 
 ; DANGEROUS AREA, helper function ;	
@@ -411,7 +414,6 @@ kthread:
 ; this read need to be atomic !
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; can't wake TASK_READY (0) and TASK_STOPPED (3) and TASK_ZOMBIE (4)
-; task TASK_UNINTERRUPTIBLE is waiting an IRQ and we aren't in IRQ context, so it seems fishy as hell right now.
 	dec	a
 	cp	a, TASK_UNINTERRUPTIBLE
 	jr	nc, .resume_exit

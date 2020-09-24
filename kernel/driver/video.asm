@@ -31,7 +31,7 @@ video:
 	ld	bc, 512
 	ldir
 	ld	hl, DRIVER_VIDEO_IMSC
-	ld	(hl), d			; DRIVER_VIDEO_IMSC_DEFAULT
+	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
 	ld	(DRIVER_VIDEO_CTRL), hl
 	ld	hl, DRIVER_VIDEO_VRAM

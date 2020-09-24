@@ -99,6 +99,7 @@ kvfs:
 ;;size_t read(int fd, void *buf, size_t count);
 ; hl is fd, void *buf is de, size_t count is bc
 ; pad count to inode_file_size
+; return size read
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -168,3 +169,5 @@ kvfs:
 .write:
 	ret
 
+.pipe:
+	ret

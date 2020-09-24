@@ -47,6 +47,7 @@ else if CONFIG_CRYSTAL_DIVISOR = 0
 end if
  
 ktimer:
+; TODO : use mem_cache for timer structure (
 
 ; please note, timer_next is still valid per timer queue
 .notify_default = kthread.irq_resume
@@ -222,3 +223,17 @@ end if
 	xor	a, a
 	jp	(hl)
 
+
+	
+;        *  timer_create(): Create a timer.
+; 
+;        *  timer_settime(2): Arm (start) or disarm (stop) a timer.
+; 
+;        *  timer_gettime(2): Fetch the time remaining until the next
+;           expiration of a timer, along with the interval setting of the
+;           timer.
+; 
+;        *  timer_getoverrun(2): Return the overrun count for the last timer
+;           expiration.
+; 
+;        *  timer_delete(2): Disarm and delete a timer.

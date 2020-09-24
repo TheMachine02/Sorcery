@@ -8,9 +8,9 @@ define	console_blink		$D00706
 define	console_flags		$D00707
 define	console_key		$D00708
 define	console_takeover	$D00715
-define	console_string		$D00718
+define	console_line_head	$D00718
+define	console_line		$D00720
 
-; TODO : remove the use of the complex circular buffer for line buffer
 ; TODO : remove the special function of circular buffer added for console
 
 console:
@@ -117,8 +117,8 @@ console:
 	ld	l, console_takeover and $FF
 	dec	b
 	ld	(hl), bc
-	ld	iy, console_stdin
-	call	ring_buffer.create
+; 	ld	iy, console_stdin
+; 	call	ring_buffer.create
 	jp	.phy_init
 	
 .init_screen:
@@ -170,8 +170,7 @@ console:
 	call	video.vsync
 ; wait for vsync, we are in vblank now (are we ?)
 ; the syscall destroy a but not hl
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	hl, (console_line_head)
 	ld	a, (hl)
 	ld	hl, console_blink
 	bit	CONSOLE_BLINK_RATE, (hl)
@@ -265,26 +264,12 @@ console:
 .handle_key_enter:
 	ld	iy, console_dev
 	call	.phy_new_line
-	ld	iy, console_stdin
-	ld	de, console_string
-	ld	bc, 0
-.handle_enter_string:
-	push	bc
-	call	ring_buffer.read
+	ld	hl, (console_line_head)
+	ld	bc, console_line
 	or	a, a
-	ld	(de), a
-	jr	z, .finish
-	inc	de
-	pop	bc
-	inc	c
-	ld	a, c
-	cp	a, 63
-	jr	nz, .handle_enter_string
-	push	bc
-	call	ring_buffer.flush
-.finish:
-; execute the instruction now
-	pop	bc
+	sbc	hl, bc
+	ld	b, h
+	ld	c, l
 	ld	a, b
 	or	a, c
 	jr	z, .clean_command
@@ -315,7 +300,7 @@ console:
 	jp	.prompt
 	
 .check_builtin:
-	ld	de, console_string
+	ld	de, console_line
 	ld	bc, 0
 	ld	c, (hl)
 	inc	hl
@@ -327,7 +312,7 @@ console:
 	jp	pe, .check_builtin_compare
 	ret
 .echo:
-	ld	hl, console_string + 5
+	ld	hl, console_line + 5
 	xor	a, a
 	ld	bc, 0
 	cpir
@@ -337,7 +322,7 @@ console:
 	pop	bc
 	cpi
 	jp	po, .clean_command
-	ld	hl, console_string + 5
+	ld	hl, console_line + 5
 	call	.phy_write
 	call	.phy_new_line	
 	jr	.clean_command
@@ -400,46 +385,76 @@ console:
 	push	hl
 	ld	hl, .UPTIME_STR
 	push	hl
-	ld	hl, console_string
+	ld	hl, console_line
 	push	hl
 	call	_boot_sprintf_safe
 	ld	hl, 18
 	add	hl, sp
 	ld	sp, hl
-	ld	hl, console_string
+	ld	hl, console_line
 	ld	bc, 34
 	call	.phy_write
 	jp	.prompt
 
 .handle_key_del:
-	call	ring_buffer.remove_head
+; suppr
+	ld	hl, (console_line_head)
+; we need to delete the value @head and collapse
+	ld	a, (hl)
+	or	a, a
 	ret	z
+.collapse_do:
+	ex	de, hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
+	inc	hl
+; copy hl to de while hl ! = 0
+.collapse:
+	ld	a, (hl)
+	ldi
+	or	a, a
+	jr	nz, .collapse
 	jr	.refresh_line
 	
 .handle_key_mode:
 ; backspace behaviour
-	call	ring_buffer.remove
+; we need to delete the value @head-1
+	ld	hl, (console_line_head)
+	dec	hl
+	ld	a, (hl)
+	or	a, a
 	ret	z
+	ld	(console_line_head), hl
+	ex	de, hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
+	inc	hl
+; copy hl to de while hl ! = 0
+.collapse_backspace:
+	ld	a, (hl)
+	ldi
+	or	a, a
+	jr	nz, .collapse_backspace
+	
 	ld	hl, .KEY_LEFT_CSI
 	ld	bc, 3
 	call	.phy_write
-
+	
 .refresh_line:
 ; bc = string, hl xy
 	ld	hl, (console_cursor_xy)
 	push	hl
 	call	.glyph_adress
-	ld	iy, console_stdin
-	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	hl, (console_line_head)
 .refresh_line_loop:
 	ld	a, (hl)
 	or	a, a
 	jr	z, .refresh_line_restore
-	call	ring_buffer.increment
+	inc	hl
 	push	hl
 	ld	hl, console_cursor_xy
-; 	ld	c, (hl)
-; 	inc	hl
 	inc	(hl)
 	call	.glyph_char_address
 	pop	hl
@@ -463,14 +478,14 @@ console:
   
 .handle_console_stdin:
 	cp	a, $FC
-	jr	z, .handle_key_clear
+	jp	z, .handle_key_clear
 	cp	a, $FE
 	jp	z, .handle_key_enter
 	cp	a, $FF
-	jr	z, .handle_key_del
+	jp	z, .handle_key_del
 	cp	a, $F7
 	jr	z, .handle_key_mode
-	ld	hl, (iy+RING_BUFFER_HEAD)
+	ld	hl, (console_line_head)
 	cp	a, $F9
 	jr	z, .handle_key_right
 	cp	a, $FA
@@ -494,11 +509,17 @@ console:
 	sbc	hl, hl
 	ld	l, a
 	add	hl, bc
-	ld	a, (hl)
-	push	hl
-	call	ring_buffer.write
+	ld	de, (console_line_head)
+; $FF should always be zero
+; so last writeable is $FE
+; prevent buffer line overflow
+	ld	a, e
+	add	a, 2
+	ret	z
+	ldi
+	dec	hl
+	ld	(console_line_head), de
 ; putchar(a)
-	pop	hl
 	ld	bc, 1
 	jp	.phy_write
 
@@ -509,8 +530,8 @@ console:
 	ld	a, (hl)
 	or	a, a
 	ret	z
-	call	ring_buffer.increment
-	ld	(iy+RING_BUFFER_HEAD), hl
+	inc	hl
+	ld	(console_line_head), hl
 	ld	hl, .KEY_RIGHT_CSI
 	ld	bc, 3
 	jp	.phy_write
@@ -519,11 +540,11 @@ console:
  db $1B, "[C"
 
 .handle_key_left:
-	call	ring_buffer.decrement
+	dec	hl
 	ld	a, (hl)
 	or	a, a
 	ret	z
-	ld	(iy+RING_BUFFER_HEAD), hl
+	ld	(console_line_head), hl
 	ld	hl, .KEY_LEFT_CSI
 	ld	bc, 3
 	jp	.phy_write
@@ -539,8 +560,14 @@ console:
 	call	.phy_write
 
 .prompt:
-	ld	iy, console_stdin
-	call	ring_buffer.flush
+; flush the line buffer
+	ld	hl, console_line
+	ld	(console_line_head), hl
+	dec	hl
+	ex	de, hl
+	ld	hl, KERNEL_DEV_NULL
+	ld	bc, CONSOLE_LINE_SIZE + 1
+	ldir
 	ld	bc, 28
 	ld	hl, .PROMPT
 	jp	.phy_write

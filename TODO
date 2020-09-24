@@ -5,3 +5,8 @@ memory management
 VFS
 signal
 keyboard stdin
+console : do not use circular buffer
+use circular buffer for pipe
+file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
+cd for change directory
+Rework timer
