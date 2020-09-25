@@ -1,6 +1,8 @@
 leaf:
  
-.exec:
+.execve:
+	scf
+	ret
 
 .check_file:
 ; iy = file adress (static for now, we'll need read syscall)

@@ -19,11 +19,14 @@ console:
 	res	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
 	ld	hl, nmi_console
 	jr	.fb_takeover_entry
-	
+
+; argument : register a is if the CONSOLE is threaded or not (0 not threaded, CONSOLE_FLAGS_THREADED else or $FF)
 .fb_takeover:
 	di
 	ld	iy, console_dev
-	set	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
+	and	a, CONSOLE_FLAGS_THREADED
+	or	a, (iy+CONSOLE_FLAGS)
+	ld	(iy+CONSOLE_FLAGS), a
 ; check CONSOLE_TAKEOVER is null
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	add	hl, de
@@ -55,8 +58,12 @@ console:
 	push	de
 	call	.init_screen
 	ld	a, (iy+CONSOLE_FLAGS)
+	or	a, a
 	bit	CONSOLE_FLAGS_THREADED, a
 	ld	iy, .thread
+	jr	nz, .load_thread_adress
+	ld	iy, (kthread_current)
+.load_thread_adress:
 	call	nz, kthread.create
 	pop	hl
 ; carry if error

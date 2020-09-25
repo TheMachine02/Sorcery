@@ -33,12 +33,12 @@ kinit:
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
-; setup priviliegied OS code (end of OS)
-	ld	a, $03
-	out0	($1F), a
 	ld	de, kernel_data
-	out0	($1D), e
-	out0	($1E), e
+; setup priviliegied OS code (end of OS)
+; 	ld	a, $03
+; 	out0	($1F), a
+; 	out0	($1D), e
+; 	out0	($1E), e
 ; disable stack protector to be able to write the whole RAM image
 	out0	($3A), e
 	out0	($3B), e
@@ -53,24 +53,19 @@ kinit:
 	ld	(hl), KERNEL_HW_POISON
 	ldir
 ; right now, the RAM image is complete
+	ld	a, $D0
+	ld	MB, a
 ; setup the kernel stack protector
 	ld.sis	sp, $0000
 	ld	sp, kernel_stack
 	ld	(kernel_stack_pointer), sp
-	ld	hl, $00A80F
-	out0	($3A), h
-	out0	($3B), c
-	ld	a, $D0
-	out0	($3C), a
-	ld	MB, a
 ; setup memory protection
-	out0	($20), c
-	out0	($21), c
-	dec	c
-	out0	($23), c
-	out0	($24), l
-	out0	($22), a
-	out0	($25), a
+	ld	bc, $0620
+	ld	hl, .arch_MPU_init
+	otir
+; stack clash protector
+	ld	bc, $033A
+	otir
 ; small init for the vfs
 	ld	hl, kvfs.phy_none
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
@@ -90,6 +85,10 @@ kinit:
 	slp
 	jr	.arch_sleep
  
+.arch_MPU_init:
+ db	$00, $00, $D0, $FF, $0F, $D0
+ db	$A8, $00, $D0
+ 
 .arch_init:
 ; here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
 ; interrupt will be disabled by most of device init, but that's okay to maintain them in a unknown state anyway
@@ -105,16 +104,36 @@ kinit:
 ; 	ld	iy, DEBUG_THREAD
 ; 	call	kthread.create
 ; 	ld	iy, DEBUG_THREAD_2
-; 	call	kthread.create	
-; TODO : if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
+; 	call	kthread.create
+; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
+	ld	bc, .arch_bin_path
+	ld	de, .arch_bin_envp
+	ld	hl, .arch_bin_argv
+	call	leaf.execve
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
-	jp	console.fb_takeover
- 
+; TODO printk a message for panic
+	xor	a, a
+	call	console.fb_takeover
+	ld	hl, .arch_bin_error
+	ld	bc, 52
+	call	console.phy_write
+	jp	console.thread
+
+.arch_bin_path:
+ db	"/bin/init",0
+.arch_bin_argv:
+ dl	NULL
+.arch_bin_envp:
+ dl	NULL
+.arch_bin_error:
+ db	"Failed to execute /bin/init",10,"Running emergency shell",10,0
+
 .arch_poison_heap:
+; shouldn't be called within irq
 	di
 	ld	hl, kernel_heap
 	ld	de, kernel_heap + 1
-	ld	bc, 256
+	ld	bc, 506
 	ld	(hl), KERNEL_HW_POISON
 	ldir
 	ei
@@ -126,7 +145,7 @@ kname:
 ; TODO : put this in the certificate ?
 .name_tag:
  db CONFIG_KERNEL_NAME, 0
-.arch_tag:
+.architecture_tag:
  db "ez80", 0
  
 ; DEBUG_THREAD:

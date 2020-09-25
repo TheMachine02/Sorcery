@@ -51,6 +51,7 @@ keyboard:
 	jr	z, .no_ctrl
 	ld	l, $12
 	bit	0, (hl)
+	ld	a, CONSOLE_FLAGS_THREADED
 	call	nz, console.fb_takeover
 .no_ctrl:
 	ld	hl, DRIVER_KEYBOARD_IRQ_LOCK

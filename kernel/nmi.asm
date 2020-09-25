@@ -65,8 +65,8 @@ nmi:
 	rra
 	jr	c, .memory_protection
 .irq_error:
-.deadlock:
-	ld	hl, .THREAD_DEADLOCK
+.noinit:
+	ld	hl, .THREAD_NOINIT
 .reboot_trampoline:
 	call	.exception_write
 	jp	kinit.reboot
@@ -199,8 +199,8 @@ nmi:
 ; also restore console state, and return
 	ret
 
-.THREAD_DEADLOCK:
- db 15, "system deadlock"
+.THREAD_NOINIT:
+ db 23, "attempting to kill init"
 .WATCHDOG_EXCEPTION:
  db 18, "watchdog violation"
 .STACKOVERFLOW_EXCEPTION:

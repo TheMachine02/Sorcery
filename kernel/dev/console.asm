@@ -408,7 +408,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ret
 
 .phy_ioctl:
-	ret	
+	ret
 	
 .glyph_adress:
 	ld	d, 220
