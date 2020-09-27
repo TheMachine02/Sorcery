@@ -125,13 +125,9 @@ nmi:
 ; hl is exception string
 	push	hl
 	ld	hl, .CONTEXT_FRAME_SYSE
-	ld	bc, 24
-	call	console.phy_write
+	call	printk
 	pop	hl
-	ld	bc, 0
-	ld	c, (hl)
-	inc	hl
-	call	console.phy_write
+	call	printk
 	ld	hl, (ix+CONTEXT_FRAME_IR)
 	push	hl
 	ld	hl, (ix+CONTEXT_FRAME_PC)
@@ -159,8 +155,7 @@ nmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_line
-	ld	bc, 183
-	call	console.phy_write
+	call	printk
 ; unwind stack frame
 	ld	ix, (ix+CONTEXT_FRAME_SP)
 	ld	b, 8
@@ -178,8 +173,7 @@ nmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_line
-	ld	bc, 15
-	call	console.phy_write
+	call	printk
 	pop	ix
 	pop	bc
 	djnz	.exception_unwind
@@ -200,21 +194,21 @@ nmi:
 	ret
 
 .THREAD_NOINIT:
- db 23, "attempting to kill init"
+ db "attempting to kill init", 0
 .WATCHDOG_EXCEPTION:
- db 18, "watchdog violation"
+ db "watchdog violation", 0
 .STACKOVERFLOW_EXCEPTION:
- db 14, "stack overflow"
+ db "stack overflow", 0
 .MEMORY_EXCEPTION:
- db 17, "memory protection"
+ db "memory protection", 0
 .POISON_MEMORY:
- db 18, "poisoned derefence"
+ db "poisoned derefence", 0
 .ILLEGAL_TRAP:
- db 19, "illegal instruction"
+ db "illegal instruction", 0
  
  ; size 24
 .CONTEXT_FRAME_SYSE:
- db "System exception : ", $1B, "[31m"
+ db "System exception : ", $1B, "[31m", 0
  
 .CONTEXT_FRAME_STR:
  db 10,10, $1B, "[39m"

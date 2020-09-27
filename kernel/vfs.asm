@@ -1,10 +1,11 @@
-; type (4 first bit)
-define	KERNEL_VFS_BLOCK_DEVICE			1
-define	KERNEL_VFS_FILE				2
-define	KERNEL_VFS_DIRECTORY			4
-define	KERNEL_VFS_SYMLINK			8
-; capabilities
-define	KERNEL_VFS_SEEK				16
+; type enum
+define	KERNEL_VFS_TYPE_FILE			0
+define	KERNEL_VFS_TYPE_DIRECTORY		1
+define	KERNEL_VFS_TYPE_CHARACTER_DEVICE	2
+define	KERNEL_VFS_TYPE_BLOCK_DEVICE		4
+define	KERNEL_VFS_TYPE_FIFO			8
+define	KERNEL_VFS_TYPE_SYMLINK			16
+define	KERNEL_VFS_TYPE_SOCKET			32
 
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
 define	KERNEL_VFS_FILE_INODE			0	; 3 bytes, inode pointer

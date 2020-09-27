@@ -389,7 +389,7 @@ define	phy_ioctl		8
 	ex	de, hl
 	ld	(hl), c
 	pop	de
-	ld	a, KERNEL_VFS_DIRECTORY
+	ld	a, KERNEL_VFS_TYPE_DIRECTORY
 	push	de
 	ex	de, hl	; name
 	call	.inode_allocate

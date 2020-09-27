@@ -118,3 +118,16 @@ kthread.usleep:
 	ld	(iy+KERNEL_THREAD_ERRNO), EINTR
 	pop	iy
 	ret
+
+_port_privileged_unlock:
+; exemple, enable flash sequence and SHA256 port
+	in0	a, ($06)
+	set	2, a
+	out0	($06), a
+	ret
+
+_port_privileged_lock:
+	in0	a, ($06)
+	res	2, a
+	out0	($06), a
+	ret

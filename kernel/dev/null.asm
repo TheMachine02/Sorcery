@@ -5,8 +5,8 @@ null:
 	ld	bc, .phy_mem_ops
 	ld	hl, .NULL_DEV
 ; inode capabilities flags
-; single dev block, (so write / read / seek only), seek capabilities not exposed
-	ld	a, KERNEL_VFS_BLOCK_DEVICE
+; single char dev, (so write / read / ioctl only)
+	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	jp	kvfs.inode_device
 
 .NULL_DEV:

@@ -56,26 +56,27 @@ include	'kernel/arch/pic.asm'
 include	'kernel/compress/lz4.asm'
 include	'kernel/exec/leaf.asm'
 include	'fs/romfs.asm'
-include	'kernel/nmi.asm'
-
 kernel_initramfs:
 file	'initramfs'
 ; end guard
  db	$00, $00
 kernel_romfs:
 file	'rootfs'
+include	'kernel/nmi.asm'
+
+include	'kernel/font/gohufont.inc'
 
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
 include	'kernel/driver/spi.asm'
+;include	'kernel/driver/usb.asm'
+;include	'kernel/driver/mtd.asm'
 ; driver & device
 include	'kernel/dev/null.asm'
 include	'kernel/driver/console.asm'
 include	'kernel/dev/console.asm'
-include	'kernel/font/gohufont.inc'
-include	'kernel/driver/flash.asm'
 include	'kernel/dev/flash.asm'
 
 ; WARNING, flash breakage right here !

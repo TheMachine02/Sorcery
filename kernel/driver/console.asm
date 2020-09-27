@@ -111,20 +111,17 @@ console:
 	jp	signal.kill
 	
 .init:
-	ld	bc, $0100
 	di
+	ld	bc, $0100
 	ld	hl, console_dev
 	ld	(hl), bc
 	ld	l, console_flags and $FF
-	ld	(hl), c
-	set	CONSOLE_FLAGS_SILENT, (hl)
+	ld	(hl), 1 shl CONSOLE_FLAGS_SILENT
 	inc	hl
 	ld	(hl), $FD
 	ld	l, console_takeover and $FF
 	dec	b
 	ld	(hl), bc
-; 	ld	iy, console_stdin
-; 	call	ring_buffer.create
 	jp	.phy_init
 	
 .init_screen:

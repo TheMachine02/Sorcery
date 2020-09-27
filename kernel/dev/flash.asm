@@ -1,9 +1,18 @@
-.phy_init:
+define	KERNEL_FLASH_MAPPING		$E00003
+define	KERNEL_FLASH_CTRL		$E00005
+define	KERNEL_FLASH_SIZE		$400000
+
+flash:
+.init:
+	ld	hl, .phy_write_base
+	ld	de, $D18800
+	ld	bc, 256
+	ldir
 	ld	bc, .phy_mem_ops
 	ld	hl, .FLASH_DEV
 ; inode capabilities flags
 ; single dev block
-	ld	a, KERNEL_VFS_BLOCK_DEVICE
+	ld	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
 	jp	kvfs.inode_device
 
 .FLASH_DEV:

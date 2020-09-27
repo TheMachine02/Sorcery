@@ -33,25 +33,25 @@ ring_buffer:
 	add	hl, bc
 	ret
 	
-.increment:
-	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
-	inc	hl
-	or	a, a
-	sbc	hl, bc
-	add	hl, bc
-	ret	nz
-	lea	hl, iy+RING_BUFFER_BOUND_LOW
-	ret
-
-.decrement:
-	lea	bc, iy+RING_BUFFER_BOUND_LOW
-	scf
-	sbc	hl, bc
-	add	hl, bc
-	ret	nc
-	ld	hl, (iy+RING_BUFFER_BOUND_UPP)
-	dec	hl
-	ret
+; .increment:
+; 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
+; 	inc	hl
+; 	or	a, a
+; 	sbc	hl, bc
+; 	add	hl, bc
+; 	ret	nz
+; 	lea	hl, iy+RING_BUFFER_BOUND_LOW
+; 	ret
+; 
+; .decrement:
+; 	lea	bc, iy+RING_BUFFER_BOUND_LOW
+; 	scf
+; 	sbc	hl, bc
+; 	add	hl, bc
+; 	ret	nc
+; 	ld	hl, (iy+RING_BUFFER_BOUND_UPP)
+; 	dec	hl
+; 	ret
 
 .write:
 ; ; a = char
@@ -59,22 +59,22 @@ ring_buffer:
 ; ; reset head value
 ; ; increment pointer
 ; ; check if full, else make head = tail
-	call	.length
-	ld	bc, (iy+RING_BUFFER_SIZE)
-	or	a, a
-	sbc	hl, bc
-	jr	c, .update
+; 	call	.length
+; 	ld	bc, (iy+RING_BUFFER_SIZE)
+; 	or	a, a
+; 	sbc	hl, bc
+; 	jr	c, .update
 	ld	hl, (iy+RING_BUFFER_HEAD)
 	ld	(hl), a
 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
 	inc	hl
-	xor	a, a
+; 	xor	a, a
 	sbc	hl, bc
 	add	hl, bc
 	jr	nz, .write_rewind
 	lea	hl, iy+RING_BUFFER_BOUND_LOW
 .write_rewind:
-	ld	(hl), a
+; 	ld	(hl), a
 	ld	(iy+RING_BUFFER_HEAD), hl
 	ld	hl, (iy+RING_BUFFER_SIZE)
 ; why single optimization break stuff ? dunno, to investigate
@@ -91,19 +91,19 @@ ring_buffer:
 	ld	(iy+RING_BUFFER_TAIL), hl
 	ret
 	
-.update:
-	ld	hl, (iy+RING_BUFFER_HEAD)
-	ld	(hl), a
-	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
-	inc	hl
-	xor	a, a
-	sbc	hl, bc
-	add	hl, bc
-	jr	nz, .update_rewind
-	lea	hl, iy+RING_BUFFER_BOUND_LOW
-.update_rewind:
-	ld	(iy+RING_BUFFER_HEAD), hl
-	ret
+; .update:
+; 	ld	hl, (iy+RING_BUFFER_HEAD)
+; 	ld	(hl), a
+; 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
+; 	inc	hl
+; 	xor	a, a
+; 	sbc	hl, bc
+; 	add	hl, bc
+; 	jr	nz, .update_rewind
+; 	lea	hl, iy+RING_BUFFER_BOUND_LOW
+; .update_rewind:
+; 	ld	(iy+RING_BUFFER_HEAD), hl
+; 	ret
 	
 .read:
 	ld	hl, (iy+RING_BUFFER_SIZE)
@@ -143,40 +143,40 @@ ring_buffer:
 	ld	(iy+RING_BUFFER_SIZE), hl
 	ret
 	
-.remove_head:
-; suppr behaviour
-	ld	hl, (iy+RING_BUFFER_HEAD)
-	and	a, (hl)
-	ret	z
-	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
-	jr	.remove_collapse
-
-.remove:
-; backspace behaviour
-	ld	hl, (iy+RING_BUFFER_HEAD)
-	call	.decrement
-	ld	a, (hl)
-	or	a, a
-	ret	z
-	ld	(iy+RING_BUFFER_HEAD), hl
-	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
-.remove_collapse:
-	ex	de, hl
-	sbc	hl, hl
-	add	hl, de
-	inc	hl
-	sbc	hl, bc
-	add	hl, bc
-	jr	nz, .remove_rewind
-	lea	hl, iy+RING_BUFFER_BOUND_LOW
-.remove_rewind:
-	ld	a, (hl)
-	ld	(de), a
-	or	a, a
-	jr	nz, .remove_collapse
-	ld	hl, (iy+RING_BUFFER_SIZE)
-	dec	hl
-	ld	(iy+RING_BUFFER_SIZE), hl
-; cpl could work, but flags aren't correctly set
-	xor	a, $FF
-	ret
+; .remove_head:
+; ; suppr behaviour
+; 	ld	hl, (iy+RING_BUFFER_HEAD)
+; 	and	a, (hl)
+; 	ret	z
+; 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
+; 	jr	.remove_collapse
+; 
+; .remove:
+; ; backspace behaviour
+; 	ld	hl, (iy+RING_BUFFER_HEAD)
+; 	call	.decrement
+; 	ld	a, (hl)
+; 	or	a, a
+; 	ret	z
+; 	ld	(iy+RING_BUFFER_HEAD), hl
+; 	ld	bc, (iy+RING_BUFFER_BOUND_UPP)
+; .remove_collapse:
+; 	ex	de, hl
+; 	sbc	hl, hl
+; 	add	hl, de
+; 	inc	hl
+; 	sbc	hl, bc
+; 	add	hl, bc
+; 	jr	nz, .remove_rewind
+; 	lea	hl, iy+RING_BUFFER_BOUND_LOW
+; .remove_rewind:
+; 	ld	a, (hl)
+; 	ld	(de), a
+; 	or	a, a
+; 	jr	nz, .remove_collapse
+; 	ld	hl, (iy+RING_BUFFER_SIZE)
+; 	dec	hl
+; 	ld	(iy+RING_BUFFER_SIZE), hl
+; ; cpl could work, but flags aren't correctly set
+; 	xor	a, $FF
+; 	ret

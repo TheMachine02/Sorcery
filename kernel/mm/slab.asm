@@ -71,17 +71,17 @@ kmem:
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	jr	.__cache_alloc_entry
-
+	pop	af
+	
 .cache_alloc:
 	push	af
-.__cache_alloc_entry:
 	push	de
 	push	bc
 	push	iy
 	tsti
 ; allocate from cache pointed by hl
 ; first, check if there is some free pages to use
+; just ld a, (hl) / inc a, but we also need to clear carry flag in case of nz
 	xor	a, a
 	or	a, (hl)
 	inc	a

@@ -26,6 +26,7 @@ kinit:
 ; boot 5.0.1 stupidity power ++
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 	di
+	rsmix
 ; load up boot stack
 	ld	sp, $D1A87E
 ; shift to soft kinit way to reboot ++
@@ -34,7 +35,7 @@ kinit:
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	de, kernel_data
-; setup priviliegied OS code (end of OS)
+; setup privileged OS code (end of OS)
 ; 	ld	a, $03
 ; 	out0	($1F), a
 ; 	out0	($1D), e
@@ -65,7 +66,14 @@ kinit:
 	otir
 ; stack clash protector
 	ld	bc, $033A
+	ld	a, b
 	otir
+; flash ws and mapping
+	ld	hl, KERNEL_FLASH_CTRL
+	ld	(hl), a
+	ld	l, KERNEL_FLASH_MAPPING and $FF
+	add	a, a
+	ld	(hl), a
 ; small init for the vfs
 	ld	hl, kvfs.phy_none
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
@@ -97,7 +105,10 @@ kinit:
 	call	keyboard.init
 	call	rtc.init
 	call	console.init
+; flash device ;
 	call	flash.init
+; mtd block driver ;
+;	call	mtd.init
 ; debug thread & other debugging stuff
 ; 	ld	hl, $D30000
 ; 	call	atomic_mutex.init
@@ -115,14 +126,12 @@ kinit:
 	xor	a, a
 	call	console.fb_takeover
 	ld	hl, .arch_bin_error
-	ld	bc, 52
-	call	console.phy_write
+	call	printk
 	jp	console.thread
 
 .arch_bin_path:
  db	"/bin/init",0
 .arch_bin_argv:
- dl	NULL
 .arch_bin_envp:
  dl	NULL
 .arch_bin_error:
@@ -169,3 +178,43 @@ kname:
 ; 	ld	hl, $D30000
 ; 	call	atomic_mutex.unlock
 ; 	jr	DEBUG_THREAD_2
+
+; TODO : put this in the certificate ?
+; flash unlock and lock
+flash.lock:
+	xor	a, a
+	out0	($28), a
+	in0	a, ($06)
+	res	2, a
+	out0	($06), a
+	ret
+	
+flash.unlock:
+; need to be in privileged flash actually
+	in0	a, ($06)
+	or	a, 4
+	out0	($06), a
+; flash sequence
+	ld	a, 4
+	di 
+	jr	$+2
+	di
+	rsmix 
+	im 1
+	out0	($28), a
+	in0	a, ($28)
+	bit	2, a
+	ret
+
+printk:
+	push	hl
+	ld	bc, 0
+	xor	a, a
+	cpir
+	or	a, a
+	sbc	hl, hl
+	scf
+	sbc	hl, bc
+	ex	(sp), hl
+	pop	bc
+	jp	console.phy_write

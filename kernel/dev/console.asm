@@ -33,7 +33,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ld	hl, .CONSOLE_DEV
 ; inode capabilities flags
 ; single dev block, (so write / read / seek only), no seek capabilities exposed
-	ld	a, KERNEL_VFS_BLOCK_DEVICE
+	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	jp	kvfs.inode_device
 
 .CONSOLE_DEV:
@@ -537,7 +537,7 @@ if CONFIG_USE_GLYPH_NUMBER = 1
 	ld	l, a
 	ld	h, 3
 	mlt	hl
-	ld	bc, .TRANSLATION_TABLE
+	ld	bc, font.TRANSLATION_TABLE
 	add	hl, bc
 	push	iy
 	ld	iy, console_dev
