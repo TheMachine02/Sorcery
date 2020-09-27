@@ -1,38 +1,98 @@
-; type enum
-define	KERNEL_VFS_TYPE_FILE			0
-define	KERNEL_VFS_TYPE_DIRECTORY		1
-define	KERNEL_VFS_TYPE_CHARACTER_DEVICE	2
-define	KERNEL_VFS_TYPE_BLOCK_DEVICE		4
-define	KERNEL_VFS_TYPE_FIFO			8
-define	KERNEL_VFS_TYPE_SYMLINK			16
-define	KERNEL_VFS_TYPE_SOCKET			32
+; inode flags = (permission or type)
+; permission, read/write/execute - map to posix "other" permission
+define	KERNEL_VFS_PERMISSION_R			1
+define	KERNEL_VFS_PERMISSION_W			2
+define	KERNEL_VFS_PERMISSION_X			4
+define	KERNEL_VFS_PERMISSION_RW		3
+define	KERNEL_VFS_PERMISSION_RWX		7
+define	KERNEL_VFS_PERMISSION_RX		5
+define	KERNEL_VFS_PERMISSION_WX		6
+; please note that file is not a set bit by if inode_flag&TYPE_FILE==0
+define	KERNEL_VFS_TYPE_FILE			248
+define	KERNEL_VFS_TYPE_DIRECTORY		8
+define	KERNEL_VFS_TYPE_CHARACTER_DEVICE	16
+define	KERNEL_VFS_TYPE_BLOCK_DEVICE		32
+define	KERNEL_VFS_TYPE_FIFO			64
+define	KERNEL_VFS_TYPE_SYMLINK			128
 
+; structure file
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
+define	KERNEL_VFS_FILE_DESCRIPTOR_SIZE		8
 define	KERNEL_VFS_FILE_INODE			0	; 3 bytes, inode pointer
 define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
-define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags
-define	KERNEL_VFS_FILE_PADDING			7	; 1 byte, padding
+define	KERNEL_VFS_FILE_FLAGS			6	; 2 byte, file flags, mode
 
-define	KERNEL_VFS_FILE_DESCRIPTOR_SIZE		8
+; file flags that control *file*
+; we can & those with permission to check mode
+define	KERNEL_VFS_O_R				1
+define	KERNEL_VFS_O_W				2
+define	KERNEL_VFS_O_RW				4
+define	KERNEL_VFS_O_TRUNC			8	; trunc file to 0 at open
+define	KERNEL_VFS_O_APPEND			16	; append to end of file all write
+define	KERNEL_VFS_O_CLOEXEC			32	; close of execve
+define	KERNEL_VFS_O_SYNC			64	; always sync write
+define	KERNEL_VFS_O_NDELAY			128	; use non-bloquant atomic_rw, error with EWOULDBLOCK
+
+; if specified creat and tmpfile, use mode (permission of inode flags)
+; seconde byte, those *doesnt* need to be stored in the file descriptor or 
+define	KERNEL_VFS_O_EXCL			1	; use with O_CREAT, fail if file already exist 
+define	KERNEL_VFS_O_CREAT			2	; creat the file if don't exist
+define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
 
 kvfs:
 
-.mkdir:
+.set_errno:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), l
+	pop	iy
+	scf
+	sbc	hl, hl
 	ret
 
-.rmdir:
-	ret
-
+.open_error_excl:
+	pop	af
+	ld	l, EEXIST
+	jr	.set_errno
+.open_error_noent:
+	pop	af
+	ld	l, ENOENT
+	jr	.set_errno
+.open_error_acess:
+	pop	ix
+	pop	de
+	pop	af
+	ld	l, EACCES
+	jr	.set_errno
 .open:
-; find the inode
+; open(const char* path, int flags, mode_t mode)
+; hl is path, bc is flags, a is mode
+	push	iy
+	push	af
 	push	hl
 	call	.inode_find
 	pop	hl
+; check if both excl and creat are set
+	ld	a, b
+	and	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
+	sub	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
+	jr	z, .open_error_excl
 	jr	nc, .open_continue
+.open_create:
+; check that flag O_CREAT set
+	bit	1, b
+	jr	z, .open_error_noent
+; a is our mode, and hl is path
 	call	.inode_create
-	jr	c, .open_error
+; if inode create c, the eror should already have been set, so just return
+	jr	nc, .open_continue
+	pop	af
+	pop	iy
+	ret
 .open_continue:
 ; iy = node
+	push	de
+	push	ix
+	push	bc
 ; now find free file descriptor
 	ld	ix, (kthread_current)
 	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR + 24
@@ -47,19 +107,30 @@ kvfs:
 	add	ix, de
 	djnz	.open_descriptor
 ; no descriptor found
-
-.open_error:
-	ret
-
+	pop	bc
+	pop	ix
+	pop	de
+	pop	af
+	ld	l, EMFILE
+	jr	.set_errno
 .open_descriptor_found:
+	pop	bc
+; check file permission
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	and	a, c
+	xor	a, c
+	jr	nz, .open_error_acess
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
-	ld	(ix+KERNEL_VFS_FILE_FLAGS), e
+; write important file flags
+	ld	(ix+KERNEL_VFS_FILE_FLAGS), c
+; TODO if KERNEL_VFS_O_TRUNC is set in c, reset the file to size 0 (drop all data)
 ; get our file descriptor
 	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR
 	ld	de, (kthread_current)
-	or	a, a
+; carry is reset by last xor
 	sbc	hl, de
 	srl	h
 	rr	l
@@ -67,7 +138,10 @@ kvfs:
 	rr	l
 	srl	h
 	rr	l
-; hl is fd
+	pop	ix
+	pop	de
+	pop	af
+	pop	iy
 	ret
 
 .close:
@@ -171,4 +245,10 @@ kvfs:
 	ret
 
 .pipe:
+	ret
+
+.mkdir:
+	ret
+
+.rmdir:
 	ret
