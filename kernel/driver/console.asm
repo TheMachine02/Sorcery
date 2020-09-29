@@ -271,7 +271,7 @@ console:
 	inc	bc
 	ld	a, b
 	or	a, c
-	jr	z, .clean_command
+	jp	z, .clean_command
 ; check the command
 ; if command = reboot, we'll do rst 0h
 	ld	hl, .REBOOT
@@ -279,19 +279,50 @@ console:
 	jp	z, kinit
 	ld	hl, .COLOR
 	call	.check_builtin
-	jr	z, .color
+	jp	z, .color
 	ld	hl, .UPTIME
 	call	.check_builtin
 	jp	z, .uptime
 	ld	hl, .SHUTDOWN
 	call	.check_builtin
-	jr	z, .shutdown
+	jp	z, .shutdown
 	ld	hl, .ECHO
 	call	.check_builtin
-	jr	z, .echo
+	jp	z, .echo
 	ld	hl, .EXIT
 	call	.check_builtin
 	jp	z, .fb_restore
+; try to exec the program in /bin/xxxx
+; bc = string size
+	ld	hl, console_line
+	ld	bc, 0
+	ld	a, ' '
+	cpir
+; return hl + 1, or po if none left
+; blit zero anyway at the end
+	dec	hl
+	ld	(hl), 0
+	ld	bc, 6
+	add	hl, bc
+	jp	pe, .argv_not_null
+	ld	hl, .BIN_ARGV
+.argv_not_null:
+	push	hl
+; copy the string now
+	ld	hl, console_line + CONSOLE_LINE_SIZE - 6
+	ld	de, console_line + CONSOLE_LINE_SIZE - 1
+	ld	bc, CONSOLE_LINE_SIZE - 5
+	lddr
+	ld	de, console_line
+	ld	hl, .BINARY_PATCH
+	ld	c, 5
+	ldir
+	pop	hl
+	ld	bc, console_line
+	ld	de, .BIN_ENVP
+; please note argv is a pointer to a raw string, it will be cut and pushed into program stack frame by the program exec call
+	call	leaf.program
+	jr	nc, .clean_command
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
 	call	.phy_write
@@ -593,6 +624,12 @@ console:
 .EXIT:
  db 5, "exit", 0
  
+.BINARY_PATCH:
+ db "/bin/",0
+.BIN_ENVP:
+.BIN_ARGV:
+ dl	NULL
+
 .UPTIME_STR:
 ; db "Up since 0000 day(s), 00h 00m 00s", 0
  db "Up since %04d day(s), %02dh %02dm %02ds" , 10, 0
