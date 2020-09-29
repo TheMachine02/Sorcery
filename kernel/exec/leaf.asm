@@ -7,7 +7,7 @@ leaf:
 .program:
 	scf
 	ret
-	
+
 .check_file:
 ; iy = file adress (static for now, we'll need read syscall)
 	ld	a, (iy+LEAF_IDENT_MAG0)

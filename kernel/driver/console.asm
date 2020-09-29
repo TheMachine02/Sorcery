@@ -321,12 +321,23 @@ console:
 	ld	bc, console_line
 	ld	de, .BIN_ENVP
 ; please note argv is a pointer to a raw string, it will be cut and pushed into program stack frame by the program exec call
+; TODO : find a better way than leaf.program
+; create thread with execve as thread is a good idea, however, the thread creation will always be correct
+; then I need to retrieve error code of execve and then utimately error code of exit thread
 	call	leaf.program
-	jr	nc, .clean_command
+	jr	c, .unknown_command
+; right here, we should wait for sigchild
+.exclusive_wait_command:
+	call	signal.wait
+	ld	a, l
+	cp	a, SIGCHLD
+	jr	nz, .exclusive_wait_command
+.clean_command:
+	jp	.prompt
+.unknown_command:
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
 	call	.phy_write
-.clean_command:
 	jp	.prompt
 	
 .check_builtin:
