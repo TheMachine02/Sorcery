@@ -29,7 +29,7 @@ define	KERNEL_VFS_O_W				2
 define	KERNEL_VFS_O_RW				4
 define	KERNEL_VFS_O_TRUNC			8	; trunc file to 0 at open
 define	KERNEL_VFS_O_APPEND			16	; append to end of file all write
-define	KERNEL_VFS_O_CLOEXEC			32	; close of execve
+define	KERNEL_VFS_O_CLOEXEC			32	; close on execve
 define	KERNEL_VFS_O_SYNC			64	; always sync write
 define	KERNEL_VFS_O_NDELAY			128	; use non-bloquant atomic_rw, error with EWOULDBLOCK
 
@@ -82,6 +82,7 @@ kvfs:
 	bit	1, b
 	jr	z, .open_error_noent
 ; a is our mode, and hl is path
+; TODO : inode create should NOT create directory path
 	call	.inode_create
 ; if inode create c, the eror should already have been set, so just return
 	jr	nc, .open_continue
@@ -126,7 +127,17 @@ kvfs:
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
 	ld	(ix+KERNEL_VFS_FILE_FLAGS), c
-; TODO if KERNEL_VFS_O_TRUNC is set in c, reset the file to size 0 (drop all data)
+	bit	3, c	; O_TRUNC
+	jr	z, .extract_fd
+; if KERNEL_VFS_O_TRUNC is set in c, and the file is a normal file (not a fifo or char or block) reset the file to size 0 (drop all data)
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_FILE
+	jr	nz, .extract_fd
+; it is a file
+; drop all data now
+; parse block data and free everything
+	call	.inode_drop_data
+.extract_fd:
 ; get our file descriptor
 	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR
 	ld	de, (kthread_current)
@@ -170,25 +181,89 @@ kvfs:
 .sync:
 	ret
 	
+	
+.read_error_badfd:
+	ld	l, EBADF
+	jp	.set_errno
+.read_error_edir:
+	ld	l, EISDIR
+	jp	.set_errno
+.read_phy_device:
+	push	iy
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_read
+	call	.jpiy
+	pop	iy
+	ret
+.jpiy:
+	jp	(iy)
+
+.read_fifo:
+; the inode is special in case of a fifo
+; the 48 bytes data block hold all the fifo data
+; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
+; TODO : implement fifo read
+	ret
 .read:
 ;;size_t read(int fd, void *buf, size_t count);
 ; hl is fd, void *buf is de, size_t count is bc
 ; pad count to inode_file_size
 ; return size read
+; TODO : maybe hide the FD data to the thread
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	ld	iy, (kthread_current)
+	ld	ix, (kthread_current)
 	ex	de, hl
-	add	iy, de
+	add	ix, de
 	ex	de, hl
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
-	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)	; get inode
+	ld	hl, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .read_error_badfd
+; check we have read permission
+; KERNEL_VFS_O_R (1)
+	bit	0, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	jr	z, .read_error_badfd
+	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
 ; hl is offset in file, iy is inode, de is buffer, bc is count
-; TODO : restrict bc to maximum file size ++
+; check inode flag right now
+; if block device or character device, directly pass 
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+; well, we have a directory opened right here
+	tst	a, KERNEL_VFS_TYPE_DIRECTORY
+	jr	nz, .read_error_edir
+	tst	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
+; passthrough char / block device / fifo driver directly
+	jr	nz, .read_phy_device
+	and	a, KERNEL_VFS_TYPE_FIFO
+	jr	nz, .read_fifo
+; check hl+bc < inode size
+; push bc if <, else push the bc clamped to inode size
+	push	hl
+	push	de
+	push	bc
+; compute inode size - offset - size
+	ex	de, hl
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
+	or	a, a
+	sbc	hl, de
+	sbc	hl, bc
+; if carry is not set, then the size can be readed from the inode
+	jr	nc, .read_no_clamp
+; readable size = inode_size - offset
+	add	hl, bc
+	ex	(sp), hl	; save back the new value into bc
+.read_no_clamp:
+	pop	bc
+	pop	de
+;	pop	hl
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
 ; hl / 1024 : offset in block
-	push	hl
+;	push	hl
 	dec	sp
 	pop	hl
 	inc	sp
@@ -198,9 +273,16 @@ kvfs:
 	srl	h
 	rra
 ; a = block offset, de buffer, bc count
-; now, let's ldir and lock
+; now let's read
+; first the lock
+; if NDELAY is set, use try_lock
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; KERNEL_VFS_O_NDELAY (128)
+	bit	7, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	jr	nz, .read_ndelay
 	call	atomic_rw.lock_read
+.read_start:
+	push	bc
 	push	bc
 	pop	hl
 .read_copy:
@@ -239,8 +321,18 @@ kvfs:
 	pop	bc
 	ldir
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	jp	atomic_rw.unlock_read
-
+	call	atomic_rw.unlock_read
+	pop	hl	; our size read
+	ret
+.read_ndelay:
+;	call	atomic_rw.try_lock_read
+; TODO : implement
+	scf
+	jr	nc, .read_start
+.read_error_again:
+	ld	l, EAGAIN
+	jp	.set_errno
+	
 .write:
 	ret
 

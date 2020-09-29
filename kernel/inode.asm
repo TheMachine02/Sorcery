@@ -21,21 +21,18 @@ define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
 
 define	kvfs_root				$D003C0
 
+; block device & char device operation ;
 ; files operations ;
 define	phy_read		0
 define	phy_write		4
 define	phy_sync		8
+define	phy_ioctl		8
 define	phy_seek		12
 ; inode operation ;
 define	phy_read_inode		16
 define	phy_write_inode		20
 define	phy_create_inode	24
 define	phy_destroy_inode	28
-
-; block device & char device operation ;
-define	phy_read		0
-define	phy_write		4
-define	phy_ioctl		8
 
 ; jump table for physical operation
 .phy_none:
@@ -448,3 +445,8 @@ define	phy_ioctl		8
 ; hl is the block_data adress structure in cache
 	ret
 
+.inode_drop_data:
+; TODO : implement
+; iy is inode number
+; parse the data and unmap everything (+clear everything)
+	ret
