@@ -6,12 +6,14 @@ define	FIFO_BOUND_UPP	$9
 define	FIFO_BOUND_LOW	$C
 
 define	FIFO_STRUCT_SIZE	15
-define	FIFO_MAX_SIZE		1024
+; TODO : make it variable size
+define	FIFO_MAX_SIZE		64
 
 fifo:
 
 .create:
 ; de is buffer
+; iy is the fifo control structure
 	ld	(iy+FIFO_BOUND_LOW), de
 	ld	(iy+FIFO_HEAD), de
 	ld	(iy+FIFO_TAIL), de

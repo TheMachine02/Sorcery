@@ -98,7 +98,7 @@ define	phy_destroy_inode	28
 ; push the new position of next name and restore previous name
 	ex	(sp), hl
 ; check if inode is a directory (if not, error out)
-	bit	2, (iy+KERNEL_VFS_INODE_FLAGS)
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	jr	z, .inode_get_unknown
 ; now, parse the directory to find we have a entry corresponding to it
 ; hl is our string, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1 - bc is the size of it
@@ -200,7 +200,7 @@ define	phy_destroy_inode	28
 .inode_allocate:
 ; parent inode is iy (with ref+1) (it IS a directory), a is flag
 ; hl is the name of the inode, iy is parent inode (directory)
-	bit	2, (iy+KERNEL_VFS_INODE_FLAGS)
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	jr	z, .inode_allocate_error_nodir
 	ex	de, hl
 	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
@@ -343,7 +343,7 @@ define	phy_destroy_inode	28
 	jr	nc, .inode_create_error_exist	; already exist
 ; hl is partial string, iy is the PARENT node
 ; sanity check, does we have a directory on partial find ?
-	bit	2, (iy+KERNEL_VFS_INODE_FLAGS)
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	jr	z, .inode_create_error_exist
 	
 	push	hl

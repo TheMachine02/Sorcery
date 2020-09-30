@@ -15,6 +15,15 @@ define	KERNEL_VFS_TYPE_BLOCK_DEVICE		32
 define	KERNEL_VFS_TYPE_FIFO			64
 define	KERNEL_VFS_TYPE_SYMLINK			128
 
+define	KERNEL_VFS_PERMISSION_R_BIT		0
+define	KERNEL_VFS_PERMISSION_W_BIT		1
+define	KERNEL_VFS_PERMISSION_X_BIT		2
+define	KERNEL_VFS_TYPE_DIRECTORY_BIT		3
+define	KERNEL_VFS_TYPE_CHARACTER_DEVICE_BIT	4
+define	KERNEL_VFS_TYPE_BLOCK_DEVICE_BIT	5
+define	KERNEL_VFS_TYPE_FIFO_BIT		6
+define	KERNEL_VFS_TYPE_SYMLINK_BIT		7
+
 ; structure file
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
 define	KERNEL_VFS_FILE_DESCRIPTOR_SIZE		8
@@ -44,16 +53,16 @@ kvfs:
 sysdef _open
 .open:
 ; open(const char* path, int flags, mode_t mode)
-; hl is path, bc is flags, a is mode
+; hl is path, bc is flags, de is mode
 ; TODO : inode create should NOT create directory
-	push	af
+	push	de
 	push	hl
 	push	bc
 	call	.inode_find
 	pop	bc
 	pop	hl
+	pop	de
 	jr	c, .open_create
-	pop	af
 ; check if both excl and creat are set
 	ld	a, b
 	and	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
@@ -62,11 +71,11 @@ sysdef _open
 	jp	z, syserror
 	jr	.open_continue
 .open_create:
-	pop	af
 ; check that flag O_CREAT set
 	bit	1, b
 	ld	a, ENOENT
 	jp	z, syserror
+	ld	a, e
 ; a is our mode, and hl is path
 	push	bc
 	call	.inode_create
@@ -181,9 +190,8 @@ sysdef _read
 	ld	a, EBADF
 	jp	z, syserror
 ; check we have read permission
-; KERNEL_VFS_O_R (1)
 	ld	a, EACCES
-	bit	0, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
 ; hl is offset in file, iy is inode, de is buffer, bc is count
@@ -203,10 +211,10 @@ sysdef _read
 	tst	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
 ; passthrough char / block device / fifo driver directly
 	jp	nz, .read_phy_device
-	tst	a, KERNEL_VFS_TYPE_FIFO
+	bit	KERNEL_VFS_TYPE_FIFO_BIT, a
 	jp	nz, .read_fifo
 ; well, we have a directory opened right here
-	and	a, KERNEL_VFS_TYPE_DIRECTORY
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, a
 	ld	a, EISDIR
 	jp	nz, syserror
 ; check hl+bc < inode size
@@ -333,54 +341,15 @@ sysdef _pipe
 sysdef _mkdir
 .mkdir:
 ; int mkdir(const char *pathname, mode_t mode)
-; hl is path, c is mode
-	push	bc
-	call	.inode_find
-	pop	de
-; if inode_find carry we have an error already set by this function, but that *okay* (and even wanted)
-	ld	a, EEXIST
-	jp	nc, syserror
-; check the error is the correct one, ie ENOENT
-	ld	a, ENOENT
-	ld	ix, (kthread_current)
-	cp	a, (ix+KERNEL_THREAD_ERRNO)
-; if the error is different, return
-	ret	nz
-; hl is partial string, iy is the PARENT node
-; we have several sanity check here
-; first check that parent is a directory
-	ld	a, ENOTDIR
-	bit	3, (iy+KERNEL_VFS_INODE_FLAGS)
-	jp	z, syserror
-; check the inode can be writed
-	bit	1, (iy+KERNEL_VFS_INODE_FLAGS)
-	ld	a, EACCES
-	jp	z, syserror
-; right here, hl is the partial string and should be null terminated, does not contain '/'
-	push	hl
-	ld	a, '/'
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-	cpir
-	pop	hl
-	ld	a, ENOENT
-	jp	z, syserror
-; does the base name is not too long ?
-	xor	a, a
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-	push	hl
-	cpir
-	pop	hl
-	ld	a, ENAMETOOLONG
-	jp	po, syserror
-; now, we can allocate the inode & create the directory inode
-; convention : hl is the name of the inode, iy is parent inode (it MUST be a directory)
-	ld	a, e
-	and	a, KERNEL_VFS_PERMISSION_RWX
-	or	a, KERNEL_VFS_TYPE_DIRECTORY
-	call	.inode_allocate
-; if carry, it mean we have an error on memory allocation
-	ld	a, ENOMEM
-	jp	c, syserror
+	ld	a, KERNEL_VFS_TYPE_DIRECTORY
+	call	.inode_create2
+; return iy = inode
+; if carry, it mean we have an error (already set)
+	ret	c
+; here, we need to fill inode data, none since it is a directory (empty)
+; so just put the inode and unlock it (write locked by inode create)
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
 	or	a, a
 	sbc	hl, hl
 	ret
@@ -399,7 +368,7 @@ sysdef _chroot
 
 sysdef _chmod
 .chmod:
-; hl is path, c is new mode
+; hl is path, bc is new mode
 	push	bc
 	call	.inode_find
 	pop	bc
@@ -410,7 +379,7 @@ sysdef _chmod
 	
 sysdef _fchmod
 .fchmod:
-; hl is fd, c is new mode
+; hl is fd, bc is new mode
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -429,7 +398,7 @@ sysdef _fchmod
 .chmod_shared:
 ; write permission ?
 	ld	a, EACCES
-	bit	1, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 ; read the inode
 	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
@@ -457,3 +426,100 @@ sysdef _fchown
 	or	a, a
 	sbc	hl, hl
 	ret
+
+sysdef _mknod
+.mknod:
+; int mknod(const char *pathname, mode_t mode, dev_t dev)
+; hl is path, bc is mode, de is dev (ie memory ops)
+	push	de
+	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	call	.inode_create2
+	pop	de
+	ret	c
+	ld	(iy+KERNEL_VFS_INODE_OP), de
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
+	
+sysdef _mkfifo
+.mkfifo:
+; a bit more complex, but anyway
+; int mkfifo(const char *pathname, mode_t mode)
+	ld	a, KERNEL_VFS_TYPE_FIFO
+	call	.inode_create2
+	ret	c
+; we need to allocate a fifo block of data and put it in the data block
+; iy is our inode
+	ld	hl, FIFO_MAX_SIZE
+	call	kmalloc
+	ld	a, ENOMEM
+	jp	c, syserror
+; hl is the memory block
+	push	hl
+	ex	de, hl
+; point iy to raw data
+	pea	iy + KERNEL_VFS_INODE_ATOMIC_LOCK
+	lea	iy, iy + KERNEL_VFS_INODE_DATA
+	call	fifo.create
+	pop	hl
+	call	atomic_rw.unlock_write	
+	or	a, a
+	sbc	hl, hl
+	ret
+
+.set_cf:
+	scf
+	ret
+.inode_create2:
+; hl is path, bc is mode, a is inode type
+	ld	b, a
+	push	bc
+	call	.inode_find
+	pop	de
+; if inode_find carry we have an error already set by this function, but that *okay* (and even wanted)
+	ld	a, EEXIST
+	jp	nc, syserror
+; check the error is the correct one, ie ENOENT
+	ld	a, ENOENT
+	ld	ix, (kthread_current)
+	cp	a, (ix+KERNEL_THREAD_ERRNO)
+; if the error is different, return
+	jr	nz, .set_cf
+; hl is partial string, iy is the PARENT node
+; we have several sanity check here
+; first check that parent is a directory
+	ld	a, ENOTDIR
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	jp	z, syserror
+; check the inode can be writed
+	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	jp	z, syserror
+; right here, hl is the partial string and should be null terminated, does not contain '/'
+	push	hl
+	ld	a, '/'
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	cpir
+	pop	hl
+	ld	a, ENOENT
+	jp	z, syserror
+; does the base name is not too long ?
+	xor	a, a
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	push	hl
+	cpir
+	pop	hl
+	ld	a, ENAMETOOLONG
+	jp	po, syserror
+; now, we can allocate the inode & create the directory inode
+; convention : hl is the name of the inode, iy is parent inode (it MUST be a directory), a is inode flags
+	ld	a, e
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	ld	e, a
+	ld	a, d
+	and	a, not KERNEL_VFS_PERMISSION_RWX
+	or	a, e
+; return iy = inode if not carry, if carry then it is an error and you should quit
+	jp	.inode_create
