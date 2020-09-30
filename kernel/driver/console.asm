@@ -654,7 +654,7 @@ include 'logo.inc'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
- db $1B, "[3;11H", CONFIG_KERNEL_NAME, $1B, "[6;H"
+ db $1B, "[3;11H", CONFIG_KERNEL_NAME, "-", CONFIG_KERNEL_VERSION, $1B, "[6;H"
  
 .PALETTE:
 ; default = foreground = \e[39m

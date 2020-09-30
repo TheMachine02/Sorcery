@@ -21,8 +21,8 @@ define	KERNEL_DEV_NULL			$E40000
 kinit:
 ; read kernel paramater
 ; silent : no LCD flashing / console updating, open console only if error
+sysdef _reboot
 .reboot:
-.boot:
 ; boot 5.0.1 stupidity power ++
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 	di
@@ -148,13 +148,36 @@ kinit:
 	ei
 	ret
  
+sysdef _uname
 kname:
-	ld	hl, .name_tag
+; hl is structure buf
+; copy it
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EFAULT
+	jp	z, syserror
+; copy data
+	ex	de, hl
+	ld	bc, 15
+	ldir
 	ret
-; TODO : put this in the certificate ?
-.name_tag:
+; TODO, put this in certificate ?
+.name_table:
+	dl	.name_system	; Operating system name (e.g., "Sorcery")
+	dl	.name_node	; network name ?
+	dl	.name_release	; Operating system release (e.g., "1.0.0")
+	dl	.name_version	; Operating system version
+	dl	.name_architecture	; Hardware identifier
+.name_system:
  db CONFIG_KERNEL_NAME, 0
-.architecture_tag:
+.name_node:
+ db "TI-83PCE", 0
+.name_release:
+ db CONFIG_KERNEL_RELEASE, 0
+.name_version:
+ db CONFIG_KERNEL_VERSION, 0
+.name_architecture:
  db "ez80", 0
  
 ; DEBUG_THREAD:

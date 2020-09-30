@@ -141,6 +141,8 @@ ktimer:
 	dec	hl
 	ret
 
+sysdef _alarm
+; TODO verify correct * invocation *
 .alarm:
 	ld	iy, (kthread_current)
 	lea	iy, iy+KERNEL_THREAD_TIMER

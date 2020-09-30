@@ -1,3 +1,5 @@
+define	CONFIG_KERNEL_NAME		"Sorcery"
+
 ; special code modifier ;
 define	CONFIG_USE_BOOT_PATCH		0
 ; try to save power during idle by lowering clock to 6MHz ;

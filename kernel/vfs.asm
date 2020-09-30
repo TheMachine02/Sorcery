@@ -42,6 +42,7 @@ define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
 kvfs:
 
 .set_errno:
+	push	iy
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_ERRNO), l
 	pop	iy
@@ -51,18 +52,23 @@ kvfs:
 
 .open_error_excl:
 	pop	af
+	pop	iy
 	ld	l, EEXIST
 	jr	.set_errno
 .open_error_noent:
 	pop	af
+	pop	iy
 	ld	l, ENOENT
 	jr	.set_errno
 .open_error_acess:
 	pop	ix
 	pop	de
 	pop	af
+	pop	iy
 	ld	l, EACCES
 	jr	.set_errno
+	
+sysdef _open
 .open:
 ; open(const char* path, int flags, mode_t mode)
 ; hl is path, bc is flags, a is mode
@@ -112,6 +118,7 @@ kvfs:
 	pop	ix
 	pop	de
 	pop	af
+	pop	iy
 	ld	l, EMFILE
 	jr	.set_errno
 .open_descriptor_found:
@@ -155,6 +162,7 @@ kvfs:
 	pop	iy
 	ret
 
+sysdef _close
 .close:
 ; hl is fd
 	add	hl, hl
@@ -178,6 +186,7 @@ kvfs:
 	ret	nz
 	jp	.inode_destroy
 
+sysdef _sync
 .sync:
 	ret
 	
@@ -204,6 +213,8 @@ kvfs:
 ; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
 ; TODO : implement fifo read
 	ret
+	
+sysdef _read
 .read:
 ;;size_t read(int fd, void *buf, size_t count);
 ; hl is fd, void *buf is de, size_t count is bc
@@ -260,10 +271,12 @@ kvfs:
 .read_no_clamp:
 	pop	bc
 	pop	de
-;	pop	hl
+	pop	hl
+	push	hl
+	add	hl, bc
+	ld	(ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), hl
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
 ; hl / 1024 : offset in block
-;	push	hl
 	dec	sp
 	pop	hl
 	inc	sp
@@ -333,14 +346,30 @@ kvfs:
 	ld	l, EAGAIN
 	jp	.set_errno
 	
+sysdef _write
 .write:
 	ret
 
+sysdef _ioctl
+.ioctl:
+	ret
+	
+sysdef _pipe
 .pipe:
 	ret
 
+sysdef _mkdir
 .mkdir:
 	ret
 
+sysdef _rmdir
 .rmdir:
+	ret
+
+sysdef _dup
+.dup:
+	ret
+	
+sysdef _chroot
+.chroot:
 	ret

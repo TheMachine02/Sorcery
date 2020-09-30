@@ -40,6 +40,7 @@ kpower:
 	bit	1, a
 	ret
 
+sysdef _shutdown
 .cycle_off:
 ; TODO save and restore LCD parameters
 	di

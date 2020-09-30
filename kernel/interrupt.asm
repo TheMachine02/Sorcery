@@ -397,6 +397,7 @@ end if
 	ei
 	ret
 
+sysdef _schedule
 .schedule:
 	di
 	ex	af, af'
@@ -406,6 +407,7 @@ end if
 	ld	iy, (kthread_current)
 	jp	.do_schedule
 
+sysdef _yield
 .yield:
 	di
 	ex	af, af'

@@ -1,12 +1,133 @@
-_syscall:
-; jumper to syscall ?
+macro align number
+	rb number - ($ mod number)
+end macro
 
+macro sysdef label
+	label = $
+end macro
+
+syscall:
+; a is the syscall number, other register are paramaters (de,bc,hl,iy)
+; all register are preserved across syscall (except hl as return register)
+; use ix for jumping
+	push	ix
+	push	iy
+	push	de
+	push	bc
+	push	af
+; stack is : sysret / syscall adress, we also need to preserve hl
+	push	hl
+	ld	hl, sysret
+	ex	(sp), hl
+	push	hl
+	ld	hl, sysjump shr 2
+	ld	l, a
+	add	hl, hl
+	add	hl, hl
+; restore and save hl
+	ex	(sp), hl
+	ret
+
+sysdef _enosys
+sysno:
+	ld	a, ENOSYS
+
+syserror:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_ERRNO), a
+	scf
+	sbc	hl, hl
+	ret
+
+sysret:
+	ei
 ; end syscall here
+	pop	af
+	pop	bc
+	pop	de
+	pop	iy
+	pop	ix
+	ret
 
-; syscall_0arg	_get_pid
-_get_pid:
-kthread.get_pid:
-; REGSAFE and ERRNO compliant
+; align this to 4 bytes
+align	4
+sysjump:
+	jp	_open
+	jp	_close
+	jp	_enosys		; _rename
+	jp	_enosys		; _mknod
+	jp	_enosys		; _link
+	jp	_enosys		; _unlink
+	jp	_read
+	jp	_write
+	jp	_enosys		; _lseek
+	jp	_enosys		; _chdir
+	jp	_sync
+	jp	_enosys		; _access
+	jp	_enosys		; _chmod
+	jp	_enosys		; _chown
+	jp	_enosys		; _stat
+	jp	_enosys		; _fstat
+	jp	_dup
+	jp	_getpid
+	jp	_getppid
+	jp	_enosys		; _statfs
+	jp	_enosys		; _execve
+	jp	_enosys		; _getdirent
+	jp	_enosys		; _time
+	jp	_enosys		; _stime
+	jp	_ioctl
+	jp	_brk
+	jp	_sbrk
+	jp	_enosys		; _vfork
+	jp	_enosys		; _mount
+	jp	_enosys		; _umount
+	jp	_enosys		; _signal
+	jp	_pause
+	jp	_alarm
+	jp	_kill
+	jp	_pipe
+	jp	_enosys		; _times
+	jp	_enosys		; _utime
+	jp	_chroot
+	jp	_enosys		; _fcntl
+	jp	_enosys		; _fchdir
+	jp	_enosys		; _fchmod
+	jp	_enosys		; _fchown
+	jp	_mkdir
+	jp	_rmdir
+	jp	_uname
+	jp	_enosys		; _waitpid
+	jp	_enosys		; _profil
+	jp	_uadmin
+	jp	_nice
+	jp	_enosys		; _sigdisp
+	jp	_enosys		; _flock
+	jp	_yield
+	jp	_schedule
+	jp	_enosys		; _kmalloc
+	jp	_enosys		; _kfree
+	jp	_enosys		; _select
+	jp	_enosys		; _getrlimit
+	jp	_enosys		; _setrlimit
+	jp	_enosys		; _setsid
+	jp	_enosys		; _getsid
+	jp	_shutdown
+	jp	_reboot
+	jp	_usleep
+	jp	_priv_lock
+	jp	_priv_unlock
+; 	jp	_socket
+; 	jp	_listen
+; 	jp	_bind
+; 	jp	_connect
+; 	jp	_accept
+; 	jp	_getsockaddrs
+; 	jp	_sendto
+; 	jp	_recvfrom
+	
+	
+sysdef _getpid
 ; pid_t getpid()
 ; return value is register hl
 	ld	hl, (kthread_current)
@@ -15,28 +136,22 @@ kthread.get_pid:
 	mlt	hl
 	ret
   
-; syscall_0arg	_get_ppid
-_get_ppid:
-kthread.get_ppid:
-; REGSAFE and ERRNO compliant
+sysdef _getppid
 ; pid_t getppid()
 ; return value is register hl
-	push	de
 	ld	hl, (kthread_current)
 	ld	de, KERNEL_THREAD_PPID
 	add	hl, de
 	ld	e, (hl)
 	ex	de, hl
-	pop	de
 	ret
 
-_uadmin:
+sysdef _uadmin
 ; cmd, fn, mdep
 	ret
 
-; pri
-_nice:
-kthread.nice:
+; priority
+sysdef _nice
 ; hl = nice, return the new nice value
 	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_NICE)
@@ -59,17 +174,23 @@ kthread.nice:
 	ld	l, a
 	ret
 
-_sbrk:
+sysdef _brk
+	ld	iy, (kthread_current)
+	jr	.brk_check
+	
+sysdef _sbrk
 ; increment as hl
 	ld	iy, (kthread_current)
 	ld	de, (iy+KERNEL_THREAD_BREAK)
 	add	hl, de
+.brk_check:
+	ld	a, ENOMEM
 ; now check : that sp - 512 > hl and that hl > iy + 256+13
 	lea	bc, iy+13
 	inc	d
 	or	a, a
 	sbc	hl, bc
-	jr	c, .break_error
+	jp	c, syserror
 	add	hl, bc
 ; now check with sp
 	push	hl
@@ -78,26 +199,23 @@ _sbrk:
 	pop	bc
 	or	a, a
 	sbc	hl, bc
-	jr	c, .break_error
+	jp	c, syserror
 ; all good, return the old break value
+	ld	(iy+KERNEL_THREAD_BREAK), bc
 	ex	de, hl
-	ret	
-.break_error:
-	ld	hl, $FFFF00 or -ENOMEM
-	ld	(iy+KERNEL_THREAD_ERRNO), hl
 	ret
+
+sysdef _pause
+	call	kthread.suspend
+	ld	a, EINTR
+	jp	syserror
 	
-_usleep:
-kthread.usleep:
+sysdef _usleep
 ; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
 ; EINTR, or EINVAL
-	push	iy
-	push	af
 	ld	iy, (kthread_current)
-	push	de
 	di
 	call	task_switch_sleep_ms
-	pop	de
 	call	task_yield
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
@@ -105,28 +223,20 @@ kthread.usleep:
 	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
 	ld	a, l
 	or	a, h
-	jr	nz, .usleep_errno_wake
+	ld	a, EINTR
+	jp	nz, syserror
 	ei
 	sbc	hl, hl
-	pop	af
-	pop	iy
-	ret
-.usleep_errno_wake:
-	pop	af
-	scf
-	sbc	hl, hl
-	ld	(iy+KERNEL_THREAD_ERRNO), EINTR
-	pop	iy
 	ret
 
-_port_privileged_unlock:
+sysdef _priv_unlock
 ; exemple, enable flash sequence and SHA256 port
 	in0	a, ($06)
 	set	2, a
 	out0	($06), a
 	ret
 
-_port_privileged_lock:
+sysdef _priv_lock
 	in0	a, ($06)
 	res	2, a
 	out0	($06), a

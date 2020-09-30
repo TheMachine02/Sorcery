@@ -56,14 +56,14 @@ include	'kernel/arch/pic.asm'
 include	'kernel/compress/lz4.asm'
 include	'kernel/exec/leaf.asm'
 include	'fs/romfs.asm'
+include	'kernel/nmi.asm'
+
 kernel_initramfs:
 file	'initramfs'
 ; end guard
  db	$00, $00
 kernel_romfs:
 file	'rootfs'
-include	'kernel/nmi.asm'
-
 include	'kernel/font/gohufont.inc'
 
 include	'kernel/driver/video.asm'

@@ -2,7 +2,8 @@
 #generate config
 str=$(git rev-parse --short HEAD)
 echo "; auto generated file" > config
-echo "define CONFIG_KERNEL_NAME \"Sorcery.0.0.1-slp-"$str"\"" >> config
+echo "define CONFIG_KERNEL_VERSION \"0.0.1-slp-"$str"\"" >> config
+echo "define CONFIG_KERNEL_RELEASE \"slp-"$str"\"" >> config
 cat config_build >> config
 echo "Generating initramfs..."
 ./fasmg kernel/bss.asm kernel/initramfs

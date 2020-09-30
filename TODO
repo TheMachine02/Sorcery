@@ -9,3 +9,8 @@ use circular buffer for pipe
 file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
 cd for change directory
 Rework timer
+
+
+Syscall error handler
+Syscall on enter
+ring_buffer >>>> fifo

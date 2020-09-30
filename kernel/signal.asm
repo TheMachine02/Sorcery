@@ -1,7 +1,7 @@
 define		KERNEL_SIGNAL_MAX	32
 
 signal:
-	
+
 .wait:
 ; wait for a signal, return hl = signal
 	call	kthread.suspend
@@ -86,7 +86,8 @@ signal:
 	ld	hl, (kthread_current)
 	ld	c, (hl)
 	pop	hl
-	
+
+sysdef _kill
 .kill:
 ; Send signal to an other thread
 ; REGSAFE and ERRNO compliant
