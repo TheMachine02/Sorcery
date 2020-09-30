@@ -74,6 +74,7 @@ kinterrupt:
 	ret
 
 .irq_request:
+; TODO : check if handler is not already taken
 ; a = IRQ, hl = interrupt routine
 ; check the interrupt routine is in *RAM*
 	call	.irq_extract_line

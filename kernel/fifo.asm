@@ -35,6 +35,7 @@ fifo:
 	ret
 	
 .write:
+; TODO : implement write from buffer, (de), bc is size
 ; a = char
 ; write a character in head of fifo
 	ld	hl, (iy+FIFO_HEAD)

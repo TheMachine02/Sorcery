@@ -46,9 +46,14 @@ sysdef _open
 ; open(const char* path, int flags, mode_t mode)
 ; hl is path, bc is flags, a is mode
 ; TODO : inode create should NOT create directory
-; TODO : inode find should preserve registers
+	push	af
+	push	hl
+	push	bc
 	call	.inode_find
+	pop	bc
+	pop	hl
 	jr	c, .open_create
+	pop	af
 ; check if both excl and creat are set
 	ld	a, b
 	and	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
@@ -57,12 +62,15 @@ sysdef _open
 	jp	z, syserror
 	jr	.open_continue
 .open_create:
+	pop	af
 ; check that flag O_CREAT set
 	bit	1, b
 	ld	a, ENOENT
 	jp	z, syserror
 ; a is our mode, and hl is path
+	push	bc
 	call	.inode_create
+	pop	bc
 ; if inode create c, the eror should already have been set, so just return
 	ret	c
 .open_continue:

@@ -32,7 +32,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ld	bc, .phy_mem_ops
 	ld	hl, .CONSOLE_DEV
 ; inode capabilities flags
-; single dev block, (so write / read / seek only), no seek capabilities exposed
+; single character device, (so write / read / ioctl), no seek capabilities exposed
 	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	jp	kvfs.inode_device
 
@@ -45,17 +45,24 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jp	.phy_ioctl
 
 .phy_read:
-; offset hl, de, bc
+; file offset hl, buffer is de, bc
+; return hl = number of bytes read
+	push	bc
 	ld	hl, $E40000
 	ldir
+	pop	hl
 	ret
 
 .phy_write:
-; write a zero terminated string @bc to the /dev/console special file
+; write string pointed by hl, file offset de, bc bytes
+; write to the character device console
+; return hl = number of bytes writed
+	push	bc
 	push	hl
 	ex	(sp), ix
 	call	.phy_write_ex
 	pop	ix
+	pop	hl
 	ret
 
 .phy_write_ex:

@@ -41,7 +41,7 @@ define	phy_destroy_inode	28
 	dl	$0
 	ret		; phy_write (physical write to backing device)
 	dl	$0
-	ret		; phy_sync (sync file)
+	ret		; phy_sync (physical sync file to backing device)
 	dl	$0
 	ret		; phy_seek (do a seek in file)
 	dl	$0

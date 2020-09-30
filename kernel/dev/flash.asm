@@ -27,6 +27,8 @@ flash:
 	ret
 ; no op
 .phy_read:
+	or	a, a
+	sbc	hl, hl
 	ret
 
 .phy_write_base:

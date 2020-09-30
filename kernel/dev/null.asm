@@ -30,9 +30,5 @@ null:
 	ret
 	
 .phy_ioctl:
-	push	iy
-	ld	hl, $FFFF00 or ENOTTY
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_ERRNO), l
-	pop	iy
-	ret
+	ld	a, ENOTTY
+	jp	syserror
