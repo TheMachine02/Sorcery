@@ -202,33 +202,6 @@ kname:
 ; 	call	atomic_mutex.unlock
 ; 	jr	DEBUG_THREAD_2
 
-; TODO : put this in the certificate ?
-; flash unlock and lock
-flash.lock:
-	xor	a, a
-	out0	($28), a
-	in0	a, ($06)
-	res	2, a
-	out0	($06), a
-	ret
-	
-flash.unlock:
-; need to be in privileged flash actually
-	in0	a, ($06)
-	or	a, 4
-	out0	($06), a
-; flash sequence
-	ld	a, 4
-	di 
-	jr	$+2
-	di
-	rsmix 
-	im 1
-	out0	($28), a
-	in0	a, ($28)
-	bit	2, a
-	ret
-
 printk:
 	push	hl
 	ld	bc, 0

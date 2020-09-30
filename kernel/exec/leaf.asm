@@ -1,5 +1,6 @@
 leaf:
  
+sysdef _execve
 .execve:
 	scf
 	ret

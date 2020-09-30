@@ -72,7 +72,7 @@ sysjump:
 	jp	_getpid
 	jp	_getppid
 	jp	_enosys		; _statfs
-	jp	_enosys		; _execve
+	jp	_execve
 	jp	_enosys		; _getdirent
 	jp	_enosys		; _time
 	jp	_enosys		; _stime
@@ -117,6 +117,8 @@ sysjump:
 	jp	_usleep
 	jp	_priv_lock
 	jp	_priv_unlock
+	jp	_flash_lock
+	jp	_flash_unlock
 ; 	jp	_socket
 ; 	jp	_listen
 ; 	jp	_bind
@@ -237,6 +239,36 @@ sysdef _priv_unlock
 	ret
 
 sysdef _priv_lock
+	in0	a, ($06)
+	res	2, a
+	out0	($06), a
+	ret
+
+; TODO : put this in the certificate ?
+; flash unlock and lock
+
+sysdef _flash_unlock
+flash.unlock:
+; need to be in privileged flash actually
+	in0	a, ($06)
+	or	a, 4
+	out0	($06), a
+; flash sequence
+	ld	a, 4
+	di 
+	jr	$+2
+	di
+	rsmix 
+	im 1
+	out0	($28), a
+	in0	a, ($28)
+	bit	2, a
+	ret
+	
+sysdef _flash_lock
+flash.lock:
+	xor	a, a
+	out0	($28), a
 	in0	a, ($06)
 	res	2, a
 	out0	($06), a

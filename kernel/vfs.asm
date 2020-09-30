@@ -150,28 +150,6 @@ sysdef _sync
 .sync:
 	ret
 	
-	
-.read_error_edir:
-	ld	a, EISDIR
-	jp	syserror
-
-.read_phy_device:
-	push	iy
-	ld	iy, (iy+KERNEL_VFS_INODE_OP)
-	lea	iy, iy+phy_read
-	call	.jpiy
-	pop	iy
-	ret
-.jpiy:
-	jp	(iy)
-
-.read_fifo:
-; the inode is special in case of a fifo
-; the 48 bytes data block hold all the fifo data
-; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
-; TODO : implement fifo read
-	ret
-	
 sysdef _read
 .read:
 ;;size_t read(int fd, void *buf, size_t count);
@@ -200,17 +178,28 @@ sysdef _read
 	jp	z, syserror
 	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
 ; hl is offset in file, iy is inode, de is buffer, bc is count
+	push	hl
+; first the lock
+; if NDELAY is set, use try_lock
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; KERNEL_VFS_O_NDELAY (128)
+	bit	7, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	jp	nz, .read_ndelay
+	call	atomic_rw.lock_read
+.read_ndelay_return:
+	pop	hl
 ; check inode flag right now
 ; if block device or character device, directly pass 
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-; well, we have a directory opened right here
-	tst	a, KERNEL_VFS_TYPE_DIRECTORY
-	jr	nz, .read_error_edir
 	tst	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jr	nz, .read_phy_device
-	and	a, KERNEL_VFS_TYPE_FIFO
-	jr	nz, .read_fifo
+	jp	nz, .read_phy_device
+	tst	a, KERNEL_VFS_TYPE_FIFO
+	jp	nz, .read_fifo
+; well, we have a directory opened right here
+	and	a, KERNEL_VFS_TYPE_DIRECTORY
+	ld	a, EISDIR
+	jp	nz, syserror
 ; check hl+bc < inode size
 ; push bc if <, else push the bc clamped to inode size
 	push	hl
@@ -246,13 +235,6 @@ sysdef _read
 	rra
 ; a = block offset, de buffer, bc count
 ; now let's read
-; first the lock
-; if NDELAY is set, use try_lock
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-; KERNEL_VFS_O_NDELAY (128)
-	bit	7, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
-	jr	nz, .read_ndelay
-	call	atomic_rw.lock_read
 .read_start:
 	push	bc
 	push	bc
@@ -292,6 +274,7 @@ sysdef _read
 .read_not_null2:
 	pop	bc
 	ldir
+.read_unlock:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	pop	hl	; our size read
@@ -300,9 +283,31 @@ sysdef _read
 ; TODO : implement
 ;	call	atomic_rw.try_lock_read
 	scf
-	jr	nc, .read_start
+	jp	nc, .read_ndelay_return
 	ld	a, EAGAIN
 	jp	syserror
+.read_phy_device:
+	push	iy
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_read
+	call	.read_indirect_call
+	pop	iy
+	jr	.read_unlock
+.read_fifo:
+; the inode is special in case of a fifo
+; the 48 bytes data block hold all the fifo data
+; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
+; TODO : check if the fifo can be read / write
+; iy is the inode
+	push	iy
+	lea	iy, iy+KERNEL_VFS_INODE_DATA
+	call	fifo.read
+	pop	iy
+; save the size readed
+	push	hl
+	jr	.read_unlock
+.read_indirect_call:
+	jp	(iy)
 	
 sysdef _write
 .write:

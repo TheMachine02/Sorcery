@@ -8,6 +8,7 @@ define	KERNEL_VFS_INODE_ATOMIC_LOCK		8	; rw lock, 5 bytes
 define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer
 define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all block are indirect)
 ; 3*16, 48 bytes
+; in case of fifo, hold the fifo structure (15 bytes)
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_FLAGS		0	; flags
