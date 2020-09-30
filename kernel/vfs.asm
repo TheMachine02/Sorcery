@@ -41,66 +41,34 @@ define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
 
 kvfs:
 
-.set_errno:
-	push	iy
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_ERRNO), l
-	pop	iy
-	scf
-	sbc	hl, hl
-	ret
-
-.open_error_excl:
-	pop	af
-	pop	iy
-	ld	l, EEXIST
-	jr	.set_errno
-.open_error_noent:
-	pop	af
-	pop	iy
-	ld	l, ENOENT
-	jr	.set_errno
-.open_error_acess:
-	pop	ix
-	pop	de
-	pop	af
-	pop	iy
-	ld	l, EACCES
-	jr	.set_errno
-	
 sysdef _open
 .open:
 ; open(const char* path, int flags, mode_t mode)
 ; hl is path, bc is flags, a is mode
-	push	iy
-	push	af
-	push	hl
+; TODO : inode create should NOT create directory
+; TODO : inode find should preserve registers
 	call	.inode_find
-	pop	hl
+	jr	c, .open_create
 ; check if both excl and creat are set
 	ld	a, b
 	and	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
 	sub	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
-	jr	z, .open_error_excl
-	jr	nc, .open_continue
+	ld	a, EEXIST
+	jp	z, syserror
+	jr	.open_continue
 .open_create:
 ; check that flag O_CREAT set
 	bit	1, b
-	jr	z, .open_error_noent
+	ld	a, ENOENT
+	jp	z, syserror
 ; a is our mode, and hl is path
-; TODO : inode create should NOT create directory path
 	call	.inode_create
 ; if inode create c, the eror should already have been set, so just return
-	jr	nc, .open_continue
-	pop	af
-	pop	iy
-	ret
+	ret	c
 .open_continue:
 ; iy = node
-	push	de
-	push	ix
-	push	bc
 ; now find free file descriptor
+; we can drop b from flags, it is useless now
 	ld	ix, (kthread_current)
 	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR + 24
 	ld	b, 21
@@ -114,21 +82,16 @@ sysdef _open
 	add	ix, de
 	djnz	.open_descriptor
 ; no descriptor found
-	pop	bc
-	pop	ix
-	pop	de
-	pop	af
-	pop	iy
-	ld	l, EMFILE
-	jr	.set_errno
+	ld	a, EMFILE
+	jp	syserror
 .open_descriptor_found:
-	pop	bc
 ; check file permission
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_PERMISSION_RWX
 	and	a, c
 	xor	a, c
-	jr	nz, .open_error_acess
+	ld	a, EACCES
+	jp	nz, syserror
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
@@ -156,14 +119,11 @@ sysdef _open
 	rr	l
 	srl	h
 	rr	l
-	pop	ix
-	pop	de
-	pop	af
-	pop	iy
 	ret
 
 sysdef _close
 .close:
+; TODO ; finish to implement
 ; hl is fd
 	add	hl, hl
 	add	hl, hl
@@ -191,12 +151,10 @@ sysdef _sync
 	ret
 	
 	
-.read_error_badfd:
-	ld	l, EBADF
-	jp	.set_errno
 .read_error_edir:
-	ld	l, EISDIR
-	jp	.set_errno
+	ld	a, EISDIR
+	jp	syserror
+
 .read_phy_device:
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
@@ -234,11 +192,12 @@ sysdef _read
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .read_error_badfd
+	ld	a, EBADF
+	jp	z, syserror
 ; check we have read permission
 ; KERNEL_VFS_O_R (1)
 	bit	0, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
-	jr	z, .read_error_badfd
+	jp	z, syserror
 	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
 ; hl is offset in file, iy is inode, de is buffer, bc is count
 ; check inode flag right now
@@ -338,13 +297,12 @@ sysdef _read
 	pop	hl	; our size read
 	ret
 .read_ndelay:
-;	call	atomic_rw.try_lock_read
 ; TODO : implement
+;	call	atomic_rw.try_lock_read
 	scf
 	jr	nc, .read_start
-.read_error_again:
-	ld	l, EAGAIN
-	jp	.set_errno
+	ld	a, EAGAIN
+	jp	syserror
 	
 sysdef _write
 .write:
