@@ -33,8 +33,10 @@ sysno:
 	ld	a, ENOSYS
 
 syserror:
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_ERRNO), a
+	push	ix
+	ld	ix, (kthread_current)
+	ld	(ix+KERNEL_THREAD_ERRNO), a
+	pop	ix
 	scf
 	sbc	hl, hl
 	ret

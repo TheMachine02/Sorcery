@@ -337,9 +337,15 @@ sysdef _mkdir
 	push	bc
 	call	.inode_find
 	pop	de
-; if inode_find carry we have an error already set by this function, but that *okay*
+; if inode_find carry we have an error already set by this function, but that *okay* (and even wanted)
 	ld	a, EEXIST
 	jp	nc, syserror
+; check the error is the correct one, ie ENOENT
+	ld	a, ENOENT
+	ld	ix, (kthread_current)
+	cp	a, (ix+KERNEL_THREAD_ERRNO)
+; if the error is different, return
+	ret	nz
 ; hl is partial string, iy is the PARENT node
 ; we have several sanity check here
 ; first check that parent is a directory
@@ -393,7 +399,14 @@ sysdef _chroot
 
 sysdef _chmod
 .chmod:
-	ret
+; hl is path, c is new mode
+	push	bc
+	call	.inode_find
+	pop	bc
+; if carry, error should have been set (could be acess in read/write/file not found etc)
+	ret	c
+; iy is the inode, c is mode
+	jr	.chmod_shared
 	
 sysdef _fchmod
 .fchmod:
@@ -401,11 +414,11 @@ sysdef _fchmod
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	ld	ix, (kthread_current)
+	ld	iy, (kthread_current)
 	ex	de, hl
-	add	ix, de
+	add	iy, de
 	ex	de, hl
-	ld	hl, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
 ; check if the fd is valid
 ; if not open / invalid, all data should be zero here
 	add	hl, de
@@ -413,13 +426,14 @@ sysdef _fchmod
 	sbc	hl, de
 	ld	a, EBADF
 	jp	z, syserror
+.chmod_shared:
 ; write permission ?
 	ld	a, EACESS
-	bit	1, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	1, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 ; read the inode
-	ld	ix, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 	ld	a, c
 	and	a, KERNEL_VFS_PERMISSION_RWX
@@ -428,7 +442,7 @@ sysdef _fchmod
 	and	a, not KERNEL_VFS_PERMISSION_RWX
 	or	a, c
 	ld	(iy+KERNEL_VFS_INODE_FLAGS), a
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	or	a, a
 	sbc	hl, hl
