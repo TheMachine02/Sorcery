@@ -182,7 +182,7 @@ sysdef _read
 	jp	z, syserror
 ; check we have read permission
 ; KERNEL_VFS_O_R (1)
-	ld	a, EACESS
+	ld	a, EACCES
 	bit	0, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
@@ -428,7 +428,7 @@ sysdef _fchmod
 	jp	z, syserror
 .chmod_shared:
 ; write permission ?
-	ld	a, EACESS
+	ld	a, EACCES
 	bit	1, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 ; read the inode
@@ -444,6 +444,16 @@ sysdef _fchmod
 	ld	(iy+KERNEL_VFS_INODE_FLAGS), a
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
+
+sysdef _chown
+sysdef _fchown
+; TODO : maybe later ?
+.chown:
+.fchown:
+; no-op here
 	or	a, a
 	sbc	hl, hl
 	ret

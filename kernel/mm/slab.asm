@@ -44,6 +44,7 @@ kmem:
 .__cache_malloc_error_null:
 	pop	af
 	scf
+	sbc	hl, hl
 	ret
 
 .cache_malloc:
@@ -134,13 +135,12 @@ kmem:
 
 .__cache_alloc_error:
 	rsti
-	or	a, a
-	sbc	hl, hl
 	pop	iy
 	pop	bc
 	pop	de
 	pop	af
 	scf
+	sbc	hl, hl
 	ret
 	
 .__cache_grow_error:

@@ -28,6 +28,16 @@ syscall:
 	ex	(sp), hl
 	ret
 
+sysret:
+	ei
+; end syscall here
+	pop	af
+	pop	bc
+	pop	de
+	pop	iy
+	pop	ix
+	ret	
+	
 sysdef _enosys
 sysno:
 	ld	a, ENOSYS
@@ -41,96 +51,76 @@ syserror:
 	sbc	hl, hl
 	ret
 
-sysret:
-	ei
-; end syscall here
-	pop	af
+sysdef	_kmalloc
+; those are kinda special since they don't have many error, and already save and restore register
+; you can call them directly if you wish
+; may destroy a if there is an error (please note kernel routine should call kmalloc directly and handle error themselves)
+	call	kmalloc
+	ret	nc
+	ld	a, ENOMEM
+	jr	syserror
+
+sysdef	_kfree
+	call	kfree
+	ret	nc
+	ld	a, EFAULT
+	jr	syserror
+
+sysdef _brk
+	ld	iy, (kthread_current)
+	jr	.brk_check
+	
+sysdef _sbrk
+; increment as hl
+	ld	iy, (kthread_current)
+	ld	de, (iy+KERNEL_THREAD_BREAK)
+	add	hl, de
+.brk_check:
+	ld	a, ENOMEM
+; now check : that sp - 512 > hl and that hl > iy + 256+13
+	lea	bc, iy+13
+	inc	d
+	or	a, a
+	sbc	hl, bc
+	jr	c, syserror
+	add	hl, bc
+; now check with sp
+	push	hl
+	ld	hl, -512
+	add	hl, sp
 	pop	bc
-	pop	de
-	pop	iy
-	pop	ix
+	or	a, a
+	sbc	hl, bc
+	jr	c, syserror
+; all good, return the old break value
+	ld	(iy+KERNEL_THREAD_BREAK), bc
+	ex	de, hl
 	ret
 
-; align this to 4 bytes
-align	4
-sysjump:
-	jp	_open
-	jp	_close
-	jp	_enosys		; _rename
-	jp	_enosys		; _mknod
-	jp	_enosys		; _link
-	jp	_enosys		; _unlink
-	jp	_read
-	jp	_write
-	jp	_enosys		; _lseek
-	jp	_enosys		; _chdir
-	jp	_sync
-	jp	_enosys		; _access
-	jp	_enosys		; _chmod
-	jp	_enosys		; _chown
-	jp	_enosys		; _stat
-	jp	_enosys		; _fstat
-	jp	_dup
-	jp	_getpid
-	jp	_getppid
-	jp	_enosys		; _statfs
-	jp	_execve
-	jp	_enosys		; _getdirent
-	jp	_enosys		; _time
-	jp	_enosys		; _stime
-	jp	_ioctl
-	jp	_brk
-	jp	_sbrk
-	jp	_enosys		; _vfork
-	jp	_enosys		; _mount
-	jp	_enosys		; _umount
-	jp	_enosys		; _signal
-	jp	_pause
-	jp	_alarm
-	jp	_kill
-	jp	_pipe
-	jp	_enosys		; _times
-	jp	_enosys		; _utime
-	jp	_chroot
-	jp	_enosys		; _fcntl
-	jp	_enosys		; _fchdir
-	jp	_enosys		; _fchmod
-	jp	_enosys		; _fchown
-	jp	_mkdir
-	jp	_rmdir
-	jp	_uname
-	jp	_enosys		; _waitpid
-	jp	_enosys		; _profil
-	jp	_uadmin
-	jp	_nice
-	jp	_enosys		; _sigdisp
-	jp	_enosys		; _flock
-	jp	_yield
-	jp	_schedule
-	jp	_enosys		; _kmalloc
-	jp	_enosys		; _kfree
-	jp	_enosys		; _select
-	jp	_enosys		; _getrlimit
-	jp	_enosys		; _setrlimit
-	jp	_enosys		; _setsid
-	jp	_enosys		; _getsid
-	jp	_shutdown
-	jp	_reboot
-	jp	_usleep
-	jp	_priv_lock
-	jp	_priv_unlock
-	jp	_flash_lock
-	jp	_flash_unlock
-; 	jp	_socket
-; 	jp	_listen
-; 	jp	_bind
-; 	jp	_connect
-; 	jp	_accept
-; 	jp	_getsockaddrs
-; 	jp	_sendto
-; 	jp	_recvfrom
+sysdef _pause
+	call	kthread.suspend
+	ld	a, EINTR
+	jr	syserror
 	
-	
+sysdef _usleep
+; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
+; EINTR, or EINVAL
+	ld	iy, (kthread_current)
+	di
+	call	task_switch_sleep_ms
+	call	task_yield
+; we are back with interrupt
+; this one is risky with interrupts, so disable them the time to do it
+	di
+	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	a, l
+	or	a, h
+	ld	a, EINTR
+	jr	nz, syserror
+	ei
+	sbc	hl, hl
+	ret
+
 sysdef _getpid
 ; pid_t getpid()
 ; return value is register hl
@@ -178,61 +168,6 @@ sysdef _nice
 	ld	l, a
 	ret
 
-sysdef _brk
-	ld	iy, (kthread_current)
-	jr	.brk_check
-	
-sysdef _sbrk
-; increment as hl
-	ld	iy, (kthread_current)
-	ld	de, (iy+KERNEL_THREAD_BREAK)
-	add	hl, de
-.brk_check:
-	ld	a, ENOMEM
-; now check : that sp - 512 > hl and that hl > iy + 256+13
-	lea	bc, iy+13
-	inc	d
-	or	a, a
-	sbc	hl, bc
-	jp	c, syserror
-	add	hl, bc
-; now check with sp
-	push	hl
-	ld	hl, -512
-	add	hl, sp
-	pop	bc
-	or	a, a
-	sbc	hl, bc
-	jp	c, syserror
-; all good, return the old break value
-	ld	(iy+KERNEL_THREAD_BREAK), bc
-	ex	de, hl
-	ret
-
-sysdef _pause
-	call	kthread.suspend
-	ld	a, EINTR
-	jp	syserror
-	
-sysdef _usleep
-; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
-; EINTR, or EINVAL
-	ld	iy, (kthread_current)
-	di
-	call	task_switch_sleep_ms
-	call	task_yield
-; we are back with interrupt
-; this one is risky with interrupts, so disable them the time to do it
-	di
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
-	ld	a, l
-	or	a, h
-	ld	a, EINTR
-	jp	nz, syserror
-	ei
-	sbc	hl, hl
-	ret
-
 sysdef _priv_unlock
 ; exemple, enable flash sequence and SHA256 port
 	in0	a, ($06)
@@ -275,3 +210,82 @@ flash.lock:
 	res	2, a
 	out0	($06), a
 	ret
+	
+; align this to 4 bytes
+align	4
+sysjump:
+	jp	_open
+	jp	_close
+	jp	_enosys		; _rename
+	jp	_enosys		; _mknod
+	jp	_enosys		; _link
+	jp	_enosys		; _unlink
+	jp	_read
+	jp	_write
+	jp	_enosys		; _lseek
+	jp	_enosys		; _chdir
+	jp	_sync
+	jp	_enosys		; _access
+	jp	_chmod
+	jp	_chown
+	jp	_enosys		; _stat
+	jp	_enosys		; _fstat
+	jp	_dup
+	jp	_getpid
+	jp	_getppid
+	jp	_enosys		; _statfs
+	jp	_execve
+	jp	_enosys		; _getdirent
+	jp	_enosys		; _time
+	jp	_enosys		; _stime
+	jp	_ioctl
+	jp	_brk
+	jp	_sbrk
+	jp	_enosys		; _vfork
+	jp	_enosys		; _mount
+	jp	_enosys		; _umount
+	jp	_enosys		; _signal
+	jp	_pause
+	jp	_alarm
+	jp	_kill
+	jp	_pipe
+	jp	_enosys		; _times
+	jp	_enosys		; _utime
+	jp	_chroot
+	jp	_enosys		; _fcntl
+	jp	_enosys		; _fchdir
+	jp	_fchmod
+	jp	_fchown
+	jp	_mkdir
+	jp	_rmdir
+	jp	_uname
+	jp	_enosys		; _waitpid
+	jp	_enosys		; _profil
+	jp	_uadmin
+	jp	_nice
+	jp	_enosys		; _sigdisp
+	jp	_enosys		; _flock
+	jp	_yield
+	jp	_schedule
+	jp	_kmalloc
+	jp	_kfree
+	jp	_enosys		; _select
+	jp	_enosys		; _getrlimit
+	jp	_enosys		; _setrlimit
+	jp	_enosys		; _setsid
+	jp	_enosys		; _getsid
+	jp	_shutdown
+	jp	_reboot
+	jp	_usleep
+	jp	_priv_lock
+	jp	_priv_unlock
+	jp	_flash_lock
+	jp	_flash_unlock
+; 	jp	_socket
+; 	jp	_listen
+; 	jp	_bind
+; 	jp	_connect
+; 	jp	_accept
+; 	jp	_getsockaddrs
+; 	jp	_sendto
+; 	jp	_recvfrom
