@@ -12,5 +12,5 @@ Other memory specific area can use both. Usually, defined table use the UPPER_CA
 
 # Assembly convention
 
-Use a 8 space alt at the begin of the line containing an opcode, an alt after the opcode, and a space after the ','  of the first operand
+Use a 8 space tab at the begin of the line containing an opcode, an tab after the opcode, and a space after the ','  of the first operand
 Commentary should be put either after the instruction or on the line before.

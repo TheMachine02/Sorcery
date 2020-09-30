@@ -1,5 +1,5 @@
 ; inode flags = (permission or type)
-; permission, read/write/execute - map to posix "other" permission
+; permission, read/write/execute - map to posix "other" permission. THIS IS "MODE"
 define	KERNEL_VFS_PERMISSION_R			1
 define	KERNEL_VFS_PERMISSION_W			2
 define	KERNEL_VFS_PERMISSION_X			4
@@ -182,6 +182,7 @@ sysdef _read
 	jp	z, syserror
 ; check we have read permission
 ; KERNEL_VFS_O_R (1)
+	ld	a, EACESS
 	bit	0, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
@@ -331,6 +332,51 @@ sysdef _pipe
 
 sysdef _mkdir
 .mkdir:
+; int mkdir(const char *pathname, mode_t mode)
+; hl is path, c is mode
+	push	bc
+	call	.inode_find
+	pop	de
+; if inode_find carry we have an error already set by this function, but that *okay*
+	ld	a, EEXIST
+	jp	nc, syserror
+; hl is partial string, iy is the PARENT node
+; we have several sanity check here
+; first check that parent is a directory
+	ld	a, ENOTDIR
+	bit	3, (iy+KERNEL_VFS_INODE_FLAGS)
+	jp	z, syserror
+; check the inode can be writed
+	bit	1, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	jp	z, syserror
+; right here, hl is the partial string and should be null terminated, does not contain '/'
+	push	hl
+	ld	a, '/'
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	cpir
+	pop	hl
+	ld	a, ENOENT
+	jp	z, syserror
+; does the base name is not too long ?
+	xor	a, a
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	push	hl
+	cpir
+	pop	hl
+	ld	a, ENAMETOOLONG
+	jp	po, syserror
+; now, we can allocate the inode & create the directory inode
+; convention : hl is the name of the inode, iy is parent inode (it MUST be a directory)
+	ld	a, e
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	or	a, KERNEL_VFS_TYPE_DIRECTORY
+	call	.inode_allocate
+; if carry, it mean we have an error on memory allocation
+	ld	a, ENOMEM
+	jp	c, syserror
+	or	a, a
+	sbc	hl, hl
 	ret
 
 sysdef _rmdir
@@ -343,4 +389,47 @@ sysdef _dup
 	
 sysdef _chroot
 .chroot:
+	ret
+
+sysdef _chmod
+.chmod:
+	ret
+	
+sysdef _fchmod
+.fchmod:
+; hl is fd, c is new mode
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	ix, (kthread_current)
+	ex	de, hl
+	add	ix, de
+	ex	de, hl
+	ld	hl, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EBADF
+	jp	z, syserror
+; write permission ?
+	ld	a, EACESS
+	bit	1, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	jp	z, syserror
+; read the inode
+	ld	ix, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	ld	a, c
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	ld	c, a
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, not KERNEL_VFS_PERMISSION_RWX
+	or	a, c
+	ld	(iy+KERNEL_VFS_INODE_FLAGS), a
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
 	ret

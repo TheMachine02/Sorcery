@@ -9,8 +9,8 @@
  The handler routine will then :
  - Find the source which triggered the interrupt by reading the interrupt controller register
  - If multiple source triggered in same time, choice the one with the highest priority
-For indication : IRQ priority : crystal > keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
-To very fastly priorize, it read the special crafted table pointed by register i (usually adress $D00000) and retrieve both the value needed to acknowledge the interrupt and the pointer to the jump table to the correct handler. It then simply change the stack pointer to point to the interrupt stack and jump to the handler.
+
+For indication : IRQ priority : crystal > keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power. To very fastly priorize, it read the special crafted table pointed by register i (usually adress $D00000) and retrieve both the value needed to acknowledge the interrupt and the pointer to the jump table to the correct handler. It then simply change the stack pointer to point to the interrupt stack and jump to the handler.
 
 A driver can install a handler with .irq_request function, suppress an handler with .irq_free. You can also disable a particular interrupt with .irq_enable and .irq_disable
 
