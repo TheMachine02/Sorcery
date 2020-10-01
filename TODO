@@ -10,4 +10,9 @@ file execution within console (check /bin/ if command not found, else exec /bin/
 cd for change directory
 Rework timer
 
-ring_buffer >>>> fifo
+inode locking :
+-inode get : lock for read all inode of the path except the last which shall be write locked
+
+
+>> exemple : acquier read lock, check metadata, error, return
+

@@ -33,8 +33,9 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ld	hl, .CONSOLE_DEV
 ; inode capabilities flags
 ; single character device, (so write / read / ioctl), no seek capabilities exposed
-	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
-	jp	kvfs.inode_device
+; 	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+; 	jp	kvfs.inode_device
+	ret
 
 .CONSOLE_DEV:
  db "/dev/console", 0

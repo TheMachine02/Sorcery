@@ -6,9 +6,10 @@ null:
 	ld	hl, .NULL_DEV
 ; inode capabilities flags
 ; single char dev, (so write / read / ioctl only)
-	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
-	jp	kvfs.inode_device
-
+; 	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+; 	jp	kvfs.inode_device
+	ret
+; 
 .NULL_DEV:
  db "/dev/null", 0
 

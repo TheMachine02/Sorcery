@@ -12,8 +12,9 @@ flash:
 	ld	hl, .FLASH_DEV
 ; inode capabilities flags
 ; single dev block
-	ld	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
-	jp	kvfs.inode_device
+; 	ld	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
+; 	jp	kvfs.inode_device
+	ret
 
 .FLASH_DEV:
  db "/dev/flash", 0

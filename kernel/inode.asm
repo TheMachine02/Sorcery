@@ -11,9 +11,8 @@ define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all
 ; in case of fifo, hold the fifo structure (15 bytes)
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
-define	KERNEL_VFS_DIRECTORY_FLAGS		0	; flags
-define	KERNEL_VFS_DIRECTORY_INODE		1	; 3 bytes pointer to inode
-define	KERNEL_VFS_DIRECTORY_NAME		4	; name, 
+define	KERNEL_VFS_DIRECTORY_INODE		0	; 3 bytes pointer to inode
+define	KERNEL_VFS_DIRECTORY_NAME		3	; name, 
 
 define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
@@ -53,33 +52,23 @@ define	phy_destroy_inode	28
 	dl	$00
 	ret		; phy_destroy_inode
 
-.inode_get_found:
-; increment the reference
-; we don't care if it is atomic or not, we are at least read locked
-; decrementing this reference is always _write_ locked, so it is always exclusive
-	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
-; unlock
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_read
-	or	a, a
-	ret
-
 ; about locking : you should always lock the PARENT first when you need to write both parent & inode to prevent deadlock
 ; inode searching can sleep with parent inode lock waiting for child inode to be free'd for read
 ; best is always locking only ONE inode
 ; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
+
 .inode_find:
 ; start at root inode, hl is path
 	ld	iy, kvfs_root
 	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_read
+	call	atomic_rw.lock_write
 	pop	hl
 	inc	hl	; skip first "/"
 .inode_parse_directory:
 	ld	a, (hl)
 	or	a, a
-	jr	z, .inode_get_found
+; 	jr	z, .inode_get_found
 	ld	a, '/'
 	push	hl
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
@@ -139,7 +128,7 @@ define	phy_destroy_inode	28
 	ex	(sp), hl
 	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_read
+	call	atomic_rw.unlock_write
 	pop	hl
 	scf
 	ret
@@ -152,11 +141,11 @@ define	phy_destroy_inode	28
 ; ix is the directory found, so use it as new parent inode
 	ld	iy, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_read
+	call	atomic_rw.lock_write
 ; now unlock the parent
 	ex	(sp), iy
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_read
+	call	atomic_rw.unlock_write
 	pop	iy
 	pop	hl
 	jp	.inode_parse_directory
@@ -192,224 +181,176 @@ define	phy_destroy_inode	28
 .inode_call:
 	jp	(hl)
 
-.inode_allocate_error_malloc:
-.inode_allocate_error_nodir:
-	scf
-	ret
+.inode_atomic_error:
+; unlock the inode (write locked) and error out
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	jp	syserror
+	
+.inode_create:
+; hl is path, bc is mode, a is inode type
+; return c and errno set if there is an issue
+; else return iy = created inode with write lock held and hl = 0 nc
+	ld	b, a
+	push	bc
+	call	.inode_find
+	pop	de
+; if inode_find carry we have an error already set by this function, but that *okay* (and even wanted)
+	ld	a, EEXIST
+	jp	nc, syserror
+.inode_create_from_node:
+; check the error is the correct one, ie ENOENT
+	ld	ix, (kthread_current)
+	ld	a, (ix+KERNEL_THREAD_ERRNO)
+	cp	a, ENOENT
+; if the error is different, return
+	jr	nz, .inode_atomic_error
+; hl is partial string, iy is the PARENT node
+; we have several sanity check here
+; check the inode can be writed
+	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	jr	z, .inode_atomic_error
+; right here, hl is the partial string and should be null terminated, does not contain '/'
+	push	hl
+	ld	a, '/'
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	cpir
+	pop	hl
+	ld	a, ENOENT
+	jr	z, .inode_atomic_error
+; does the base name is not too long ?
+	xor	a, a
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+	push	hl
+	cpir
+	pop	hl
+	ld	a, ENAMETOOLONG
+	jp	po, .inode_atomic_error
+; now, we can allocate the inode & create the directory inode
+; convention : hl is the name of the inode, iy is parent inode (it MUST be a directory), a is inode flags
+	ld	a, e
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	ld	e, a
+	ld	a, d
+	and	a, not KERNEL_VFS_PERMISSION_RWX
+	or	a, e
+; return iy = inode if not carry, if carry then it is an error and you should quit
 
 .inode_allocate:
-; parent inode is iy (with ref+1) (it IS a directory), a is flag
-; hl is the name of the inode, iy is parent inode (directory)
+; hl is the name of the inode, iy is parent inode (directory), which should already be write locked++
+; a is raw inode flags
+; sanity check
+	ld	c, a
+	ld	a, ENOTDIR
 	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jr	z, .inode_allocate_error_nodir
+	jr	z, .inode_atomic_error
+; save name in register de
 	ex	de, hl
-	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
-	call	kmalloc
-	jr	c, .inode_allocate_error_malloc
-; hl is our node inode
-	push	hl
-	pop	ix
-; right here, we have the new inode as ix, the parent as iy, and name of inode as de
-	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
-	ld	(ix+KERNEL_VFS_INODE_FLAGS), a
-	ld	(ix+KERNEL_VFS_INODE_PARENT), iy
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.init
-; start writing to the parent inode identity of the new inode
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_write
-; first copy memory operation from parent to child
-	ld	hl, (iy+KERNEL_VFS_INODE_OP)
-	ld	(ix+KERNEL_VFS_INODE_OP), hl
-; write the name (de) + flags + inode (ix)
+; take the write lock on the parent inode to check if we can write a new inode in this directory
 	push	iy
-	push	ix
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
-	ld	a, 16
-.inode_directory_free:
+	ld	b, 16
+.inode_allocate_data:
 	ld	ix, (iy+0)
 ; check if ix is NULL, else, skip
 	lea	hl, ix+0
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .inode_directory_free_indirect
+	jr	z, .inode_allocate_free_indirect
 	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .inode_directory_free_pointer
+	jr	z, .inode_allocate_free_direct
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .inode_directory_free_pointer
+	jr	z, .inode_allocate_free_direct
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .inode_directory_free_pointer
+	jr	z, .inode_allocate_free_direct
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .inode_directory_free_pointer
+	jr	z, .inode_allocate_free_direct
 	lea	iy, iy+3
-	dec	a
-	jr	nz, .inode_directory_free
-.inode_directory_error_no_free:
-	pop	hl	; this is our node
-	pop	iy	; parent inode
-	call	kfree
-; iput parent inode
-	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
-	jp	z, .inode_destroy
-; unlock the write lock and clean up & return c as error
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
-	scf
-	ret
-.inode_directory_free_indirect:
-; we need to allocate for the directory entry
+	djnz	.inode_allocate_data
+; well, no place found
+; unlock and quit
+	ld	a, ENOSPC
+.inode_allocate_error:
+	pop	iy
+	jp	.inode_atomic_error
+; upper data block was free, so allocate one
+.inode_allocate_free_indirect:
 	ld	hl, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4
 	call	kmalloc
-	jr	c, .inode_directory_error_no_free
-; iy is the directory entry, write it
+	ld	a, ENOMEM
+	jr	c, .inode_allocate_error
+; iy is the directory entry, write the new entry made
 	ld	(iy+0), hl
-; copy hl to ix
-	push	hl
-	pop	ix
-.inode_directory_free_pointer:
-; now, restore our inode
+.inode_allocate_free_direct:
+; ix is the directory entrie
 	pop	iy
-; write inode number to the directory entry
-	ld	(ix+KERNEL_VFS_DIRECTORY_INODE), iy
-; now copy the name
+; iy is now the parent inode
+	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
+	call	kmalloc
+	ld	a, ENOMEM
+	jp	c, .inode_atomic_error
+; hl is our new little inode \o/
+; copy everything in the dir entrie
+	ld	(ix+KERNEL_VFS_DIRECTORY_INODE), hl
+	push	hl
+	push	bc
+; now copy the name (still in de after all this time)
 	lea	hl, ix+KERNEL_VFS_DIRECTORY_NAME
 	ex	de, hl
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-.inode_copy_name:
+.inode_allocate_copy_name:
 	ld	a, (hl)
 	or	a, a
-	jr	z, .inode_copy_end
+	jr	z, .inode_allocate_copy_end
 	ldi
-	jp	pe, .inode_copy_name
-.inode_copy_end:
+	jp	pe, .inode_allocate_copy_name
+.inode_allocate_copy_end:
 	ld	(de), a
-; swap parent inode with our child
-	ex	(sp), iy
-; iput the parent inode
-	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
-	jp	z, .inode_destroy
+	pop	hl
+	pop	bc
+; c is still our flags, hl is our inode
+; hl is our node inode
+	push	hl
+	pop	ix
+; right here, we have the new inode as ix, the parent as iy, and name of inode as de
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+	ld	(ix+KERNEL_VFS_INODE_FLAGS), c
+	ld	(ix+KERNEL_VFS_INODE_PARENT), iy
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.init
+; hard take the write lock
+; it is okay, since the inode is not yet inserted in the filesystem
+	dec	(hl)
+; copy parent methode inheriting filesystem and mount propriety
+	ld	hl, (iy+KERNEL_VFS_INODE_OP)
+	ld	(ix+KERNEL_VFS_INODE_OP), hl
 ; unlock parent inode
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
-; and restore child inode
+; children inode is still locked
+; return the children node in iy
+	push	ix
 	pop	iy
 	or	a, a
+	sbc	hl, hl
 	ret
-
-.inode_device:
-; create a device
-; hl path, a is flags, bc is mem op
-	push	bc
-	call	.inode_create
-	pop	bc
-	ret	c
-; TODO : fix the possible race condition here were the inode is already open when it has just been created
-	ld	(iy+KERNEL_VFS_INODE_OP), bc
-	ret
-	
-.inode_create_error_exist:
-; unlock the referenced parent
-	pop	af
-	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
-	jp	z, .inode_destroy
-	scf
-	ret
-.inode_create_alloc_error:
-	pop	hl
-.inode_create_alloc_error2:
-	pop	af
-	scf
-	ret
-
-.inode_create:
-	push	af	; inode flags
-	call	.inode_find
-	jr	nc, .inode_create_error_exist	; already exist
-; hl is partial string, iy is the PARENT node
-; sanity check, does we have a directory on partial find ?
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jr	z, .inode_create_error_exist
-	
-	push	hl
-	ld	hl, 16
-	call	kmalloc	; grab a place to copy our temporary name
-	ex	de, hl
-	pop	hl
-	jr	c, .inode_create_alloc_error2
-	
-.inode_create_directory_chain:
-; here, we have to : extract name
-	ld	a, '/'
-	push	hl
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-	cpir
-	jp	pe, .inode_create_continue
-	pop	hl
-	push	hl
-	xor	a, a
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-	cpir
-	dec	hl
-	ld	a, (hl)
-	or	a, a
-; if zero, final inode AT LAST, else zero's the '/'
-	jr	z, .inode_create_final
-.inode_create_continue:
-	pop	bc
-; bc is start, de is where to copy, hl is end
-	push	hl
-	or	a, a
-	sbc	hl, bc
-	dec	hl
-; hl is lenght >> bc, bc is start, de is to copy, stack is end
-	push	hl
-	push	bc
-	pop	hl
-	pop	bc
-	push	de
-	ldir
-	ex	de, hl
-	ld	(hl), c
-	pop	de
-	ld	a, KERNEL_VFS_TYPE_DIRECTORY
-	push	de
-	ex	de, hl	; name
-	call	.inode_allocate
-	pop	de
-	jr	c, .inode_create_alloc_error
-; iy is new parent, get (increment reference) the inode, aaaannnnnd loop back
-	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
-	pop	hl
-	jr	.inode_create_directory_chain
-.inode_create_final:
-	pop	hl
-	pop	af
-	push	de
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1
-	ldir
-	ex	de, hl
-	ld	(hl), c
-	pop	hl
-	push	hl
-	call	.inode_allocate
-	pop	hl
-	jp	kfree
 	
 .inode_dup:
 	ret
@@ -451,3 +392,27 @@ define	phy_destroy_inode	28
 ; iy is inode number
 ; parse the data and unmap everything (+clear everything)
 	ret
+	
+sysdef _rename
+.inode_rename:
+; int rename(const char *oldpath, const char *newpath);
+; hl is old path, bc is newpath
+; for this we need to find the file (grab inode and parent inode, lock the parent inode for write, remove reference for the file, introduce reference to the new path, etc). QUite some hard work actually
+; 	push	bc
+; 	call	.inode_find
+; 	pop	hl
+; ; well, we didn't found the first path, so abort
+; 	ret	c
+; 	push	iy
+; 	call	.inode_find_directory
+; 	pop	ix
+; ; well, the path of the directory for the new name couldn't been found
+; 	ret	c
+; ; now lock both, and pray
+; TODO : implement
+
+	ret
+	
+	
+	
+

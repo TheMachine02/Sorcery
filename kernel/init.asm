@@ -18,7 +18,7 @@ define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
 
 
-kinit:
+init:
 ; read kernel paramater
 ; silent : no LCD flashing / console updating, open console only if error
 sysdef _reboot
@@ -149,7 +149,7 @@ sysdef _reboot
 	ret
  
 sysdef _uname
-kname:
+name:
 ; hl is structure buf
 ; copy it
 	add	hl, de
