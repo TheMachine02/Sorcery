@@ -163,7 +163,7 @@ kmem_cache_user:
  db	72	dup	$00	; null is reference to not allocated
 kvfs_root:
 ; 64 bytes
- db	$04	; directory
+ db	15	; directory (8), RWX permission
  db	$01	; reference
  dl	$000000	; size, it is a directory, so count of data holded
  dl	$000000	; parent

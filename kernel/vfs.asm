@@ -58,7 +58,7 @@ sysdef _open
 	push	de
 	push	hl
 	push	bc
-	call	.inode_find
+	call	.inode_get_lock
 	pop	bc
 	pop	hl
 	pop	de
@@ -68,7 +68,7 @@ sysdef _open
 	and	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
 	sub	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
 	ld	a, EEXIST
-	jp	z, syserror
+	jp	z, .inode_atomic_write_error
 	jr	.open_continue
 .open_create:
 ; check that flag O_CREAT set
@@ -373,15 +373,15 @@ sysdef _chmod
 .chmod:
 ; hl is path, bc is new mode
 	push	bc
-	call	.inode_find
+	call	.inode_get_lock
 	pop	bc
-; if carry, error should have been set (could be acess in read/write/file not found etc)
-	jp	c, .inode_atomic_error
+; if carry, error should have been set (could be acess in read/write/file not found etc) (return non locked)
+	ret	c
 ; iy is the inode (locked), c is mode
 ; write permission ?
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jp	z, .inode_atomic_error
+	jp	z, .inode_atomic_write_error
 	jr	.chmod_shared
 	
 sysdef _fchmod
@@ -462,10 +462,8 @@ sysdef _mkfifo
 	ld	hl, FIFO_MAX_SIZE
 	call	kmalloc
 	ld	a, ENOMEM
-	jp	c, syserror
+	jp	c, .inode_atomic_write_error
 ; hl is the memory block
-	push	hl
-	ex	de, hl
 ; point iy to raw data
 	pea	iy + KERNEL_VFS_INODE_ATOMIC_LOCK
 	lea	iy, iy + KERNEL_VFS_INODE_DATA

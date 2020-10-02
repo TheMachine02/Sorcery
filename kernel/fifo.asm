@@ -12,8 +12,9 @@ define	FIFO_MAX_SIZE		64
 fifo:
 
 .create:
-; de is buffer
+; hl is buffer
 ; iy is the fifo control structure
+	ex	de, hl
 	ld	(iy+FIFO_BOUND_LOW), de
 	ld	(iy+FIFO_HEAD), de
 	ld	(iy+FIFO_TAIL), de

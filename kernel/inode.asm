@@ -57,53 +57,205 @@ define	phy_destroy_inode	28
 ; best is always locking only ONE inode
 ; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
 
-.inode_find:
-; start at root inode, hl is path
+.inode_atomic_read_error:
+	push	af
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	pop	af
+	jp	syserror
+
+.inode_atomic_write_error:
+; unlock the inode (write locked) and error out
+	push	af
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	pop	af
+	jp	syserror
+	
+.inode_get_lock:
+; hl is path
+; return c = error, none lock
+; return nc = iy is the locked for write inode
 	ld	iy, kvfs_root
+	inc	hl
+; skip the first '/'
+	ld	a, (hl)
+	or	a, a
+	jp	z, .inode_get_root_lock
+	push	hl
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	pop	hl
+.inode_get_parse_path:
+; find the entrie in the directory
+	call	.inode_directory_lookup
+	jp	c, .inode_atomic_read_error
+; ix is the new inode, iy the old, hl is still our path
+; ex : /dev/ need to lock dev for write
+	ld	c, KERNEL_VFS_DIRECTORY_NAME_SIZE
+.__bad_search3:
+	ld	a, (hl)
+	inc	hl
+	or	a, a
+	jr	z, .inode_get_lock_entry
+	cp	a, '/'
+	jr	z, .inode_get_continue
+	dec	c
+	jr	nz, .__bad_search3
+	ld	a, ENAMETOOLONG
+	jp	.inode_atomic_read_error
+.inode_get_continue:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .inode_get_lock_entry
+; we have the new path at hl
+; lock dance
+	push	hl
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	lea	iy, ix+0
+	pop	hl
+	jr	.inode_get_parse_path
+.inode_get_lock_entry:
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	lea	iy, ix+0
+	xor	a, a
+	ret
+.inode_get_root_lock:
 	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
+	xor	a, a
 	pop	hl
-	inc	hl	; skip first "/"
-.inode_parse_directory:
+	ret
+
+	
+.inode_directory_get_lock:
+; Half - debuged
+; /dev lock the correct directory
+; /dev/fifo too
+; need to check /dev/ and /dev/fifo/ + error path
+; hl is path
+; return c = error, none lock
+; return nc = iy is the locked for write inode, hl is the name of the file
+; logic is quite complex here
+; exemple
+; /dev/ lock / for write and give back dev//0
+; /dev/hello lock /dev/ for write and give back hello/0
+	ld	iy, kvfs_root
+	inc	hl
+; skip the first '/'
+	ex	de, hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
 	ld	a, (hl)
 	or	a, a
-; 	jr	z, .inode_get_found
-	ld	a, '/'
-	push	hl
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-; we also need to stop if we catch a NULL
-	cpir
-	jp	pe, .inode_get_continue
-	pop	hl
-	push	hl
-; reload, but search 0
-	xor	a, a
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-; we also need to stop if we catch a NULL
-	cpir
-	dec	hl
-.inode_get_continue:
-; push the new position of next name and restore previous name
-	ex	(sp), hl
-; check if inode is a directory (if not, error out)
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jr	z, .inode_get_unknown
-; now, parse the directory to find we have a entry corresponding to it
-; hl is our string, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1 - bc is the size of it
-	push	hl
-	ld	hl, KERNEL_VFS_DIRECTORY_NAME_SIZE - 1
+; we will maintain hl = name actually looked up
+; de = name AFTER the following '/'
+	jp	z, .inode_directory_get_root_lock
+	ld	c, KERNEL_VFS_DIRECTORY_NAME_SIZE
+.__bad_search:
+	ld	a, (hl)
+	inc	hl
 	or	a, a
-	sbc	hl, bc
+	jr	z, .inode_directory_get_root_lock
+	cp	a, '/'
+	jr	z, .inode_directory_get_start
+	dec	c
+	jr	nz, .__bad_search
+	ld	a, ENAMETOOLONG
+	jp	syserror
+.inode_directory_get_start:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .inode_directory_get_root_lock
+	ex	de, hl
 	push	hl
-	pop	bc
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
 	pop	hl
-; bc is size, hl is string (not NULL terminated)
+.inode_directory_get_parse_path:
+; find the entrie in the directory
+	push	de
+	call	.inode_directory_lookup
+	pop	de
+	jp	c, .inode_atomic_read_error
+; ix is the new inode, iy the old, hl is still our path
+; ex : /dev/ need to lock dev for write
+; de > copy to hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
+	ld	c, KERNEL_VFS_DIRECTORY_NAME_SIZE
+.__bad_search2:
+	ld	a, (hl)
+	inc	hl
+	or	a, a
+	jr	z, .inode_directory_get_lock_entry
+	cp	a, '/'
+	jr	z, .inode_directory_continue
+	dec	c
+	jr	nz, .__bad_search2
+	ld	a, ENAMETOOLONG
+	jp	.inode_atomic_read_error
+.inode_directory_continue:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .inode_directory_get_lock_entry
+	ex	de, hl
+; we have the new path at de
+; lock dance
+	push	hl
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	lea	iy, ix+0
+	pop	hl
+	jr	.inode_directory_get_parse_path
+.inode_directory_get_lock_entry:
+	ex	de, hl
+	push	hl
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	pop	hl
+	lea	iy, ix+0
+	xor	a, a
+	ret
+.inode_directory_get_root_lock:
+	ex	de, hl
+	push	hl
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	xor	a, a
+	pop	hl
+	ret
+
+.inode_directory_lookup:
+; return c if error with a = error (but NO ERRNO SET)
+; return nc if found, ix is the inode lookup
+; also can check partial path ('dev/toto' lookup dev)
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, ENOTDIR
+	scf
+	ret	z
+; does we have at least read authorization of this folder ?
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	ret	z
 	push	iy
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
-	ld	a, 16
-.inode_get_directory_loop:
-; 15 times
+	ld	b, 16
+.inode_directory_lookup_data:
+; 16 times
 	ld	ix, (iy+0)
 ; check if ix is NULL, else, skip
 	push	hl
@@ -112,58 +264,57 @@ define	phy_destroy_inode	28
 	or	a, a
 	sbc	hl, de
 	pop	hl
-	jr	z, .inode_get_directory_skip
-	push	af
-	call	.inode_helper_compare_1st_time
-	call	.inode_helper_compare
-	call	.inode_helper_compare
-	call	.inode_helper_compare
-	pop	af
-.inode_get_directory_skip:
+	jr	z, .inode_directory_data_null
+	call	.inode_directory_entry_cmp
+	jr	z, .inode_directory_lookup_match
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	call	.inode_directory_entry_cmp
+	jr	z, .inode_directory_lookup_match
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	call	.inode_directory_entry_cmp
+	jr	z, .inode_directory_lookup_match
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	call	.inode_directory_entry_cmp
+	jr	z, .inode_directory_lookup_match
+.inode_directory_data_null:
 	lea	iy, iy+3
-	dec	a
-	jr	nz, .inode_get_directory_loop
-.inode_get_unknown:
+	djnz	.inode_directory_lookup_data
 	pop	iy
-	ex	(sp), hl
-	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
-	pop	hl
+	ld	a, ENOENT
 	scf
 	ret
-.inode_get_directory_found:
-	pop	bc
-	ld	hl, 6
-	add	hl, sp
-	ld	sp, hl
-	pop	af
-; ix is the directory found, so use it as new parent inode
-	ld	iy, (ix+KERNEL_VFS_DIRECTORY_INODE)
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_write
-; now unlock the parent
-	ex	(sp), iy
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
+.inode_directory_lookup_match:
 	pop	iy
-	pop	hl
-	jp	.inode_parse_directory
+	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	xor	a, a
+	ret
 
-.inode_helper_compare:
-	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-.inode_helper_compare_1st_time:
+.inode_directory_entry_cmp:
 	lea	de, ix+KERNEL_VFS_DIRECTORY_NAME
 	push	hl
 	push	bc
-.inode_helper_comp_loop:
+	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
+.inode_directory_entry_loop:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .inode_directory_entry_last
+	sub	a, '/'
+	jr	z, .inode_directory_entry_last
 	ld	a, (de)
 	cpi
-	jr	nz, .inode_helper_comp_restore
-	jp	po, .inode_get_directory_found
+	jr	nz, .inode_directory_entry_return
 	inc	de
-	jr	.inode_helper_comp_loop
-.inode_helper_comp_restore:
+	jp	pe, .inode_directory_entry_loop
+; entry are the same
+.inode_directory_entry_return:
+; z flags set
+	pop	bc
+	pop	hl
+	ret
+.inode_directory_entry_last:
+; check 0 against (de)
+	ex	de, hl
+	cp	a, (hl)
 	pop	bc
 	pop	hl
 	ret
@@ -180,12 +331,6 @@ define	phy_destroy_inode	28
 
 .inode_call:
 	jp	(hl)
-
-.inode_atomic_error:
-; unlock the inode (write locked) and error out
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
-	jp	syserror
 	
 .inode_create:
 ; hl is path, bc is mode, a is inode type
@@ -193,32 +338,25 @@ define	phy_destroy_inode	28
 ; else return iy = created inode with write lock held and hl = 0 nc
 	ld	b, a
 	push	bc
-	call	.inode_find
+	call	.inode_directory_get_lock
 	pop	de
-; if inode_find carry we have an error already set by this function, but that *okay* (and even wanted)
-	ld	a, EEXIST
-	jp	nc, syserror
-.inode_create_from_node:
-; check the error is the correct one, ie ENOENT
-	ld	ix, (kthread_current)
-	ld	a, (ix+KERNEL_THREAD_ERRNO)
-	cp	a, ENOENT
-; if the error is different, return
-	jr	nz, .inode_atomic_error
-; hl is partial string, iy is the PARENT node
+	ret	c
+
+.inode_create_parent:
+; hl is name, iy is the PARENT node
 ; we have several sanity check here
 ; check the inode can be writed
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	a, EACCES
-	jr	z, .inode_atomic_error
-; right here, hl is the partial string and should be null terminated, does not contain '/'
+	jp	z, .inode_atomic_write_error
+	push	de
 	push	hl
-	ld	a, '/'
-	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
-	cpir
+	call	.inode_directory_lookup
 	pop	hl
-	ld	a, ENOENT
-	jr	z, .inode_atomic_error
+	pop	de
+	ld	a, EEXIST
+	jp	nc, .inode_atomic_write_error
+; right here, hl is the partial string and should be null terminated
 ; does the base name is not too long ?
 	xor	a, a
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
@@ -226,7 +364,7 @@ define	phy_destroy_inode	28
 	cpir
 	pop	hl
 	ld	a, ENAMETOOLONG
-	jp	po, .inode_atomic_error
+	jp	po, .inode_atomic_write_error
 ; now, we can allocate the inode & create the directory inode
 ; convention : hl is the name of the inode, iy is parent inode (it MUST be a directory), a is inode flags
 	ld	a, e
@@ -244,7 +382,7 @@ define	phy_destroy_inode	28
 	ld	c, a
 	ld	a, ENOTDIR
 	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jr	z, .inode_atomic_error
+	jp	z, .inode_atomic_write_error
 ; save name in register de
 	ex	de, hl
 ; take the write lock on the parent inode to check if we can write a new inode in this directory
@@ -289,7 +427,7 @@ define	phy_destroy_inode	28
 	ld	a, ENOSPC
 .inode_allocate_error:
 	pop	iy
-	jp	.inode_atomic_error
+	jp	.inode_atomic_write_error
 ; upper data block was free, so allocate one
 .inode_allocate_free_indirect:
 	ld	hl, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4
@@ -298,6 +436,9 @@ define	phy_destroy_inode	28
 	jr	c, .inode_allocate_error
 ; iy is the directory entry, write the new entry made
 	ld	(iy+0), hl
+; copy result to ix
+	push	hl
+	pop	ix
 .inode_allocate_free_direct:
 ; ix is the directory entrie
 	pop	iy
@@ -305,7 +446,7 @@ define	phy_destroy_inode	28
 	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
 	call	kmalloc
 	ld	a, ENOMEM
-	jp	c, .inode_atomic_error
+	jp	c, .inode_atomic_write_error
 ; hl is our new little inode \o/
 ; copy everything in the dir entrie
 	ld	(ix+KERNEL_VFS_DIRECTORY_INODE), hl
@@ -316,15 +457,18 @@ define	phy_destroy_inode	28
 	ex	de, hl
 	ld	bc, KERNEL_VFS_DIRECTORY_NAME_SIZE
 .inode_allocate_copy_name:
+; do not copy trailing '/'
 	ld	a, (hl)
 	or	a, a
+	jr	z, .inode_allocate_copy_end
+	sub	a, '/'
 	jr	z, .inode_allocate_copy_end
 	ldi
 	jp	pe, .inode_allocate_copy_name
 .inode_allocate_copy_end:
 	ld	(de), a
-	pop	hl
 	pop	bc
+	pop	hl
 ; c is still our flags, hl is our inode
 ; hl is our node inode
 	push	hl
@@ -351,7 +495,7 @@ define	phy_destroy_inode	28
 	or	a, a
 	sbc	hl, hl
 	ret
-	
+
 .inode_dup:
 	ret
 

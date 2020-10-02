@@ -116,6 +116,16 @@ sysdef _reboot
 ; 	call	kthread.create
 ; 	ld	iy, DEBUG_THREAD_2
 ; 	call	kthread.create
+; DEBUG
+; 
+; 	ld	hl, DEBUG_PATH
+; 	call	_mkdir
+; 	ld	hl, DEBUG_PATH_2
+; 	call	_mkdir
+; 	ld	hl, DEBUG_PATH_3
+; 	call	_mkfifo
+; 	ld	hl, DEBUG_PATH_3
+; 	call	kvfs.inode_get_lock
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	bc, .arch_bin_path
 	ld	de, .arch_bin_envp
@@ -202,6 +212,15 @@ name:
 ; 	call	atomic_mutex.unlock
 ; 	jr	DEBUG_THREAD_2
 
+; DEBUG_PATH:
+;  db "/dev/",0
+;  
+; DEBUG_PATH_2:
+;  db "/dev/fifo/",0
+; 
+; DEBUG_PATH_3:
+;  db "/dev/fifo/pipe",0
+ 
 printk:
 	push	hl
 	ld	bc, 0
