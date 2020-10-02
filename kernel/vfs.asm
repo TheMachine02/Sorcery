@@ -49,6 +49,10 @@ define	KERNEL_VFS_O_CREAT			2	; creat the file if don't exist
 define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
 define	KERNEL_VFS_O_TMPFILE			8	; create a temporary file
 
+define	SEEK_SET				0
+define	SEEK_CUR				1
+define	SEEK_END				2
+
 kvfs:
 
 sysdef _open
@@ -530,4 +534,67 @@ sysdef _mkfifo
 	sbc	hl, hl
 	ret
 
-
+sysdef _lseek
+.lseek:
+;; off_t lseek(int fd, off_t offset, int whence);   
+; SEEK_SET
+;     La tête est placée à offset octets depuis le début du fichier. 
+; SEEK_CUR
+;     La tête de lecture/écriture est avancée de offset octets. 
+; SEEK_END
+;     La tête est placée à la fin du fichier plus offset octets. 
+; ; fd is hl, de is offset, bc is whence
+	ld	a, 23
+	cp	a, l
+	ld	a, EBADF
+	jp	c, syserror
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	iy, (kthread_current)
+	ex	de, hl
+	add	iy, de
+	ex	de, hl
+	ld	ix, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	lea	hl, ix+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jp	z, syserror
+; is the inode permit the seek ?
+; rule : directory permit (but ignored and useless), character device ESPIPE, fifo ESPIPE, block device permit, symlink should NOT happen
+	ld	a, (ix+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_FIFO
+	ld	a, ESPIPE
+	jp	nz, syserror
+; so now, we have the offset de
+	ld	a, c
+	or	a, a
+	jr	z, .lseek_set
+	dec	a
+	jr	z, .lseek_cur
+	dec	a
+	jr	z, .lseek_end
+	ld	a, EINVAL
+	jp	syserror
+.lseek_set:
+	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), de
+	ex	de, hl
+	or	a, a
+	ret
+.lseek_cur:
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET)
+	add	hl, de
+	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), hl
+	ret	nc
+	ld	a, EOVERFLOW
+	jp	syserror
+.lseek_end:
+	ld	hl, (ix+KERNEL_VFS_INODE_SIZE)
+	add	hl, de
+	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), hl
+	ret	nc
+	ld	a, EOVERFLOW
+	jp	syserror

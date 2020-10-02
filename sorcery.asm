@@ -37,12 +37,11 @@ sysjump:
 	jp	_open
 	jp	_close
 	jp	_enosys		; _rename
-	jp	_mknod
 	jp	_enosys		; _link
 	jp	_enosys		; _unlink
 	jp	_read
 	jp	_write
-	jp	_enosys		; _lseek
+	jp	_lseek
 	jp	_enosys		; _chdir
 	jp	_sync
 	jp	_enosys		; _access
