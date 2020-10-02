@@ -47,6 +47,7 @@ define	KERNEL_VFS_O_NDELAY			128	; use non-bloquant atomic_rw, error with EWOULD
 define	KERNEL_VFS_O_EXCL			1	; use with O_CREAT, fail if file already exist 
 define	KERNEL_VFS_O_CREAT			2	; creat the file if don't exist
 define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
+define	KERNEL_VFS_O_TMPFILE			8	; create a temporary file
 
 kvfs:
 
@@ -54,7 +55,6 @@ sysdef _open
 .open:
 ; open(const char* path, int flags, mode_t mode)
 ; hl is path, bc is flags, de is mode
-; TODO : use create OR find based on O_CREAT
 	push	de
 	push	bc
 	call	.inode_directory_get_lock
@@ -349,7 +349,32 @@ sysdef _write
 
 sysdef _ioctl
 .ioctl:
-	ret
+; hl is fd, de is request
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EBADF
+	jp	z, syserror
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	iy, (kthread_current)
+	ex	de, hl
+	add	iy, de
+	ex	de, hl
+	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+; is the inode is a block or a character device ?
+; README : the need to lock for read is dummy since we have already open this inode and the flags inode should NEVER change for TYPE
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_BLOCK_DEVICE or KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	ld	a, ENOTTY
+	jp	z, syserror
+; now, just pass to ioctl of file
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_ioctl
+	ex	de, hl
+; hl is request
+	jp	(iy)
 	
 sysdef _pipe
 .pipe:
@@ -401,6 +426,13 @@ sysdef _chmod
 sysdef _fchmod
 .fchmod:
 ; hl is fd, bc is new mode
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EBADF
+	jp	z, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -409,13 +441,6 @@ sysdef _fchmod
 	add	iy, de
 	ex	de, hl
 	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
-; check if the fd is valid
-; if not open / invalid, all data should be zero here
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	ld	a, EBADF
-	jp	z, syserror
 	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
 ; write permission ?
 	ld	a, EACCES

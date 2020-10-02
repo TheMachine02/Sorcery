@@ -37,7 +37,7 @@ sysjump:
 	jp	_open
 	jp	_close
 	jp	_enosys		; _rename
-	jp	_enosys		; _mknod
+	jp	_mknod
 	jp	_enosys		; _link
 	jp	_enosys		; _unlink
 	jp	_read
