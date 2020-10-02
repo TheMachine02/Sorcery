@@ -56,35 +56,49 @@ sysdef _open
 ; hl is path, bc is flags, de is mode
 ; TODO : use create OR find based on O_CREAT
 	push	de
-	push	hl
 	push	bc
-	call	.inode_get_lock
+	call	.inode_directory_get_lock
 	pop	bc
-	pop	hl
 	pop	de
+	ret	c
+; here the DIRECTORY is locked for write
+	push	hl
+	push	de
+	push	bc
+	call	.inode_directory_lookup
+	pop	bc
+	pop	de
+	pop	hl
+; dir is still locked, ix is our file (or not, if carry)
 	jr	c, .open_create
+; check we didn't ask exclusive creation
 ; check if both excl and creat are set
 	ld	a, b
 	and	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
 	sub	a, KERNEL_VFS_O_CREAT or KERNEL_VFS_O_EXCL
 	ld	a, EEXIST
 	jp	z, .inode_atomic_write_error
+; drop parent lock and get our
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	lea	iy, ix+0
 	jr	.open_continue
 .open_create:
 ; check that flag O_CREAT set
 	bit	1, b
 	ld	a, ENOENT
-	jp	z, syserror
-	ld	a, e
-; a is our mode, and hl is path
+	jp	z, .inode_atomic_write_error
 	push	bc
-; the .inode create reparse the filesystem for creating the inode
-; so it could return EEXIST if someone created the file between the first "find" and this .inode_create
-; TODO : fix race condition
-	call	.inode_create
+; mode & inode type in de
+	ld	d, e
+	ld	e, KERNEL_VFS_PERMISSION_RWX
+	call	.inode_create_parent
 	pop	bc
 ; if inode create c, the eror should already have been set, so just return
 	ret	c
+; unlock the child, create parent does always unlock the parent inode (in case of error or sucess)
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
 .open_continue:
 ; iy = node
 ; now find free file descriptor

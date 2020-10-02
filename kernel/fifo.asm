@@ -4,6 +4,10 @@ define	FIFO_TAIL	$3
 define	FIFO_SIZE	$6
 define	FIFO_BOUND_UPP	$9
 define	FIFO_BOUND_LOW	$C
+define	FIFO_ENDPOINT	$F
+
+define	FIFO_WRITE_OPEN_BIT	1
+define	FIFO_READ_OPEN_BIT	2
 
 define	FIFO_STRUCT_SIZE	15
 ; TODO : make it variable size
@@ -23,6 +27,7 @@ fifo:
 	ldir
 	ld	(iy+FIFO_BOUND_UPP), de
 	ld	(iy+FIFO_SIZE), bc
+	ld	(iy+FIFO_ENDPOINT), 0
 	ret
 
 .length:

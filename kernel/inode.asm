@@ -341,14 +341,7 @@ define	phy_destroy_inode	28
 	call	.inode_directory_get_lock
 	pop	de
 	ret	c
-
-.inode_create_parent:
-; hl is name, iy is the PARENT node
 ; we have several sanity check here
-; check the inode can be writed
-	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	ld	a, EACCES
-	jp	z, .inode_atomic_write_error
 	push	de
 	push	hl
 	call	.inode_directory_lookup
@@ -356,6 +349,12 @@ define	phy_destroy_inode	28
 	pop	de
 	ld	a, EEXIST
 	jp	nc, .inode_atomic_write_error
+.inode_create_parent:
+; hl is name, iy is the PARENT node, d is inode type, e is mode
+; check the inode can be writed
+	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	jp	z, .inode_atomic_write_error
 ; right here, hl is the partial string and should be null terminated
 ; does the base name is not too long ?
 	xor	a, a
