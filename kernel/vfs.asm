@@ -350,11 +350,6 @@ sysdef _write
 sysdef _ioctl
 .ioctl:
 ; hl is fd, de is request
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	ld	a, EBADF
-	jp	z, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -363,6 +358,14 @@ sysdef _ioctl
 	add	iy, de
 	ex	de, hl
 	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EBADF
+	jp	z, syserror
 ; is the inode is a block or a character device ?
 ; README : the need to lock for read is dummy since we have already open this inode and the flags inode should NEVER change for TYPE
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
@@ -426,13 +429,6 @@ sysdef _chmod
 sysdef _fchmod
 .fchmod:
 ; hl is fd, bc is new mode
-; check if the fd is valid
-; if not open / invalid, all data should be zero here
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	ld	a, EBADF
-	jp	z, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -440,8 +436,16 @@ sysdef _fchmod
 	ex	de, hl
 	add	iy, de
 	ex	de, hl
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
 	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EBADF
+	jp	z, syserror
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
 ; write permission ?
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
