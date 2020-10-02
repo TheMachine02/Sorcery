@@ -36,6 +36,7 @@ sysret:
 	pop	de
 	pop	iy
 	pop	ix
+	or	a, a
 	ret	
 	
 sysdef _enosys
