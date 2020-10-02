@@ -47,8 +47,8 @@ sysjump:
 	jp	_enosys		; _access
 	jp	_chmod
 	jp	_chown
-	jp	_enosys		; _stat
-	jp	_enosys		; _fstat
+	jp	_stat
+	jp	_fstat
 	jp	_dup
 	jp	_getpid
 	jp	_getppid

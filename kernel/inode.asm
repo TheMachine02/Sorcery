@@ -3,6 +3,7 @@ define	KERNEL_VFS_INODE			0
 define	KERNEL_VFS_INODE_FLAGS			0	; 1 byte, inode flag
 define	KERNEL_VFS_INODE_REFERENCE		1	; 1 byte, number of reference to this inode
 define	KERNEL_VFS_INODE_SIZE			2	; 3 bytes, size of the inode
+define	KERNEL_VFS_INODE_DEVICE			2	; 2 bytes, device number if applicable
 define	KERNEL_VFS_INODE_PARENT			5	; 3 bytes, parent of the inode, NULL mean root
 define	KERNEL_VFS_INODE_ATOMIC_LOCK		8	; rw lock, 5 bytes
 define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer

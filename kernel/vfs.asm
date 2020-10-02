@@ -53,6 +53,16 @@ define	SEEK_SET				0
 define	SEEK_CUR				1
 define	SEEK_END				2
 
+; 20 bytes
+define	STAT_DEVICE				0
+define	STAT_INODE				3
+define	STAT_MODE				6
+define	STAT_LINK				7
+define	STAT_RDEVICE				8
+define	STAT_BLKSIZE				11
+define	STAT_BLKCNT				14
+define	STAT_SIZE				17
+
 kvfs:
 
 sysdef _open
@@ -462,7 +472,6 @@ sysdef _fchmod
 	sbc	hl, de
 	ld	a, EBADF
 	jp	z, syserror
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
 ; write permission ?
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
@@ -598,3 +607,90 @@ sysdef _lseek
 	ret	nc
 	ld	a, EOVERFLOW
 	jp	syserror
+
+sysdef _fstat
+; int fstat(int fd, struct stat *statbuf);
+; hl is fd, de is statbuf
+	ld	a, 23
+	cp	a, l
+	ld	a, EBADF
+	jp	c, syserror
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	iy, (kthread_current)
+	ex	de, hl
+	add	iy, de
+	ex	de, hl
+	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EBADF
+	jp	z, syserror
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+; read permission ?
+	ld	a, EACCES
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	jp	z, syserror
+	push	de
+	pop	ix	
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	jr	.stat_fill	
+
+sysdef _stat
+.stat:
+; int stat(const char *pathname, struct stat *statbuf);
+; dev_t     st_dev;         ID of device containing file
+; ino_t     st_ino;         Inode number
+; mode_t    st_mode;        File type and mode (1 byte)
+; nlink_t   st_nlink;       Number of hard links (1 byte)
+; dev_t     st_rdev;        Device ID (if special file)
+; off_t     st_size;        Total size, in bytes
+; blksize_t st_blksize;     Block size for filesystem I/O
+; blkcnt_t  st_blocks;      Number of 1024 bytes blocks allocated
+; hl is path, de is statbuff
+	push	de
+	call	.inode_get_lock
+	pop	ix
+; if carry, error should have been set (could be acess in read/write/file not found etc) (return non locked)
+	ret	c
+.stat_fill:
+; iy is inode
+; copy data
+	ld	(ix+STAT_INODE), iy
+	or	a, a
+	sbc	hl, hl
+	ld	(ix+STAT_DEVICE), hl
+	ld	a, (iy+KERNEL_VFS_INODE_REFERENCE)
+	dec	a
+	ld	(ix+STAT_LINK), a
+; find the correct device number
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	(ix+STAT_MODE), a
+	and	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
+	jr	z, .stat_no_device
+	ld	(ix+STAT_SIZE), hl
+	ld	(ix+STAT_BLKCNT), hl
+	ld	(ix+STAT_BLKSIZE), hl
+	ld	hl, (iy+KERNEL_VFS_INODE_DEVICE)
+	ld	(ix+STAT_RDEVICE), hl
+	jr	.stat_continue
+.stat_no_device:
+	ld	(ix+STAT_RDEVICE), hl
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
+	ld	(ix+STAT_SIZE), hl
+	ld	hl, 1024
+	ld	(ix+STAT_BLKSIZE), hl
+; TODO : count blk here
+	ld	(ix+STAT_BLKCNT), hl
+.stat_continue:
+	lea	hl, iy + KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
