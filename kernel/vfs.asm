@@ -65,6 +65,34 @@ define	STAT_SIZE				17
 
 kvfs:
 
+.fd_pointer_check:
+; return nc is corret, c with error set if not
+; ix = file descriptor, iy = inode
+; destroy hl
+	ld	a, 23
+	cp	a, l
+	ld	a, EBADF
+	jp	c, syserror
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	ix, (kthread_current)
+	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR
+	ex	de, hl
+	add	ix, de
+	ex	de, hl
+	ld	iy, (ix+KERNEL_VFS_FILE_INODE)
+; check if the fd is valid
+; if not open / invalid, all data should be zero here
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jp	z, syserror
+; reset carry
+	or	a, a
+	ret
+
 sysdef _open
 .open:
 ; open(const char* path, int flags, mode_t mode)
@@ -173,6 +201,8 @@ sysdef _close
 .close:
 ; TODO ; finish to implement
 ; hl is fd
+; 	call	.fd_pointer_check
+; 	ret	c
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -205,22 +235,12 @@ sysdef _read
 ; pad count to inode_file_size
 ; return size read
 ; TODO : maybe hide the FD data to the thread
-	ld	a, 23
-	cp	a, l
-	ld	a, EBADF
-	jp	c, syserror
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	ix, (kthread_current)
-	ex	de, hl
-	add	ix, de
-	ex	de, hl
+	call	.fd_pointer_check
+	ret	c
 ; check we have read permission
 	ld	a, EACCES
-	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
-	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
 	lea	hl, iy+0
 ; check if the fd is valid
 ; if not open / invalid, all data should be zero here
@@ -229,14 +249,14 @@ sysdef _read
 	sbc	hl, de
 	ld	a, EBADF
 	jp	z, syserror
-	ld	hl, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 ; hl is offset in file, iy is inode, de is buffer, bc is count
 	push	hl
 ; first the lock
 ; if NDELAY is set, use try_lock
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; KERNEL_VFS_O_NDELAY (128)
-	bit	7, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	7, (ix+KERNEL_VFS_FILE_FLAGS)
 	jp	nz, .read_ndelay
 	call	atomic_rw.lock_read
 .read_ndelay_return:
@@ -275,7 +295,7 @@ sysdef _read
 	pop	hl
 	push	hl
 	add	hl, bc
-	ld	(ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), hl
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
 ; hl / 1024 : offset in block
 	dec	sp
@@ -369,26 +389,8 @@ sysdef _write
 sysdef _ioctl
 .ioctl:
 ; hl is fd, de is request
-; hl should be < 24 (0-23)
-	ld	a, 23
-	cp	a, l
-	ld	a, EBADF
-	jp	c, syserror
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	iy, (kthread_current)
-	ex	de, hl
-	add	iy, de
-	ex	de, hl
-	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
-; check if the fd is valid
-; if not open / invalid, all data should be zero here
-	lea	hl, iy+0
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	jp	z, syserror
+	call	.fd_pointer_check
+	ret	c
 ; is the inode is a block or a character device ?
 ; README : the need to lock for read is dummy since we have already open this inode and the flags inode should NEVER change for TYPE
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
@@ -452,29 +454,11 @@ sysdef _chmod
 sysdef _fchmod
 .fchmod:
 ; hl is fd, bc is new mode
-	ld	a, 23
-	cp	a, l
-	ld	a, EBADF
-	jp	c, syserror
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	iy, (kthread_current)
-	ex	de, hl
-	add	iy, de
-	ex	de, hl
-	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
-; check if the fd is valid
-; if not open / invalid, all data should be zero here
-	lea	hl, iy+0
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	ld	a, EBADF
-	jp	z, syserror
+	call	.fd_pointer_check
+	ret	c
 ; write permission ?
 	ld	a, EACCES
-	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
@@ -553,28 +537,11 @@ sysdef _lseek
 ; SEEK_END
 ;     La tête est placée à la fin du fichier plus offset octets. 
 ; ; fd is hl, de is offset, bc is whence
-	ld	a, 23
-	cp	a, l
-	ld	a, EBADF
-	jp	c, syserror
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	iy, (kthread_current)
-	ex	de, hl
-	add	iy, de
-	ex	de, hl
-	ld	ix, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
-; check if the fd is valid
-; if not open / invalid, all data should be zero here
-	lea	hl, ix+0
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	jp	z, syserror
+	call	.fd_pointer_check
+	ret	c
 ; is the inode permit the seek ?
 ; rule : directory permit (but ignored and useless), character device ESPIPE, fifo ESPIPE, block device permit, symlink should NOT happen
-	ld	a, (ix+KERNEL_VFS_INODE_FLAGS)
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_FIFO
 	ld	a, ESPIPE
 	jp	nz, syserror
@@ -589,21 +556,21 @@ sysdef _lseek
 	ld	a, EINVAL
 	jp	syserror
 .lseek_set:
-	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), de
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 	ex	de, hl
 	or	a, a
 	ret
 .lseek_cur:
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET)
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 	add	hl, de
-	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), hl
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 	ret	nc
 	ld	a, EOVERFLOW
 	jp	syserror
 .lseek_end:
-	ld	hl, (ix+KERNEL_VFS_INODE_SIZE)
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
 	add	hl, de
-	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_OFFSET), hl
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 	ret	nc
 	ld	a, EOVERFLOW
 	jp	syserror
@@ -611,33 +578,14 @@ sysdef _lseek
 sysdef _fstat
 ; int fstat(int fd, struct stat *statbuf);
 ; hl is fd, de is statbuf
-	ld	a, 23
-	cp	a, l
-	ld	a, EBADF
-	jp	c, syserror
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	iy, (kthread_current)
-	ex	de, hl
-	add	iy, de
-	ex	de, hl
-	ld	iy, (iy+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)
-; check if the fd is valid
-; if not open / invalid, all data should be zero here
-	lea	hl, iy+0
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	ld	a, EBADF
-	jp	z, syserror
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+	call	.fd_pointer_check
+	ret	c
 ; read permission ?
 	ld	a, EACCES
-	bit	KERNEL_VFS_PERMISSION_R_BIT, (iy+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
 	push	de
-	pop	ix	
+	pop	ix
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 	jr	.stat_fill	
