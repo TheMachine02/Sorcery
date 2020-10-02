@@ -191,6 +191,10 @@ sysdef _read
 ; pad count to inode_file_size
 ; return size read
 ; TODO : maybe hide the FD data to the thread
+	ld	a, 23
+	cp	a, l
+	ld	a, EBADF
+	jp	c, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -198,7 +202,12 @@ sysdef _read
 	ex	de, hl
 	add	ix, de
 	ex	de, hl
-	ld	hl, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
+; check we have read permission
+	ld	a, EACCES
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
+	jp	z, syserror
+	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
+	lea	hl, iy+0
 ; check if the fd is valid
 ; if not open / invalid, all data should be zero here
 	add	hl, de
@@ -206,11 +215,7 @@ sysdef _read
 	sbc	hl, de
 	ld	a, EBADF
 	jp	z, syserror
-; check we have read permission
-	ld	a, EACCES
-	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
-	ld	iy, (ix+KERNEL_THREAD_FILE_DESCRIPTOR+KERNEL_VFS_FILE_INODE)	; get inode
+	ld	hl, (ix+KERNEL_THREAD_FILE_DESCRIPTOR + KERNEL_VFS_FILE_OFFSET)
 ; hl is offset in file, iy is inode, de is buffer, bc is count
 	push	hl
 ; first the lock
@@ -350,6 +355,11 @@ sysdef _write
 sysdef _ioctl
 .ioctl:
 ; hl is fd, de is request
+; hl should be < 24 (0-23)
+	ld	a, 23
+	cp	a, l
+	ld	a, EBADF
+	jp	c, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -364,7 +374,6 @@ sysdef _ioctl
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	ld	a, EBADF
 	jp	z, syserror
 ; is the inode is a block or a character device ?
 ; README : the need to lock for read is dummy since we have already open this inode and the flags inode should NEVER change for TYPE
@@ -429,6 +438,10 @@ sysdef _chmod
 sysdef _fchmod
 .fchmod:
 ; hl is fd, bc is new mode
+	ld	a, 23
+	cp	a, l
+	ld	a, EBADF
+	jp	c, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
