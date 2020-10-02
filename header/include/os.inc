@@ -19,14 +19,11 @@ macro os_private
 		di
 		call	.create
 		jp	.continue
-.create:
-		ld	a,$d1
-		ld	mb,a
-		ld.sis	sp,$987e
-		call.is	.unlock and $ffff
+	.create:
+		call	.unlock
 		
 		ld	a,$02
-.erase:
+	.erase:
 		push	af
 		call	.sectorerase
 		pop	af
@@ -39,40 +36,48 @@ macro os_private
 		ld	bc,os.size
 		call	$2e0
 
-		call.is	.lock and $ffff
-		ld	a,$d0
-		ld	mb,a
+		call	.lock
 		xor	a,a
 		ret
 
-.sectorerase:
-		ld	bc,$f8
+	.sectorerase:
+		ld	bc, $f8
 		push	bc
 		jp	$2dc
 
-		assume	adl = 0
-
-.unlock:
-		ld	a,$8c
-		out0	($24),a
-		ld	c,4
-		in0	a,(6)
-		or	c
-		out0	(6),a
-		out0	($28),c
-		ret.l
-.lock:	
-		xor	a
-		out0	($28),a
-		in0	a,(6)
-		res	2,a
-		out0	(6),a
-		ld	a,$88
-		out0	($24),a
-		ret.l
-
-		assume adl = 1
-.continue:
+	.unlock:
+		ld	bc, $24
+		ld	a, $8c
+		call	.write
+		ld	bc, $06
+		call	.read
+		or	a, 4
+		call	.write
+		ld	bc, $28
+		ld	a, $4
+		jp	.write
+	.lock:
+		ld	bc, $28
+		xor	a, a
+		call	.write
+		ld	bc, $06
+		call	.read
+		res	2, a
+		call	.write
+		ld	bc, $24
+		ld	a, $88
+		jp	.write
+	.write:
+		ld	de, $C979ED
+		ld	hl, $D1887C - 3
+		ld	(hl), de
+		jp	(hl)
+	.read:
+		ld	de, $C978ED
+		ld	hl, $0D1887C - 3
+		ld	(hl), de
+		jp	(hl)
+	.continue:
 		jp	0
 	end macro
 	
