@@ -227,13 +227,15 @@ profil:
 ;  scale and divided by 65536.  If the resulting value is less than
 ;  bufsiz, then the corresponding entry in buf is incremented
 .syscall:
-; TODO : to test
 ; hl : buf, de : bufsize, bc : offset, ix : scale
 	ld	iy, (kthread_current)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
 	jr	z, .reset
+; also reset if there was already profiling
+	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	jr	nz, .reset
 	push	hl
 	ld	hl, 12
 	call	kmalloc

@@ -139,8 +139,8 @@ kernel_initramfs:
 file	'initramfs'
 ; end guard
  db	$00, $00
-kernel_romfs:
-file	'rootfs'
+; kernel_romfs:
+; file	'rootfs'
 include	'kernel/font/gohufont.inc'
 
 include	'kernel/driver/video.asm'
