@@ -1,3 +1,8 @@
+define	PROFIL_BUFFSIZE		0
+define	PROFIL_BUFF		3
+define	PROFIL_OFFSET		6
+define	PROFIL_SCALE		9
+
 macro align number
 	rb number - ($ mod number)
 end macro
@@ -142,6 +147,7 @@ sysdef _getppid
 	ret
 
 sysdef _uadmin
+; TODO : implement
 ; cmd, fn, mdep
 	ret
 
@@ -210,4 +216,107 @@ flash.lock:
 	in0	a, ($06)
 	res	2, a
 	out0	($06), a
+	ret
+
+sysdef _profil
+profil:
+; int profil(unsigned short *buf, size_t bufsiz, size_t offset, unsigned int scale);
+; disable profiling if buf == NULL
+;  Every virtual 10 milliseconds, the user's program counter (PC)
+;  is examined: offset is subtracted and the result is multiplied by
+;  scale and divided by 65536.  If the resulting value is less than
+;  bufsiz, then the corresponding entry in buf is incremented
+.syscall:
+; TODO : to test
+; hl : buf, de : bufsize, bc : offset, ix : scale
+	ld	iy, (kthread_current)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .reset
+	push	hl
+	ld	hl, 12
+	call	kmalloc
+	ld	a, ENOMEM
+	ld	(iy+KERNEL_THREAD_PROFIL_STRUCTURE), hl
+	jr	c, .error
+; fill in the structure
+	ld	(hl), de
+	inc	hl
+	inc	hl
+	inc	hl
+	pop	de
+	ld	(hl), de
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	(hl), bc
+	inc	hl
+	inc	hl
+	inc	hl
+	push	ix
+	dec	sp
+	pop	ix
+	inc	sp
+; ix / 256
+	ld	(hl), ix
+; set the profiler
+	set	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	or	a, a
+	sbc	hl, hl
+	ret
+.reset:
+	res	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	ld	hl, (iy+KERNEL_THREAD_PROFIL_STRUCTURE)
+	call	kfree
+	or	a, a
+	sbc	hl, hl
+	ld	(iy+KERNEL_THREAD_PROFIL_STRUCTURE), hl
+	ret
+.error:
+	pop	hl
+	ret
+
+.scheduler:
+; Preserve af and iy ++++
+	push	af
+	push	iy
+; get the pc
+; TODO : check this logic
+	ld	hl, (kinterrupt_irq_stack_ctx)
+	ld	hl, (hl)
+	ld	iy, (iy+KERNEL_THREAD_PROFIL_STRUCTURE)
+	ld	de, (iy+PROFIL_OFFSET)
+	or	a, a
+	sbc	hl, de
+; multiply by scale/65536
+; best is (a/256)*(b/256) right now
+	ld	bc, (iy+PROFIL_SCALE)
+	push	hl
+	dec	sp
+	pop	hl
+	inc	sp
+; hl = hl/256
+; hl * bc = hl
+	call	__imulu
+; check hl against buffsize
+	ld	de, (iy+PROFIL_BUFFSIZE)
+	or	a, a
+	sbc	hl, de
+; nc : not taken in account
+	jr	nc, .restore
+; else increment the entrie in buffsize
+	add	hl, de
+	add	hl, hl
+	ld	de, (iy+PROFIL_BUFF)
+	add	hl, de
+; entrie are unsigned short
+	ld	de, (hl)
+	inc	de
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+.restore:
+	pop	iy
+	pop	af
 	ret

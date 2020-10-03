@@ -42,15 +42,12 @@ define	KERNEL_THREAD_EV_SIG_POINTER		$30
 define	KERNEL_THREAD_NICE			$33
 define	KERNEL_THREAD_ATTRIBUTE			$34
 define	KERNEL_THREAD_JOINED			$35	; joined thread waiting for exit()
-; priority waiting list
-define	KERNEL_THREAD_LIST_PRIORITY		$36
-define	KERNEL_THREAD_LIST			$37
-
+; thread waiting ;
 define	KERNEL_THREAD_IO			$36
 define	KERNEL_THREAD_LIST_DATA			$36
 define	KERNEL_THREAD_LIST_NEXT			$37
 define	KERNEL_THREAD_LIST_PREVIOUS		$3A
-
+define	KERNEL_THREAD_PROFIL_STRUCTURE		$3D
 define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
 ; up to $100, table is 192 bytes or 24 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 21 descriptors usables ;
@@ -61,8 +58,8 @@ define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	64
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
-define  THREAD_ONCE_INIT			$FE
 define	THREAD_JOIGNABLE			0
+define	THREAD_PROFIL				1
 
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
@@ -77,6 +74,10 @@ define	NICE_PRIO_MIN				19
 define	NICE_PRIO_MAX				-20
 
 define	ROOT_USER				$01
+
+define	WNOHANG					1
+define	WUNTRACED				2
+define	WCONTINUED				4
 
 ; D00100 to D00120 is scratch
 
@@ -206,6 +207,21 @@ kthread:
 ; try to reschedule immediately
 	jp	task_schedule
 
+sysdef _waitpid
+.waitpid:
+; Ssed to wait for state changes in a child of the calling process, and obtain information about the child whose state has changed. A state change is considered to be: the child terminated; the child was stopped by a signal; or the child was resumed by a signal. In the case of a terminated child, performing a wait allows the system to release the resources associated with the child; if a wait is not performed, then the terminated child remains in a "zombie" state
+; pid_t waitpid(pid_t pid, int *status, int options);
+; NOT IMPLEMENTED :  < -1 	meaning wait for any child process whose process group ID is equal to the absolute value of pid.
+; -1 	meaning wait for any child process.
+; NOT IMPLEMENTED : 0 	meaning wait for any child process whose process group ID is equal to that of the calling process.
+; > 0 	meaning wait for the child whose process ID is equal to the value of pid. 
+; ECHILD; (for wait()) The calling process does not have any unwaited-for children.
+; ECHILD; (for waitpid() or waitid()) The process specified by pid (waitpid()) or idtype and id (waitid()) does not exist or is not a child of the calling process. (This can happen for one's own child if the action for SIGCHLD is set to SIG_IGN. See also the Linux Notes section about threads.)
+; EINTR ; WNOHANG was not set and an unblocked signal or a SIGCHLD was caught; see signal(7).
+; EINVAL ; The options argument was invalid. 
+; waitpid(): on success, returns the process ID of the child whose state has changed; if WNOHANG was specified and one or more child(ren) specified by pid exist, but have not yet changed state, then 0 is returned. On error, -1 is returned. 
+	ret
+	
 .core:
 
 .exit:

@@ -52,7 +52,7 @@ _boot_idvrmu                   equ 0000144h
 _boot_ildix                    equ 0000148h
 _boot_ildiy                    equ 000014Ch
 _boot_imul_b                   equ 0000150h
-_boot_imulu                    equ 0000154h
+__imulu                    equ 0000154h
 _boot_imuls                    equ 0000158h
 _boot_indcall                  equ 000015Ch
 _boot_ineg                     equ 0000160h

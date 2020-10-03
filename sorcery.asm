@@ -81,7 +81,7 @@ sysjump:
 	jp	_mkfifo
 	jp	_uname
 	jp	_enosys		; _waitpid
-	jp	_enosys		; _profil
+	jp	_profil
 	jp	_uadmin
 	jp	_nice
 	jp	_enosys		; _sigdisp

@@ -255,6 +255,9 @@ kscheduler:
 	sla	(hl)
 	inc	hl
 	ld	iy, (hl)
+; perform the thread profiler
+	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	call	nz, profil.scheduler 
 	jr	c, .do_schedule
 ; do we have idle thread ?
 	lea	hl, iy+KERNEL_THREAD_STATUS

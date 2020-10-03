@@ -29,7 +29,7 @@ define	KERNEL_VFS_FILE_DESCRIPTOR		0
 define	KERNEL_VFS_FILE_DESCRIPTOR_SIZE		8
 define	KERNEL_VFS_FILE_INODE			0	; 3 bytes, inode pointer
 define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
-define	KERNEL_VFS_FILE_FLAGS			6	; 2 byte, file flags, mode
+define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags, mode
 
 ; file flags that control *file*
 ; we can & those with permission to check mode
@@ -225,6 +225,7 @@ sysdef _close
 	jp	.inode_destroy
 
 sysdef _sync
+; TODO : implement
 .sync:
 	ret
 	
@@ -383,6 +384,7 @@ sysdef _read
 	jp	(iy)
 	
 sysdef _write
+; TODO : implement
 .write:
 	ret
 
@@ -405,6 +407,7 @@ sysdef _ioctl
 	jp	(iy)
 	
 sysdef _pipe
+; TODO : implement
 .pipe:
 	ret
 
@@ -425,15 +428,8 @@ sysdef _mkdir
 	ret
 
 sysdef _rmdir
+; TODO : implement
 .rmdir:
-	ret
-
-sysdef _dup
-.dup:
-	ret
-	
-sysdef _chroot
-.chroot:
 	ret
 
 sysdef _chmod
@@ -668,4 +664,14 @@ sysdef _stat
 	call	atomic_rw.unlock_write
 	or	a, a
 	sbc	hl, hl
+	ret
+
+sysdef _dup
+; TODO : implement
+.dup:
+	ret
+	
+sysdef _chroot
+; TODO : implement
+.chroot:
 	ret
