@@ -250,21 +250,22 @@ kinterrupt:
 
 kscheduler:
 .schedule_check_quanta:
-; load current thread ;
+; load current thread
 	ld	hl, i
 	sla	(hl)
 	inc	hl
 	ld	iy, (hl)
-; perform the thread profiler
-	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
-	call	nz, profil.scheduler 
-	jr	c, .do_schedule
 ; do we have idle thread ?
 	lea	hl, iy+KERNEL_THREAD_STATUS
 	ld	a, (hl)
 	inc	a
 ; this is idle, just schedule
 	jr	z, .do_schedule
+; perform the thread profiling
+	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	call	nz, profil.scheduler
+; we still have carry from that sla (hl), so if carry is set, we need to reschedule
+	jr	c, .do_schedule
 	inc	hl
 	inc	hl
 	dec	(hl)

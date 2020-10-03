@@ -135,6 +135,7 @@ sysdef _reboot
 ; TODO printk a message for panic
 	xor	a, a
 	call	console.fb_takeover
+	ei
 	ld	hl, .arch_bin_error
 	call	printk
 	jp	console.thread

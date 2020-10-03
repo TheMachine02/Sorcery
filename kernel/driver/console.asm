@@ -143,6 +143,15 @@ console:
 	jp	.phy_write
 
 .thread:
+; ; profiling exemple
+; 	ld	hl, 128
+; 	call	kmalloc
+; ; de : bufsize, bc : offset, ix : scale
+; 	ld	de, 64
+; 	ld	bc, .run_loop
+; ; by 4 bytes blocks
+; 	ld	ix, 16384
+; 	call	_profil
 	call	.prompt
 .run_loop:
 ; wait keyboard scan

@@ -254,12 +254,16 @@ profil:
 	inc	hl
 	inc	hl
 	inc	hl
-	push	ix
 	dec	sp
-	pop	ix
+	push	ix
 	inc	sp
+	pop	de
 ; ix / 256
-	ld	(hl), ix
+	ld	(hl), e
+	inc	hl
+	ld	(hl), d
+	inc	hl
+	ld	(hl), 0
 ; set the profiler
 	set	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
 	or	a, a
@@ -278,12 +282,12 @@ profil:
 	ret
 
 .scheduler:
-; Preserve af and iy ++++
+; Preserve af and iy and hl++++, also, pc is push on the stack at a very precise adress
 	push	af
 	push	iy
+	push	hl
 ; get the pc
-; TODO : check this logic
-	ld	hl, 15
+	ld	hl, 18
 	add	hl, sp
 	ld	hl, (hl)
 ; hl = pc
@@ -292,15 +296,17 @@ profil:
 	or	a, a
 	sbc	hl, de
 ; multiply by scale/65536
-; best is (a/256)*(b/256) right now
+; best is (a)*(b/256)/256 right now
 	ld	bc, (iy+PROFIL_SCALE)
-	push	hl
-	dec	sp
-	pop	hl
-	inc	sp
 ; hl = hl/256
 ; hl * bc = hl
 	call	__imulu
+	dec	sp
+	push	hl
+	inc	sp
+	pop	hl
+	inc.s	hl
+	dec.s	hl
 ; check hl against buffsize
 	ld	de, (iy+PROFIL_BUFFSIZE)
 	or	a, a
@@ -319,6 +325,7 @@ profil:
 	inc	hl
 	ld	(hl), d
 .restore:
+	pop	hl
 	pop	iy
 	pop	af
 	ret
