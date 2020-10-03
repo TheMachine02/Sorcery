@@ -576,6 +576,7 @@ sysdef _lseek
 	jp	syserror
 
 sysdef _fstat
+.fstat:
 ; int fstat(int fd, struct stat *statbuf);
 ; hl is fd, de is statbuf
 	call	.fd_pointer_check
@@ -588,7 +589,7 @@ sysdef _fstat
 	pop	ix
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
-	jr	.stat_fill	
+	jr	.stat_fill
 
 sysdef _stat
 .stat:
@@ -634,8 +635,34 @@ sysdef _stat
 	ld	(ix+STAT_SIZE), hl
 	ld	hl, 1024
 	ld	(ix+STAT_BLKSIZE), hl
-; TODO : count blk here
-	ld	(ix+STAT_BLKCNT), hl
+	ld	de, 0
+; 256 entries to parse, it is quite slow
+; TODO : find a faster way to count those block
+	ld	c, 16
+	lea	hl, iy+KERNEL_VFS_INODE_DATA
+.stat_indirect_block:
+	push	hl
+	ld	hl, (hl)
+	ld	b, 16
+.stat_direct_block:
+	inc	hl
+	push	hl
+	ld	hl, (hl)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .stat_noinc
+	inc	de
+.stat_noinc:
+	pop	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	djnz	.stat_indirect_block
+	pop	hl
+	dec	c
+	jr	nz, .stat_indirect_block
+	ld	(ix+STAT_BLKCNT), de
 .stat_continue:
 	lea	hl, iy + KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
