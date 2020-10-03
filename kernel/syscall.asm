@@ -283,8 +283,10 @@ profil:
 	push	iy
 ; get the pc
 ; TODO : check this logic
-	ld	hl, (kinterrupt_irq_stack_ctx)
+	ld	hl, 15
+	add	hl, sp
 	ld	hl, (hl)
+; hl = pc
 	ld	iy, (iy+KERNEL_THREAD_PROFIL_STRUCTURE)
 	ld	de, (iy+PROFIL_OFFSET)
 	or	a, a
