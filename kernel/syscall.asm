@@ -49,6 +49,7 @@ sysno:
 	ld	a, ENOSYS
 
 syserror:
+	ei
 	push	ix
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_ERRNO), a
@@ -281,7 +282,7 @@ profil:
 	ret
 .error:
 	pop	hl
-	ret
+	jp	syserror
 
 .scheduler:
 ; Preserve af and iy and hl++++, also, pc is push on the stack at a very precise adress

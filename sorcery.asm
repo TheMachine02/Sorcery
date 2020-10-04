@@ -122,23 +122,19 @@ include	'kernel/signal.asm'
 include	'kernel/restart.asm'
 include	'kernel/syscall.asm'
 include	'kernel/timer.asm'
+include	'kernel/vfs.asm'
+include	'kernel/inode.asm'
 include	'kernel/mm/mm.asm'
 include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'
-include	'kernel/vfs.asm'
-include	'kernel/inode.asm'
+include	'kernel/compress/lz4.asm'
+include	'fs/romfs.asm'
+include	'kernel/nmi.asm'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
 include	'kernel/arch/pic.asm'
-include	'kernel/compress/lz4.asm'
 include	'kernel/exec/leaf.asm'
-include	'fs/romfs.asm'
-include	'kernel/nmi.asm'
 
-kernel_initramfs:
-file	'initramfs'
-; end guard
- db	$00, $00
 ; kernel_romfs:
 ; file	'rootfs'
 include	'kernel/font/gohufont.inc'

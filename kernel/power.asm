@@ -49,6 +49,7 @@ sysdef _shutdown
 	ld	hl, kmem_cache_s512
 	call	kmem.cache_alloc
 ; TODO use emergency memory if this carry
+	ret	c
 	ld	(kpower_lcd_mask), hl
 	ex	de, hl
 	ld	hl, DRIVER_VIDEO_PALETTE

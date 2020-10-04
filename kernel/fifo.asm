@@ -43,19 +43,10 @@ fifo:
 	ret
 	
 .write:
-; TODO : implement write from buffer, (de), bc is size
-; a = char
-; write a character in head of fifo
-	ld	hl, (iy+FIFO_HEAD)
-	ld	(hl), a
-	ld	bc, (iy+FIFO_BOUND_UPP)
-	inc	hl
-	sbc	hl, bc
-	add	hl, bc
-	jr	nz, .write_rewind
-	ld	hl, (iy+FIFO_BOUND_LOW)
-.write_rewind:
-	ld	(iy+FIFO_HEAD), hl
+; iy is the fifo read, de is source buffer, bc is size
+	push	bc
+.write_loop:
+	push	bc
 	ld	hl, (iy+FIFO_SIZE)
 	ld	bc, FIFO_MAX_SIZE
 	or	a, a
@@ -64,10 +55,28 @@ fifo:
 	add	hl, bc
 	inc	hl
 	ld	(iy+FIFO_SIZE), hl
+	ld	hl, (iy+FIFO_HEAD)
+	ld	a, (de)
+	ld	(hl), a
+	inc	de
+	inc	hl
+	ld	bc, (iy+FIFO_BOUND_UPP)
+	sbc	hl, bc
+	add	hl, bc
+	jr	nz, .write_rewind
+	ld	hl, (iy+FIFO_BOUND_LOW)
+.write_rewind:
+	ld	(iy+FIFO_HEAD), hl
+	pop	bc
+	cpi
+	jp	pe, .write_loop
+	pop	hl
 	ret
 .write_full:
-	ld	hl, (iy+FIFO_HEAD)
-	ld	(iy+FIFO_TAIL), hl
+	pop	bc
+	pop	hl
+	or	a, a
+	sbc	hl, bc
 	ret
 
 .read:
@@ -100,8 +109,8 @@ fifo:
 .read_empty:
 ; bc is our data left to be read
 	pop	hl
-	push	bc
-	pop	hl
+	or	a, a
+	sbc	hl, bc
 	ret
 	
 .flush:

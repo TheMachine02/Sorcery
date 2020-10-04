@@ -3,16 +3,8 @@ leaf load
 library load
 memory management
 VFS
-signal
 keyboard stdin
-use circular buffer for pipe
 file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
 cd for change directory
 Rework timer
-
-inode locking :
--inode get : lock for read all inode of the path except the last which shall be write locked
-
-
->> exemple : acquier read lock, check metadata, error, return
-
+Rework signal

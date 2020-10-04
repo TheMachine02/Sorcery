@@ -45,7 +45,7 @@ sysdef _reboot
 	out0	($3B), e
 	out0	($3C), e
 ; load the initramfs image, 4K
-	ld	hl, kernel_initramfs
+	ld	hl, .arch_initramfs
 	call	lz4.decompress
 ; and init the rest of memory with poison
 	ld	hl, $D01000
@@ -97,6 +97,11 @@ sysdef _reboot
  db	$00, $00, $D0, $FF, $0F, $D0
  db	$A8, $00, $D0
  
+.arch_initramfs:
+file	'initramfs'
+; end guard
+ db	$00, $00
+
 .arch_init:
 ; here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
 ; interrupt will be disabled by most of device init, but that's okay to maintain them in a unknown state anyway
@@ -132,7 +137,6 @@ sysdef _reboot
 	ld	hl, .arch_bin_argv
 	call	leaf.execve
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
-; TODO printk a message for panic
 	xor	a, a
 	call	console.fb_takeover
 	ei
