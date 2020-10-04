@@ -233,9 +233,15 @@ sysdef _close
 
 sysdef _sync
 ; TODO : implement
+; sync() causes all pending modifications to filesystem metadata and
+; cached file data to be written to the underlying filesystems
+; ie, call phy_sync for all file modified and not yet written
 .sync:
 	ret
 	
+; TODO : read and write are almost the SAME routine
+; can we merge it ?
+
 sysdef _read
 .read:
 ;;size_t read(int fd, void *buf, size_t count);
@@ -272,7 +278,7 @@ sysdef _read
 ; well, we have a directory opened right here
 	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, a
 	ld	a, EISDIR
-	jp	nz, syserror
+	jp	nz, .inode_atomic_read_error
 ; check hl+bc < inode size
 ; push bc if <, else push the bc clamped to inode size
 	push	hl
@@ -306,6 +312,8 @@ sysdef _read
 	rra
 	srl	h
 	rra
+; FIXME : right now, the first block is always read in full
+; so we can only read @1024 bytes alignement
 ; a = block offset, de buffer, bc count
 ; now let's read
 .read_start:
@@ -318,17 +326,7 @@ sysdef _read
 	sbc	hl, bc
 	jr	c, .read_copy_end
 	push	hl
-	call	.inode_block_data
-	inc	hl
-	ld	hl, (hl)
-	ld	bc, KERNEL_MM_PAGE_SIZE
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	jr	nz, .read_not_null
-	ld	hl, KERNEL_MM_NULL
-.read_not_null:
-	ldir
+	call	.read_buff
 	pop	hl
 	inc	a
 	jr	.read_copy
@@ -336,17 +334,8 @@ sysdef _read
 ; end copy
 	add	hl, bc
 	push	hl
-	call	.inode_block_data
-	inc	hl
-	ld	hl, (hl)
-	add	hl, de
-	or	a, a
-	sbc	hl, de
-	jr	nz, .read_not_null2
-	ld	hl, KERNEL_MM_NULL
-.read_not_null2:
 	pop	bc
-	ldir
+	call	.read_buff
 .read_unlock:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
@@ -380,6 +369,30 @@ sysdef _read
 ; save the size readed
 	push	hl
 	jr	.read_unlock
+.read_buff:
+; the inner data logic
+	call	.inode_block_data
+	ld	a, (hl)
+	or	a, a
+	jr	z, .read_buff_cache_miss
+; get data from cache
+	ld	hl, KERNEL_MM_RAM shr 2
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ldir
+	ret
+.read_buff_cache_miss:
+	inc	hl
+	ld	hl, (hl)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	nz, .read_buff_null
+	ld	hl, KERNEL_MM_NULL
+.read_buff_null:
+	ldir
+	ret
 	
 sysdef _write
 .write:
@@ -411,16 +424,58 @@ sysdef _write
 ; well, we have a directory opened right here
 	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, a
 	ld	a, EISDIR
-	jp	nz, syserror
-; TODO : logic
+	jp	nz, .inode_atomic_write_error
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	push	hl
+	add	hl, bc
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+; convert hl to block (16 blocks per indirect, 1024 bytes per block)
+; hl / 1024 : offset in block
+	dec	sp
+	pop	hl
+	inc	sp
+	ld	a, l
+	srl	h
+	rra
+	srl	h
+	rra
+; a = block offset, de buffer, bc count
+; now let's write
+; FIXME : write can only occur at 1024 bytes alignement
+.write_start:
+	push	bc
+	push	bc
+	pop	hl
+.write_copy:
+	ld	bc, KERNEL_MM_PAGE_SIZE
+	or	a, a
+	sbc	hl, bc
+	jr	c, .write_copy_end
+	push	hl
+	call	.write_buff
+	pop	hl
+	jr	c, .write_error
+	inc	a
+	jr	.write_copy
+.write_copy_end:
+; end copy
+	add	hl, bc
+	push	hl
+	pop	bc
+	call	.write_buff
+	jr	c, .write_error
 .write_unlock:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
-	pop	hl	; our size read
+	pop	hl	; our size written
 	ret
+.write_error:
+	pop	hl
+	jp	.inode_atomic_write_error
+
 .write_ndelay:
 ; TODO : implement
-;	call	atomic_rw.try_lock_read
+;	call	atomic_rw.try_lock_write
 	scf
 	jp	nc, .write_ndelay_return
 	ld	a, EAGAIN
@@ -446,6 +501,55 @@ sysdef _write
 ; save the size readed
 	push	hl
 	jr	.write_unlock
+; complex logic for writing to data block
+.write_buff:
+; the inner data logic
+	call	.inode_block_data
+	ld	a, (hl)
+	or	a, a
+	jr	z, .write_buff_cache_miss
+.write_buff_do:
+; set dirty
+	ld	hl, kmm_ptlb_map
+	ld	l, a
+	set	KERNEL_MM_PAGE_DIRTY, (hl)
+; get data from cache
+	ld	hl, KERNEL_MM_RAM shr 2
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ex	de, hl
+	ldir
+	ex	de, hl
+	ret
+.write_buff_cache_miss:
+; here, we need to allocate data
+	call	cache.page_map
+	ret	c
+	ld	(hl), a
+	inc	hl
+	ld	hl, (hl)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .write_buff_do
+; so we need to read from backing device here
+; iy = inode
+	push	af
+	ex	de, hl
+	ld	hl, KERNEL_MM_RAM shr 2
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ex	de, hl
+	push	iy
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+; hl = data from inode, bc is size (1024), de is my memory page
+	lea	iy, iy+phy_read
+	call	.phy_indirect_call
+	pop	iy
+	pop	af
+	jr	.write_buff_do
 	
 sysdef _ioctl
 .ioctl:

@@ -508,7 +508,8 @@ define	phy_destroy_inode	28
 ; about alignement : block are at last 1024 bytes aligned
 ; block data is aligned to 4 bytes
 ; inode data is 64 bytes aligned
-; destroy a, bc, hl
+; destroy a, hl
+	push	bc
 	ld	b, a
 	rra
 	rra
@@ -528,6 +529,7 @@ define	phy_destroy_inode	28
 	ld	hl, (hl)
 	add	a, l
 	ld	l, a
+	pop	bc
 ; hl is the block_data adress structure in cache
 	ret
 
