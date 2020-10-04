@@ -44,7 +44,7 @@ sysjump:
 	jp	_lseek
 	jp	_enosys		; _chdir
 	jp	_sync
-	jp	_enosys		; _access
+	jp	_access
 	jp	_chmod
 	jp	_chown
 	jp	_stat

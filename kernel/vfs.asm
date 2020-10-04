@@ -63,6 +63,10 @@ define	STAT_BLKSIZE				11
 define	STAT_BLKCNT				14
 define	STAT_SIZE				17
 
+define	R_OK					1
+define	W_OK					2
+define	X_OK					4
+
 kvfs:
 
 .phy_indirect_call:
@@ -730,3 +734,19 @@ sysdef _chroot
 ; TODO : implement
 .chroot:
 	ret
+
+sysdef _access
+; int access(const char *pathname, int mode);
+.access:
+; hl is path, de is mode
+	push	de
+	call	.inode_get_lock
+	pop	de
+	ret	c
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, e
+	xor	a, e
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	ld	a, EACCES
+	jr	nz, .stat_continue
+	jp	.inode_atomic_write_error
