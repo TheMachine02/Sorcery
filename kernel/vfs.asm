@@ -35,7 +35,7 @@ define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags, mode
 ; we can & those with permission to check mode
 define	KERNEL_VFS_O_R				1
 define	KERNEL_VFS_O_W				2
-define	KERNEL_VFS_O_RW				4
+define	KERNEL_VFS_O_RW				3
 define	KERNEL_VFS_O_TRUNC			8	; trunc file to 0 at open
 define	KERNEL_VFS_O_APPEND			16	; append to end of file all write
 define	KERNEL_VFS_O_CLOEXEC			32	; close on execve
@@ -279,6 +279,7 @@ sysdef _read
 	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, a
 	ld	a, EISDIR
 	jp	nz, .inode_atomic_read_error
+; FIXME : welp, it is broken from here to the end
 ; check hl+bc < inode size
 ; push bc if <, else push the bc clamped to inode size
 	push	hl
@@ -300,6 +301,7 @@ sysdef _read
 	pop	de
 	pop	hl
 	push	hl
+	push	hl
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
@@ -312,20 +314,68 @@ sysdef _read
 	rra
 	srl	h
 	rra
-; FIXME : right now, the first block is always read in full
-; so we can only read @1024 bytes alignement
-; a = block offset, de buffer, bc count
-; now let's read
-.read_start:
-	push	bc
-	push	bc
 	pop	hl
+; hl = still the offset in the file, bc = size to read, de = buffer, a = block
+; hl mod 1024
+	push	af
+	ld	a, l
+	rl	h
+	ld	hl, 0
+	ld	l, a
+	sbc	a, a
+	and	a, 00000001b
+	ld	h, a
+	pop	af
+; start reading the file
+; first block is in size 1024 - hl long maximum
+	push	bc
+	push	bc
+	pop	ix
+; ix will be size
+	push	hl
+	ld	bc, -1024
+	add	hl, bc
+	push	hl
+; we have (offset mod 1024) - 1024
+; size - (1024-modoffset)) > 0 ?
+	lea	bc, ix+0
+	add	hl, bc
+; hl > 0 ?
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	pop	bc
+	pop	hl
+	jp	m, .read_end_single_copy
+; copy(modoffset, buffer, 1024-modoffset)
+; hl set, bc is not *yet* set
+	add	ix, bc
+; we need to negate bc
+	push	hl
+	ld	h, a
+	ld	a, c
+	ld	l, b
+	ld	bc, $FFFFFF
+	cpl
+	ld	c, a
+	ld	a, l
+	cpl
+	ld	b, a
+	inc	bc
+	ld	a, h
+	pop	hl
+; a is set, bc is set, hl is set, de is set
+	call	.read_buff
+	inc	a
+	lea	hl, ix+0
 .read_copy:
 	ld	bc, KERNEL_MM_PAGE_SIZE
 	or	a, a
 	sbc	hl, bc
 	jr	c, .read_copy_end
 	push	hl
+	or	a, a
+	sbc	hl, hl
 	call	.read_buff
 	pop	hl
 	inc	a
@@ -335,6 +385,9 @@ sysdef _read
 	add	hl, bc
 	push	hl
 	pop	bc
+.read_end_single_copy:
+	or	a, a
+	sbc	hl, hl
 	call	.read_buff
 .read_unlock:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
@@ -369,8 +422,11 @@ sysdef _read
 ; save the size readed
 	push	hl
 	jr	.read_unlock
+; complex logic to read from the inode structure
 .read_buff:
+; hl = 1024 bytes offset, de = buffer, bc = size, a = block count
 ; the inner data logic
+	push	hl
 	call	.inode_block_data
 	ld	a, (hl)
 	or	a, a
@@ -380,6 +436,11 @@ sysdef _read
 	ld	h, a
 	add	hl, hl
 	add	hl, hl
+.read_buff_do:
+	ex	de, hl
+	ex	(sp), hl
+	add	hl, de
+	pop	de
 	ldir
 	ret
 .read_buff_cache_miss:
@@ -388,11 +449,9 @@ sysdef _read
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	nz, .read_buff_null
+	jr	nz, .read_buff_do
 	ld	hl, KERNEL_MM_NULL
-.read_buff_null:
-	ldir
-	ret
+	jr	.read_buff_do
 	
 sysdef _write
 .write:
@@ -429,6 +488,7 @@ sysdef _write
 	push	hl
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+; FIXME : welp, it is broken from here to the end
 ; convert hl to block (16 blocks per indirect, 1024 bytes per block)
 ; hl / 1024 : offset in block
 	dec	sp
@@ -466,7 +526,7 @@ sysdef _write
 	jr	c, .write_error
 .write_unlock:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_read
+	call	atomic_rw.unlock_write
 	pop	hl	; our size written
 	ret
 .write_error:
@@ -481,6 +541,8 @@ sysdef _write
 	ld	a, EAGAIN
 	jp	syserror
 .write_phy_device:
+	ex	de, hl
+; expect string hl, size bc, de offset
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
 	lea	iy, iy+phy_write
@@ -577,6 +639,7 @@ sysdef _pipe
 sysdef _mkdir
 .mkdir:
 ; int mkdir(const char *pathname, mode_t mode)
+; hl is path, bc is mode
 	ld	a, KERNEL_VFS_TYPE_DIRECTORY
 	call	.inode_create
 ; return iy = inode
@@ -651,10 +714,14 @@ sysdef _mknod
 ; int mknod(const char *pathname, mode_t mode, dev_t dev)
 ; hl is path, bc is mode, de is dev (ie memory ops)
 	push	de
-	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+; mode hold everything (and also the file type)
+	ld	a, c
+	and	a, not KERNEL_VFS_PERMISSION_RWX
+; NOTE : mknod can create any type of file with the dev
 	call	.inode_create
 	pop	de
 	ret	c
+; TODO : device list and actual fetching of data for the memops
 	ld	(iy+KERNEL_VFS_INODE_OP), de
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
@@ -666,6 +733,7 @@ sysdef _mkfifo
 .mkfifo:
 ; a bit more complex, but anyway
 ; int mkfifo(const char *pathname, mode_t mode)
+; bc is mode, hl is path
 	ld	a, KERNEL_VFS_TYPE_FIFO
 	call	.inode_create
 	ret	c

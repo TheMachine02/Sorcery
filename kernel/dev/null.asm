@@ -2,14 +2,11 @@ null:
 
 .init:
 .phy_init:
-	ld	bc, .phy_mem_ops
 	ld	hl, .NULL_DEV
-; inode capabilities flags
-; single char dev, (so write / read / ioctl only)
-; 	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
-; 	jp	kvfs.inode_device
-	ret
-; 
+	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	ld	de, .phy_mem_ops
+	jp	_mknod
+
 .NULL_DEV:
  db "/dev/null", 0
 

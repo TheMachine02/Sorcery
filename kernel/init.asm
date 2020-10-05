@@ -84,28 +84,30 @@ sysdef _reboot
 ; create the kernel init thread
 	ld	iy, .arch_init
 	call	kthread.create
-; if this thread create carry, it will get to the arch_sleep and NMI as deadlock
+; NOTE : if this thread create carry, it will get to the arch_sleep and NMI as deadlock
 ; so, optimise out a jp c, nmi
-; nice idle thread code
 
 .arch_sleep:
+; nice idle thread code
 	ei
 	slp
 	jr	.arch_sleep
  
+ .arch_initramfs:
+file	'initramfs'
+; NOTE : end guard is part of MPU init (those two $00 are important)
+
 .arch_MPU_init:
  db	$00, $00, $D0, $FF, $0F, $D0
  db	$A8, $00, $D0
- 
-.arch_initramfs:
-file	'initramfs'
-; end guard
- db	$00, $00
 
 .arch_init:
-; here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
+; NOTE : here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
 ; interrupt will be disabled by most of device init, but that's okay to maintain them in a unknown state anyway
 ; just don't trigger watchdog please
+	ld	bc, KERNEL_VFS_PERMISSION_RW
+	ld	hl, .arch_dev_path
+	call	_mkdir
 	call	video.init
 	call	keyboard.init
 	call	rtc.init
@@ -115,22 +117,8 @@ file	'initramfs'
 ; mtd block driver ;
 ;	call	mtd.init
 ; debug thread & other debugging stuff
-; 	ld	hl, $D30000
-; 	call	atomic_mutex.init
-; 	ld	iy, DEBUG_THREAD
-; 	call	kthread.create
-; 	ld	iy, DEBUG_THREAD_2
-; 	call	kthread.create
-; DEBUG
-; 
-; 	ld	hl, DEBUG_PATH
-; 	call	_mkdir
-; 	ld	hl, DEBUG_PATH_2
-; 	call	_mkdir
-; 	ld	hl, DEBUG_PATH_3
-; 	call	_mkfifo
-; 	ld	hl, DEBUG_PATH_3
-; 	call	kvfs.inode_get_lock
+; enabled if kernel is compiled with debug option
+	dbg	thread
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	bc, .arch_bin_path
 	ld	de, .arch_bin_envp
@@ -144,12 +132,17 @@ file	'initramfs'
 	call	printk
 	jp	console.thread
 
+.arch_dev_path:
+ db	"/dev",0
+ 
 .arch_bin_path:
  db	"/bin/init",0
+
 .arch_bin_argv:
 .arch_bin_envp:
  dl	NULL
-.arch_bin_error:
+
+ .arch_bin_error:
  db	"Failed to execute /bin/init",10,"Running emergency shell",10,0
 
 .arch_poison_heap:
@@ -179,53 +172,23 @@ name:
 	ret
 ; TODO, put this in certificate ?
 .name_table:
-	dl	.name_system	; Operating system name (e.g., "Sorcery")
-	dl	.name_node	; network name ?
-	dl	.name_release	; Operating system release (e.g., "1.0.0")
-	dl	.name_version	; Operating system version
+	dl	.name_system		; Operating system name (e.g., "Sorcery")
+	dl	.name_node		; network name ?
+	dl	.name_release		; Operating system release (e.g., "1.0.0")
+	dl	.name_version		; Operating system version
 	dl	.name_architecture	; Hardware identifier
 .name_system:
- db CONFIG_KERNEL_NAME, 0
+ db	CONFIG_KERNEL_NAME, 0
 .name_node:
- db "TI-83PCE", 0
+ db	"TI-83PCE", 0
 .name_release:
- db CONFIG_KERNEL_RELEASE, 0
+ db	CONFIG_KERNEL_RELEASE, 0
 .name_version:
- db CONFIG_KERNEL_VERSION, 0
+ db	CONFIG_KERNEL_VERSION, 0
 .name_architecture:
- db "ez80", 0
+ db	"ez80", 0
  
-; DEBUG_THREAD:
-; 	ld	hl, 30
-; 	call	kthread.sleep
-; 	ld	hl, $D30000
-; 	call	atomic_mutex.lock
-; 	ld	hl, 10
-; 	call	kthread.sleep
-; 	ld	hl, $D30000
-; 	call	atomic_mutex.unlock 
-; 	jr	DEBUG_THREAD
-; 	
-; DEBUG_THREAD_2:
-; 	ld	hl, 200
-; 	call	kthread.sleep
-; 	ld	hl, $D30000
-; 	call	atomic_mutex.lock
-; 	ld	hl, 100
-; 	call	kthread.sleep
-; 	ld	hl, $D30000
-; 	call	atomic_mutex.unlock
-; 	jr	DEBUG_THREAD_2
-
-; DEBUG_PATH:
-;  db "/dev/",0
-;  
-; DEBUG_PATH_2:
-;  db "/dev/fifo/",0
-; 
-; DEBUG_PATH_3:
-;  db "/dev/fifo/pipe",0
- 
+sysdef _printk
 printk:
 	push	hl
 	ld	bc, 0

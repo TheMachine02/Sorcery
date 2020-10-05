@@ -102,6 +102,7 @@ sysjump:
 	jp	_priv_unlock
 	jp	_flash_lock
 	jp	_flash_unlock
+	jp	_printk
 ; 	jp	_socket
 ; 	jp	_listen
 ; 	jp	_bind
@@ -124,39 +125,35 @@ include	'kernel/syscall.asm'
 include	'kernel/timer.asm'
 include	'kernel/vfs.asm'
 include	'kernel/inode.asm'
+include	'kernel/arch/atomic.asm'
+include	'kernel/arch/debug.asm'
 include	'kernel/mm/mm.asm'
 include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'
 include	'kernel/compress/lz4.asm'
-include	'fs/romfs.asm'
 include	'kernel/nmi.asm'
-include	'kernel/arch/atomic.asm'
-include	'kernel/arch/debug.asm'
 include	'kernel/arch/pic.asm'
-include	'kernel/exec/leaf.asm'
-
+include	'kernel/arch/leaf.asm'
+include	'kernel/arch/ldso.asm'
+include	'fs/romfs.asm'
 ; kernel_romfs:
 ; file	'rootfs'
 include	'kernel/font/gohufont.inc'
 
+; driver & device
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
 include	'kernel/driver/hrtimer.asm'
 include	'kernel/driver/keyboard.asm'
 include	'kernel/driver/spi.asm'
-;include	'kernel/driver/usb.asm'
-;include	'kernel/driver/mtd.asm'
-; driver & device
-include	'kernel/dev/null.asm'
+include	'kernel/driver/usb.asm'
+include	'kernel/driver/mtd.asm'
 include	'kernel/driver/console.asm'
+; NOTE : dev console must follow driver/console code
 include	'kernel/dev/console.asm'
+include	'kernel/dev/null.asm'
 include	'kernel/dev/flash.asm'
 
-; WARNING, flash breakage right here !
-
-; include	'kernel/exec/kexec.asm'
-; include	'kernel/exec/kso.asm'
-; include	'kernel/exec/kelf.asm'
-
+; WARNING : flash breakage right here !
 
 sorcery_end:

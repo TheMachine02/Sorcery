@@ -143,14 +143,14 @@ console:
 	jp	.phy_write
 
 .thread:
-; ; profiling exemple
-; 	ld	hl, 128
-; 	call	kmalloc
+; profiling exemple
+; 	ld	hl, kmem_cache_s512
+; 	call	kmem.cache_alloc
 ; ; de : bufsize, bc : offset, ix : scale
-; 	ld	de, 64
+; 	ld	de, 256
 ; 	ld	bc, .run_loop
 ; ; by 4 bytes blocks
-; 	ld	ix, 16384
+; 	ld	ix, 65536
 ; 	call	_profil
 	call	.prompt
 .run_loop:

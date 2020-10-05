@@ -29,13 +29,11 @@ define	CONSOLE_CURSOR_MAX_COL	50
 define	CONSOLE_CURSOR_MAX_ROW	20
 
 .phy_init:
-	ld	bc, .phy_mem_ops
 	ld	hl, .CONSOLE_DEV
-; inode capabilities flags
 ; single character device, (so write / read / ioctl), no seek capabilities exposed
-; 	ld	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
-; 	jp	kvfs.inode_device
-	ret
+	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	ld	de, .phy_mem_ops
+	jp	_mknod
 
 .CONSOLE_DEV:
  db "/dev/console", 0

@@ -8,13 +8,12 @@ flash:
 	ld	de, $D18800
 	ld	bc, 256
 	ldir
-	ld	bc, .phy_mem_ops
 	ld	hl, .FLASH_DEV
 ; inode capabilities flags
 ; single dev block
-; 	ld	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
-; 	jp	kvfs.inode_device
-	ret
+	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_BLOCK_DEVICE
+	ld	de, .phy_mem_ops
+	jp	_mknod
 
 .FLASH_DEV:
  db "/dev/flash", 0
@@ -62,7 +61,7 @@ org $D18800
 	call	nz, .phy_suspend
 	ld	a, (hl)
 	cp	a, $FF
-	jr	nz, .phy_erase_loop	
+	jr	nz, .phy_erase_loop
 	ret
 
 .phy_suspend:
