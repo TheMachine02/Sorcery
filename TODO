@@ -8,3 +8,6 @@ file execution within console (check /bin/ if command not found, else exec /bin/
 cd for change directory
 Rework timer
 Rework signal
+
+Easier memory map
+Thread TLS are just after the top of stack, can create thread by passing single stack pointer and stack size

@@ -15,9 +15,6 @@ define	nmi_context			$D00140	; 64 bytes
 define	nmi_console			$D00160	; 64 bytes
 define	nmi_stack			$D0027A	; interrupt stack. Anyway, if we were in a interrupt, we'll reboot
 
-assert $ < $0220A8
-rb $0220A8-$
-
 nmi:
 .handler:
 	ld	(nmi_context+CONTEXT_FRAME_HL), hl

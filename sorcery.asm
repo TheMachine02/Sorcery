@@ -31,7 +31,6 @@ include 'sorcery_certificate.asm'
 	jp	restart.20h
 	jp	restart.28h
 	jp	restart.30h
-	jp	nmi.handler
 ; align this to 4 bytes
 sysjump:
 	jp	_open
@@ -131,6 +130,9 @@ include	'kernel/mm/mm.asm'
 include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'
 include	'kernel/compress/lz4.asm'
+; be sure we are in the correct spot for NMI
+ assert $ < $0220A8
+ rb $0220A8-$
 include	'kernel/nmi.asm'
 include	'kernel/arch/pic.asm'
 include	'kernel/arch/leaf.asm'
