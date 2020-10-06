@@ -18,7 +18,7 @@ macro os_private
 	macro os_create?
 		di
 		call	.create
-		jp	.continue
+		rst	0
 	.create:
 		call	.unlock
 		
@@ -77,8 +77,6 @@ macro os_private
 		ld	hl, $0D1887C - 3
 		ld	(hl), de
 		jp	(hl)
-	.continue:
-		jp	0
 	end macro
 	
 end macro

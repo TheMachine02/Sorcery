@@ -9,7 +9,6 @@ define	KERNEL_HW_POISON			$C7
 define	KERNEL_MM_RESERVED_MASK			00101000b
 define	KERNEL_MM_PAGE_FREE_MASK		128
 
- org	$D00000
 KERNEL_INTERRUPT_IPT:
 ; IRQ priority : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
 kinterrupt_irq_reschedule:

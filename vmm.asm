@@ -16,7 +16,8 @@ define	VMM_HYPERVISOR_NMI	$D321A9
 define	VMM_HYPERVISOR_SIZE	$D30105
 define	VMM_HYPERVISOR_IRQ	$D3010D
 
-define	VMM_HYPERVISOR_FLAG	-1
+define	VMM_HYPERVISOR_FLAG	$D0007F
+define	VMM_HYPERVISOR_OFFSET	-1
 define	VMM_HYPERVISOR_BIT	0
 
 define	VMM_GUEST_INIT		$020109
@@ -56,7 +57,7 @@ vmm_installer:
 .erase:
 	ld	a, $0C
 	call	.erase_sector
-	ld	hl, sorcery
+	ld	hl, vmm_ram
 	ld	de, VMM_HYPERVISOR_BASE
 	ld	bc, sorcery_size
 	call	$0002E0
@@ -127,8 +128,8 @@ vmm_installer:
 	ld	(hl), de
 	jp	(hl)
 	
-sorcery:
-
+vmm_ram:
+	
 virtual at $
 guest_init_ram:
 	jp	$0
@@ -150,14 +151,14 @@ vmm:
 	jp	$0
 
 .interrupt:
-	bit	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_FLAG)
+	bit	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_OFFSET)
 	jr	z, .guest_interrupt
 	jp	kinterrupt.irq_handler
 
 .nmi:
 	push	iy
 	ld	iy, $D00080
-	bit	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_FLAG)
+	bit	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_OFFSET)
 	pop	iy
 	jr	z, .guest_nmi
 	jp	nmi.handler
@@ -179,6 +180,11 @@ vmm:
 	dec	hl
 	ld	($E30202), hl
 	
+	ld	hl, $E40000
+	ld	de, $E30204
+	ld	bc, 508
+	ldir
+	
 	ld	ix, $000100
 	
 	ld	hl, 0
@@ -192,7 +198,7 @@ vmm:
 	xor	a, a
 .boot_choose_loop:
 	push	af
-	ld	b, 7
+	ld	b, 8
 .wait:
 	push	bc
 	call	video.vsync
@@ -239,9 +245,11 @@ vmm:
 	or	a, a
 	jr	z, .tios_init
 	ld	iy, $D00080
-	set	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_FLAG)	
+	set	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_OFFSET)
 	jp	init
 .tios_init:
+; FIXME : we need to explain to the OS that he is smaller
+; invisible variable taking up to $0D0000 ??
 	ld	hl, $E40000
 	ld	de, $D40000
 	ld	bc, 76800*2
@@ -286,7 +294,11 @@ vmm:
  
 .string_enter:
  db "Press enter to boot selected entry", 0
-	
+
+; now, the whole kernel 
+ 
+sorcery:
+
 sysjump:
 	jp	_open
 	jp	_close

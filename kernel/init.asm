@@ -17,6 +17,10 @@ define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
 
+; NOTE : memory map of the initramfs is here
+; virtual at kernel_data
+; 	include 'bss.asm'
+; end virtual
 
 init:
 ; read kernel paramater
