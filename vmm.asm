@@ -8,38 +8,56 @@ include	'header/asm-boot.inc'
 ; kernel build config
 include 'config'
 
-define	VMM_KERNEL_BASE		$0C8000
-define	VMM_KERNEL_END		$0D0000
+define	VMM_HYPERVISOR_BASE	$0C8000
+define	VMM_HYPERVISOR_END	$0D0000
 
 define	VMM_HYPERVISOR_INIT	$D30109
 define	VMM_HYPERVISOR_NMI	$D321A9
 define	VMM_HYPERVISOR_SIZE	$D30105
 define	VMM_HYPERVISOR_IRQ	$D3010D
 
+define	VMM_HYPERVISOR_FLAG	-1
+define	VMM_HYPERVISOR_BIT	0
+
 define	VMM_GUEST_INIT		$020109
 define	VMM_GUEST_IRQ		$02010D
+define	VMM_GUEST_NMI		$0220A9
 
 format	ti executable 'VMM'
 
-vmm:
+vmm_installer:
 
 .install:
 ; install the kernel in flash at the end of the OS and adapt the size of the OS to reflect the increased size
-
+; touch some hypervisor code so we have an easy jump to base init and irq of TI OS
+	ld	hl, (VMM_GUEST_INIT)
+	ld	de, vmm.boot
+	or	a, a
+	sbc	hl, de
+	jr	z, .upgrade
+	add	hl, de
+	ld	(guest_init_ram+1), hl
+	ld	hl, (VMM_GUEST_IRQ)
+	ld	(guest_irq_ram+1), hl
+	ld	hl, (VMM_GUEST_NMI)
+	ld	(guest_nmi_ram+1), hl
+	jr	.do_install
+.upgrade:
+	ld	hl, (vmm.guest_init+1)
+	ld	(guest_init_ram+1), hl
+	ld	hl, (vmm.guest_interrupt+1)
+	ld	(guest_irq_ram+1), hl
+	ld	hl, (vmm.guest_nmi+1)
+	ld	(guest_nmi_ram+1), hl
+.do_install:
 	di
 	call	.unlock
 ; FIXME : can't work for OS 5.5 and 5.6
 .erase:
 	ld	a, $0C
 	call	.erase_sector
-	
-; touch some hypervisor code so we have an easy jump to base init and irq of TI OS
-	ld	hl, (VMM_GUEST_INIT)
-	ld	(guest_init+1), hl
-	ld	hl, (VMM_GUEST_IRQ)
-	ld	(guest_irq+1), hl
 	ld	hl, sorcery
-	ld	de, VMM_KERNEL_BASE
+	ld	de, VMM_HYPERVISOR_BASE
 	ld	bc, sorcery_size
 	call	$0002E0
 ; now we need to patch the OS sector $020000
@@ -53,13 +71,13 @@ vmm:
 ; start of kernel : $0C8000
 ; 32K free up to $0D000
 ; set end of OS pointer to this
-	ld	hl, VMM_KERNEL_END
+	ld	hl, VMM_HYPERVISOR_END
 	ld	(VMM_HYPERVISOR_SIZE), hl
-	ld	hl, (.arch_nmi)
+	ld	hl, vmm.nmi
 	ld	(VMM_HYPERVISOR_NMI), hl
-	ld	hl, (.arch_init)
+	ld	hl, vmm.boot
 	ld	(VMM_HYPERVISOR_INIT), hl
-	ld	hl, (.arch_interrupt)
+	ld	hl, vmm.interrupt
 	ld	(VMM_HYPERVISOR_IRQ), hl
 	ld	a, $02
 	call	.erase_sector
@@ -108,21 +126,167 @@ vmm:
 	ld	hl, $0D1887C - 3
 	ld	(hl), de
 	jp	(hl)
-
-.arch_nmi:
- dl	nmi.handler
-.arch_interrupt:
- dl	kinterrupt.irq_handler
-.arch_init:
- dl	init
 	
 sorcery:
-guest_init:
+
+virtual at $
+guest_init_ram:
 	jp	$0
-guest_irq:
+guest_irq_ram:
 	jp	$0
-; NOTE : we need to offset the two jump
-org	VMM_KERNEL_BASE + 8
+guest_nmi_ram:
+	jp	$0
+end virtual
+
+org	VMM_HYPERVISOR_BASE
+	
+vmm:
+
+.guest_init:
+	jp	$0
+.guest_interrupt:
+	jp	$0
+.guest_nmi:
+	jp	$0
+
+.interrupt:
+	bit	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_FLAG)
+	jr	z, .guest_interrupt
+	jp	kinterrupt.irq_handler
+
+.nmi:
+	push	iy
+	ld	iy, $D00080
+	bit	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_FLAG)
+	pop	iy
+	jr	z, .guest_nmi
+	jp	nmi.handler
+	
+.boot:
+	di
+; ti os = bit reset
+; kernel = bit set
+; nice little boot loader
+; LCD to 8 bits
+	ld	hl, $D40000
+	ld	($E30010), hl
+	ld	a,$27
+	ld	($E30018), a
+; colors 0, 1
+	or	a, a
+	sbc	hl, hl
+	ld	($E30200), hl
+	dec	hl
+	ld	($E30202), hl
+	
+	ld	ix, $000100
+	
+	ld	hl, 0
+	ld	bc, .string_boot0
+	call	.string
+	
+	ld	hl, 19*256+0
+	ld	bc, .string_enter
+	call	.string
+	
+	xor	a, a
+.boot_choose_loop:
+	push	af
+	ld	b, 7
+.wait:
+	push	bc
+	call	video.vsync
+	pop	bc
+	djnz	.wait
+	pop	af
+	push	af
+	ld	ix, $000100
+	or	a, a
+	jr	nz, .not_reverse
+	ld	ix, $010001
+.not_reverse:
+	ld	hl, 1*256+3
+	ld	bc, .string_boot1
+	call	.string
+	pop	af
+	push	af
+	ld	ix, $000100
+	or	a, a
+	jr	z, .not_reverse2
+	ld	ix, $010001
+.not_reverse2:
+	ld	hl, 2*256+3
+	ld	bc, .string_boot2
+	call	.string
+	ld	hl, $F50000
+	ld	(hl), 2
+	xor	a, a
+.scan_wait:
+	cp	a, (hl)
+	jr	nz, .scan_wait
+	pop	af
+	ld	hl, $F5001E
+	bit	0, (hl)
+	jr	z, $+3
+	cpl
+	bit	3, (hl)
+	jr	z, $+3
+	cpl
+	ld	hl, $F5001C
+	bit	0, (hl)
+	jr	z, .boot_choose_loop
+	
+	or	a, a
+	jr	z, .tios_init
+	ld	iy, $D00080
+	set	VMM_HYPERVISOR_BIT, (iy+VMM_HYPERVISOR_FLAG)	
+	jp	init
+.tios_init:
+	ld	hl, $E40000
+	ld	de, $D40000
+	ld	bc, 76800*2
+	ldir
+	ld	a,$2D
+	ld	($E30018), a
+	jp	.guest_init
+	
+.string:
+; use the kernel function
+; display string bc @ hl (y - x)
+	call	console.glyph_adress
+.string_loop:
+	ld	a, (bc)
+	or	a, a
+	ret	z
+	push	bc
+	call	.char
+	pop	bc
+	inc	bc
+	jr	.string_loop
+	
+.char:
+	push	iy
+	ld	l, a
+	ld	h, 3
+	mlt	hl
+	ld	bc, font.TRANSLATION_TABLE
+	add	hl, bc
+	lea	bc, ix+0
+	ld	iy, (hl)
+	ex	de, hl
+	ld	de, 315
+	jp	console.glyph_char_loop	
+
+.string_boot0:
+ db "Choose OS to boot from :", 0
+.string_boot1:
+ db "TI-os version x.x.x", 0
+.string_boot2:
+ db "Sorcery version x.x.x", 0
+ 
+.string_enter:
+ db "Press enter to boot selected entry", 0
+	
 sysjump:
 	jp	_open
 	jp	_close
