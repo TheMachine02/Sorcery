@@ -11,10 +11,6 @@ define	CONTEXT_FRAME_AF		18
 define	CONTEXT_FRAME_IR		21
 define	CONTEXT_FRAME_HL		24
 
-define	nmi_context			$D00140	; 64 bytes
-define	nmi_console			$D00160	; 64 bytes
-define	nmi_stack			$D0027A	; interrupt stack. Anyway, if we were in a interrupt, we'll reboot
-
 nmi:
 .handler:
 	ld	(nmi_context+CONTEXT_FRAME_HL), hl

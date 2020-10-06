@@ -20,8 +20,6 @@ define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
 define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		16	; 16 bytes per entries, or 4 entries per slab entries
 define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
 
-define	kvfs_root				$D003C0
-
 ; block device & char device operation ;
 ; files operations ;
 define	phy_read		0

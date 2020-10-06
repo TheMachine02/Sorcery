@@ -79,22 +79,6 @@ define	WNOHANG					1
 define	WUNTRACED				2
 define	WCONTINUED				4
 
-; D00100 to D00120 is scratch
-
-; multilevel priority queue ;
-define	kthread_mqueue_active			$D00300		; 16 bytes
-; retire queue ;
-define	kthread_queue_retire			$D00310		; 4 bytes
-; timer queue
-define	ktimer_queue				$D00314		; 4 bytes
-
-define	kinterrupt_irq_reschedule		$D00000
-define	kthread_current				$D00001
-; 64 x 4 bytes, D00400 to D00500
-define	kthread_pid_map				$D00400
-; utilisateur : thread adress
-; root is user $01
-
 kthread:
 
 .create_no_mem:

@@ -2,25 +2,18 @@ define	BOOT_DIRTY_MEMORY0		$D0009B		; 1 byte ]
 define	BOOT_DIRTY_MEMORY1		$D000AC		; 1 byte ] on interrupt
 define	BOOT_DIRTY_MEMORY2		$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
-
-define	kernel_data			$D00000		; start of the init image
-define	kernel_idle			$D00090		; location of the idle thread image
-define	kernel_stack_pointer		$D0009F		; stack pointer within idle thread
-define	kernel_stack			$D000FF		; kernel stack
-define	kernel_heap			$D00100		; kernel heap
-
 define	KERNEL_STACK_SIZE		87		; size of the stack
-
 define	KERNEL_CRYSTAL_CTLR		$00		; port 00 is master control
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
-
-define	NULL 				0
 define	KERNEL_DEV_NULL			$E40000
+define	NULL 				0
+
+define	kernel_data			$D00000		; start of the init image
 
 ; NOTE : memory map of the initramfs is here
-; virtual at kernel_data
-; 	include 'bss.asm'
-; end virtual
+virtual at kernel_data
+	include 'bss.asm'
+end virtual
 
 init:
 ; read kernel paramater

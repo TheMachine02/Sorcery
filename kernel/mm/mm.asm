@@ -44,10 +44,10 @@ macro	trap
 	db $FD, $FF
 end	macro
 
-; link between cache page and inode (so inode can be updated when droping cache pages)
-define	kcache_inode_map		$D00F00
-; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
-define	kmm_ptlb_map			$D00500
+; ; link between cache page and inode (so inode can be updated when droping cache pages)
+; define	kcache_inode_map		$D00F00
+; ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
+; define	kmm_ptlb_map			$D00500
 
 kmm:
 

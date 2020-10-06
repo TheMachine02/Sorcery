@@ -8,15 +8,15 @@ define	KERNEL_SLAB_CACHE_DATA_COUNT	6	; maximum number of block
 define	KERNEL_SLAB_CACHE_DATA_PAGE	7	; number of page currently used
 
 ; bss defined location
-define	kmem_cache_buffctl		$D00340
-define	kmem_cache_s8			$D00340
-define	kmem_cache_s16			$D00348
-define	kmem_cache_s32			$D00350
-define	kmem_cache_s64			$D00358
-define	kmem_cache_s128			$D00360
-define	kmem_cache_s256			$D00368
-define	kmem_cache_s512			$D00370
-define	kmem_cache_user			$D00378
+; define	kmem_cache_buffctl		$D00340
+; define	kmem_cache_s8			$D00340
+; define	kmem_cache_s16			$D00348
+; define	kmem_cache_s32			$D00350
+; define	kmem_cache_s64			$D00358
+; define	kmem_cache_s128			$D00360
+; define	kmem_cache_s256			$D00368
+; define	kmem_cache_s512			$D00370
+; define	kmem_cache_user			$D00378
 
 ; per slab structure
 ; 7 bytes + 3 special

@@ -26,24 +26,6 @@ define	KERNEL_IRQ_LCD				32
 define	KERNEL_IRQ_RTC				64
 define	KERNEL_IRQ_USB				128
 
-define	KERNEL_INTERRUPT_IPT			$D00000
-define	KERNEL_INTERRUPT_IPT_JP			$D00040
-define	KERNEL_INTERRUPT_IPT_SIZE		$60
-define	KERNEL_INTERRUPT_ISR_DATA_VIDEO		$D00060
-define	KERNEL_INTERRUPT_ISR_DATA_USB		$D00066
-define	KERNEL_INTERRUPT_ISR_DATA_RTC		$D0006C
-define	KERNEL_INTERRUPT_ISR_DATA_KEYBOARD	$D00072
-define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER1	$D00078
-define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER2	$D0007E
-define	KERNEL_INTERRUPT_ISR_DATA_HRTIMER3	$D00084
-define	KERNEL_INTERRUPT_ISR_DATA_POWER		$D0008A
-
-define	kinterrupt_irq_reschedule		$D00000
-define	kinterrupt_irq_stack_isr		$D002FA		; constant, head of stack
-define	kinterrupt_irq_ret_ctx			$D002FA		; written in the init
-define	kinterrupt_irq_stack_ctx		$D002FD		; written in IRQ handler
-define	kinterrupt_irq_boot_ctx			$D177BA		; 1 byte, if nz, execute boot isr handler
-
 kinterrupt:
  
 .init:

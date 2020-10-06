@@ -3,10 +3,6 @@ define	KERNEL_POWER_CHARGING		$000B
 define	KERNEL_POWER_CPU_CLOCK		$0001
 define	KERNEL_POWER_PWM		$F60024
 
-define	kpower_interrupt_mask		$D00418
-define	kpower_lcd_mask			$D0041B
-; we need to save the whales (and the palette)
-
 macro	wait
 	ld	b, $FF
 	djnz	$
