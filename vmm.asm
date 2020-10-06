@@ -8,7 +8,7 @@ include	'header/asm-boot.inc'
 ; kernel build config
 include 'config'
 
-define	VMM_HYPERVISOR_BASE	$0C8000
+define	VMM_HYPERVISOR_BASE	$0C0000
 define	VMM_HYPERVISOR_END	$0D0000
 
 define	VMM_HYPERVISOR_INIT	$D30109
@@ -129,8 +129,15 @@ vmm_installer:
 	jp	(hl)
 	
 vmm_ram:
-	
+
 virtual at $
+	db	$F0
+	db	$FC
+	db	$FF, $FF
+	db	$DE, $AD, $00
+	db	$01, $00, $0C
+	db	$04, "HVMX"
+	dw	$FFF0
 guest_init_ram:
 	jp	$0
 guest_irq_ram:
@@ -140,8 +147,15 @@ guest_nmi_ram:
 end virtual
 
 org	VMM_HYPERVISOR_BASE
-	
+
 vmm:
+	db	$F0
+	db	$FC
+	db	$FF, $FF
+	db	$07, $00, $00
+	db	$01, $00, $0C
+	db	$04, "HVMX"
+	dw	$FFF0
 
 .guest_init:
 	jp	$0
