@@ -20,9 +20,9 @@ format	ti executable 'SORCERY'
 ;-------------------------------------------------------------------------------
 
 sorcery:
-include 'sorcery_certificate.asm'
-; we'll set as occupying 4 sectors - or 256KB
-	db	$5A, $A5, $FF, $04
+include 'certificate.asm'
+; we'll set as occupying 1 sectors - or 64KB
+	db	$5A, $A5, $FF, $01
 	jp	sorcery_end
 	jp	init
 	jp	kinterrupt.irq_handler
