@@ -26,12 +26,11 @@ define	phy_read		0
 define	phy_write		4
 define	phy_sync		8
 define	phy_ioctl		8
-define	phy_seek		12
 ; inode operation ;
-define	phy_read_inode		16
-define	phy_write_inode		20
-define	phy_create_inode	24
-define	phy_destroy_inode	28
+define	phy_read_inode		12
+define	phy_write_inode		16
+define	phy_create_inode	18
+define	phy_destroy_inode	22
 
 ; jump table for physical operation
 .phy_none:
@@ -40,8 +39,6 @@ define	phy_destroy_inode	28
 	ret		; phy_write (physical write to backing device)
 	dl	$0
 	ret		; phy_sync (physical sync file to backing device)
-	dl	$0
-	ret		; phy_seek (do a seek in file)
 	dl	$0
 	ret		; phy_read_inode (from backing device)
 	dl	$0

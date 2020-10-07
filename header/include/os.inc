@@ -28,7 +28,7 @@ macro os_private
 		call	.sectorerase
 		pop	af
 		inc	a
-		cp	a,$10
+		cp	a,$0C
 		jr	nz,.erase
 
 		ld	hl,os.start

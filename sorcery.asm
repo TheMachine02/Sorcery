@@ -138,6 +138,7 @@ include	'kernel/arch/pic.asm'
 include	'kernel/arch/leaf.asm'
 include	'kernel/arch/ldso.asm'
 include	'fs/romfs.asm'
+include	'fs/tifs.asm'
 ; kernel_romfs:
 ; file	'rootfs'
 include	'kernel/font/gohufont.inc'

@@ -8,7 +8,8 @@ define	KERNEL_VFS_PERMISSION_RWX		7
 define	KERNEL_VFS_PERMISSION_RX		5
 define	KERNEL_VFS_PERMISSION_WX		6
 ; please note that file is not a set bit by if inode_flag&TYPE_FILE==0
-define	KERNEL_VFS_TYPE_FILE			248
+define	KERNEL_VFS_TYPE_FILE_MASK		248
+define	KERNEL_VFS_TYPE_FILE			0
 define	KERNEL_VFS_TYPE_DIRECTORY		8
 define	KERNEL_VFS_TYPE_CHARACTER_DEVICE	16
 define	KERNEL_VFS_TYPE_BLOCK_DEVICE		32
@@ -184,7 +185,7 @@ sysdef _open
 	jr	z, .extract_fd
 ; if KERNEL_VFS_O_TRUNC is set in c, and the file is a normal file (not a fifo or char or block) reset the file to size 0 (drop all data)
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_FILE
+	and	a, KERNEL_VFS_TYPE_FILE_MASK
 	jr	nz, .extract_fd
 ; it is a file
 ; drop all data now
