@@ -79,25 +79,8 @@ if CONFIG_DEBUG
 
 DEBUG_THREAD:
 	dbg	open
-	ld	hl, 100
-	call	kthread.sleep
 	
-	ld	hl, DEBUG_PATH
-	ld	bc, KERNEL_VFS_O_RW
-	ld	de, NULL
-	call	_open
-	
-DEBUG_SPAM:
-	push	hl
-	ld	hl, 100
-	call	kthread.sleep	
-	pop	hl
-	push	hl
-	ld	bc, 30
-	ld	de, DEBUG_STRING
-	call	_write
-	pop	hl
-	jr	DEBUG_SPAM
+	call	tifs.mount
 	
 ; ; hl is path, bc is flags, de is mode
 	ld	hl, DEBUG_PATH_3

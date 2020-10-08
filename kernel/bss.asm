@@ -9,6 +9,10 @@ define	KERNEL_HW_POISON		$C7
 define	KERNEL_MM_RESERVED_MASK		00101000b
 define	KERNEL_MM_PAGE_FREE_MASK	128
 
+if $<> $D00000
+ org	$D00000
+end if
+
 KERNEL_INTERRUPT_IPT:			; IRQ priority table : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
 kinterrupt_irq_reschedule:		; Does we need to reschedule after an IRQ (only have a meaning at the end of an IRQ)
 kthread_current:= $+1			; Current executing thread
@@ -83,11 +87,12 @@ kernel_idle:				; we are at offset $90, 24 bytes
  db	$FF				; Status, NOTE : offset $9B is here, we DONT care
  db	12				; Special anyway
  db	$FF				; quantum
- dl	$D000A8				; Stack limit
+ dl	kernel_stack_limit		; Stack limit
 kernel_stack_pointer:			; Stack pointer within idle thread
- dl	$D000FF				; Stack will be writed at first unschedule
- dl	$D00100				; Boot/kernel  heap
+ dl	kernel_stack			; Stack will be writed at first unschedule
+ dl	kernel_heap			; Boot/kernel  heap
  dl	$000000				; Time, NOTE : we finish at offset $A8, end of stack
+kernel_stack_limit:
  db	87	dup	KERNEL_HW_POISON
 kernel_stack:				; kernel stack head (HW stack)
   db	KERNEL_HW_POISON		; scrap
@@ -159,7 +164,7 @@ kvfs_root:				; 64 bytes inode, the root of all root
  db	$01				; reference
  dl	$000000				; size, it is a directory, so count of data holded
  dl	$000000				; parent
- db	$00, $FF			; atomic lock
+ db	$00,$FF				; atomic lock
  dl	$000000				; atomic lock
  dl	$000000				; operation lookup table, null physical operation (ie device callback are here)
  dl	$000000				; data, 16 * 3, there is nothing in this directory 

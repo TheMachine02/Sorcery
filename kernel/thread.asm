@@ -48,13 +48,14 @@ define	KERNEL_THREAD_LIST_DATA			$36
 define	KERNEL_THREAD_LIST_NEXT			$37
 define	KERNEL_THREAD_LIST_PREVIOUS		$3A
 define	KERNEL_THREAD_PROFIL_STRUCTURE		$3D
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$40
-; up to $100, table is 192 bytes or 24 descriptor, 3 reserved as stdin, stdout, stderr ;
+define	KERNEL_THREAD_WORKING_DIRECTORY		$40	; pointer to the directory inode
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$43	; file descriptor table, TODO : move it to allocated kmem_cache
+; up to $100, table is 189 bytes or 23 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 21 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$100
 define	KERNEL_THREAD_STACK_SIZE		8192	; 3964 bytes usable
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	64
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	23
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
@@ -130,6 +131,8 @@ kthread:
 	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
 	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
+	ld	hl, kvfs_root
+	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
 ; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; we are memory aligned
