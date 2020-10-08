@@ -7,6 +7,7 @@ define	KERNEL_VFS_PERMISSION_RW		3
 define	KERNEL_VFS_PERMISSION_RWX		7
 define	KERNEL_VFS_PERMISSION_RX		5
 define	KERNEL_VFS_PERMISSION_WX		6
+define	KERNEL_VFS_PERMISSION_DMA		8
 ; please note that file is not a set bit by if inode_flag&TYPE_FILE==0
 define	KERNEL_VFS_TYPE_FILE_MASK		248
 define	KERNEL_VFS_TYPE_FILE			0
@@ -37,6 +38,7 @@ define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags, mode
 define	KERNEL_VFS_O_R				1
 define	KERNEL_VFS_O_W				2
 define	KERNEL_VFS_O_RW				3
+define	KERNEL_VFS_O_TMPFILE			4	; create a temporary file
 define	KERNEL_VFS_O_TRUNC			8	; trunc file to 0 at open
 define	KERNEL_VFS_O_APPEND			16	; append to end of file all write
 define	KERNEL_VFS_O_CLOEXEC			32	; close on execve
@@ -48,7 +50,6 @@ define	KERNEL_VFS_O_NDELAY			128	; use non-bloquant atomic_rw, error with EWOULD
 define	KERNEL_VFS_O_EXCL			1	; use with O_CREAT, fail if file already exist 
 define	KERNEL_VFS_O_CREAT			2	; creat the file if don't exist
 define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
-define	KERNEL_VFS_O_TMPFILE			8	; create a temporary file
 
 define	SEEK_SET				0
 define	SEEK_CUR				1
@@ -77,10 +78,11 @@ kvfs:
 ; return nc is corret, c with error set if not
 ; ix = file descriptor, iy = inode
 ; destroy hl
-	ld	a, 23
-	cp	a, l
+; 0 - 22 or 23 descriptor
+	ld	a, l
+	cp	a, KERNEL_THREAD_FILE_DESCRIPTOR_MAX
 	ld	a, EBADF
-	jp	c, syserror
+	jp	nc, syserror
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -155,7 +157,7 @@ sysdef _open
 ; we can drop b from flags, it is useless now
 	ld	ix, (kthread_current)
 	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR + 24
-	ld	b, 21
+	ld	b, KERNEL_THREAD_FILE_DESCRIPTOR_MAX - 3
 	ld	de, 8
 .open_descriptor:
 	ld	hl, (ix+0)
@@ -824,7 +826,7 @@ sysdef _stat
 ; int stat(const char *pathname, struct stat *statbuf);
 ; dev_t     st_dev;         ID of device containing file
 ; ino_t     st_ino;         Inode number
-; mode_t    st_mode;        File type and mode (1 byte)
+; mode_t    st_mode;        File type and mode (1 byte) (expose if DMA is available)
 ; nlink_t   st_nlink;       Number of hard links (1 byte)
 ; dev_t     st_rdev;        Device ID (if special file)
 ; off_t     st_size;        Total size, in bytes
@@ -923,3 +925,31 @@ sysdef _access
 	ld	a, EACCES
 	jr	nz, .stat_continue
 	jp	.inode_atomic_write_error
+
+sysdef _chdir
+.chdir:
+;       int chdir(const char *path);
+;       int fchdir(int fd);
+	call	.inode_get_lock
+	ret	c
+.chdir_common:
+; iy is the inode
+	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	jp	z, .inode_atomic_write_error
+; iy is valid
+	ld	ix, (kthread_current)
+	ld	(ix+KERNEL_THREAD_WORKING_DIRECTORY), ix
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
+	
+sysdef _fchdir
+.fchdir:
+	call	.fd_pointer_check
+	ret	c
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	jr	.chdir_common
+

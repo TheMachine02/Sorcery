@@ -2,12 +2,10 @@ FAT 12 flash
 leaf load
 library load
 memory management
-VFS
 keyboard stdin
 file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
 cd for change directory
 Rework timer
 Rework signal
-
-Easier memory map
+chdirent
 Thread TLS are just after the top of stack, can create thread by passing single stack pointer and stack size

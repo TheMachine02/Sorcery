@@ -41,7 +41,7 @@ sysjump:
 	jp	_read
 	jp	_write
 	jp	_lseek
-	jp	_enosys		; _chdir
+	jp	_chdir
 	jp	_sync
 	jp	_access
 	jp	_chmod
@@ -71,7 +71,7 @@ sysjump:
 	jp	_enosys		; _utime
 	jp	_chroot
 	jp	_enosys		; _fcntl
-	jp	_enosys		; _fchdir
+	jp	_fchdir
 	jp	_fchmod
 	jp	_fchown
 	jp	_mkdir
