@@ -35,7 +35,7 @@ include 'certificate.asm'
 sysjump:
 	jp	_open
 	jp	_close
-	jp	_enosys		; _rename
+	jp	_rename
 	jp	_enosys		; _link
 	jp	_enosys		; _unlink
 	jp	_read
@@ -54,8 +54,8 @@ sysjump:
 	jp	_enosys		; _statfs
 	jp	_execve
 	jp	_enosys		; _getdirent
-	jp	_enosys		; _time
-	jp	_enosys		; _stime
+	jp	_time
+	jp	_stime
 	jp	_ioctl
 	jp	_brk
 	jp	_sbrk
@@ -67,8 +67,8 @@ sysjump:
 	jp	_alarm
 	jp	_kill
 	jp	_pipe
-	jp	_enosys		; _times
-	jp	_enosys		; _utime
+	jp	_times
+	jp	_clock
 	jp	_chroot
 	jp	_enosys		; _fcntl
 	jp	_fchdir
@@ -117,6 +117,7 @@ include	'kernel/watchdog.asm'
 include	'kernel/power.asm'
 include	'kernel/thread.asm'
 include	'kernel/queue.asm'
+include	'kernel/clock.asm'
 include	'kernel/fifo.asm'
 include	'kernel/signal.asm'
 include	'kernel/restart.asm'

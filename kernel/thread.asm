@@ -49,13 +49,14 @@ define	KERNEL_THREAD_LIST_NEXT			$37
 define	KERNEL_THREAD_LIST_PREVIOUS		$3A
 define	KERNEL_THREAD_PROFIL_STRUCTURE		$3D
 define	KERNEL_THREAD_WORKING_DIRECTORY		$40	; pointer to the directory inode
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$43	; file descriptor table, TODO : move it to allocated kmem_cache
+define	KERNEL_THREAD_TIME_CHILD		$43
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$46	; file descriptor table, TODO : move it to allocated kmem_cache
 ; up to $100, table is 189 bytes or 23 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 21 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$100
 define	KERNEL_THREAD_STACK_SIZE		8192	; 3964 bytes usable
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	23
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	22
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
@@ -208,8 +209,12 @@ sysdef _waitpid
 ; EINVAL ; The options argument was invalid. 
 ; waitpid(): on success, returns the process ID of the child whose state has changed; if WNOHANG was specified and one or more child(ren) specified by pid exist, but have not yet changed state, then 0 is returned. On error, -1 is returned. 
 	ret
-	
+
+sysdef _core
 .core:
+; write whole process image to a "core" file in reallocated mode
+; leaf file format
+	ret
 
 .exit:
 ; signal parent thread of the end of the child thread
