@@ -1,7 +1,8 @@
 include	'header/include/ez80.inc'
 include	'header/include/tiformat.inc'
+include	'header/asm-leaf-def.inc'
 
-format	ti executable 'LOADER'
+format	ti executable 'VMLOADER'
 
 define	LOADER_RAM		$D30000
 define	LOADER_OS_PATCH		$020000
@@ -88,7 +89,7 @@ sulphure:
 	ld	de, VM_HYPERVISOR_RAM_ADRESS
 	ld	bc, $2000
 	ldir
-	ld	a, $0C
+	ld	a, $0B
 	call	.erase_sector
 	ld	hl, LOADER_RAM
 	ld	de, LOADER_OS_APPEND

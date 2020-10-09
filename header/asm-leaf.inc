@@ -57,6 +57,7 @@ define	LEAF_HEADER_SHOFF	11	; 3 bytes, section offset in file (usually at the en
 define	LEAF_HEADER_SHNUM	14	; 1 bytes, number of section
 define	LEAF_HEADER_SHSTRNDX	15	; 1 bytes, string section index
 
+define	LEAF_HEADER_SIZE	16
 ; header is 16 bytes
 
 define	LEAF_SECTION		0

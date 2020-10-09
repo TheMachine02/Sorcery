@@ -93,10 +93,6 @@ define	leaf_bound_upper	$D0000D
 
 leaf:
  
-.exec_static:
-; grab the entry point of the program and jump to it
-; make section protected for the kernel ?
- 
 .check_file:
 ; iy = file adress (static)
 	ld	a, (iy+LEAF_IDENT_MAG0)
@@ -124,8 +120,12 @@ leaf:
 	ret	nz
 ; execute the leaf file. It is static ?
 	ld	a, (iy+LEAF_HEADER_FLAGS)
-	and	LF_STATIC
-	ret	z
+	xor	a, LF_STATIC
+	ret
+	
+.exec_static:
+; grab the entry point of the program and jump to it
+; make section protected for the kernel ?
 ; execute in place
 ; we need to reallocate here
 ; read section table and copy at correct location (for those needed)

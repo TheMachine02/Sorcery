@@ -51,7 +51,7 @@ sysdef _reboot
 ; and init the rest of memory with poison
 	ld	hl, $D01000
 	ld	de, $D01001
-	ld	bc, KERNEL_MM_RAM_SIZE - 4097
+	ld	bc, KERNEL_MM_RAM_SIZE - 4097 - 65536 ; tmp for leaf fix
 	ld	(hl), KERNEL_HW_POISON
 	ldir
 ; right now, the RAM image is complete
@@ -98,8 +98,9 @@ sysdef _reboot
 file	'initramfs'
 ; NOTE : end guard is part of MPU init (those two $00 are important)
 
+; FIXME : temporarily increased the protected memory range
 .arch_MPU_init:
- db	$00, $00, $D0, $FF, $0F, $D0
+ db	$00, $00, $D0, $FF, $3F, $D0
  db	$A8, $00, $D0
 
 .arch_init:

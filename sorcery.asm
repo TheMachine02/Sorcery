@@ -25,7 +25,9 @@ include 'certificate.asm'
 	db	$5A, $A5, $FF, $01
 	jp	sorcery_end
 	jp	init
+sorcery_hypervisor:
 	jp	kinterrupt.irq_handler
+	jp	nmi.handler
 	jp	restart.10h
 	jp	restart.18h
 	jp	restart.20h

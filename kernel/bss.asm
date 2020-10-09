@@ -11,6 +11,7 @@ define	KERNEL_MM_PAGE_FREE_MASK	128
 
 if $<> $D00000
  org	$D00000
+ define sorcery_hypervisor	$D30004		;$D01004
 end if
 
 KERNEL_INTERRUPT_IPT:			; IRQ priority table : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
@@ -68,9 +69,10 @@ KERNEL_INTERRUPT_ISR_DATA_RTC:
 KERNEL_INTERRUPT_ISR_DATA_KEYBOARD:
  db	6	dup	KERNEL_HW_POISON
 KERNEL_INTERRUPT_ISR_DATA_HRTIMER1:
- db	7	dup	KERNEL_HW_POISON
-KERNEL_HYPERVISOR_DATA:=$-1
-KERNEL_HYPERVISOR_FLAG:			; should be placed at offset $79
+ db	4	dup	KERNEL_HW_POISON
+KERNEL_HYPERVISOR_DATA:
+ dl	sorcery_hypervisor
+KERNEL_HYPERVISOR_SETTINGS:			; should be placed at offset $79
  db	$01
 KERNEL_INTERRUPT_ISR_DATA_POWER:
  db	4	dup	KERNEL_HW_POISON

@@ -72,7 +72,6 @@ hypervisor:
 	jr	z, .init_failure
 	ld	bc, 8
 	add	hl, bc
-	ld	hl, (hl)
 	jp	(hl)
 .init_failure:
 ; hum hum
@@ -86,7 +85,6 @@ hypervisor:
 	or	a, a
 	sbc	hl, de
 	jr	z, .interrupt_failure
-	ld	hl, (hl)
 	jp	(hl)
 .interrupt_failure:
 ; we'll need to acknowledge interrupt ourselves if we are in this very special case where interrupt are on, but we have not yet reached boot code (stupid boot 5.0.0)
@@ -116,7 +114,6 @@ hypervisor:
 	pop	iy
 	jr	z, .nmi_restart
 	pop	af
-	ld	hl, (hl)
 	inc	hl
 	inc	hl
 	inc	hl
@@ -139,10 +136,6 @@ hypervisor:
 ; try to detect ti os version
 	ld	hl, guest_tios
 	ld	(vm_guest_table), hl
-	ld	hl, guest_tios
-	ld	(vm_guest_table+4), hl
-	ld	hl, guest_tios
-	ld	(vm_guest_table+8), hl
 	ld	a, 1
 	ld	(vm_guest_count), a
 	xor	a, a
@@ -205,6 +198,7 @@ hypervisor:
 	ld	l, a
 	add	hl, hl
 	add	hl, hl
+	add	hl, hl
 	ld	bc, vm_guest_table
 	add	hl, bc
 	ld	hl, (hl)
@@ -233,7 +227,16 @@ hypervisor:
 	bit	3, a
 	jr	z, $+3
 	dec	(hl)
-		
+	jp	p, .boot_still_pos
+	ld	(hl), 0
+.boot_still_pos:
+	ld	a, (vm_guest_count)
+	dec	a
+	cp	a, (hl)
+	jr	nc, .boot_still_up
+	ld	(hl), a
+.boot_still_up:
+
 	ld	hl, $F5001C
 	bit	0, (hl)
 	jr	z, .boot_choose_loop
@@ -243,19 +246,118 @@ hypervisor:
 	or	a, a
 	res	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
 	ret	z
+	di
+	halt
 	or	a, a
 	sbc	hl, hl
 	ld	l, a
 	add	hl, hl
 	add	hl, hl
+	add	hl, hl
 	ld	bc, vm_guest_table
 	add	hl, bc
+	ld	ix, (hl)
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
 	ld	hl, (hl)
 	ld	(iy+VM_HYPERVISOR_DATA), hl
-	ret
+	set	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
+	lea	iy, ix-16
+	jp	leaf.exec_static
 
 .boot_search_leaf:
+	ld	b, $34
+	ld	hl, $0C0000
+.boot_parse:
+	push	bc
+; create an inode for each file found and fill it
+	ld	a, (hl)
+	cp	a, $F0
+	jr	nz, .boot_invalid_sector
+	inc	hl
+	push	hl
+.boot_parse_sector:
+	ld	a, (hl)
+; unexpected value, quit current sector
+	cp	a, $F0
+	jr	z, .boot_skip_file
+	cp	a, $FC
+	jr	z, .boot_check_file
+.boot_parse_sector_continue:
+	pop	hl
+.boot_invalid_sector:
+	ld	bc, 65536
+	add	hl, bc
+	ld	h, b
+	ld	l, c
+	pop	bc
+	djnz	.boot_parse
 	ret
+	
+.boot_skip_file:
+	inc	hl
+	ld	bc, 0
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+	jr	.boot_parse_sector
+
+.boot_check_file:
+	inc	hl
+	ld	bc, 0
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+	push	hl
+	add	hl, bc
+	ex	(sp), hl
+	ld	a, (hl)		; file type
+	cp	a, 6
+	jr	nz, .boot_next
+	ld	bc, 6
+	add	hl, bc
+; goes directly to NAME
+	ld	c, (hl)
+	add	hl, bc
+; skiped name, now five byte to skip
+	ld	c, 5
+	add	hl, bc
+; hl = start of file
+	push	hl
+	pop	iy
+	call	leaf.check_file
+	jr	nz, .boot_next
+; it is one of our !
+	ld	a, (vm_guest_count)
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	ld	bc, vm_guest_table
+	add	hl, bc
+	lea	iy, iy + LEAF_HEADER_SIZE
+	ld	(hl), iy
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	bc, (iy+LEAF_HEADER_ENTRY-LEAF_HEADER_SIZE)
+	inc	bc
+	inc	bc
+	inc	bc
+	inc	bc
+	ld	(hl), bc
+	inc	a
+	ld	(vm_guest_count), a	
+.boot_next:
+	pop	hl
+	jp	.boot_parse_sector_continue
 	
 .boot_string_choose:
  db "Choose OS to boot from :", 0 
