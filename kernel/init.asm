@@ -115,6 +115,9 @@ file	'initramfs'
 	call	console.init
 ; flash device ;
 	call	flash.init
+; dev/zero & dev/null
+	call	null.init
+	call	zero.init
 ; mtd block driver ;
 ;	call	mtd.init
 ; debug thread & other debugging stuff
