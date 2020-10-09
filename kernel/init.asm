@@ -16,6 +16,10 @@ virtual at kernel_data
 end virtual
 
 init:
+	di
+	in0	a, ($03)
+	cp	a, $FF
+	jp	z, _boot_CheckHardware
 ; read kernel paramater
 ; silent : no LCD flashing / console updating, open console only if error
 sysdef _reboot
