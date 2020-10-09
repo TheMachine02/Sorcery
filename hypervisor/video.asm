@@ -1,13 +1,12 @@
-define	VIDEO_ISR		$E30020
-define	VIDEO_ICR		$E30028
-define	VIDEO_SCREEN		$E30010
+define	VM_VIDEO_ISR		$E30020
+define	VM_VIDEO_ICR		$E30028
+define	VM_VIDEO_SCREEN		$E30010
 
-_video:
-.string:
+.putstring:
 ; use the kernel function
 ; display string bc @ hl (y - x)
 	call	.adress
-.string_loop:
+.putstring_loop:
 	ld	a, (bc)
 	or	a, a
 	ret	z
@@ -15,13 +14,13 @@ _video:
 	call	.putchar
 	pop	bc
 	inc	bc
-	jr	.string_loop
+	jr	.putstring_loop
 
 .vsync:
 ; wait until the LCD finish displaying the frame
-	ld	hl, VIDEO_ICR
+	ld	hl, VM_VIDEO_ICR
 	set	2, (hl)
-	ld	l, VIDEO_ISR and $FF
+	ld	l, VM_VIDEO_ISR and $FF
 .wait_busy:
 	bit	2, (hl)
 	jr	z, .wait_busy
@@ -41,7 +40,7 @@ _video:
 	add	hl, de
 	ld	de, 10*320+10
 	add	hl, de
-	ld	de, (VIDEO_SCREEN)
+	ld	de, (VM_VIDEO_SCREEN)
 	add	hl, de
 	ex	de, hl
 	ret
@@ -52,7 +51,7 @@ _video:
 	ld	l, a
 	ld	h, 3
 	mlt	hl
-	ld	bc, _font.TRANSLATION_TABLE
+	ld	bc, font.TRANSLATION_TABLE
 	add	hl, bc
 	lea	bc, ix+0
 	ld	iy, (hl)

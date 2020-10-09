@@ -1,4 +1,4 @@
-_font:
+font:
 .TRANSLATION_TABLE:
 dl .CHARACTER32
 dl .CHARACTER32
