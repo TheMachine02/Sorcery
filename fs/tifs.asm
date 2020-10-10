@@ -98,6 +98,7 @@ tifs:
 	inc	hl
 	ld	b, (hl)
 	inc	hl
+	add	hl, bc
 	jr	.mount_parse_sector
 .mount_add_file:
 	inc	hl

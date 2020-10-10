@@ -246,8 +246,6 @@ hypervisor:
 	or	a, a
 	res	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
 	ret	z
-	di
-	halt
 	or	a, a
 	sbc	hl, hl
 	ld	l, a
@@ -303,6 +301,7 @@ hypervisor:
 	inc	hl
 	ld	b, (hl)
 	inc	hl
+	add	hl, bc
 	jr	.boot_parse_sector
 
 .boot_check_file:

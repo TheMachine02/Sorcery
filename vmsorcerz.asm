@@ -20,7 +20,7 @@ sorcery_hypervisor:
 	jp	kinterrupt.irq_handler
 	jp	nmi.handler
 	dd	$DEC0DAED
-	db CONFIG_KERNEL_NAME, "-", CONFIG_KERNEL_RELEASE,0
+	db CONFIG_KERNEL_NAME, "-", CONFIG_KERNEL_VERSION,0
 
 org	$D30080
 section '.sys' writeable
