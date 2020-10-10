@@ -356,7 +356,7 @@ hypervisor:
 	ld	(vm_guest_count), a	
 .boot_next:
 	pop	hl
-	jp	.boot_parse_sector_continue
+	jp	.boot_parse_sector
 	
 .boot_string_choose:
  db "Choose OS to boot from :", 0 

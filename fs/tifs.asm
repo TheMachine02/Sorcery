@@ -80,7 +80,6 @@ tifs:
 	jr	z, .mount_skip_file
 	cp	a, TIFS_FILE_VALID
 	jr	z, .mount_add_file
-.mount_parse_sector_continue:
 	pop	hl
 .mount_invalid_sector:
 	ld	bc, 65536

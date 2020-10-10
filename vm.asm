@@ -31,18 +31,32 @@ _os_nmi:=$+1
 	jp	$0
 end virtual
 
-sulphure:
+sulphur:
 
 .detect_patch:
 	ld	hl, ($020109)
 	ld	de, hypervisor.init
 	or	a, a
 	sbc	hl, de
-	ret	z
-
+	jr	nz, .detect_use_OS__path
+; read data from the hypervisor	
+	ld	hl, (guest_tios_interrupt_jp)
+	ld	(guest_tios_interrupt_jp_ram), hl
+	ld	hl, (guest_tios_nmi_jp)
+	ld	(guest_tios_nmi_jp_ram), hl
+	ld	hl, (guest_tios_boot_jp)
+	ld	(guest_tios_boot_jp_ram), hl
+	jr	.detect_unlock
+.detect_use_OS__path:
+	ld	hl, ($02010D)
+	ld	(guest_tios_interrupt_jp_ram), hl
+	ld	hl, ($0220A9)
+	ld	(guest_tios_nmi_jp_ram), hl
+	ld	hl, ($020109)
+	ld	(guest_tios_boot_jp_ram), hl
+.detect_unlock:
 	di
 	call	.unlock
-	
 .detect_os_version:
 ; this all reside in RAM
 	call    _os_GetSystemStats
@@ -73,18 +87,11 @@ sulphure:
 	ld	de, guest_tios_name_ram
 	ld	bc, 19
 	ldir
-
 .append_os:
 	ld	hl, LOADER_OS_APPEND
 	ld	de, LOADER_RAM
 	ld	bc, 65536
 	ldir
-	ld	hl, ($02010D)
-	ld	(guest_tios_interrupt_jp_ram), hl
-	ld	hl, ($0220A9)
-	ld	(guest_tios_nmi_jp_ram), hl
-	ld	hl, ($020109)
-	ld	(guest_tios_boot_jp_ram), hl
 	ld	hl, hypervisor_ram
 	ld	de, VM_HYPERVISOR_RAM_ADRESS
 	ld	bc, $1000
@@ -95,7 +102,6 @@ sulphure:
 	ld	de, LOADER_OS_APPEND
 	ld	bc, 65536
 	call	$0002E0
-
 .patch_os:
 ; now we need to patch the OS sector $020000
 ; use $D30000 as temporary page
@@ -131,7 +137,6 @@ sulphure:
 	ld	bc, $f8
 	push	bc
 	jp	$2dc
-
 .unlock:
 	ld	bc, $24
 	ld	a, $8c
