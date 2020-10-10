@@ -177,11 +177,11 @@ sysdef _shutdown
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
 	ld	(DRIVER_VIDEO_CTRL), hl
-; setup timings
-	ld	hl, video.LCD_TIMINGS
-	ld	de, DRIVER_VIDEO_TIMING0 + 1
-	ld	c, 8
-	ldir
+; ; setup timings
+; 	ld	hl, video.LCD_TIMINGS
+; 	ld	de, DRIVER_VIDEO_TIMING0
+; 	ld	c, 9
+; 	ldir
 ; not sure what this is for
 ; 	call	$000080
 ; 	ld	a, b

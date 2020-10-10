@@ -38,12 +38,12 @@ video:
 	ld	(DRIVER_VIDEO_SCREEN), hl
 	ld	hl, DRIVER_VIDEO_VRAM + DRIVER_VIDEO_FRAMEBUFFER_SIZE
 	ld	(DRIVER_VIDEO_BUFFER), hl
-; setup timings
-	ld	hl, .LCD_TIMINGS
-	ld	d, e
-	inc	e
-	ld	c, 8
-	ldir
+	dbg	open
+; ; setup timings
+; 	ld	hl, .LCD_TIMINGS
+; 	ld	de, DRIVER_VIDEO_TIMING0
+; 	ld	c, 9
+; 	ldir
 ; clear the LCD
 	call	.clear_screen
 	call	.clear_buffer
@@ -154,10 +154,15 @@ video:
 	ret
 
 .LCD_TIMINGS:
- db	7			; HSW
- db	87			; HFP
- db	63			; HBP
- dw	(0 shl 10)+319	; (VSW shl 10)+LPP
- db	179			; VFP
- db	0			; VBP
- db	(0 shl 6)+(0 shl 5)+0	; (ACB shl 6)+(CLKSEL shl 5)+PCD_LO
+	db	14 shl 2		; PPL shl 2
+	db	7			; HSW
+	db	87			; HFP
+	db	63			; HBP
+	dw	(0 shl 10)+319		; (VSW shl 10)+LPP
+	db	179			; VFP
+	db	0			; VBP
+	db	(0 shl 6)+(0 shl 5)+0	; (ACB shl 6)+(CLKSEL shl 5)+PCD_LO
+;  H = ((PPL+1)*16)+(HSW+1)+(HFP+1)+(HBP+1) = 240+8+88+64 = 400
+;  V = (LPP+1)+(VSW+1)+VFP+VBP = 320+1+179+0 = 500
+; CC = H*V*PCD*2 = 400*500*2*2 = 800000
+; Hz = 48000000/CC = 60
