@@ -1,6 +1,6 @@
 #!/bin/bash
 #generate config
-version=${1:-1.5.0}
+version=${1:-0.1.5}
 str=$(git rev-parse --short HEAD)
 echo "; auto generated file" > config
 echo "define CONFIG_KERNEL_VERSION \""$version"-slp-"$str"\"" >> config
@@ -26,4 +26,4 @@ rm image.asm
 rm initramfs
 
 sha256sum -b bin/sorcery-$version-slp | sed 's/ \*.*//'> bin/sha256
-truncate sha256 -s -1
+truncate bin/sha256 -s -1

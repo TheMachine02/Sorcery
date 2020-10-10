@@ -54,12 +54,12 @@ sulphure:
 	ld	(vm_tios_version), de
 	or	a, a
 	sbc	hl, hl
-	ld	l, e
+	ld	a, (vm_tios_rev)
+	ld	l, a
 	push	hl
 	ld	l, d
 	push	hl
-	ld	a, (vm_tios_rev)
-	ld	l, a
+	ld	l, e
 	push	hl
 	ld	hl, .tios_version
 	push	hl
@@ -87,7 +87,7 @@ sulphure:
 	ld	(guest_tios_boot_jp_ram), hl
 	ld	hl, hypervisor_ram
 	ld	de, VM_HYPERVISOR_RAM_ADRESS
-	ld	bc, $2000
+	ld	bc, $1000
 	ldir
 	ld	a, $0B
 	call	.erase_sector
@@ -165,7 +165,7 @@ sulphure:
 	ld	(hl), de
 	jp	(hl)
 	
-.tios_version:	
+.tios_version:
  db "TI-os version %d.%d.%d", 0
  
 include	'hypervisor/hypervisor.asm'
