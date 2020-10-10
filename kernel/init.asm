@@ -22,8 +22,6 @@ init:
 	jp	z, _boot_CheckHardware
 ; read kernel paramater
 ; silent : no LCD flashing / console updating, open console only if error
-sysdef _reboot
-.reboot:
 ; boot 5.0.1 stupidity power ++
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 	di
@@ -160,6 +158,19 @@ file	'initramfs'
 	ldir
 	ei
 	ret
+ 
+sysdef _reboot
+.reboot:
+; disable interruption and watchdog then rst 0 to the boot code firmware
+	di
+	call	kwatchdog.disarm
+	ld	de, NULL
+	ld	hl, KERNEL_INTERRUPT_IMSC
+	ld	(hl), de
+	ld	l, KERNEL_INTERRUPT_ICR and $FF
+	dec	de
+	ld	(hl), de
+	rst	$00
  
 sysdef _uname
 name:
