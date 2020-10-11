@@ -7,6 +7,7 @@ define	KERNEL_CRYSTAL_CTLR		$00		; port 00 is master control
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	KERNEL_DEV_NULL			$E40000
 define	NULL 				0
+define	KERNEL_LCD_CLOCK_DIVISOR	$E30008		; the LCD clock timings is derived from CPU clock
 
 define	kernel_data			$D00000		; start of the init image
 
@@ -16,16 +17,15 @@ virtual at kernel_data
 end virtual
 
 init:
-	di
-	in0	a, ($03)
-	cp	a, $FF
-	jp	z, _boot_CheckHardware
-; read kernel paramater
+; TODO : read kernel paramater
 ; silent : no LCD flashing / console updating, open console only if error
 ; boot 5.0.1 stupidity power ++
 ; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 	di
 	rsmix
+	in0	a, ($03)
+	cp	a, $FF
+	jp	z, _boot_CheckHardware
 ; load up boot stack
 	ld	sp, $D1A87E
 ; shift to soft kinit way to reboot ++
@@ -62,11 +62,11 @@ init:
 ; setup memory protection
 	ld	bc, $0620
 	ld	hl, .arch_MPU_init
-	otir
+	otimr
 ; stack clash protector
 	ld	bc, $033A
 	ld	a, b
-	otir
+	otimr
 ; flash ws and mapping
 	ld	hl, KERNEL_FLASH_CTRL
 	ld	(hl), a
@@ -98,7 +98,7 @@ file	'initramfs'
 
 ; FIXME : temporarily increased the protected memory range
 .arch_MPU_init:
- db	$00, $00, $D0, $FF, $3F, $D0
+ db	$00, $00, $D0, $FF, $FF, $D3
  db	$A8, $00, $D0
 
 .arch_init:

@@ -2,9 +2,16 @@ define DRIVER_VIDEO_VRAM                  $D40000
 define DRIVER_VIDEO_VRAM_SIZE             $25800
 define DRIVER_VIDEO_FRAMEBUFFER_SIZE      $12C00
 define DRIVER_VIDEO_CTRL                  $E30018
-define DRIVER_VIDEO_CTRL_DEFAULT          100100100111b
+define DRIVER_VIDEO_CTRL_DEFAULT          10000100100100111b	; generate interrupt at vcomp & watermark enable & pwr & BGR & 8bpp & EN
 define DRIVER_VIDEO_IMSC                  $E3001C
-define DRIVER_VIDEO_IMSC_DEFAULT          00000100b
+define DRIVER_VIDEO_IMSC_DEFAULT          000001000b	; vcomp interrupt
+; 31---------------------------------------------------------0
+; UNDEFINED                   MBERROR Vcomp LNBU FUF UNDEFINED
+; 000000000000000000000000000 0       0     0    0   0
+; MBERROR = AHB master error
+; Vcomp   = Vertical compare
+; LNBU    = LCD next base address update
+; FUF     = FIFO underflow
 define DRIVER_VIDEO_ICR                   $E30028
 define DRIVER_VIDEO_ISR                   $E30020
 define DRIVER_VIDEO_SCREEN                $E30010
@@ -16,8 +23,8 @@ define DRIVER_VIDEO_TIMING2               $E30008
 define DRIVER_VIDEO_TIMING3               $E3000C
 
 define DRIVER_VIDEO_IRQ                   00100000b
-define DRIVER_VIDEO_IRQ_LOCK              $D00060
-define DRIVER_VIDEO_IRQ_LOCK_THREAD       $D00061
+define DRIVER_VIDEO_IRQ_LOCK              KERNEL_INTERRUPT_ISR_DATA_VIDEO
+define DRIVER_VIDEO_IRQ_LOCK_THREAD       KERNEL_INTERRUPT_ISR_DATA_VIDEO + 1
 define DRIVER_VIDEO_IRQ_LOCK_SET          0
 
 ; TODO fix race condition in lock and make use of kernel atomic_mutex
@@ -38,12 +45,11 @@ video:
 	ld	(DRIVER_VIDEO_SCREEN), hl
 	ld	hl, DRIVER_VIDEO_VRAM + DRIVER_VIDEO_FRAMEBUFFER_SIZE
 	ld	(DRIVER_VIDEO_BUFFER), hl
-	dbg	open
-; ; setup timings
-; 	ld	hl, .LCD_TIMINGS
-; 	ld	de, DRIVER_VIDEO_TIMING0
-; 	ld	c, 9
-; 	ldir
+; setup timings
+	ld	hl, .LCD_TIMINGS
+	ld	de, DRIVER_VIDEO_TIMING0 + 1
+	ld	c, 8
+	ldir
 ; clear the LCD
 	call	.clear_screen
 	call	.clear_buffer
@@ -55,7 +61,7 @@ video:
 
 .irq_handler:
 	ld	hl, DRIVER_VIDEO_ICR
-	set	2, (hl)
+	set	3, (hl)
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
 	ret	z
@@ -98,6 +104,12 @@ video:
 	ld	a, i
 	ld	a, DRIVER_VIDEO_IRQ
 	di
+	ld	hl, DRIVER_VIDEO_ICR
+	set	2, (hl)
+	ld	l, DRIVER_VIDEO_ISR and $FF
+.wait_LBNU:
+	bit	2, (hl)
+	jr	z, .wait_LBNU
 	ld	hl, (DRIVER_VIDEO_SCREEN) 
 	ld	de, (DRIVER_VIDEO_BUFFER)
 	ld	(DRIVER_VIDEO_BUFFER), hl
@@ -115,11 +127,11 @@ video:
 .vsync_atomic:
 ; wait until the LCD finish displaying the frame
 	ld	hl, DRIVER_VIDEO_ICR
-	set	2, (hl)
+	set	3, (hl)
 	ld	l, DRIVER_VIDEO_ISR and $FF
-.wait_busy:
-	bit	2, (hl)
-	jr	z, .wait_busy
+.wait_vcomp:
+	bit	3, (hl)
+	jr	z, .wait_vcomp
 	ret
 	
 .clear_buffer:
@@ -154,7 +166,7 @@ video:
 	ret
 
 .LCD_TIMINGS:
-	db	14 shl 2		; PPL shl 2
+;	db	14 shl 2		; PPL shl 2
 	db	7			; HSW
 	db	87			; HFP
 	db	63			; HBP

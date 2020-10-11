@@ -19,7 +19,7 @@ fasmg vm.asm bin/VMLOADER.8xp
 fasmg vmsorcerz.asm bin/sorcery-$version-slp
 echo "include	'header/include/ez80.inc'" > image.asm
 echo "include	'header/include/tiformat.inc'" >> image.asm
-echo "format	ti executable 'VMSCZ'" >> image.asm
+echo "format	ti executable archived 'VMSCZ'" >> image.asm
 echo "file	'bin/sorcery-"$version"-slp'" >> image.asm
 fasmg image.asm bin/VMSCZ.8xp
 rm image.asm
