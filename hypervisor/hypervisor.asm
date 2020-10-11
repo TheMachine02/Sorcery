@@ -18,6 +18,12 @@ vm_guest_table:
  rb 54
 vm_cursor:
  db 0
+vm_delay:
+ db 0
+vm_second:
+ db 0
+vm_string_boot:
+ rb 64
 end virtual
 
 hypervisor_ram:=$
@@ -163,18 +169,48 @@ hypervisor:
 	ld	hl, 0
 	ld	bc, .boot_string_choose
 	call	.putstring
-	ld	hl, 19*256+0
-	ld	bc, .boot_string_enter
-	call	.putstring
 	
+	ld	a, 60
+	ld	(vm_delay), a
+	ld	a, 10
+	ld	(vm_second), a
 .boot_choose_loop:
 	ld	b, 8
 .wait:
 	push	bc
 	call	.vsync
+	ld	hl, vm_delay
+	dec	(hl)
+	jr	nz, .no_decrement
+	ld	(hl), 60
+	inc	hl
+	dec	(hl)
+	pop	bc
+	jp	z, .boot_do
+	push	bc
+.no_decrement:
 	pop	bc
 	djnz	.wait
-
+	
+	or	a, a
+	sbc	hl, hl
+	ld	a, (vm_second)
+	ld	l, a
+	push	hl
+	ld	hl, .boot_string_enter
+	push	hl
+	ld	hl, vm_string_boot
+	push	hl
+	call	_sprintf
+	pop	hl
+	pop	hl
+	pop	hl
+	
+	ld	hl, 19*256+0
+	ld	ix, $000100
+	ld	bc, vm_string_boot
+	call	.putstring	
+	
 	ld	hl, 1*256+3
 .boot_display_name:
 	ld	a, (vm_guest_count)
@@ -239,8 +275,9 @@ hypervisor:
 
 	ld	hl, $F5001C
 	bit	0, (hl)
-	jr	z, .boot_choose_loop
-	
+	jp	z, .boot_choose_loop
+
+.boot_do:
 	ld	iy, VM_HYPERVISOR_FLAG
 	ld	a, (vm_cursor)
 	or	a, a
@@ -361,5 +398,5 @@ hypervisor:
 .boot_string_choose:
  db "Choose OS to boot from :", 0 
 .boot_string_enter:
- db "Press enter to boot selected entry", 0 
+ db "Press Enter to boot. Boot selected in %2d second(s)", 0
 
