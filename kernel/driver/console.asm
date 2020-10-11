@@ -10,6 +10,7 @@ define	console_takeover	$D00715
 define	console_line_head	$D00718
 define	console_line		$D00720
 
+
 ; TODO : remove the special function of circular buffer added for console
 
 console:
@@ -304,7 +305,7 @@ console:
 ; try to exec the program in /bin/xxxx
 ; bc = string size
 	ld	hl, console_line
-	ld	bc, 0
+	ld	bc, CONSOLE_LINE_SIZE
 	ld	a, ' '
 	cpir
 ; return hl + 1, or po if none left
@@ -351,7 +352,7 @@ console:
 	
 .check_builtin:
 	ld	de, console_line
-	ld	bc, 0
+	ld	bc, CONSOLE_LINE_SIZE
 	ld	c, (hl)
 	inc	hl
 .check_builtin_compare:
