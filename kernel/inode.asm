@@ -239,10 +239,12 @@ define	phy_destroy_inode	22
 ; return c if error with a = error (but NO ERRNO SET)
 ; return nc if found, ix is the inode lookup
 ; also can check partial path ('dev/toto' lookup dev)
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, ENOTDIR
 	scf
-	ret	z
+	ret	nz
 ; does we have at least read authorization of this folder ?
 	bit	KERNEL_VFS_PERMISSION_R_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	a, EACCES
@@ -375,9 +377,11 @@ define	phy_destroy_inode	22
 ; a is raw inode flags
 ; sanity check
 	ld	c, a
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, ENOTDIR
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jp	z, .inode_atomic_write_error
+	jp	nz, .inode_atomic_write_error
 ; save name in register de
 	ex	de, hl
 ; take the write lock on the parent inode to check if we can write a new inode in this directory

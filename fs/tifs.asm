@@ -140,7 +140,7 @@ tifs:
 .mount_create_inode:
 	push	hl
 	lea	hl, iy+0
-	ld	a, KERNEL_VFS_TYPE_FILE
+	ld	a, KERNEL_VFS_TYPE_FILE or KERNEL_VFS_CAPABILITY_DMA
 	push	iy
 	call	kvfs.inode_create
 	pop	ix

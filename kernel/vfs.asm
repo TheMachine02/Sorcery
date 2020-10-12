@@ -1,4 +1,9 @@
-; inode flags = (permission or type)
+; inode flags = (permission or type or capability)
+
+define	KERNEL_VFS_PERMISSION_MASK		00000111b
+define	KERNEL_VFS_TYPE_MASK			00111000b
+define	KERNEL_VFS_CAPABILITY_MASK		11000000b
+
 ; permission, read/write/execute - map to posix "other" permission. THIS IS "MODE"
 define	KERNEL_VFS_PERMISSION_R			1
 define	KERNEL_VFS_PERMISSION_W			2
@@ -7,24 +12,20 @@ define	KERNEL_VFS_PERMISSION_RW		3
 define	KERNEL_VFS_PERMISSION_RWX		7
 define	KERNEL_VFS_PERMISSION_RX		5
 define	KERNEL_VFS_PERMISSION_WX		6
-define	KERNEL_VFS_PERMISSION_DMA		8
-; please note that file is not a set bit by if inode_flag&TYPE_FILE==0
-define	KERNEL_VFS_TYPE_FILE_MASK		248
-define	KERNEL_VFS_TYPE_FILE			0
-define	KERNEL_VFS_TYPE_DIRECTORY		8
-define	KERNEL_VFS_TYPE_CHARACTER_DEVICE	16
-define	KERNEL_VFS_TYPE_BLOCK_DEVICE		32
-define	KERNEL_VFS_TYPE_FIFO			64
-define	KERNEL_VFS_TYPE_SYMLINK			128
-
 define	KERNEL_VFS_PERMISSION_R_BIT		0
 define	KERNEL_VFS_PERMISSION_W_BIT		1
 define	KERNEL_VFS_PERMISSION_X_BIT		2
-define	KERNEL_VFS_TYPE_DIRECTORY_BIT		3
-define	KERNEL_VFS_TYPE_CHARACTER_DEVICE_BIT	4
-define	KERNEL_VFS_TYPE_BLOCK_DEVICE_BIT	5
-define	KERNEL_VFS_TYPE_FIFO_BIT		6
-define	KERNEL_VFS_TYPE_SYMLINK_BIT		7
+
+define	KERNEL_VFS_TYPE_FILE			0 shl 3
+define	KERNEL_VFS_TYPE_DIRECTORY		1 shl 3
+define	KERNEL_VFS_TYPE_CHARACTER_DEVICE	2 shl 3
+define	KERNEL_VFS_TYPE_BLOCK_DEVICE		3 shl 3
+define	KERNEL_VFS_TYPE_FIFO			4 shl 3
+define	KERNEL_VFS_TYPE_SYMLINK			5 shl 3
+define	KERNEL_VFS_TYPE_SOCKET			6 shl 3
+
+define	KERNEL_VFS_CAPABILITY_DMA		64		; direct pointer acess
+define	KERNEL_VFS_CAPABILITY_FREE		128		; not used yet
 
 ; structure file
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
@@ -187,7 +188,7 @@ sysdef _open
 	jr	z, .extract_fd
 ; if KERNEL_VFS_O_TRUNC is set in c, and the file is a normal file (not a fifo or char or block) reset the file to size 0 (drop all data)
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_FILE_MASK
+	and	a, KERNEL_VFS_TYPE_MASK
 	jr	nz, .extract_fd
 ; it is a file
 ; drop all data now
@@ -273,15 +274,18 @@ sysdef _read
 ; check inode flag right now
 ; if block device or character device, directly pass 
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	tst	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jp	nz, .read_phy_device
-	bit	KERNEL_VFS_TYPE_FIFO_BIT, a
-	jp	nz, .read_fifo
+	jp	z, .read_phy_device
+	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
+	jp	z, .read_phy_device
+	cp	a, KERNEL_VFS_TYPE_FIFO
+	jp	z, .read_fifo
 ; well, we have a directory opened right here
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, a
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
-	jp	nz, .inode_atomic_read_error
+	jp	z, .inode_atomic_read_error
 ; FIXME : welp, it is broken from here to the end
 ; check hl+bc < inode size
 ; push bc if <, else push the bc clamped to inode size
@@ -478,15 +482,18 @@ sysdef _write
 	pop	hl
 ; test the inode for type
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	tst	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jp	nz, .write_phy_device
-	bit	KERNEL_VFS_TYPE_FIFO_BIT, a
-	jp	nz, .write_fifo
+	jp	z, .write_phy_device
+	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
+	jp	z, .write_phy_device
+	cp	a, KERNEL_VFS_TYPE_FIFO
+	jp	z, .write_fifo
 ; well, we have a directory opened right here
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, a
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
-	jp	nz, .inode_atomic_write_error
+	jp	z, .inode_atomic_write_error
 	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 	push	hl
 	add	hl, bc
@@ -624,9 +631,13 @@ sysdef _ioctl
 ; is the inode is a block or a character device ?
 ; README : the need to lock for read is dummy since we have already open this inode and the flags inode should NEVER change for TYPE
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_BLOCK_DEVICE or KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	jr	z, .char_dev
+	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
 	ld	a, ENOTTY
-	jp	z, syserror
+	jp	nz, syserror
+.char_dev:
 ; now, just pass to ioctl of file
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
 	lea	iy, iy+phy_ioctl
@@ -772,9 +783,13 @@ sysdef _lseek
 ; is the inode permit the seek ?
 ; rule : directory permit (but ignored and useless), character device ESPIPE, fifo ESPIPE, block device permit, symlink should NOT happen
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_FIFO
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	jr	z, .error
+	cp	a, KERNEL_VFS_TYPE_FIFO
+.error:
 	ld	a, ESPIPE
-	jp	nz, syserror
+	jp	z, syserror
 ; so now, we have the offset de
 	ld	a, c
 	or	a, a
@@ -851,8 +866,11 @@ sysdef _stat
 ; find the correct device number
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	(ix+STAT_MODE), a
-	and	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE or KERNEL_VFS_TYPE_BLOCK_DEVICE
-	jr	z, .stat_no_device
+	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	jr	z, .stat_device
+	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
+	jr	nz, .stat_no_device
+.stat_device:
 	ld	(ix+STAT_SIZE), hl
 	ld	(ix+STAT_BLKCNT), hl
 	ld	(ix+STAT_BLKSIZE), hl
@@ -934,8 +952,10 @@ sysdef _chdir
 	ret	c
 .chdir_common:
 ; iy is the inode
-	bit	KERNEL_VFS_TYPE_DIRECTORY_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	jp	z, .inode_atomic_write_error
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	jp	nz, .inode_atomic_write_error
 ; iy is valid
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_WORKING_DIRECTORY), ix
