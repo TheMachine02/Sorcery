@@ -81,11 +81,18 @@ define	phy_destroy_inode	22
 ; return c = error, none lock
 ; return nc = iy is the locked for write inode
 	ld	iy, kvfs_root
+	ld	a, (hl)
+	cp	a, '/'
+	jr	z, .inode_get_from_root
+; the path is a relative path, so try to use the inode of the thread
+	ld	iy, (kthread_current)
+	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
+	dec	hl
+.inode_get_from_root:
 	inc	hl
-; skip the first '/'
 	ld	a, (hl)
 	or	a, a
-	jp	z, .inode_get_root_lock
+	jp	z, .inode_get_direct_lock
 	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_read
@@ -130,7 +137,7 @@ define	phy_destroy_inode	22
 	lea	iy, ix+0
 	xor	a, a
 	ret
-.inode_get_root_lock:
+.inode_get_direct_lock:
 	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
@@ -152,8 +159,16 @@ define	phy_destroy_inode	22
 ; /dev/ lock / for write and give back dev//0
 ; /dev/hello lock /dev/ for write and give back hello/0
 	ld	iy, kvfs_root
+	ld	a, (hl)
+	cp	a, '/'
+	jr	z, .inode_get_from_root
+; the path is a relative path, so try to use the inode of the thread
+	ld	iy, (kthread_current)
+	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
+	dec	hl
+.inode_directory_get_from_root:
+; skip the first '/' if it was one
 	inc	hl
-; skip the first '/'
 	ex	de, hl
 	or	a, a
 	sbc	hl, hl
@@ -326,14 +341,16 @@ define	phy_destroy_inode	22
 	ret
 	
 .inode_destroy:
+; TODO : implement
+	ret
 ; there is no more reference to this inode, so it can be freely destroyed
-; we also need to free all child : TODO
+; we also need to free all child
 ; first signal the callback
-	ld	ix, (iy+KERNEL_VFS_INODE_OP)
-	lea	hl, ix+phy_destroy_inode
-	call	.inode_call
-	lea	hl, iy+KERNEL_VFS_INODE
-	jp	kfree
+; 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
+; 	lea	hl, ix+phy_destroy_inode
+; 	call	.inode_call
+; 	lea	hl, iy+KERNEL_VFS_INODE
+; 	jp	kfree
 
 .inode_call:
 	jp	(hl)

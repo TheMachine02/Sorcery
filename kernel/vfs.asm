@@ -152,6 +152,8 @@ sysdef _open
 ; if inode create c, the eror should already have been set, so just return
 	ret	c
 ; unlock the child, create parent does always unlock the parent inode (in case of error or sucess)
+; increment the reference
+	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 .open_continue:
@@ -212,26 +214,25 @@ sysdef _open
 
 sysdef _close
 .close:
-; TODO ; finish to implement
 ; hl is fd
-; 	call	.fd_pointer_check
-; 	ret	c
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	de, (kthread_current)
-	add	hl, de
-	ld	de, KERNEL_THREAD_FILE_DESCRIPTOR
-	add	hl, de
-	ld	iy, (hl)	; get inode
-; null the file descriptor
-	ex	de, hl
+	call	.fd_pointer_check
+	ret	c
+; ix is the pointer to fd, iy is the inode
+	lea	de, ix+0
 	ld	hl, KERNEL_MM_NULL
 	ld	bc, KERNEL_VFS_FILE_DESCRIPTOR_SIZE
 	ldir
+; if the inode is KERNEL_VFS_TYPE_FILE
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	jr	nz, .close_no
+; call the special sync file (write all dirty to flash)
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
 	lea	hl, ix+phy_sync
+	push	iy
 	call	.inode_call
+	pop	iy
+.close_no:
 ; and put the inode, decrement reference
 	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
 	ret	nz
@@ -703,7 +704,7 @@ sysdef _chmod
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	jp	z, .inode_atomic_write_error
 	jr	.chmod_shared
-	
+
 sysdef _fchmod
 .fchmod:
 ; hl is fd, bc is new mode
