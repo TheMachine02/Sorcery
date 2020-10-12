@@ -10,6 +10,12 @@ define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer
 define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all block are indirect)
 ; 3*16, 48 bytes
 ; in case of fifo, hold the fifo structure (15 bytes) (data block point to slab structure of 64 bytes with CACHE:BLOCK)
+; SO FIFO : 32 bytes
+define	KERNEL_VFS_INODE_FIFO_DATA		16
+; in case of DMA, we only need to store 256 bytes indirect for the write structure
+; so 4 indirect page of 64 bytes = 12 bytes + 3 bytes DMA adress
+define	KERNEL_VFS_INODE_DMA_DATA		16
+define	KERNEL_VFS_INODE_DMA_POINTER		28
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_INODE		0	; 3 bytes pointer to inode
@@ -17,6 +23,8 @@ define	KERNEL_VFS_DIRECTORY_NAME		3	; name,
 
 define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
+define	KERNEL_VFS_INODE_NODE_SIZE_DMA		32	; inode size in case of DMA
+define	KERNEL_VFS_INODE_NODE_SIZE_FIFO		32	; inode size in case of fifo
 define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		16	; 16 bytes per entries, or 4 entries per slab entries
 define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
 
@@ -442,7 +450,13 @@ define	phy_destroy_inode	22
 ; ix is the directory entrie
 	pop	iy
 ; iy is now the parent inode
-	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
+; also, c is still our flags
+	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, c
+	ld	hl, KERNEL_VFS_INODE_NODE_SIZE_DMA
+	jr	nz, .node_regular
+	add	hl, hl
+.node_regular:
+;	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
 	call	kmalloc
 	ld	a, ENOMEM
 	jp	c, .inode_atomic_write_error

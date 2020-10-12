@@ -26,6 +26,8 @@ define	KERNEL_VFS_TYPE_SOCKET			6 shl 3
 
 define	KERNEL_VFS_CAPABILITY_DMA		64		; direct pointer acess
 define	KERNEL_VFS_CAPABILITY_FREE		128		; not used yet
+define	KERNEL_VFS_CAPABILITY_DMA_BIT		6
+define	KERNEL_VFS_CAPABILITY_FREE_BIT		7
 
 ; structure file
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
@@ -274,18 +276,22 @@ sysdef _read
 ; check inode flag right now
 ; if block device or character device, directly pass 
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_MASK
+; NOTE : we mask type or capability : any of the following test can't have dma set anyway
+; and we'll need to test it after
+	and	a, KERNEL_VFS_TYPE_MASK or KERNEL_VFS_CAPABILITY_DMA
 	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jp	z, .read_phy_device
+	jp	z, .read_device
 	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
-	jp	z, .read_phy_device
+	jp	z, .read_device
 	cp	a, KERNEL_VFS_TYPE_FIFO
 	jp	z, .read_fifo
 ; well, we have a directory opened right here
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
 	jp	z, .inode_atomic_read_error
+	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
+	jp	nz, .read_dma
 ; FIXME : welp, it is broken from here to the end
 ; check hl+bc < inode size
 ; push bc if <, else push the bc clamped to inode size
@@ -408,7 +414,7 @@ sysdef _read
 	jp	nc, .read_ndelay_return
 	ld	a, EAGAIN
 	jp	syserror
-.read_phy_device:
+.read_device:
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
 	lea	iy, iy+phy_read
@@ -423,11 +429,22 @@ sysdef _read
 ; TODO : check if the fifo can be read / write
 ; iy is the inode
 	push	iy
-	lea	iy, iy+KERNEL_VFS_INODE_DATA
+	lea	iy, iy+KERNEL_VFS_INODE_FIFO_DATA
 	call	fifo.read
 	pop	iy
 ; save the size readed
 	push	hl
+	jr	.read_unlock
+.read_dma:
+	push	bc
+	push	bc
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	ld	bc, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	add	hl, bc
+	pop	bc
+	ldir
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+	pop	bc
 	jr	.read_unlock
 ; complex logic to read from the inode structure
 .read_buff:
@@ -459,7 +476,7 @@ sysdef _read
 	jr	nz, .read_buff_do
 	ld	hl, KERNEL_MM_NULL
 	jr	.read_buff_do
-	
+
 sysdef _write
 .write:
 	call	.fd_pointer_check
