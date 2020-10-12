@@ -290,6 +290,7 @@ sysdef _read
 	jp	z, .inode_atomic_read_error
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
 	jp	nz, .read_dma
+; TODO : if ((offset + size) > inode_size) { size = inode_size - offset; } (and update read accordingly)
 ; offset = file offset
 ; block = offset >> 10
 ; block_offset = offset % 1024
@@ -420,24 +421,26 @@ sysdef _read
 	push	bc
 	push	bc
 	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	push	hl
+	add	hl, bc
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+	pop	hl
 	ld	bc, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	add	hl, bc
 	pop	bc
 	ldir
-	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	pop	bc
 	jr	.read_unlock
 ; complex logic to read from the inode structure
 .read_buff:
 ; hl = offset mod 1024, de = buffer, bc = size (adapted to offset), a = block count
 ; the inner data logic
-	push	hl
 ; iy is inode number (adress of the inode)
 ; a is block number (ie, file adress divided by KERNEL_MM_PAGE_SIZE)
 ; about alignement : block are at last 1024 bytes aligned
 ; block data is aligned to 4 bytes
 ; inode data is 64 bytes aligned
 ; block adress is : (block & 0x0F)*4 + inode[data+(block >> 4 * 3)]
+	push	hl
 	push	bc
 	ld	b, a
 	rra
