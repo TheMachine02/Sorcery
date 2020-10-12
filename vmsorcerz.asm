@@ -11,7 +11,7 @@ LEAF.settings.flags:=LF_STATIC
 
 entry sorcery
 
-org	$D30000
+org	$D01000
 section '.boot' writeable
 
 sorcery:
@@ -19,10 +19,11 @@ sorcery:
 sorcery_hypervisor:
 	jp	kinterrupt.irq_handler
 	jp	nmi.handler
-	dd	$DEC0DAED
+	dd	$DEC0ADDE
 	db CONFIG_KERNEL_NAME, "-", CONFIG_KERNEL_VERSION,0
 
-org	$D30080
+assert $ < $D01040
+org	$D01040
 section '.sys' writeable
 ; align this to 4 bytes
 sysjump:

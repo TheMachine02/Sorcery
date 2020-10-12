@@ -11,7 +11,7 @@ define	KERNEL_MM_PAGE_FREE_MASK	128
 
 if $<> $D00000
  org	$D00000
- define sorcery_hypervisor	$D30004		;$D01004
+ define sorcery_hypervisor	$D01004		;$D01004
 end if
 
 KERNEL_INTERRUPT_IPT:			; IRQ priority table : keyboard > lcd > usb > rtc > hrtr1 > hrtr2 > hrtr3 > power
@@ -190,8 +190,8 @@ kthread_pid_map:			; we are at offset $400
  dl	kernel_idle
  db	252	dup	$00
 kmm_ptlb_map:				; the kernel page alloctor process tlb at offset $500
- db	4	dup	KERNEL_MM_RESERVED_MASK
- db	89	dup	KERNEL_MM_PAGE_FREE_MASK
+ db	32	dup	KERNEL_MM_RESERVED_MASK
+ db	61	dup	KERNEL_MM_PAGE_FREE_MASK
  db	1	dup	KERNEL_MM_RESERVED_MASK
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00

@@ -34,11 +34,6 @@ init:
 	ld	a, KERNEL_CRYSTAL_DIVISOR
 	out0	(KERNEL_CRYSTAL_CTLR), a
 	ld	de, kernel_data
-; setup privileged OS code (end of OS)
-; 	ld	a, $03
-; 	out0	($1F), a
-; 	out0	($1D), e
-; 	out0	($1E), e
 ; disable stack protector to be able to write the whole RAM image
 	out0	($3A), e
 	out0	($3B), e
@@ -47,9 +42,9 @@ init:
 	ld	hl, .arch_initramfs
 	call	lz4.decompress
 ; and init the rest of memory with poison
-	ld	hl, $D01000
-	ld	de, $D01001
-	ld	bc, KERNEL_MM_RAM_SIZE - 4097 - 65536 ; tmp for leaf fix
+	ld	hl, $D08000
+	ld	de, $D08001
+	ld	bc, KERNEL_MM_RAM_SIZE - 32769
 	ld	(hl), KERNEL_HW_POISON
 	ldir
 ; right now, the RAM image is complete
@@ -96,9 +91,8 @@ init:
 file	'initramfs'
 ; NOTE : end guard is part of MPU init (those two $00 are important)
 
-; FIXME : temporarily increased the protected memory range
 .arch_MPU_init:
- db	$00, $00, $D0, $FF, $FF, $D3
+ db	$00, $00, $D0, $FF, $7F, $D0
  db	$A8, $00, $D0
 
 .arch_init:

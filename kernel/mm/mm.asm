@@ -34,8 +34,8 @@ define	KERNEL_HW_POISON		$C7
 define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
 define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 
-define	KERNEL_MM_GFP_KERNEL		0
-define	KERNEL_MM_GFP_USER		64
+define	KERNEL_MM_GFP_KERNEL		32	; $D08000
+define	KERNEL_MM_GFP_USER		64	; $D10000
 ; $D0 ... $D1 should be reserved to kernel / cache
 ; $D1 and after is thread and program memory
 ; this partition reduce fragmentation in the cache area (always map 1K at the time) and general memory fragmentation
@@ -44,45 +44,7 @@ macro	trap
 	db $FD, $FF
 end	macro
 
-; ; link between cache page and inode (so inode can be updated when droping cache pages)
-; define	kcache_inode_map		$D00F00
-; ; memory region for gestion (512 bytes table, first 256 bytes are flags, next either count or thread_id)
-; define	kmm_ptlb_map			$D00500
-
 kmm:
-
-; .init:
-; ; setup memory protection
-; 	di
-; if CONFIG_USE_BOOT_PATCH=1
-; 	xor	a, a
-; 	out0	($20), a
-; 	out0	($21), a
-; 	dec	a
-; 	out0	($23), a
-; 	ld	a, $0F
-; 	out0	($24), a
-; 	ld	a, $D0
-; 	out0	($22), a
-; 	out0	($25), a
-; else
-; 	ld	a, $00
-; 	out0 ($20), a
-; 	dec	a
-; 	out0 ($23), a
-; 	ld	a, $88
-; 	out0 ($21), a
-; 	out0 ($24), a
-; 	ld	a, $D1
-; 	out0 ($22), a
-; 	out0 ($25), a
-; end if
-; 	ld	hl, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE
-; 	ld	de, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE + 1
-; 	ld	bc, KERNEL_MM_RAM_SIZE - KERNEL_MM_PROTECTED_SIZE - 1
-; 	ld	(hl), KERNEL_HW_POISON
-; 	ldir
-; 	ret
 
  .page_perm_rw:
 ; b = page

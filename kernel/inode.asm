@@ -161,7 +161,7 @@ define	phy_destroy_inode	22
 	ld	iy, kvfs_root
 	ld	a, (hl)
 	cp	a, '/'
-	jr	z, .inode_get_from_root
+	jr	z, .inode_directory_get_from_root
 ; the path is a relative path, so try to use the inode of the thread
 	ld	iy, (kthread_current)
 	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
