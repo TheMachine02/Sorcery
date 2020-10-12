@@ -328,7 +328,6 @@ kmem:
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_SIZE), hl
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_PAGE), a
 ; TODO : KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
-	ld	(iy+KERNEL_SLAB_CACHE_DATA_COUNT), a
 	pop	bc
 	pop	de
 	pop	iy
