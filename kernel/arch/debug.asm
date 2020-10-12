@@ -78,47 +78,21 @@ end macro
 if CONFIG_DEBUG
 
 DEBUG_THREAD:
-	dbg	open
-	
 	call	tifs.mount
 	
 ; ; hl is path, bc is flags, de is mode
-	ld	hl, DEBUG_PATH_3
-	ld	bc, KERNEL_VFS_PERMISSION_RWX
-	call	_mkdir
-	ld	hl, DEBUG_PATH_4
-	ld	bc, (KERNEL_VFS_O_CREAT*256) or KERNEL_VFS_O_RW
-	ld	de, KERNEL_VFS_PERMISSION_RWX
+	ld	hl, DEBUG_PATH
+	ld	bc, KERNEL_VFS_O_R
 	call	_open
-	
-; 	ld	de, $D40000
-; 	ld	bc, 4096
-; 	push	hl
-; 	call	_write
-; 	pop	hl
-	
-	push	hl
+
+	dbg	open
 	ld	de, $D40000
-	ld	bc, 256
+	ld	bc, 18000
 	call	_read
-	pop	hl
-	
-	ld	de, $D40000
-	ld	bc, 256
-	call	_read
-	
+		
 	ret
 
 DEBUG_PATH:
- db "/dev/console",0
+ db "/tifs/SORCERY",0
 
-DEBUG_PATH_3:
- db "/home",0
-
-DEBUG_PATH_4:
- db "/home/file",0
- 
-DEBUG_STRING:
- db "AGAhukghsfbjrgzhefsqikgerhnsekqjgfvznirkjsdghfcizekjghsnfickjgzrbdc", 0
- 
  end if

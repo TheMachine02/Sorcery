@@ -262,9 +262,7 @@ sysdef _read
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
-	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
-; hl is offset in file, iy is inode, de is buffer, bc is count
-	push	hl
+; iy is inode, de is buffer, bc is count
 ; first the lock
 ; if NDELAY is set, use try_lock
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
@@ -273,7 +271,6 @@ sysdef _read
 	jp	nz, .read_ndelay
 	call	atomic_rw.lock_read
 .read_ndelay_return:
-	pop	hl
 ; check inode flag right now
 ; if block device or character device, directly pass 
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
@@ -282,9 +279,9 @@ sysdef _read
 	and	a, KERNEL_VFS_TYPE_MASK or KERNEL_VFS_CAPABILITY_DMA
 	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jp	z, .read_device
+	jp	z, .read_char_device
 	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
-	jp	z, .read_device
+	jp	z, .read_block_device
 	cp	a, KERNEL_VFS_TYPE_FIFO
 	jp	z, .read_fifo
 ; well, we have a directory opened right here
@@ -293,120 +290,97 @@ sysdef _read
 	jp	z, .inode_atomic_read_error
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
 	jp	nz, .read_dma
-; FIXME : welp, it is broken from here to the end
-; check hl+bc < inode size
-; push bc if <, else push the bc clamped to inode size
-	push	hl
-	push	de
+; offset = file offset
+; block = offset >> 10
+; block_offset = offset % 1024
+; if ( (block_offset + size) < 1024){
+; 	read_buff(block_offset, buff, size, count);
+;	return inode_unlock();
+; }
+; size_0 = 1024 - block_offset;
+; size = size - size_0;
+; read_buff(block_offset, buff, size_0, count);
+; count++
+; while(size > 1024) {
+; 	read_buff(0, buff, 1024, count++);
+;	size = size - 1024;
+; }
+; read_buff(0, buff, size, count);
+; return inode_unlock();
 	push	bc
-; compute inode size - offset - size
-	ex	de, hl
-	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
-	or	a, a
-	sbc	hl, de
-	sbc	hl, bc
-; if carry is not set, then the size can be readed from the inode
-	jr	nc, .read_no_clamp
-; readable size = inode_size - offset
-	add	hl, bc
-	ex	(sp), hl	; save back the new value into bc
-.read_no_clamp:
-	pop	bc
-	pop	de
-	pop	hl
-	push	hl
-	push	hl
+	push	de
+; bc = size, hl = offset, de = buffer
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET + 1)
+; convert hl to block (16 blocks per indirect, 1024 bytes per block)
+; hl >> 10 : block count
+	ld	a, l
+	srl	h
+	rra
+	srl	h
+	rra
+; now, we need the modulo
+	ld	de, 0
+	ld	e, (ix+KERNEL_VFS_FILE_OFFSET)
+; get the last digit
+	ld	a, (ix+KERNEL_VFS_FILE_OFFSET+1)
+	and	a, 00000001b
+	ld	d, a
+; de is the block_offset
+; we can update offset right here
+; TODO : bound checking
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-; convert hl to block (16 blocks per indirect, 1024 bytes per block)
-; hl / 1024 : offset in block
-	dec	sp
-	pop	hl
-	inc	sp
-	ld	a, l
-	srl	h
-	rra
-	srl	h
-	rra
-	pop	hl
-; hl = still the offset in the file, bc = size to read, de = buffer, a = block
-; hl mod 1024
-	push	af
-	ld	a, l
-	rl	h
-	ld	hl, 0
-	ld	l, a
-	sbc	a, a
-	and	a, 00000001b
-	ld	h, a
-	pop	af
-; start reading the file
-; first block is in size 1024 - hl long maximum
-	push	bc
-	push	bc
-	pop	ix
-; ix will be size
-	push	hl
-	ld	bc, -1024
-	add	hl, bc
-	push	hl
-; we have (offset mod 1024) - 1024
-; size - (1024-modoffset)) > 0 ?
-	lea	bc, ix+0
-	add	hl, bc
-; hl > 0 ?
-	add	hl, de
+; (block_offset + size) < 1024 ?
+	ld	hl, KERNEL_MM_PAGE_SIZE
 	or	a, a
 	sbc	hl, de
-	pop	bc
-	pop	hl
-	jp	m, .read_end_single_copy
-; copy(modoffset, buffer, 1024-modoffset)
-; hl set, bc is not *yet* set
-	add	ix, bc
-; we need to negate bc
-	push	hl
-	ld	h, a
-	ld	a, c
-	ld	l, b
-	ld	bc, $FFFFFF
-	cpl
-	ld	c, a
-	ld	a, l
-	cpl
-	ld	b, a
-	inc	bc
-	ld	a, h
-	pop	hl
-; a is set, bc is set, hl is set, de is set
+	jr	c, .read_multiple
+	sbc	hl, bc
+	jr	c, .read_multiple_offset
+	ex	de, hl
+	pop	de
+; a, de, bc, hl are all set
 	call	.read_buff
-	inc	a
-	lea	hl, ix+0
-.read_copy:
-	ld	bc, KERNEL_MM_PAGE_SIZE
+	jr	.read_unlock
+.read_multiple_offset:
+	add	hl, bc
+.read_multiple:
+; size_0 = 1024 - block_offset; ( = hl right now)
+; size = size - size_0;
+; swap hl and bc
+; de is block offset, keep it in mind
+	push	bc
+	ex	(sp), hl
+	pop	bc
 	or	a, a
 	sbc	hl, bc
-	jr	c, .read_copy_end
-	push	hl
-	or	a, a
-	sbc	hl, hl
+; push this on stack, get back the buff in de, get offset in hl
+	ex	(sp), hl
+	ex	de, hl
+.read_copy_loop:
+; hl = offset, de = buffer, bc = size, a = block
 	call	.read_buff
-	pop	hl
 	inc	a
-	jr	.read_copy
-.read_copy_end:
-; end copy
-	add	hl, bc
-	push	hl
-	pop	bc
-.read_end_single_copy:
+	pop	hl
+; hl = size
 	or	a, a
+	ld	bc, KERNEL_MM_PAGE_SIZE
+	sbc	hl, bc
+	jr	nc, .read_copy_restore
+	add	hl, bc
+.read_copy_restore:
+	push	hl
 	sbc	hl, hl
+	jr	nc, .read_copy_loop
+	inc	hl
+	pop	bc
 	call	.read_buff
 .read_unlock:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
-	pop	hl	; our size read
+; pop our size read
+	pop	hl
 	ret
 .read_ndelay:
 ; TODO : implement
@@ -415,7 +389,13 @@ sysdef _read
 	jp	nc, .read_ndelay_return
 	ld	a, EAGAIN
 	jp	syserror
-.read_device:
+.read_block_device:
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	push	hl
+	add	hl, bc
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+	pop	hl
+.read_char_device:
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
 	lea	iy, iy+phy_read
@@ -449,10 +429,36 @@ sysdef _read
 	jr	.read_unlock
 ; complex logic to read from the inode structure
 .read_buff:
-; hl = 1024 bytes offset, de = buffer, bc = size, a = block count
+; hl = offset mod 1024, de = buffer, bc = size (adapted to offset), a = block count
 ; the inner data logic
 	push	hl
-	call	.inode_block_data
+; iy is inode number (adress of the inode)
+; a is block number (ie, file adress divided by KERNEL_MM_PAGE_SIZE)
+; about alignement : block are at last 1024 bytes aligned
+; block data is aligned to 4 bytes
+; inode data is 64 bytes aligned
+; block adress is : (block & 0x0F)*4 + inode[data+(block >> 4 * 3)]
+	push	bc
+	ld	b, a
+	rra
+	rra
+	rra
+	and	a, 00011110b
+	ld	c, a
+	rra
+	add	a, c
+	lea	hl, iy+KERNEL_VFS_INODE_DATA
+	add	a, l
+	ld	l, a
+	ld	a, b
+	and	a, 00001111b
+; hl adress should be aligned to 64 bytes
+	add	a, a
+	add	a, a
+	ld	hl, (hl)
+	add	a, l
+	ld	l, a
+; hl is the block_data adress structure in cache
 	ld	a, (hl)
 	or	a, a
 	jr	z, .read_buff_cache_miss
@@ -462,6 +468,8 @@ sysdef _read
 	add	hl, hl
 	add	hl, hl
 .read_buff_do:
+	ld	a, b
+	pop	bc
 	ex	de, hl
 	ex	(sp), hl
 	add	hl, de
@@ -477,7 +485,7 @@ sysdef _read
 	jr	nz, .read_buff_do
 	ld	hl, KERNEL_MM_NULL
 	jr	.read_buff_do
-
+	
 sysdef _write
 .write:
 	call	.fd_pointer_check
@@ -990,4 +998,3 @@ sysdef _fchdir
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 	jr	.chdir_common
-
