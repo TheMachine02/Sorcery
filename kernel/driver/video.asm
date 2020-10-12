@@ -65,7 +65,8 @@ video:
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
 	ret	z
-	ld	iy, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
+	inc	hl
+	ld	iy, (hl)
 ; signal the IRQ to a waiting (helper / or not ) thread
 	ld	a, DRIVER_VIDEO_IRQ
 	jp	kthread.irq_resume
