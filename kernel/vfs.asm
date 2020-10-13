@@ -290,8 +290,8 @@ sysdef _read
 	jp	z, .inode_atomic_read_error
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
 	jp	nz, .read_dma
-; TODO : if ((offset + size) > inode_size) { size = inode_size - offset; } (and update read accordingly)
 ; offset = file offset
+; if ((offset + size) > inode_size) { size = inode_size - offset; }
 ; block = offset >> 10
 ; block_offset = offset % 1024
 ; if ( (block_offset + size) < 1024){
@@ -308,6 +308,23 @@ sysdef _read
 ; }
 ; read_buff(0, buff, size, count);
 ; return inode_unlock();
+; 12,5 cycles for ~18000 bytes read (from flash)
+; let's start the logic
+; if ((offset + size) > inode_size) { size = inode_size - offset; }
+	push	de
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
+	ld	de, (ix+KERNEL_VFS_FILE_OFFSET)
+	or	a, a
+	sbc	hl, de
+	or	a, a
+	sbc	hl, bc
+	jp	p, .read_adjust
+	add	hl, bc
+	push	hl
+	pop	bc
+; adjust size
+.read_adjust:
+	pop	de
 	push	bc
 	push	de
 ; bc = size, hl = offset, de = buffer
@@ -328,7 +345,6 @@ sysdef _read
 	ld	d, a
 ; de is the block_offset
 ; we can update offset right here
-; TODO : bound checking
 	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
@@ -384,8 +400,7 @@ sysdef _read
 	pop	hl
 	ret
 .read_ndelay:
-; TODO : implement
-;	call	atomic_rw.try_lock_read
+	call	atomic_rw.try_lock_read
 	scf
 	jp	nc, .read_ndelay_return
 	ld	a, EAGAIN

@@ -30,6 +30,19 @@ end	macro
 
 atomic_rw:
 
+.try_lock_read:
+	di
+	xor	a, a
+	inc	(hl)
+	jr	z, .lock_fail
+	ei
+	ret
+.lock_fail:
+	dec	(hl)
+	scf
+	ei
+	ret
+
 .lock_read:
 	di
 	xor	a, a
