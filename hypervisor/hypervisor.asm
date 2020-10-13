@@ -51,10 +51,10 @@ guest_tios_name:=$
 .init:
 ; cleanup LCD state
 	ld	hl, $E4002D
+	ld	a, l
 	ld	de, $D40000
 	ld	bc, 76800*2
 	ldir
-	ld	a, l
 	ld	($E30018), a
 ; actual jump pointer
 guest_tios_boot_jp:=$+1
