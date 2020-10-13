@@ -214,7 +214,6 @@ printk:
 	ld	bc, 0
 	xor	a, a
 	cpir
-	or	a, a
 	sbc	hl, hl
 	scf
 	sbc	hl, bc
