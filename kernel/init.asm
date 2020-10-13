@@ -179,7 +179,7 @@ name:
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	ld	a, EFAULT	; should be "ld a, DEFAULT" ??
+	ld	a, EFAULT
 	jp	z, syserror
 ; copy data
 	ex	de, hl
