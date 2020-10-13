@@ -50,11 +50,11 @@ guest_tios_name:=$
 	db "TI-os version 0.0.0", 0
 .init:
 ; cleanup LCD state
-	ld	hl, $E40000
+	ld	hl, $E4002D
+	ld	a, l
 	ld	de, $D40000
 	ld	bc, 76800*2
 	ldir
-	ld	a,$2D
 	ld	($E30018), a
 ; actual jump pointer
 guest_tios_boot_jp:=$+1
@@ -111,13 +111,11 @@ hypervisor:
 	jr	z, guest_tios.nmi
 	push	hl
 	push	af
-	push	iy
-	ld	iy, VM_HYPERVISOR_FLAG
-	ld	hl, (iy+VM_HYPERVISOR_DATA)
+	ld	hl, VM_HYPERVISOR_FLAG+VM_HYPERVISOR_DATA
+	ld	hl, (hl)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	pop	iy
 	jr	z, .nmi_restart
 	pop	af
 	inc	hl
@@ -134,7 +132,7 @@ hypervisor:
 	
 .boot_detect:
 	di
-	or	a, a
+	xor	a, a
 	sbc	hl, hl
 	ld	(VM_HYPERVISOR_DATA), hl
 ; NOTE : does there is even a TI OS installed ? 
@@ -142,10 +140,9 @@ hypervisor:
 ; try to detect ti os version
 	ld	hl, guest_tios
 	ld	(vm_guest_table), hl
-	ld	a, 1
-	ld	(vm_guest_count), a
-	xor	a, a
 	ld	(vm_cursor), a
+	inc	a
+	ld	(vm_guest_count), a
 ; we have the correct substring version, and entry point with guest_tios
 ; we need to parse tifs and find leaf file that could be launched
 	call	.boot_search_leaf
@@ -155,18 +152,16 @@ hypervisor:
 	ld	($E30010), hl
 	ld	a,$27
 	ld	($E30018), a
-	or	a, a
-	sbc	hl, hl
 	ld	($E30200), hl
-	dec	hl
-	ld	($E30202), hl
 ; palette cleanup
-	ld	hl, $E40000
+	ld	hl, $E4FFFF
+	ld	($E30202), hl
 	ld	de, $E30204
 	ld	bc, 508
 	ldir
+	or	a, a
+	sbc	hl, hl
 	ld	ix, $000100
-	ld	hl, 0
 	ld	bc, .boot_string_choose
 	call	.putstring
 	
@@ -175,28 +170,22 @@ hypervisor:
 	ld	a, 10
 	ld	(vm_second), a
 .boot_choose_loop:
-	ld	b, 8
+	ld	bc, $00083c
 .wait:
-	push	bc
 	call	.vsync
 	ld	hl, vm_delay
 	dec	(hl)
 	jr	nz, .no_decrement
-	ld	(hl), 60
+	ld	(hl), c
 	inc	hl
 	dec	(hl)
-	pop	bc
 	jp	z, .boot_do
-	push	bc
 .no_decrement:
-	pop	bc
 	djnz	.wait
 	
-	or	a, a
-	sbc	hl, hl
-	ld	a, (vm_second)
-	ld	l, a
-	push	hl
+	ld	hl, vm_second
+	ld	c, (hl)
+	push	bc
 	ld	hl, .boot_string_enter
 	push	hl
 	ld	hl, vm_string_boot
@@ -255,16 +244,17 @@ hypervisor:
 	cp	a, (hl)
 	jr	nz, .scan_wait
 
+	ld	l, $1E
+	ld	c, (hl)
 	ld	hl, vm_cursor
-	ld	a, ($F5001E)
-	bit	0, a
+	bit	0, c
 	jr	z, $+3
 	inc	(hl)
-	bit	3, a
+	bit	3, c
 	jr	z, $+3
 	dec	(hl)
 	jp	p, .boot_still_pos
-	ld	(hl), 0
+	ld	(hl), a
 .boot_still_pos:
 	ld	a, (vm_guest_count)
 	dec	a
@@ -273,9 +263,9 @@ hypervisor:
 	ld	(hl), a
 .boot_still_up:
 
-	ld	hl, $F5001C
-	bit	0, (hl)
-	jp	z, .boot_choose_loop
+	ld	a, ($F5001C)
+	rra
+	jp	nc, .boot_choose_loop
 
 .boot_do:
 	ld	iy, VM_HYPERVISOR_FLAG
@@ -283,7 +273,6 @@ hypervisor:
 	or	a, a
 	res	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
 	ret	z
-	or	a, a
 	sbc	hl, hl
 	ld	l, a
 	add	hl, hl
