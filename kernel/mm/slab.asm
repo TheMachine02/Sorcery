@@ -326,9 +326,8 @@ kmem:
 ; hl is the block size of the cache
 	ld	(iy+KERNEL_SLAB_CACHE_COUNT), $FF
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_SIZE), hl
-	ld	(iy+KERNEL_SLAB_CACHE_DATA_PAGE), $00
+	ld	(iy+KERNEL_SLAB_CACHE_DATA_PAGE), a
 ; TODO : KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
-	ld	(iy+KERNEL_SLAB_CACHE_DATA_COUNT), $00
 	pop	bc
 	pop	de
 	pop	iy
