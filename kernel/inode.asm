@@ -208,7 +208,6 @@ define	phy_destroy_inode	22
 ; ix is the new inode, iy the old, hl is still our path
 ; ex : /dev/ need to lock dev for write
 ; de > copy to hl
-	or	a, a
 	sbc	hl, hl
 	add	hl, de
 	ld	c, KERNEL_VFS_DIRECTORY_NAME_SIZE
@@ -498,10 +497,8 @@ define	phy_destroy_inode	22
 .inode_allocate_copy_end:
 	ld	(de), a
 	pop	bc
-	pop	hl
 ; c is still our flags, hl is our inode
 ; hl is our node inode
-	push	hl
 	pop	ix
 ; right here, we have the new inode as ix, the parent as iy, and name of inode as de
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
@@ -520,8 +517,7 @@ define	phy_destroy_inode	22
 	call	atomic_rw.unlock_write
 ; children inode is still locked
 ; return the children node in iy
-	push	ix
-	pop	iy
+	lea	iy, ix+0
 	or	a, a
 	sbc	hl, hl
 	ret
