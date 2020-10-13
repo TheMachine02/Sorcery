@@ -24,7 +24,7 @@ fifo:
 	ldir
 	ld	(iy+FIFO_BOUND_UPP), de
 	ld	(iy+FIFO_SIZE), bc
-	ld	(iy+FIFO_ENDPOINT), 0
+	ld	(iy+FIFO_ENDPOINT), c
 	ret
 
 .length:
