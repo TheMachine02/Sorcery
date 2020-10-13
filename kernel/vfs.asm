@@ -268,9 +268,14 @@ sysdef _read
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; KERNEL_VFS_O_NDELAY (128)
 	bit	7, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	nz, .read_ndelay
+	jr	z, .read_delay
+	call	atomic_rw.try_lock_read
+	jr	nc, .read_ndelay
+	ld	a, EAGAIN
+	jp	syserror
+.read_delay:
 	call	atomic_rw.lock_read
-.read_ndelay_return:
+.read_ndelay:
 ; check inode flag right now
 ; if block device or character device, directly pass 
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
@@ -279,17 +284,57 @@ sysdef _read
 	and	a, KERNEL_VFS_TYPE_MASK or KERNEL_VFS_CAPABILITY_DMA
 	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jp	z, .read_char_device
+	jr	z, .read_char_device
 	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
-	jp	z, .read_block_device
+	jr	z, .read_block_device
 	cp	a, KERNEL_VFS_TYPE_FIFO
-	jp	z, .read_fifo
-; well, we have a directory opened right here
+	jr	z, .read_fifo
+	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
+	jr	z, .read_file
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
 	jp	z, .inode_atomic_read_error
-	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
-	jp	nz, .read_dma
+.read_dma:
+	push	bc
+	push	bc
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	push	hl
+	add	hl, bc
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+	pop	hl
+	ld	bc, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	add	hl, bc
+	pop	bc
+	ldir
+	jp	.read_unlock
+.read_block_device:
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	push	hl
+	add	hl, bc
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+	pop	hl
+.read_char_device:
+	push	iy
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_read
+	call	.phy_indirect_call
+	pop	iy
+	push	hl
+	jr	.read_unlock
+.read_fifo:
+; the inode is special in case of a fifo
+; the 48 bytes data block hold all the fifo data
+; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
+; TODO : check if the fifo can be read / write
+; iy is the inode
+	push	iy
+	lea	iy, iy+KERNEL_VFS_INODE_FIFO_DATA
+	call	fifo.read
+	pop	iy
+; save the size readed
+	push	hl
+	jr	.read_unlock
+.read_file:
 ; offset = file offset
 ; if ((offset + size) > inode_size) { size = inode_size - offset; }
 ; block = offset >> 10
@@ -399,52 +444,6 @@ sysdef _read
 ; pop our size read
 	pop	hl
 	ret
-.read_ndelay:
-	call	atomic_rw.try_lock_read
-	scf
-	jp	nc, .read_ndelay_return
-	ld	a, EAGAIN
-	jp	syserror
-.read_block_device:
-	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
-	push	hl
-	add	hl, bc
-	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	pop	hl
-.read_char_device:
-	push	iy
-	ld	iy, (iy+KERNEL_VFS_INODE_OP)
-	lea	iy, iy+phy_read
-	call	.phy_indirect_call
-	pop	iy
-	push	hl
-	jr	.read_unlock
-.read_fifo:
-; the inode is special in case of a fifo
-; the 48 bytes data block hold all the fifo data
-; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
-; TODO : check if the fifo can be read / write
-; iy is the inode
-	push	iy
-	lea	iy, iy+KERNEL_VFS_INODE_FIFO_DATA
-	call	fifo.read
-	pop	iy
-; save the size readed
-	push	hl
-	jr	.read_unlock
-.read_dma:
-	push	bc
-	push	bc
-	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
-	push	hl
-	add	hl, bc
-	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	pop	hl
-	ld	bc, (iy+KERNEL_VFS_INODE_DMA_DATA)
-	add	hl, bc
-	pop	bc
-	ldir
-	jr	.read_unlock
 ; complex logic to read from the inode structure
 .read_buff:
 ; hl = offset mod 1024, de = buffer, bc = size (adapted to offset), a = block count

@@ -6,10 +6,18 @@ define	KERNEL_STACK_SIZE		87		; size of the stack
 define	KERNEL_CRYSTAL_CTLR		$00		; port 00 is master control
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	KERNEL_DEV_NULL			$E40000
-define	NULL 				0
 define	KERNEL_LCD_CLOCK_DIVISOR	$E30008		; the LCD clock timings is derived from CPU clock
-
+define	KERNEL_EMERG			0 
+define	KERNEL_ALERT			1
+define	KERNEL_CRIT			2
+define	KERNEL_ERR			3
+define	KERNEL_WARNING			4
+define	KERNEL_NOTICE			5
+define	KERNEL_INFO			6
+define	KERNEL_DEBUG			7
 define	kernel_data			$D00000		; start of the init image
+
+define	NULL 				0
 
 ; NOTE : memory map of the initramfs is here
 virtual at kernel_data
@@ -200,6 +208,10 @@ name:
  
 sysdef _printk
 printk:
+; (start of header) $01, followed by info level at the start of the string is expected
+; print time ?
+; defaut is KERNEL_WARNING 
+; write to the ring buffer
 	push	hl
 	ld	bc, 0
 	xor	a, a

@@ -87,7 +87,7 @@ DEBUG_THREAD:
 
 	dbg	open
 	ld	de, $D40000
-	ld	bc, 18000
+	ld	bc, 32768
 	call	_read
 		
 	ret
