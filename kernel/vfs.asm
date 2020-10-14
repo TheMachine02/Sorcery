@@ -381,13 +381,13 @@ sysdef _read
 	pop	bc
 ; adjust size
 .read_adjust:
-	pop	de
 	push	bc
 	pop	hl
 	add	hl, bc
 	or	a, a
 	sbc	hl, bc
 	jr	z, .read_null
+	pop	de
 	push	bc
 	push	de
 ; bc = size, hl = offset, de = buffer
