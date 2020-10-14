@@ -184,6 +184,7 @@ sysdef _open
 	jp	syserror
 .open_descriptor_found:
 ; TODO : mark fifo opened
+	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
