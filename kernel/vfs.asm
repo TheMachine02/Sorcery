@@ -185,7 +185,6 @@ sysdef _open
 .open_descriptor_found:
 ; TODO : mark fifo opened
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
-	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
 	ld	(ix+KERNEL_VFS_FILE_FLAGS), c

@@ -47,7 +47,6 @@ nmi:
 ; are we in the ISR stack ?
 	ld	bc, (ix+CONTEXT_FRAME_SP)
 	ld	hl, nmi_stack
-	or	a, a
 	sbc	hl, bc
 	jr	nc, .irq_error
 	in0	a, ($3D)

@@ -32,7 +32,7 @@ init:
 	di
 	rsmix
 	in0	a, ($03)
-	cp	a, $FF
+	inc	a
 	jp	z, _boot_CheckHardware
 ; load up boot stack
 	ld	sp, $D1A87E
@@ -68,14 +68,12 @@ init:
 	otimr
 ; stack clash protector
 	ld	bc, $033A
-	ld	a, b
 	otimr
 ; flash ws and mapping
 	ld	hl, KERNEL_FLASH_CTRL
-	ld	(hl), a
+	ld	(hl), $03
 	ld	l, KERNEL_FLASH_MAPPING and $FF
-	add	a, a
-	ld	(hl), a
+	ld	(hl), $06
 ; small init for the vfs
 	ld	hl, kvfs.phy_none
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl

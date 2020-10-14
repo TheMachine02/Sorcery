@@ -112,15 +112,15 @@ leaf:
 	ret	nz
 	
 .check_supported:
+	ld	a, (iy+LEAF_HEADER_MACHINE)
+	or	a, a	; =LM_EZ80_ADL=0 ?
+	ret	nz
 	ld	a, (iy+LEAF_HEADER_TYPE)
 	cp	a, LT_EXEC
 	ret	nz
-	ld	a, (iy+LEAF_HEADER_MACHINE)
-	cp	a, LM_EZ80_ADL
-	ret	nz
 ; execute the leaf file. It is static ?
-	ld	a, (iy+LEAF_HEADER_FLAGS)
-	xor	a, LF_STATIC
+	;ld	a, LF_STATIC	; LF_STATIC=LT_EXEC=2
+	xor	a, (iy+LEAF_HEADER_FLAGS)
 	ret
 	
 .exec_static:
@@ -139,9 +139,9 @@ leaf:
 	ld	a, (ix+LEAF_SECTION_FLAGS)
 	and	a, SHF_ALLOC
 	jr	z, .alloc_next_section
-	ld	hl, $E40000
+	ld	hl, $E40000+SHT_NOBITS
 	ld	a, (ix+LEAF_SECTION_TYPE)
-	cp	a, SHT_NOBITS
+	cp	a, l
 	jr	z, .copy_null
 	ld	hl, (ix+LEAF_SECTION_OFFSET)
 	lea	bc, iy+0
@@ -182,7 +182,6 @@ leaf:
 	jr	z, .bound_next_section
 	ld	de, (ix+LEAF_SECTION_ADDR)
 	ld	hl, (leaf_bound_lower)
-	or	a, a
 	sbc	hl, de
 	jr	c, .bound_upper
 	ld	(leaf_bound_lower), de

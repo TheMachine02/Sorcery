@@ -245,16 +245,16 @@ hypervisor:
 	jr	nz, .scan_wait
 
 	ld	l, $1E
-	ld	c, (hl)
+	ld	a, (hl)
 	ld	hl, vm_cursor
-	bit	0, c
-	jr	z, $+3
+	rra
+	jr	nc, $+3
 	inc	(hl)
-	bit	3, c
+	bit	2, a
 	jr	z, $+3
 	dec	(hl)
 	jp	p, .boot_still_pos
-	ld	(hl), a
+	ld	(hl), b
 .boot_still_pos:
 	ld	a, (vm_guest_count)
 	dec	a
@@ -322,7 +322,7 @@ hypervisor:
 	
 .boot_skip_file:
 	inc	hl
-	ld	bc, 0
+	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
@@ -332,7 +332,7 @@ hypervisor:
 
 .boot_check_file:
 	inc	hl
-	ld	bc, 0
+	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
@@ -341,9 +341,9 @@ hypervisor:
 	add	hl, bc
 	ex	(sp), hl
 	ld	a, (hl)		; file type
-	cp	a, 6
-	jr	nz, .boot_next
 	ld	bc, 6
+	cp	a, c
+	jr	nz, .boot_next
 	add	hl, bc
 ; goes directly to NAME
 	ld	c, (hl)
