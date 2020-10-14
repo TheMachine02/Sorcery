@@ -88,7 +88,8 @@ tifs:
 	ld	l, c
 	pop	bc
 	djnz	.mount_parse
-	ret
+	lea	hl, iy+0
+	jp	kfree
 	
 .mount_skip_file:
 	inc	hl
@@ -140,7 +141,7 @@ tifs:
 .mount_create_inode:
 	push	hl
 	lea	hl, iy+0
-	ld	a, KERNEL_VFS_TYPE_FILE
+	ld	a, KERNEL_VFS_TYPE_FILE or KERNEL_VFS_CAPABILITY_DMA
 	push	iy
 	call	kvfs.inode_create
 	pop	ix
@@ -154,10 +155,12 @@ tifs:
 	ld	(iy+KERNEL_VFS_INODE_SIZE), hl
 	ld	bc, .phy_mem_ops
 	ld	(iy+KERNEL_VFS_INODE_OP), bc
-	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	.mount_data
-	pop	hl
+;	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	.mount_data
+	ld	(iy+KERNEL_VFS_INODE_DMA_POINTER), de
+;	pop	hl
 ; and let go of the lock
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	pop	iy
 	pop	hl
@@ -196,28 +199,28 @@ tifs:
 	ld	bc, KERNEL_VFS_PERMISSION_RX
 	jr	.mount_create_inode
 	
-.mount_data:
-; hl is size of file, de is disk adress, iy is inode
-	lea	iy, iy+KERNEL_VFS_INODE_DATA
-	ld	bc, 1024
-.do_data:
-	push	hl
-	ld	hl, 64
-	call	kmalloc
-	push	hl
-	pop	ix
-	ld	(iy+0), ix
-	lea	iy, iy+3
-	pop	hl
-	ld	a, 16
-.do_data_inner:
-	ld	(ix+1), de
-	lea	ix, ix+4
-	ex	de, hl
-	add	hl, bc
-	ex	de, hl
-	sbc	hl, bc
-	ret	c
-	dec	a
-	jr	nz, .do_data_inner
-	jr	.do_data
+; .mount_data:
+; ; hl is size of file, de is disk adress, iy is inode
+; 	lea	iy, iy+KERNEL_VFS_INODE_DATA
+; 	ld	bc, 1024
+; .do_data:
+; 	push	hl
+; 	ld	hl, 64
+; 	call	kmalloc
+; 	push	hl
+; 	pop	ix
+; 	ld	(iy+0), ix
+; 	lea	iy, iy+3
+; 	pop	hl
+; 	ld	a, 16
+; .do_data_inner:
+; 	ld	(ix+1), de
+; 	lea	ix, ix+4
+; 	ex	de, hl
+; 	add	hl, bc
+; 	ex	de, hl
+; 	sbc	hl, bc
+; 	ret	c
+; 	dec	a
+; 	jr	nz, .do_data_inner
+; 	jr	.do_data

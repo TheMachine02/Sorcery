@@ -145,7 +145,7 @@ sysdef _open
 	jp	z, .inode_atomic_write_error
 	push	bc
 ; mode & inode type in de
-	ld	d, e
+	ld	d, KERNEL_VFS_TYPE_FILE
 	ld	e, KERNEL_VFS_PERMISSION_RWX
 	call	.inode_create_parent
 	pop	bc
@@ -158,6 +158,13 @@ sysdef _open
 	call	atomic_rw.unlock_write
 .open_continue:
 ; iy = node
+; check file permission
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_PERMISSION_RWX
+	and	a, c
+	xor	a, c
+	ld	a, EACCES
+	jp	nz, syserror
 ; now find free file descriptor
 ; we can drop b from flags, it is useless now
 	ld	ix, (kthread_current)
@@ -176,14 +183,7 @@ sysdef _open
 	ld	a, EMFILE
 	jp	syserror
 .open_descriptor_found:
-; check file permission
-	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_PERMISSION_RWX
-	and	a, c
-	xor	a, c
-	ld	e, a
-	ld	a, EACCES
-	jp	nz, syserror
+; TODO : mark fifo opened
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
@@ -290,10 +290,11 @@ sysdef _read
 	cp	a, KERNEL_VFS_TYPE_FIFO
 	jr	z, .read_fifo
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
-	jr	z, .read_file
+	jr	nz, .read_dma
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
-	jp	z, .inode_atomic_read_error
+	jr	nz, .read_file
+	jp	.inode_atomic_read_error
 .read_dma:
 	push	bc
 	push	bc
@@ -320,23 +321,32 @@ sysdef _read
 	call	.phy_indirect_call
 	pop	iy
 	push	hl
-	jr	.read_unlock
+	jp	.read_unlock
 .read_fifo:
 ; the inode is special in case of a fifo
 ; the 48 bytes data block hold all the fifo data
 ; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
-; TODO : check if the fifo can be read / write
 ; iy is the inode
-	push	iy
 	lea	iy, iy+KERNEL_VFS_INODE_FIFO_DATA
+	ld	a, (iy+FIFO_ENDPOINT)
+; both read and write should be set
+	xor	a, FIFO_READ_OPEN or FIFO_WRITE_OPEN
+	ld	a, EBADF
+	jp	nz, syserror
 	call	fifo.read
-	pop	iy
+	lea	iy, iy-KERNEL_VFS_INODE_FIFO_DATA
 ; save the size readed
 	push	hl
+	jr	.read_unlock
+.read_null:
+	or	a, a
+	sbc	hl, hl
+	ex	(sp), hl
 	jr	.read_unlock
 .read_file:
 ; offset = file offset
 ; if ((offset + size) > inode_size) { size = inode_size - offset; }
+; if (size==0) return inode_unlock();
 ; block = offset >> 10
 ; block_offset = offset % 1024
 ; if ( (block_offset + size) < 1024){
@@ -361,15 +371,22 @@ sysdef _read
 	ld	de, (ix+KERNEL_VFS_FILE_OFFSET)
 	or	a, a
 	sbc	hl, de
-	or	a, a
+; offset > inode_size, so we can't read
+	jr	c, .read_null
 	sbc	hl, bc
-	jp	p, .read_adjust
+	jr	nc, .read_adjust
 	add	hl, bc
 	push	hl
 	pop	bc
 ; adjust size
 .read_adjust:
 	pop	de
+	push	bc
+	pop	hl
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	z, .read_null
 	push	bc
 	push	de
 ; bc = size, hl = offset, de = buffer
@@ -429,6 +446,7 @@ sysdef _read
 	or	a, a
 	ld	bc, KERNEL_MM_PAGE_SIZE
 	sbc	hl, bc
+	jr	z, .read_unlock
 	jr	nc, .read_copy_restore
 	add	hl, bc
 .read_copy_restore:
@@ -511,90 +529,42 @@ sysdef _write
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
 	jp	z, syserror
-	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 ; hl is offset in file, iy is inode, de is buffer, bc is count
-	push	hl
 ; first the lock
 ; if NDELAY is set, use try_lock
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; KERNEL_VFS_O_NDELAY (128)
 	bit	7, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	nz, .write_ndelay
+	jr	z, .write_delay
+	call	atomic_rw.try_lock_write
+	jr	nc, .write_ndelay
+	ld	a, EAGAIN
+	jp	syserror
+.write_delay:
 	call	atomic_rw.lock_write
-.write_ndelay_return:
-	pop	hl
+.write_ndelay:
 ; test the inode for type
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
 	cp	a, KERNEL_VFS_TYPE_CHARACTER_DEVICE
 ; passthrough char / block device / fifo driver directly
-	jp	z, .write_phy_device
+	jr	z, .write_char_device
 	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
-	jp	z, .write_phy_device
+	jr	z, .write_block_device
 	cp	a, KERNEL_VFS_TYPE_FIFO
-	jp	z, .write_fifo
-; well, we have a directory opened right here
+	jr	z, .write_fifo
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
-	jp	z, .inode_atomic_write_error
+	jr	nz, .write_file
+	jp	.inode_atomic_write_error
+.write_block_device:
 	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 	push	hl
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-; FIXME : welp, it is broken from here to the end
-; convert hl to block (16 blocks per indirect, 1024 bytes per block)
-; hl / 1024 : offset in block
-	dec	sp
 	pop	hl
-	inc	sp
-	ld	a, l
-	srl	h
-	rra
-	srl	h
-	rra
-; a = block offset, de buffer, bc count
-; now let's write
-; FIXME : write can only occur at 1024 bytes alignement
-.write_start:
-	push	bc
-	or	a, a
-	sbc	hl, hl
-	add	hl, bc
-.write_copy:
-	ld	bc, KERNEL_MM_PAGE_SIZE
-	or	a, a
-	sbc	hl, bc
-	jr	c, .write_copy_end
-	push	hl
-	call	.write_buff
-	pop	hl
-	jr	c, .write_error
-	inc	a
-	jr	.write_copy
-.write_copy_end:
-; end copy
-	add	hl, bc
-	push	hl
-	pop	bc
-	call	.write_buff
-	jr	c, .write_error
-.write_unlock:
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
-	pop	hl	; our size written
-	ret
-.write_error:
-	pop	hl
-	jp	.inode_atomic_write_error
-
-.write_ndelay:
-; TODO : implement
-;	call	atomic_rw.try_lock_write
-	scf
-	jp	nc, .write_ndelay_return
-	ld	a, EAGAIN
-	jp	syserror
-.write_phy_device:
+.write_char_device:
+; TODO : fix this ugly ex de, hl hack and make argument for call consistent
 	ex	de, hl
 ; expect string hl, size bc, de offset
 	push	iy
@@ -603,27 +573,194 @@ sysdef _write
 	call	.phy_indirect_call
 	pop	iy
 	push	hl
-	jr	.write_unlock
+	jp	.write_unlock
 .write_fifo:
 ; the inode is special in case of a fifo
 ; the 48 bytes data block hold all the fifo data
 ; (if end are opened, in write / read, the block data for fifo, and the internal fifo data)
-; TODO : check if the fifo can be read / write
 ; iy is the inode
-	push	iy
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
+	ld	a, (iy+FIFO_ENDPOINT)
+; both read and write should be set
+	xor	a, FIFO_READ_OPEN or FIFO_WRITE_OPEN
+	ld	a, EBADF
+	jp	nz, syserror
 	call	fifo.write
-	pop	iy
+	lea	iy, iy-KERNEL_VFS_INODE_FIFO_DATA
 ; save the size readed
 	push	hl
+	jp	.write_unlock
+.write_file:
+; check size !=0
+	push	bc
+	pop	hl
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	nz, .write_do
+	push	hl
+	jp	.write_unlock
+.write_do:
+; case if offset > max_file_size >>> set new offset = max_file_size & size = 0
+	push	de
+	ld	hl, KERNEL_VFS_INODE_FILE_SIZE
+	ld	de, (ix+KERNEL_VFS_FILE_OFFSET)
+	ld	a, EFBIG
+	or	a, a
+	sbc	hl, de
+; past maximum file size
+	jr	c, .write_atomic_error
+; offset + size is past the maximum file size : error
+	sbc	hl, bc
+	jr	c, .write_atomic_error
+; set new inode size
+; inode_size = (offset + size) > inode_size ? (offset + size) : inode_size
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	add	hl, bc
+	ld	de, (iy+KERNEL_VFS_INODE_SIZE)
+	or	a, a
+	sbc	hl, de
+	jr	c, .write_adjust_size
+	add	hl, de
+	ld	(iy+KERNEL_VFS_INODE_SIZE), hl
+.write_adjust_size:
+	pop	de
+	push	bc
+	push	de
+; bc = size, hl = offset, de = buffer
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET + 1)
+; convert hl to block (16 blocks per indirect, 1024 bytes per block)
+; hl >> 10 : block count
+	ld	a, l
+	srl	h
+	rra
+	srl	h
+	rra
+; now, we need the modulo
+	ld	de, 0
+	ld	e, (ix+KERNEL_VFS_FILE_OFFSET)
+; get the last digit
+	ld	a, (ix+KERNEL_VFS_FILE_OFFSET+1)
+	and	a, 00000001b
+	ld	d, a
+; de is the block_offset
+; we can update offset right here
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+	add	hl, bc
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+; (block_offset + size) < 1024 ?
+	ld	hl, KERNEL_MM_PAGE_SIZE
+	or	a, a
+	sbc	hl, de
+	jr	c, .write_multiple
+	sbc	hl, bc
+	jr	c, .write_multiple_offset
+	ex	de, hl
+	pop	de
+; a, de, bc, hl are all set
+	call	.write_buff
+	jr	c, .write_atomic_error
 	jr	.write_unlock
+.write_multiple_offset:
+	add	hl, bc
+.write_multiple:
+; size_0 = 1024 - block_offset; ( = hl right now)
+; size = size - size_0;
+; swap hl and bc
+; de is block offset, keep it in mind
+	push	bc
+	ex	(sp), hl
+	pop	bc
+	or	a, a
+	sbc	hl, bc
+; push this on stack, get back the buff in de, get offset in hl
+	ex	(sp), hl
+	ex	de, hl
+.write_copy_loop:
+; hl = offset, de = buffer, bc = size, a = block
+	call	.write_buff
+	pop	hl
+	jr	c, .write_atomic_error
+	inc	a
+; hl = size
+	or	a, a
+	ld	bc, KERNEL_MM_PAGE_SIZE
+	sbc	hl, bc
+	jr	z, .write_unlock
+	jr	nc, .write_copy_restore
+	add	hl, bc
+.write_copy_restore:
+	push	hl
+	sbc	hl, hl
+	jr	nc, .write_copy_loop
+	inc	hl
+	pop	bc
+	call	.write_buff
+	jr	c, .write_atomic_error
+.write_unlock:
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+; pop our size writed
+	pop	hl
+	ret
+.write_atomic_error:
+	pop	hl
+	push	af
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	pop	af
+	jp	syserror
+.write_error_pop_l3:
+	pop	de
+.write_error_pop_l2:
+	pop	bc
+	pop	hl
+	ld	a, ENOMEM
+	scf
+	ret
 ; complex logic for writing to data block
 .write_buff:
 ; the inner data logic
-	call	.inode_block_data
+	push	hl
+	push	bc
+	push	de
+	ld	b, a
+	rra
+	rra
+	rra
+	and	a, 00011110b
+	ld	c, a
+	rra
+	add	a, c
+	lea	hl, iy+KERNEL_VFS_INODE_DATA
+	add	a, l
+	ld	l, a
+	ld	de, (hl)
+	ex	de, hl
+; check if this was allocated, if not, allocate it
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	nz, .write_deref
+	ld	hl, kmem_cache_s64
+	call	kmem.cache_alloc
+	jr	c, .write_error_pop_l3
+	ex	de, hl
+	ld	(hl), de
+	ex	de, hl
+.write_deref:
+	pop	de
+	ld	a, b
+	and	a, 00001111b
+; hl adress should be aligned to 64 bytes
+	add	a, a
+	add	a, a
+	add	a, l
+	ld	l, a
 	ld	a, (hl)
 	or	a, a
 	jr	z, .write_buff_cache_miss
+; cache hit, we can directly write
 .write_buff_do:
 ; set dirty
 	ld	hl, kmm_ptlb_map
@@ -634,14 +771,21 @@ sysdef _write
 	ld	h, a
 	add	hl, hl
 	add	hl, hl
+	ld	a, b
+	pop	bc
+	ex	de, hl
+	ex	(sp), hl
+	add	hl, de
+	pop	de
 	ex	de, hl
 	ldir
 	ex	de, hl
 	ret
 .write_buff_cache_miss:
 ; here, we need to allocate data
+; following does not destroy bc
 	call	cache.page_map
-	ret	c
+	jr	c, .write_error_pop_l2
 	ld	(hl), a
 	inc	hl
 	ld	hl, (hl)
@@ -651,6 +795,7 @@ sysdef _write
 	jr	z, .write_buff_do
 ; so we need to read from backing device here
 ; iy = inode
+	push	bc
 	push	af
 	ex	de, hl
 	ld	hl, KERNEL_MM_RAM shr 2
@@ -662,9 +807,11 @@ sysdef _write
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
 ; hl = data from inode, bc is size (1024), de is my memory page
 	lea	iy, iy+phy_read
+	ld	bc, KERNEL_MM_PAGE_SIZE
 	call	.phy_indirect_call
 	pop	iy
 	pop	af
+	pop	bc
 	jr	.write_buff_do
 	
 sysdef _ioctl
@@ -985,7 +1132,7 @@ sysdef _access
 	xor	a, e
 	and	a, KERNEL_VFS_PERMISSION_RWX
 	ld	a, EACCES
-	jr	nz, .stat_continue
+	jr	z, .stat_continue
 	jp	.inode_atomic_write_error
 
 sysdef _chdir

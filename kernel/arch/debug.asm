@@ -81,18 +81,31 @@ DEBUG_THREAD:
 	call	tifs.mount
 	
 ; ; hl is path, bc is flags, de is mode
-	ld	hl, DEBUG_PATH
-	ld	bc, KERNEL_VFS_O_R
+	ld	hl, DEBUG_PATH_2
+	ld	bc, KERNEL_VFS_O_RW or (KERNEL_VFS_O_CREAT *256)
 	call	_open
 
 	dbg	open
-	ld	de, $D40000
+	push	hl
+	ld	de, $D01000
+	ld	bc, 32768
+	call	_write
+	pop	hl
+	push	hl	
+; fd is hl, de is offset, bc is whence
+	ld	de, 0
+	ld	bc, SEEK_SET
+	call	_lseek
+	pop	hl
+	ld	de, $D50000
 	ld	bc, 32768
 	call	_read
-		
+
 	ret
 
 DEBUG_PATH:
  db "/tifs/SORCERY",0
-
+DEBUG_PATH_2:
+ db "/file", 0
+ 
  end if
