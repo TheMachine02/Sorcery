@@ -181,10 +181,10 @@ sysdef _open
 	and	a, KERNEL_VFS_PERMISSION_RWX
 	and	a, c
 	xor	a, c
+	ld	e, a
 	ld	a, EACCES
 	jp	nz, syserror
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
-	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
 	ld	(ix+KERNEL_VFS_FILE_FLAGS), c
@@ -557,8 +557,9 @@ sysdef _write
 ; FIXME : write can only occur at 1024 bytes alignement
 .write_start:
 	push	bc
-	push	bc
-	pop	hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, bc
 .write_copy:
 	ld	bc, KERNEL_MM_PAGE_SIZE
 	or	a, a
