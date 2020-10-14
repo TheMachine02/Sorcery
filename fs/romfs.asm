@@ -83,6 +83,7 @@ romfs:
 	xor	a, a
 .checksum_outer_loop:
 	push	bc
+.checksum_inner_loop:
 ; load ix + 1 in deu
 	ld	de, (ix-2)
 ; then big endian ordering
@@ -90,9 +91,9 @@ romfs:
 	ld	d, (ix+2)
 	ld	e, (ix+3)
 ; add up the 32 bits value
-.checksum_inner_loop:
 	add	hl, de
 	adc	a, c
+	lea	ix, ix+4
 	djnz	.checksum_inner_loop
 	pop	bc
 	dec	c

@@ -47,8 +47,8 @@ tifs:
  db "/tifs/", 0
 
 .mount:
-	ld	hl, 16
-	call	kmalloc
+	ld	hl, kmem_cache_s16
+	call	kmem.cache_alloc
 	ret	c
 ; this will be our temporary buffer for path
 	ex	de, hl
@@ -193,7 +193,7 @@ tifs:
 	dec	bc
 	dec	bc
 	push	bc
-; EF7B
+; skip $EF7B identifier of 8xp exectuable
 	inc	hl
 	inc	hl
 	ld	bc, KERNEL_VFS_PERMISSION_RX

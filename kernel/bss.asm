@@ -190,8 +190,8 @@ kthread_pid_map:			; we are at offset $400
  dl	kernel_idle
  db	252	dup	$00
 kmm_ptlb_map:				; the kernel page alloctor process tlb at offset $500
- db	32	dup	KERNEL_MM_RESERVED_MASK
- db	61	dup	KERNEL_MM_PAGE_FREE_MASK
+ db	24	dup	KERNEL_MM_RESERVED_MASK
+ db	69	dup	KERNEL_MM_PAGE_FREE_MASK
  db	1	dup	KERNEL_MM_RESERVED_MASK
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00

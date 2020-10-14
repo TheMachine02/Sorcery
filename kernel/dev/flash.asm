@@ -4,10 +4,10 @@ define	KERNEL_FLASH_SIZE		$400000
 
 flash:
 .init:
-	ld	hl, .phy_write_base
-	ld	de, $D18800
-	ld	bc, 256
-	ldir
+; 	ld	hl, .phy_write_base
+; 	ld	de, $D18800
+; 	ld	bc, 256
+; 	ldir
 	ld	hl, .FLASH_DEV
 ; inode capabilities flags
 ; single dev block
@@ -33,7 +33,7 @@ flash:
 
 .phy_write_base:
 
-org $D18800
+; org $D18800
 
 .phy_erase:
 ; erase sector hl

@@ -147,4 +147,7 @@ include	'kernel/dev/console.asm'
 include	'kernel/dev/null.asm'
 include	'kernel/dev/flash.asm'
 
-; WARNING : flash breakage right here !
+assert $ < $D06000
+
+kernel_size strcalc $D06000 - $
+display "kernel space left : ", kernel_size," bytes."

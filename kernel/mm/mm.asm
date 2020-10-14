@@ -34,7 +34,7 @@ define	KERNEL_HW_POISON		$C7
 define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
 define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 
-define	KERNEL_MM_GFP_KERNEL		32	; $D08000
+define	KERNEL_MM_GFP_KERNEL		24	; $D06000
 define	KERNEL_MM_GFP_USER		64	; $D10000
 ; $D0 ... $D1 should be reserved to kernel / cache
 ; $D1 and after is thread and program memory
