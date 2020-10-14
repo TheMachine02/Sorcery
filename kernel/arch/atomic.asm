@@ -34,15 +34,26 @@ atomic_rw:
 	di
 	xor	a, a
 	inc	(hl)
-	jr	z, .lock_fail
+	jr	z, .__lock_fail_read
 	ei
 	ret
-.lock_fail:
+	
+.try_lock_write:
+	di
+	xor	a, a
+	or	a, (hl)
+	jr	nz, .__lock_fail_write
 	dec	(hl)
-	scf
 	ei
 	ret
 
+.__lock_fail_read:
+	dec	(hl)
+.__lock_fail_write:
+	scf
+	ei
+	ret	
+	
 .lock_read:
 	di
 	xor	a, a

@@ -5,8 +5,8 @@ define	FIFO_SIZE		$6
 define	FIFO_BOUND_UPP		$9
 define	FIFO_BOUND_LOW		$C
 define	FIFO_ENDPOINT		$F
-define	FIFO_WRITE_OPEN_BIT	1
-define	FIFO_READ_OPEN_BIT	2
+define	FIFO_WRITE_OPEN		1
+define	FIFO_READ_OPEN		2
 define	FIFO_STRUCT_SIZE	16
 define	FIFO_MAX_SIZE		64	; TODO : make it variable size
 
