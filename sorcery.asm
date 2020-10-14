@@ -132,7 +132,6 @@ include	'kernel/arch/debug.asm'
 include	'kernel/mm/mm.asm'
 include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'
-include	'kernel/compress/lz4.asm'
 ; be sure we are in the correct spot for NMI
  assert $ < $0220A8
  rb $0220A8-$
@@ -140,6 +139,7 @@ include	'kernel/nmi.asm'
 include	'kernel/arch/pic.asm'
 include	'kernel/arch/leaf.asm'
 include	'kernel/arch/ldso.asm'
+include	'kernel/compress/lz4.asm'
 include	'fs/romfs.asm'
 include	'fs/tifs.asm'
 ; kernel_romfs:

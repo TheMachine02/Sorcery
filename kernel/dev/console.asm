@@ -40,7 +40,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 
 .phy_mem_ops:
 	jp	.phy_read
-	jp	.phy_write
+	jp	.phy_write_ex
 	jp	.phy_ioctl
 
 .phy_read:
@@ -52,19 +52,21 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	pop	hl
 	ret
 
+.phy_write_ex:
+	ex	de, hl
 .phy_write:
-; write string pointed by hl, file offset de, bc bytes
+; write buffer is hl, file offset de, bc bytes
 ; write to the character device console
 ; return hl = number of bytes writed
 	push	bc
 	push	hl
 	ex	(sp), ix
-	call	.phy_write_ex
+	call	.phy_write_do
 	pop	ix
 	pop	hl
 	ret
 
-.phy_write_ex:
+.phy_write_do:
 	ld	iy, console_dev
 	bit	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
 	jr	nz, .phy_escape_sequence_ex

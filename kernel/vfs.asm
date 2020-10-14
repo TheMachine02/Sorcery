@@ -565,8 +565,6 @@ sysdef _write
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 	pop	hl
 .write_char_device:
-; TODO : fix this ugly ex de, hl hack and make argument for call consistent
-	ex	de, hl
 ; expect string hl, size bc, de offset
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
