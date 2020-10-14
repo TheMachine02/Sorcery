@@ -51,11 +51,11 @@ tifs:
 	call	kmalloc
 	ret	c
 ; this will be our temporary buffer for path
-	push	hl
-	pop	iy
 	ex	de, hl
+	ld	iy, 0
+	lea	bc, iy+6
+	add	iy, de
 	ld	hl, .path
-	ld	bc, 6
 	ldir
 	ld	hl, .path
 	ld	bc, KERNEL_VFS_PERMISSION_RWX
@@ -92,7 +92,7 @@ tifs:
 	
 .mount_skip_file:
 	inc	hl
-	ld	bc, 0
+	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
@@ -101,7 +101,7 @@ tifs:
 	jr	.mount_parse_sector
 .mount_add_file:
 	inc	hl
-	ld	bc, 0
+	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
@@ -172,7 +172,7 @@ tifs:
 	ret
 	
 .mount_appv:
-	ld	bc, 0
+	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
@@ -182,7 +182,7 @@ tifs:
 	ld	bc, KERNEL_VFS_PERMISSION_R
 	jr	.mount_create_inode
 .mount_exec:
-	ld	bc, 0
+	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
