@@ -5,7 +5,7 @@ define	VM_HYPERVISOR_ADRESS		$0BF000
 define	VM_HYPERVISOR_RAM_ADRESS	$D3F000
 define	VM_HYPERVISOR_RAM		$D00000		; some scratch RAM
 define	VM_HYPERVISOR_LUT		0
-define	VM_HYPERVISOR_AWARE		$DEC0DAED
+define	VM_HYPERVISOR_AWARE		$DEC0ADDE
 
 _sprintf                   equ 00000BCh
 _os_GetSystemStats         equ 0021ED4h

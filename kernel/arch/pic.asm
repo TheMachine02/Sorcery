@@ -1,29 +1,56 @@
 ; RAM reallocated routine for runtime virtual to physical translation, code in library and user process and most essentially XIP
 ; see doc in doc/pic
 
-; swap interrupt and all shadow in cycles = 3F
-macro	exxi
-	if defined SWAP
-		ex	af, af'
-		exx
-		ei	
-	restore SWAP
+macro call argcc, argpc
+	match (=PC?+d), argcc
+		call	__sorcery_relative_call_cc
+		jp	d
+	else match (=$+d), argcc
+		call	__sorcery_relative_call_cc
+		jp	d	
 	else
-		di
-		exx
-		ex	af, af'
-	define SWAP
-	end if
-end	macro
+		match (=PC?+d), argpc
+			call	argcc, __sorcery_relative_call_cc
+			jp	argcc, d
+		else match (=$+d), argpc
+			call	argcc, __sorcery_relative_call_cc
+			jp	argcc, d
+		else
+			call	argcc, argpc
+		end match
+	end match
+end macro
+
+macro jp argcc, argpc
+	match (=PC?+d), argcc
+		call	__sorcery_relative_jp_cc
+		jp	d+3
+	else  match (=$?+d), argcc
+		call	__sorcery_relative_jp_cc
+		jp	d+3
+	else
+		match (=PC?+d), argpc
+			call	argcc, __sorcery_relative_jp_cc
+			jp	argcc, d+3
+		else match (=$?+d), argpc
+			call	argcc, __sorcery_relative_jp_cc
+			jp	argcc, d+3
+		else
+			jp	argcc, argpc
+		end match
+	end match
+end macro
 
 ; extern symbol call. Expect bc' as the base data adress, given negative offset
 
 ; call [cc,] (plt+offset)
 __sorcery_extern_call_cc:
-	exxi
+	di
+	exx
+	ex	af, af'
 	pop	hl
-	ld	de, (hl)
 	inc	hl
+	ld	de, (hl)
 	inc	hl
 	inc	hl
 	inc	hl
@@ -32,44 +59,60 @@ __sorcery_extern_call_cc:
 ; bc' is the base .data section with plt table at negative offset
 	add	hl, bc
 	push	hl
-	exxi
+	ex	af, af'
+	exx
+	ei
 	ret
 
 ; jp [cc,] (plt+offset)
 __sorcery_extern_jp_cc:
-	exxi
+	di
+	exx
+	ex	af, af'
 	pop	hl
+	inc	hl
 	ld	hl, (hl)
 	add	hl, bc
 	push	hl
-	exxi
+	ex	af, af'
+	exx
+	ei
 	ret
 	
 ; In section call and jp. For intersection or library call, see plt
 	
 ; call [cc,] (pc+offset)
 __sorcery_relative_call_cc:
-	exxi
+	di
+	exx
+	ex	af, af'
 	pop	hl
-	ld	de, (hl)
 	inc	hl
+	ld	de, (hl)
 	inc	hl
 	inc	hl
 	inc	hl
 	push	hl
 	add	hl, de
 	push	hl
-	exxi
+	ex	af, af'
+	exx
+	ei
 	ret
 
 ; jp [cc,] (pc+offset)
 __sorcery_relative_jp_cc:
-	exxi
+	di
+	exx
+	ex	af, af'
 	pop	hl
+	inc	hl
 	ld	de, (hl)
 	add	hl, de
 	push	hl
-	exxi
+	ex	af, af'
+	exx
+	ei
 	ret
 	
 ; C optimized version wich does framesetting in same time (and destroy for that both hl & ix & de)
@@ -81,7 +124,7 @@ __sorcery_extern_call_C:
 	ex	(sp), hl
 	push	hl
 ; grab the offset and add the plt base (bc')
-	ld	ix, (ix+0)
+	ld	ix, (ix+1)
 	exx
 	add	ix, bc
 	exx
@@ -94,7 +137,7 @@ __sorcery_extern_call_C:
 ; de, hl, ix can be destroyed
 __sorcery_extern_jp_C:
 	ex	(sp), ix
-	ld	ix, (ix+0)
+	ld	ix, (ix+1)
 	exx
 	add	ix, bc
 	exx
@@ -115,7 +158,7 @@ __sorcery_relative_call_C:
 	push	hl
 ; now ix and hl are free
 ; get the offset and add it to the pc
-	ld	de, (ix+0)
+	ld	de, (ix+1)
 	lea	hl, ix+0
 	add	hl, de
 	ld	ix, 0
@@ -124,7 +167,7 @@ __sorcery_relative_call_C:
 	
 __sorcery_relative_jp_C:
 	ex	(sp), ix
-	ld	de, (ix+0)
+	ld	de, (ix+1)
 	lea	hl, ix+0
 	add	hl, de
 	ld	ix, 0

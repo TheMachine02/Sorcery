@@ -6,13 +6,13 @@ echo "; auto generated file" > config
 echo "define CONFIG_KERNEL_VERSION \""$version"-slp-"$str"\"" >> config
 echo "define CONFIG_KERNEL_RELEASE \"slp-"$str"\"" >> config
 cat build_config >> config
-echo "Generating initramfs..."
+echo "generating initramfs..."
 fasmg kernel/bss.asm kernel/initramfs
 lz4 -f -l --best kernel/initramfs initramfs
 rm kernel/initramfs
 # echo "Generating initial root..."
 # genromfs -d root -V root -f rootfs
-echo "Building kernel..."
+echo "building kernel..."
 # build kernel
 fasmg sorcery.asm bin/SORCERY.8xp
 fasmg vm.asm bin/VMLOADER.8xp
