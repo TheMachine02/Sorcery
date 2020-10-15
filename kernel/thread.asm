@@ -127,11 +127,11 @@ kthread:
 ; setup the default parameter
 	ld	bc, $100
 	ld	hl, KERNEL_MM_NULL
+	ld	(iy+KERNEL_THREAD_QUANTUM), b
 	ldir
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
 	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0
-	ld	(iy+KERNEL_THREAD_QUANTUM), 1
 	ld	hl, kvfs_root
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
 ; sig parameter mask ;
@@ -226,9 +226,8 @@ sysdef _core
 ; if we have a thread * currently * watching, wake it up
 	push	hl
 	ld	a, (iy+KERNEL_THREAD_JOINED)
-	or	a, a
-	jr	z, .exit_make_zombie_bunny
 	add	a, a
+	jr	z, .exit_make_zombie_bunny
 	add	a, a
 	sbc	hl, hl
 	ld	l, a
