@@ -94,10 +94,8 @@ hypervisor:
 	jp	(hl)
 .interrupt_failure:
 ; we'll need to acknowledge interrupt ourselves if we are in this very special case where interrupt are on, but we have not yet reached boot code (stupid boot 5.0.0)
-	ld	hl, $F00014
-	ld	bc, (hl)
-	ld	l, $F00008 and $FF
-	ld	(hl), bc
+	ld	hl, ($F00014)
+	ld	($F00008), hl
 	pop	hl
 	pop	iy
 	pop	ix
