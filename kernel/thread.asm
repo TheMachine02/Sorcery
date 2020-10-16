@@ -229,10 +229,8 @@ sysdef _core
 	add	a, a
 	jr	z, .exit_make_zombie_bunny
 	add	a, a
-	sbc	hl, hl
+	ld	hl, kthread_pid_map
 	ld	l, a
-	ld	bc, kthread_pid_map
-	add	hl, bc
 	ld	a, (hl)
 ; sanity check ;
 	or	a, a
