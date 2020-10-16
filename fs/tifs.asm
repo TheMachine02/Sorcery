@@ -58,7 +58,7 @@ tifs:
 	ld	hl, .path
 	ldir
 	ld	hl, .path
-	ld	bc, KERNEL_VFS_PERMISSION_RWX
+	ld	c, KERNEL_VFS_PERMISSION_RWX
 	push	iy
 	call	kvfs.mkdir
 	pop	iy
