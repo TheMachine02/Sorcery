@@ -85,9 +85,9 @@ romfs:
 	push	bc
 .checksum_inner_loop:
 ; load ix + 1 in deu
-	ld	de, (ix-2)
+	ld	de, (ix-1)
 ; then big endian ordering
-	ld	c, (ix+0)
+	ld	c, d
 	ld	d, (ix+2)
 	ld	e, (ix+3)
 ; add up the 32 bits value
