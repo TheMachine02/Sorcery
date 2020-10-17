@@ -59,9 +59,10 @@ define	LT_EXEC			2
 define	LT_DYN			3
 define	LT_CORE			4
 ; flags
-define	LF_COMPRESSED		$1
-define	LF_STATIC		$2
-define	LF_REALLOC		$4
+define	LF_COMPRESSED		1
+define	LF_STATIC		2
+define	LF_REALLOC		4
+define	LF_XIP			8
  
 ; section type
 define	SHT_NULL		0

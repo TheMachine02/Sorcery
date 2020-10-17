@@ -324,7 +324,7 @@ console:
 	ld	bc, CONSOLE_LINE_SIZE - 5
 	lddr
 	ld	de, console_line
-	ld	hl, .BINARY_PATCH
+	ld	hl, .BINARY_PATH
 	ld	c, 5
 	ldir
 	pop	hl
@@ -645,7 +645,7 @@ console:
 .EXIT:
  db 5, "exit", 0
  
-.BINARY_PATCH:
+.BINARY_PATH:
  db "/bin/",0
 .BIN_ENVP:
 .BIN_ARGV:

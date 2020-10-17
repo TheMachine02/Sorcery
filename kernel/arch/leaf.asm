@@ -1,12 +1,72 @@
 leaf:
  
+.program:
+ 
 sysdef _execve
 .execve:
+; .BINARY_PATH:	hl
+; .BIN_ENVP:	de
+; .BIN_ARGV:	bc
+	push	de
+	push	bc
+	call	kvfs.inode_get_lock
+	pop	bc
+	pop	de
+	ret	c
+; check if the inode is executable
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	l, a
+	and	a, KERNEL_VFS_TYPE_MASK
+	ld	a, ENOEXEC
+	jp	nz, kvfs.inode_atomic_write_error
+	bit	KERNEL_VFS_PERMISSION_X_BIT, l
+	jp	z, kvfs.inode_atomic_write_error
+; check if inode is DMA, else allocate the header and make it point to ix
+	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, l
+	jr	z, .execve_no_dma_xip
+; does the file support XIP ?
+	ld	ix, (iy+KERNEL_VFS_INODE_DMA_POINTER)
+	ld	a, (ix+LEAF_HEADER_FLAGS)
+	and	a, LF_XIP
+; if not, well need to reallocate anyway, so fall back into the default section
+; reading could be simpler, but that mean duplicating some code...
+	jr	z, .execve_no_dma_xip
+; we have both DMA and XIP (can't use XIP with realloc, they are exclusive)
+; TODO : load necessary lib & ptl page & data page
+	call	.aux_data
+; right now, XIP ONLY with RO data only works
+; de & bc are environnement
+	call	.aux_environnement
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write	
+; find entry point ?
+	ld	hl, (ix+LEAF_HEADER_ENTRY)
+	jp	(hl)
+.execve_no_dma_xip:
+	ld	hl, LEAF_HEADER_SIZE
+	call	kmalloc
+	ret	c
+	push	de
+	push	bc
+	ex	de, hl
+	push	de
+	pop	ix
+	xor	a, a
+	sbc	hl, hl
+; a, de, bc, hl are all set (iy is inode)
+	call	kvfs.read_buff
+; leaf header is ix
+	pop	bc
+	pop	de
+	lea	hl, ix+0
+	call	kfree
 	scf
 	ret
-
-.program:
-	scf
+.aux_environnement:
+	ret
+.aux_data:
+	ret
+.aux_prog:
 	ret
 
 .check_file:
@@ -26,14 +86,16 @@ sysdef _execve
 	ld	a, (iy+LEAF_IDENT_MAG4)
 	cp	a, 'F'
 	ret	nz
-	
 .check_supported:
 	ld	a, (iy+LEAF_HEADER_TYPE)
 	cp	a, LT_EXEC
 	ret	nz
 	ld	a, (iy+LEAF_HEADER_MACHINE)
 	cp	a, LM_EZ80_ADL
-	ret	nz
+	ret
+	
+.BROKEN:
+	call	.check_file
 ; execute the leaf file
 	ld	a, (iy+LEAF_HEADER_FLAGS)
 	and	a, LF_REALLOC
