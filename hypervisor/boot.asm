@@ -98,14 +98,9 @@ leaf:
 	ld	a, (iy+LEAF_IDENT_MAG0)
 	cp	a, 0x7F
 	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG1)
-	cp	a, 'L'
-	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG2)
-	cp	a, 'E'
-	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG3)
-	cp	a, 'A'
+	ld	hl, (iy+LEAF_IDENT_MAG1)
+	ld	de, ('A'*65536)+('E'*256)+'L'
+	sbc	hl, de
 	ret	nz
 	ld	a, (iy+LEAF_IDENT_MAG4)
 	cp	a, 'F'
