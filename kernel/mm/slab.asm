@@ -318,7 +318,6 @@ kmem:
 	pop	bc
 	pop	de
 	pop	iy
-	or	a, a
 	sbc	hl, hl
 	scf
 	ret
