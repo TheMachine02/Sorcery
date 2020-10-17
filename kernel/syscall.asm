@@ -195,17 +195,17 @@ sysdef _priv_lock
 sysdef _flash_unlock
 flash.unlock:
 ; need to be in privileged flash actually
-	ld	b, 4
 	in0	a, ($06)
-	or	a, b
+	or	a, 4
 	out0	($06), a
 ; flash sequence
+	ld	a, 4
 	di 
 	jr	$+2
 	di
 	rsmix 
 	im 1
-	out0	($28), b
+	out0	($28), a
 	in0	a, ($28)
 	bit	2, a
 	ret
