@@ -58,14 +58,13 @@ console:
 ; init the screen now
 	push	de
 	call	.init_screen
-	ld	a, (iy+CONSOLE_FLAGS)
-; get bit 7 (THREADED)
-	rla
-	ld	iy, .thread
-	jr	c, .load_thread_adress
+; get bit 7 (THREADED)	
+	bit	7, (iy+CONSOLE_FLAGS)
 	ld	iy, (kthread_current)
-.load_thread_adress:
-	call	c, kthread.create
+	jr	z, .noload_thread_adress
+	ld	iy, .thread
+	call	kthread.create
+.noload_thread_adress:
 	pop	hl
 ; carry if error
 	ret	c
