@@ -95,14 +95,9 @@ leaf:
  
 .check_file:
 ; iy = file adress (static)
-	ld	a, (iy+LEAF_IDENT_MAG0)
-	cp	a, 0x7F
-	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG1)
-	cp	a, 'L'
-	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG2)
-	cp	a, 'E'
+	ld	hl, (iy+LEAF_IDENT_MAG0)
+	ld	de, -(('E'*65536)+('L'*256)+$7F)
+	add	hl, de
 	ret	nz
 	ld	a, (iy+LEAF_IDENT_MAG3)
 	cp	a, 'A'
