@@ -134,6 +134,10 @@ kthread:
 	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0
 	ld	hl, kvfs_root
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
+; increase reference count of directory
+	ld	c, KERNEL_VFS_INODE_REFERENCE
+	add	hl, bc
+	inc	(hl)
 ; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; we are memory aligned
@@ -146,7 +150,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_HEAP), hl
 ; the stack adress is iy + STACK_SIZE - 27
 	lea	hl, iy-27
-	ld	b, KERNEL_THREAD_STACK_SIZE/256
+	ld	bc, KERNEL_THREAD_STACK_SIZE
 	add	hl, bc
 	ld	(iy+KERNEL_THREAD_STACK), hl
 ; map the thread to be transparent to the scheduler

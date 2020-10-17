@@ -59,12 +59,13 @@ console:
 	push	de
 	call	.init_screen
 	ld	a, (iy+CONSOLE_FLAGS)
-	bit	CONSOLE_FLAGS_THREADED, a
+; get bit 7 (THREADED)
+	rla
 	ld	iy, .thread
-	jr	nz, .load_thread_adress
+	jr	c, .load_thread_adress
 	ld	iy, (kthread_current)
 .load_thread_adress:
-	call	nz, kthread.create
+	call	c, kthread.create
 	pop	hl
 ; carry if error
 	ret	c
@@ -74,8 +75,9 @@ console:
 	ld	(hl), $FF
 	inc	hl
 	ld	(hl), iy
-	bit	CONSOLE_FLAGS_THREADED, a
-	ret	z
+	rla
+	ret	nc
+	ccf
 	ei
 	ret
 	

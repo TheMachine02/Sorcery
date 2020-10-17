@@ -87,7 +87,7 @@ define	phy_destroy_inode	22
 	ld	a, (hl)
 	cp	a, '/'
 	jr	z, .inode_get_from_root
-; the path is a relative path, so try to use the inode of the thread
+; the path is a relative path, so try to use the inode of the thread (reference is ALWAYS valid)
 	ld	iy, (kthread_current)
 	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
 	dec	hl
@@ -101,6 +101,9 @@ define	phy_destroy_inode	22
 	call	atomic_rw.lock_read
 	pop	hl
 .inode_get_parse_path:
+; follow
+; 	call	.inode_follow_link
+; 	jp	c, .inode_atomic_read_error
 ; find the entrie in the directory
 	call	.inode_directory_lookup
 	jp	c, .inode_atomic_read_error
@@ -148,7 +151,6 @@ define	phy_destroy_inode	22
 	pop	hl
 	ret
 
-	
 .inode_directory_get_lock:
 ; Half - debuged
 ; /dev lock the correct directory
@@ -573,20 +575,24 @@ sysdef _symlink
 	sbc	hl, hl
 	ret
 	
-.inode_follow_link:
-; iy = inode, return iy = the followed inode
-; destroy register a, c
-	ld	c, KERNEL_VFS_MAX_FOLLOW
-	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_MASK
-	cp	a, KERNEL_VFS_TYPE_SYMLINK
-	ret	nz
-	dec	c
-	ld	a, ELOOP
-	jp	z, syserror
-; we have a symlink, follow
-	ld	iy, (iy+KERNEL_VFS_INODE_LINK)	
-	jr	.inode_follow_link
+; .inode_link_lock_read:
+; ; iy = inode, return iy = the followed inode
+; ; destroy register a, c
+; ; c is set with error
+; 	ld	c, KERNEL_VFS_MAX_FOLLOW
+; 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+; 	and	a, KERNEL_VFS_TYPE_MASK
+; 	sub	a, KERNEL_VFS_TYPE_SYMLINK
+; 	or	a, a
+; 	ret	nz
+; 	dec	c
+; 	ld	a, ELOOP
+; 	jp	z, syserror
+; ; we have a symlink, follow
+; 	ld	iy, (iy+KERNEL_VFS_INODE_LINK)	
+; 	jr	.inode_follow_link
+; .inode_link_lock_write:
+; 	ret
 	
 .inode_block_data:
 ; iy is inode number (adress of the inode)

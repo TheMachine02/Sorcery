@@ -20,9 +20,9 @@ define	CONSOLE_FLAGS_ALPHA	0
 define	CONSOLE_FLAGS_2ND	1
 define	CONSOLE_FLAGS_MODE	2	; 2 and 3 are for color mode
 
-define	CONSOLE_FLAGS_THREADED	5
+define	CONSOLE_FLAGS_THREADED	7
 define	CONSOLE_FLAGS_SILENT	6
-define	CONSOLE_FLAGS_ESC	7	; we are writing an esc sequence
+define	CONSOLE_FLAGS_ESC	5	; we are writing an esc sequence
 
 define	CONSOLE_BLINK_RATE	1
 define	CONSOLE_CURSOR_MAX_COL	50
