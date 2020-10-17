@@ -266,10 +266,10 @@ profil:
 	inc	hl
 	ld	(hl), d
 	inc	hl
-	ld	(hl), 0
+	xor	a, a
+	ld	(hl), a
 ; set the profiler
 	set	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
-	or	a, a
 	sbc	hl, hl
 	ret
 .reset:

@@ -59,7 +59,6 @@ console:
 	push	de
 	call	.init_screen
 	ld	a, (iy+CONSOLE_FLAGS)
-	or	a, a
 	bit	CONSOLE_FLAGS_THREADED, a
 	ld	iy, .thread
 	jr	nz, .load_thread_adress
@@ -311,8 +310,8 @@ console:
 ; return hl + 1, or po if none left
 ; blit zero anyway at the end
 	dec	hl
-	ld	(hl), 0
 	ld	bc, 6
+	ld	(hl), b
 	add	hl, bc
 	jp	pe, .argv_not_null
 	ld	hl, .BIN_ARGV
@@ -478,7 +477,6 @@ console:
 	ret	z
 	ld	(console_line_head), hl
 	ex	de, hl
-	or	a, a
 	sbc	hl, hl
 	add	hl, de
 	inc	hl
@@ -612,14 +610,13 @@ console:
 
 .prompt:
 ; flush the line buffer
-	ld	hl, console_line
-	ld	(console_line_head), hl
-	dec	hl
-	ex	de, hl
+	ld	de, console_line
+	ld	(console_line_head), de
+	dec	de
 	ld	hl, KERNEL_DEV_NULL
 	ld	bc, CONSOLE_LINE_SIZE + 1
 	ldir
-	ld	bc, 28
+	ld	c, 28
 	ld	hl, .PROMPT
 	jp	.phy_write
 
