@@ -54,6 +54,8 @@ define	KERNEL_VFS_O_EXCL			1	; use with O_CREAT, fail if file already exist
 define	KERNEL_VFS_O_CREAT			2	; creat the file if don't exist
 define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
 
+define	KERNEL_VFS_MAX_FOLLOW			4
+
 define	SEEK_SET				0
 define	SEEK_CUR				1
 define	SEEK_END				2
@@ -256,7 +258,6 @@ sysdef _read
 ; hl is fd, void *buf is de, size_t count is bc
 ; pad count to inode_file_size
 ; return size read
-; TODO : maybe hide the FD data to the thread
 	call	.fd_pointer_check
 	ret	c
 ; check we have read permission
@@ -364,7 +365,6 @@ sysdef _read
 ; }
 ; read_buff(0, buff, size, count);
 ; return inode_unlock();
-; 12,5 cycles for ~18000 bytes read (from flash)
 ; let's start the logic
 ; if ((offset + size) > inode_size) { size = inode_size - offset; }
 	push	de

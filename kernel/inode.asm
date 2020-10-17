@@ -4,6 +4,7 @@ define	KERNEL_VFS_INODE_FLAGS			0	; 1 byte, inode flag
 define	KERNEL_VFS_INODE_REFERENCE		1	; 1 byte, number of reference to this inode
 define	KERNEL_VFS_INODE_SIZE			2	; 3 bytes, size of the inode
 define	KERNEL_VFS_INODE_DEVICE			2	; 2 bytes, device number if applicable
+define	KERNEL_VFS_INODE_LINK			2	; 3 bytes, link if applicable
 define	KERNEL_VFS_INODE_PARENT			5	; 3 bytes, parent of the inode, NULL mean root
 define	KERNEL_VFS_INODE_ATOMIC_LOCK		8	; rw lock, 5 bytes
 define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer
@@ -25,6 +26,8 @@ define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
 define	KERNEL_VFS_INODE_NODE_SIZE_DMA		32	; inode size in case of DMA
 define	KERNEL_VFS_INODE_NODE_SIZE_FIFO		32	; inode size in case of fifo
+define	KERNEL_VFS_INODE_NODE_SIZE_SYMLINK	16	; symlink inode size
+
 define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		16	; 16 bytes per entries, or 4 entries per slab entries
 define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
 
@@ -467,12 +470,19 @@ define	phy_destroy_inode	22
 	pop	iy
 ; iy is now the parent inode
 ; also, c is still our flags
+	ld	a, c
+	and	a, KERNEL_VFS_TYPE_MASK
+	ld	hl, KERNEL_VFS_INODE_NODE_SIZE_SYMLINK
+	cp	a, KERNEL_VFS_TYPE_SYMLINK
+	jr	z, .node_regular
+	add	hl, hl
+; size = dma or fifo
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, c
-	ld	hl, KERNEL_VFS_INODE_NODE_SIZE_DMA
 	jr	nz, .node_regular
+	cp	a, KERNEL_VFS_TYPE_FIFO
+	jr	z, .node_regular
 	add	hl, hl
 .node_regular:
-;	ld	hl, KERNEL_VFS_INODE_NODE_SIZE
 	call	kmalloc
 	ld	a, ENOMEM
 	jp	c, .inode_atomic_write_error
@@ -527,8 +537,56 @@ define	phy_destroy_inode	22
 .inode_dup:
 	ret
 
+sysdef _symlink
 .inode_symlink:
+; int symlink(const char* path1, const char* path2)
+; hl = path 1 (inode to link), de = path 2
+	push	de
+	call	.inode_get_lock
+	pop	hl
+	ret	c
+; save iy our inode
+	push	iy
+; hl is path, bc is mode, a is inode type
+	ld	bc, 0
+	ld	c, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_PERMISSION_MASK
+	ld	c, a
+	ld	a, KERNEL_VFS_TYPE_SYMLINK
+	call	.inode_create
+	ex	(sp), iy
+	pop	ix
+; iy = the original inode, ix = either nothing or the created inode
+; if carry = error set
+	ret	c
+; setup the link
+; ref count ++
+	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
+; write inode into the symlink
+	ld	(ix+KERNEL_VFS_INODE_LINK), iy
+; unlock both now
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
 	ret
+	
+.inode_follow_link:
+; iy = inode, return iy = the followed inode
+; destroy register a, c
+	ld	c, KERNEL_VFS_MAX_FOLLOW
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_SYMLINK
+	ret	nz
+	dec	c
+	ld	a, ELOOP
+	jp	z, syserror
+; we have a symlink, follow
+	ld	iy, (iy+KERNEL_VFS_INODE_LINK)	
+	jr	.inode_follow_link
 	
 .inode_block_data:
 ; iy is inode number (adress of the inode)
