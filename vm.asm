@@ -94,7 +94,7 @@ sulphur:
 	ldir
 	ld	hl, hypervisor_ram
 	ld	de, VM_HYPERVISOR_RAM_ADRESS
-	ld	bc, $1000
+	ld	b, $10
 	ldir
 	ld	a, $0B
 	call	.erase_sector
