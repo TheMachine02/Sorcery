@@ -81,11 +81,10 @@ kmem:
 	inc	hl
 	ld	iy, (hl)
 ; block size now
-	ld	bc, 3
-	add	hl, bc
-	ld	c, (hl)
 	inc	hl
-	ld	b, (hl)
+	inc	hl
+	inc	hl
+	ld.s	bc, (hl)
 ; quickly save hl, we may not be using it, but anyway
 	ex	de, hl
 ; get the ptlb of the page and the count
@@ -115,7 +114,7 @@ kmem:
 
 .__cache_alloc_full_page:
 	ex	de, hl
-	ld	de, -5
+	ld	de, -4
 	add	hl, de
 	call	kqueue.remove_head
 ; the last one in the slab
@@ -179,9 +178,7 @@ kmem:
 	add	hl, de
 	ex	de, hl
 	sbc	hl, hl
-	ld	bc, 0
-	ld	c, (ix+KERNEL_SLAB_CACHE_DATA_SIZE)
-	ld	b, (ix+KERNEL_SLAB_CACHE_DATA_SIZE+1)
+	ld.s	bc, (ix+KERNEL_SLAB_CACHE_DATA_SIZE)
 	sbc	hl, bc
 ; hl = negated bloc size
 	ex	de, hl
@@ -318,7 +315,6 @@ kmem:
 	pop	bc
 	pop	de
 	pop	iy
-	or	a, a
 	sbc	hl, hl
 	scf
 	ret
