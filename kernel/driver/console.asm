@@ -64,10 +64,12 @@ console:
 	jr	z, .noload_thread_adress
 	ld	iy, .thread
 	call	kthread.create
-.noload_thread_adress:
 	pop	hl
 ; carry if error
 	ret	c
+	.db	$fe	; dummy 'cp a,..' to avoid 'pop hl'
+.noload_thread_adress:
+	pop	hl
 ; take lcd mutex control
 	ld	(hl), iy
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
