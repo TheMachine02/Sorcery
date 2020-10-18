@@ -170,7 +170,6 @@ leaf:
 ; read section now
 	ld	b, (iy+LEAF_HEADER_SHNUM)
 .bound_loop:
-	push	bc
 	bit	1, (ix+LEAF_SECTION_FLAGS)
 	jr	z, .bound_next_section
 	ld	de, (ix+LEAF_SECTION_ADDR)
