@@ -58,18 +58,17 @@ console:
 ; init the screen now
 	push	de
 	call	.init_screen
-; get bit 7 (THREADED)	
-	bit	7, (iy+CONSOLE_FLAGS)
-	ld	iy, (kthread_current)
-	jr	z, .noload_thread_adress
+	ld	a, (iy+CONSOLE_FLAGS)
+; get bit 7 (THREADED)
+	rla
 	ld	iy, .thread
-	call	kthread.create
+	jr	c, .load_thread_adress
+	ld	iy, (kthread_current)
+.load_thread_adress:
+	call	c, kthread.create
 	pop	hl
 ; carry if error
 	ret	c
-	.db	$fe	; dummy 'cp a,..' to avoid 'pop hl'
-.noload_thread_adress:
-	pop	hl
 ; take lcd mutex control
 	ld	(hl), iy
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
