@@ -1,12 +1,12 @@
 ; inode handling ;
 define	KERNEL_VFS_INODE			0
 define	KERNEL_VFS_INODE_FLAGS			0	; 1 byte, inode flag
-define	KERNEL_VFS_INODE_REFERENCE		1	; 1 byte, number of reference to this inode
-define	KERNEL_VFS_INODE_SIZE			2	; 3 bytes, size of the inode
-define	KERNEL_VFS_INODE_DEVICE			2	; 2 bytes, device number if applicable
-define	KERNEL_VFS_INODE_LINK			2	; 3 bytes, link if applicable
-define	KERNEL_VFS_INODE_PARENT			5	; 3 bytes, parent of the inode, NULL mean root
-define	KERNEL_VFS_INODE_ATOMIC_LOCK		8	; rw lock, 5 bytes
+define	KERNEL_VFS_INODE_ATOMIC_LOCK		1	; rw lock, 5 bytes
+define	KERNEL_VFS_INODE_REFERENCE		6	; 1 byte, number of reference to this inode
+define	KERNEL_VFS_INODE_SIZE			7	; 3 bytes, size of the inode
+define	KERNEL_VFS_INODE_DEVICE			7	; 2 bytes, device number if applicable
+define	KERNEL_VFS_INODE_LINK			7	; 3 bytes, link if applicable
+define	KERNEL_VFS_INODE_PARENT			10	; 3 bytes, parent of the inode, NULL mean root
 define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer
 define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all block are indirect)
 ; 3*16, 48 bytes
@@ -63,21 +63,6 @@ define	phy_destroy_inode	22
 ; inode searching can sleep with parent inode lock waiting for child inode to be free'd for read
 ; best is always locking only ONE inode
 ; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
-
-.inode_atomic_read_error:
-	push	af
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_read
-	pop	af
-	jp	syserror
-
-.inode_atomic_write_error:
-; unlock the inode (write locked) and error out
-	push	af
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
-	pop	af
-	jp	syserror
 	
 .inode_get_lock:
 ; hl is path
@@ -97,16 +82,16 @@ define	phy_destroy_inode	22
 	or	a, a
 	jp	z, .inode_get_direct_lock
 	push	hl
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_read
+;	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+;	call	atomic_rw.lock_read
+	call	.inode_raw_lock_read
+; iy is the locked inode (and assured to be a file)
 	pop	hl
+	jp	c, syserror
 .inode_get_parse_path:
-; follow
-; 	call	.inode_follow_link
-; 	jp	c, .inode_atomic_read_error
 ; find the entrie in the directory
 	call	.inode_directory_lookup
-	jp	c, .inode_atomic_read_error
+	jr	c, .inode_atomic_read_error
 ; ix is the new inode, iy the old, hl is still our path
 ; ex : /dev/ need to lock dev for write
 	ld	c, KERNEL_VFS_DIRECTORY_NAME_SIZE
@@ -120,7 +105,7 @@ define	phy_destroy_inode	22
 	dec	c
 	jr	nz, .__bad_search3
 	ld	a, ENAMETOOLONG
-	jp	.inode_atomic_read_error
+	jr	.inode_atomic_read_error
 .inode_get_continue:
 	ld	a, (hl)
 	or	a, a
@@ -128,16 +113,20 @@ define	phy_destroy_inode	22
 ; we have the new path at hl
 ; lock dance
 	push	hl
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_read
+; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_read
+	call	.inode_raw_lock_read_ex
+	jr	c, .inode_atomic_read_error
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	lea	iy, ix+0
 	pop	hl
 	jr	.inode_get_parse_path
 .inode_get_lock_entry:
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_write
+; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_write
+	call	.inode_raw_lock_write_ex
+	jr	c, .inode_atomic_read_error
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	lea	iy, ix+0
@@ -145,12 +134,28 @@ define	phy_destroy_inode	22
 	ret
 .inode_get_direct_lock:
 	push	hl
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_write
-	xor	a, a
+; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_write
+	call	.inode_raw_lock_write
+; and return error
 	pop	hl
 	ret
 
+.inode_atomic_read_error:
+	push	af
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	pop	af
+	jp	syserror
+
+.inode_atomic_write_error:
+; unlock the inode (write locked) and error out
+	push	af
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	pop	af
+	jp	syserror
+	
 .inode_directory_get_lock:
 ; Half - debuged
 ; /dev lock the correct directory
@@ -201,15 +206,17 @@ define	phy_destroy_inode	22
 	jr	z, .inode_directory_get_root_lock
 	ex	de, hl
 	push	hl
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_read
+; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_read
+	call	.inode_raw_lock_read
 	pop	hl
+	jp	c, syserror
 .inode_directory_get_parse_path:
 ; find the entrie in the directory
 	push	de
 	call	.inode_directory_lookup
 	pop	de
-	jp	c, .inode_atomic_read_error
+	jr	c, .inode_atomic_read_error
 ; ix is the new inode, iy the old, hl is still our path
 ; ex : /dev/ need to lock dev for write
 ; de > copy to hl
@@ -226,7 +233,7 @@ define	phy_destroy_inode	22
 	dec	c
 	jr	nz, .__bad_search2
 	ld	a, ENAMETOOLONG
-	jp	.inode_atomic_read_error
+	jr	.inode_atomic_read_error
 .inode_directory_continue:
 	ld	a, (hl)
 	or	a, a
@@ -235,8 +242,10 @@ define	phy_destroy_inode	22
 ; we have the new path at de
 ; lock dance
 	push	hl
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_read
+; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_read
+	call	.inode_raw_lock_read_ex
+	jp	c, .inode_atomic_read_error
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	lea	iy, ix+0
@@ -245,8 +254,10 @@ define	phy_destroy_inode	22
 .inode_directory_get_lock_entry:
 	ex	de, hl
 	push	hl
-	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_write
+; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_write
+	call	.inode_raw_lock_write_ex
+	jp	c, .inode_atomic_read_error
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	pop	hl
@@ -256,9 +267,10 @@ define	phy_destroy_inode	22
 .inode_directory_get_root_lock:
 	ex	de, hl
 	push	hl
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.lock_write
-	xor	a, a
+; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	call	atomic_rw.lock_write
+; 	xor	a, 
+	call	.inode_raw_lock_write
 	pop	hl
 	ret
 
@@ -574,55 +586,108 @@ sysdef _symlink
 	or	a, a
 	sbc	hl, hl
 	ret
+
+.inode_raw_lock_read_ex:
+	push	iy
+	lea	iy, ix+0
+	call	.inode_raw_lock_read
+	lea	ix, iy+0
+	pop	iy
+	ret
 	
-; .inode_link_lock_read:
-; ; iy = inode, return iy = the followed inode
-; ; destroy register a, c
-; ; c is set with error
-; 	ld	c, KERNEL_VFS_MAX_FOLLOW
-; 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-; 	and	a, KERNEL_VFS_TYPE_MASK
-; 	sub	a, KERNEL_VFS_TYPE_SYMLINK
-; 	or	a, a
-; 	ret	nz
-; 	dec	c
-; 	ld	a, ELOOP
-; 	jp	z, syserror
-; ; we have a symlink, follow
-; 	ld	iy, (iy+KERNEL_VFS_INODE_LINK)	
-; 	jr	.inode_follow_link
-; .inode_link_lock_write:
-; 	ret
+.inode_raw_lock_write_ex:
+	push	iy
+	lea	iy, ix+0
+	call	.inode_raw_lock_write
+	lea	ix, iy+0
+	pop	iy
+	ret
 	
-.inode_block_data:
-; iy is inode number (adress of the inode)
-; a is block number (ie, file adress divided by KERNEL_MM_PAGE_SIZE)
-; about alignement : block are at last 1024 bytes aligned
-; block data is aligned to 4 bytes
-; inode data is 64 bytes aligned
-; destroy a, hl
-	push	bc
-	ld	b, a
-	rra
-	rra
-	rra
-	and	a, 00011110b
-	ld	c, a
-	rra
-	add	a, c
-	lea	hl, iy+KERNEL_VFS_INODE_DATA
-	add	a, l
-	ld	l, a
-	ld	a, b
-	and	a, 00001111b
-; hl adress should be aligned to 64 bytes
-	add	a, a
-	add	a, a
-	ld	hl, (hl)
-	add	a, l
-	ld	l, a
-	pop	bc
-; hl is the block_data adress structure in cache
+; lock and follow symlink
+.inode_raw_lock_read:
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	ld	c, KERNEL_VFS_MAX_FOLLOW
+.inode_raw_lock_loop:
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	sub	a, KERNEL_VFS_TYPE_SYMLINK
+; reset carry flag before returning
+	or	a, a
+	ret	nz
+	ld	hl, (iy+KERNEL_VFS_INODE_LINK)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EACCES
+	jr	z, .inode_raw_error
+	push	hl
+; lock swap
+assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
+	inc	hl
+	call	atomic_rw.lock_read
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	pop	iy
+	dec	c
+	jr	nz, .inode_raw_lock_loop
+	ld	a, ELOOP
+
+.inode_raw_error:
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	scf
+	ret
+	
+.inode_raw_lock_write:
+; lock for write & follow symlink
+; return c and error, nc otherwise
+	ld	c, KERNEL_VFS_MAX_FOLLOW
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_SYMLINK
+	jr	nz, .inode_raw_llw
+; this is a symlink, lock it for read
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+; read the link and follow
+.inode_raw_lwl:
+	ld	hl, (iy+KERNEL_VFS_INODE_LINK)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ld	a, EACCES
+	jr	z, .inode_raw_error
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_SYMLINK
+	jr	nz, .inode_raw_lcw
+; here, swap lock
+	push	hl
+	inc	hl
+	call	atomic_rw.lock_read
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	pop	iy
+	dec	c
+	jr	nz, .inode_raw_lwl
+	ld	a, ELOOP
+	jr	.inode_raw_error
+.inode_raw_lcw:
+; unlock read iy and lock write hl
+	push	hl
+	inc	hl
+	call	atomic_rw.lock_write
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_read
+	pop	iy
+	or	a, a
+	ret
+.inode_raw_llw:
+; lock and return (early)
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	or	a, a
 	ret
 
 .inode_drop_data:

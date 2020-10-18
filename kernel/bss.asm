@@ -163,11 +163,11 @@ kmem_cache_user:
  db	72	dup	$00		; null is reference to not allocated
 kvfs_root:				; 64 bytes inode, the root of all root
  db	15				; directory (8), RWX permission
- db	$01				; reference
- dl	$000000				; size, it is a directory, so count of data holded
- dl	$000000				; parent
  db	$00,$FF				; atomic lock
  dl	$000000				; atomic lock
+ db	$00				; reference
+ dl	$000000				; size, it is a directory, so count of data holded
+ dl	$000000				; parent
  dl	$000000				; operation lookup table, null physical operation (ie device callback are here)
  dl	$000000				; data, 16 * 3, there is nothing in this directory 
  dl	$000000

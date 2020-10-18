@@ -123,9 +123,9 @@ file	'initramfs'
 ; enabled if kernel is compiled with debug option
 	dbg	thread
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
-	ld	bc, .arch_bin_path
+	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
-	ld	hl, .arch_bin_argv
+	ld	bc, .arch_bin_argv
 	call	leaf.execve
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	xor	a, a

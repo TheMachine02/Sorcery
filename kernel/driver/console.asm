@@ -306,7 +306,7 @@ console:
 ; try to exec the program in /bin/xxxx
 ; bc = string size
 	ld	hl, console_line
-	ld	bc, CONSOLE_LINE_SIZE
+	ld	bc, CONSOLE_LINE_SIZE - 6
 	ld	a, ' '
 	cpir
 ; return hl + 1, or po if none left
@@ -328,13 +328,14 @@ console:
 	ld	hl, .BINARY_PATH
 	ld	c, 5
 	ldir
-	pop	hl
-	ld	bc, console_line
+	pop	bc
+	ld	hl, console_line
 	ld	de, .BIN_ENVP
 ; please note argv is a pointer to a raw string, it will be cut and pushed into program stack frame by the program exec call
 ; TODO : find a better way than leaf.program
 ; create thread with execve as thread is a good idea, however, the thread creation will always be correct
 ; then I need to retrieve error code of execve and then utimately error code of exit thread
+	dbg	open
 	call	leaf.program
 	jr	c, .unknown_command
 ; right here, we should wait for sigchild

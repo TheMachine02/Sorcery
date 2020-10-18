@@ -43,23 +43,25 @@ sysdef _execve
 	ld	hl, (ix+LEAF_HEADER_ENTRY)
 	jp	(hl)
 .execve_no_dma_xip:
-	ld	hl, LEAF_HEADER_SIZE
-	call	kmalloc
-	ret	c
-	push	de
-	push	bc
-	ex	de, hl
-	push	de
-	pop	ix
-	xor	a, a
-	sbc	hl, hl
-; a, de, bc, hl are all set (iy is inode)
-	call	kvfs.read_buff
-; leaf header is ix
-	pop	bc
-	pop	de
-	lea	hl, ix+0
-	call	kfree
+; 	ld	hl, LEAF_HEADER_SIZE
+; 	call	kmalloc
+; 	ret	c
+; 	push	de
+; 	push	bc
+; 	ex	de, hl
+; 	push	de
+; 	pop	ix
+; 	xor	a, a
+; 	sbc	hl, hl
+; ; a, de, bc, hl are all set (iy is inode)
+; ; 	call	kvfs.read_buff
+; ; leaf header is ix
+; 	pop	bc
+; 	pop	de
+; 	lea	hl, ix+0
+; 	call	kfree
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
 	scf
 	ret
 .aux_environnement:

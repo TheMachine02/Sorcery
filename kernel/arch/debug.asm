@@ -78,14 +78,19 @@ end macro
 if CONFIG_DEBUG
 
 DEBUG_THREAD:
+	dbg	open
+
 	call	tifs.mount
+	
+	ld	hl, DEBUG_PATH_LINK
+	ld	de, DEBUG_PATH_LINK2
+	call	_symlink
 	
 ; ; hl is path, bc is flags, de is mode
 	ld	hl, DEBUG_PATH_2
 	ld	bc, KERNEL_VFS_O_RW or (KERNEL_VFS_O_CREAT *256)
 	call	_open
 
-	dbg	open
 	push	hl
 	ld	de, $D01000
 	ld	bc, 32768
@@ -97,7 +102,7 @@ DEBUG_THREAD:
 	ld	bc, SEEK_SET
 	call	_lseek
 	pop	hl
-	ld	de, $D50000
+	ld	de, $D60000
 	ld	bc, 32768
 	call	_read
 
@@ -107,5 +112,11 @@ DEBUG_PATH:
  db "/tifs/SORCERY",0
 DEBUG_PATH_2:
  db "/file", 0
+ 
+DEBUG_PATH_LINK:
+ db "/tifs/", 0
+ 
+DEBUG_PATH_LINK2:
+ db "/bin/", 0
  
  end if
