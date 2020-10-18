@@ -130,10 +130,9 @@ leaf:
 ; read section now
 	ld	b, (iy+LEAF_HEADER_SHNUM)
 .alloc_prog_loop:
-	push	bc
-	ld	a, (ix+LEAF_SECTION_FLAGS)
-	and	a, SHF_ALLOC
+	bit	1, (ix+LEAF_SECTION_FLAGS)
 	jr	z, .alloc_next_section
+	push	bc
 	ld	hl, $E40000+SHT_NOBITS
 	ld	a, (ix+LEAF_SECTION_TYPE)
 	cp	a, l
@@ -146,9 +145,9 @@ leaf:
 ; we are a static file, the addr is RAM adress
 	ld	de, (ix+LEAF_SECTION_ADDR)
 	ldir
+	pop	bc
 .alloc_next_section:
 	lea	ix, ix+16
-	pop	bc
 	djnz	.alloc_prog_loop	
 	call	.bound_static
 .priviligied_static:
@@ -171,9 +170,7 @@ leaf:
 ; read section now
 	ld	b, (iy+LEAF_HEADER_SHNUM)
 .bound_loop:
-	push	bc
-	ld	a, (ix+LEAF_SECTION_FLAGS)
-	and	a, SHF_ALLOC
+	bit	1, (ix+LEAF_SECTION_FLAGS)
 	jr	z, .bound_next_section
 	ld	de, (ix+LEAF_SECTION_ADDR)
 	ld	hl, (leaf_bound_lower)
@@ -192,6 +189,5 @@ leaf:
 .bound_lower:
 .bound_next_section:
 	lea	ix, ix+16
-	pop	bc
 	djnz	.bound_loop
 	ret
