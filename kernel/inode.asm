@@ -116,7 +116,9 @@ define	phy_destroy_inode	22
 ; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; 	call	atomic_rw.lock_read
 	call	.inode_raw_lock_read_ex
+	pop	hl
 	jr	c, .inode_atomic_read_error
+	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	lea	iy, ix+0
@@ -133,13 +135,9 @@ define	phy_destroy_inode	22
 	xor	a, a
 	ret
 .inode_get_direct_lock:
-	push	hl
 ; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; 	call	atomic_rw.lock_write
-	call	.inode_raw_lock_write
-; and return error
-	pop	hl
-	ret
+	jp	.inode_raw_lock_write
 
 .inode_atomic_read_error:
 	push	af
@@ -245,7 +243,9 @@ define	phy_destroy_inode	22
 ; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; 	call	atomic_rw.lock_read
 	call	.inode_raw_lock_read_ex
+	pop	hl
 	jp	c, .inode_atomic_read_error
+	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	lea	iy, ix+0
@@ -257,7 +257,9 @@ define	phy_destroy_inode	22
 ; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
 ; 	call	atomic_rw.lock_write
 	call	.inode_raw_lock_write_ex
+	pop	hl
 	jp	c, .inode_atomic_read_error
+	push	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	pop	hl
