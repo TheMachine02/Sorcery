@@ -293,9 +293,7 @@ D1AB7F:
 	ld	($E30B0A), sp
 	ld	sp, hl
 	
-	ld	hl,$F50200
-	ld	(hl),h
-	ld	l,$1C
+	ld	hl,$F5001C
 	bit	6,(hl)
 	jp	z,$E30822
 

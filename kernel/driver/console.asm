@@ -225,6 +225,7 @@ console:
 	ld	e, a
 	inc	bc
 	ld	a, (bc)
+	inc	bc
 ; e = h, a = vsize
 	push	bc
 	inc.s	bc
@@ -673,7 +674,7 @@ console:
 
 .SPLASH:
 db 58,50
-include 'console_logo_58x50.data'
+include	'logo.inc'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
