@@ -149,9 +149,8 @@ console:
 	ld	bc, 36
 	ldir
 	call	video.clear_screen
-	or	a, a
-	sbc	hl, hl
-	ld	e, l
+	ld	hl, 4
+	ld	e, 7
 	ld	bc, .SPLASH
 	call	.blit
 	ld	c, 37
@@ -673,8 +672,8 @@ console:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# "
 
 .SPLASH:
-db 64,65
-include 'logo.inc'
+db 58,50
+include 'console_logo_58x50.data'
  
 .SPLASH_NAME:
 ; y 2, x 10, then y 5, x 0
