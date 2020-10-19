@@ -2,8 +2,8 @@ define	CONFIG_KERNEL_NAME		"Sorcery"
 
 define	CONFIG_DEBUG			0
 
+define	CONFIG_MOUNT_TIFS		1
 ; special code modifier ;
-define	CONFIG_USE_BOOT_PATCH		0
 ; try to save power during idle by lowering clock to 6MHz ;
 ; right now broken with the LCD timings ;
 define	CONFIG_USE_DYNAMIC_CLOCK	0

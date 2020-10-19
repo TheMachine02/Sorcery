@@ -122,11 +122,20 @@ file	'initramfs'
 ; debug thread & other debugging stuff
 ; enabled if kernel is compiled with debug option
 	dbg	thread
+; mount a filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
+if CONFIG_MOUNT_TIFS
+; mount tifs & symlink it to binary, config_tifs
+	call	tifs.mount
+	ld	hl, .arch_mount_tifs
+	ld	de, .arch_mount_bin
+	call	kvfs.symlink
+end if
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-	call	leaf.execve
+;	call	leaf.execve
+	jp	init_conway
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	xor	a, a
 	call	console.fb_takeover
@@ -145,9 +154,16 @@ file	'initramfs'
 .arch_bin_envp:
  dl	NULL
 
- .arch_bin_error:
+.arch_bin_error:
  db	"Failed to execute /bin/init",10,"Running emergency shell",10,0
 
+if CONFIG_MOUNT_TIFS
+.arch_mount_tifs:
+ db	"/tifs", 0
+.arch_mount_bin:
+ db	"/bin", 0
+end if
+ 
 .arch_poison_heap:
 ; shouldn't be called within irq
 	di
