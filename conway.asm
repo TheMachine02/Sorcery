@@ -13,7 +13,7 @@
 	ld ($D4BE89),a
 	ld hl, __D1A8BA
 	ld de,$E30800
-	ld bc,$000307 + 64
+	ld bc,$000400
 	ldir 
 	jp $E30800
 
@@ -29,7 +29,7 @@ __D1A8BA:
 	di 
 	push ix
 	push iy
-	ld ($E30B0A),sp
+	ld ($E30B07),sp
 	
 	ld sp,$D5C80D
 	or a,a
@@ -284,13 +284,13 @@ D1AB7F:
 	or	a, a
 	sbc	hl, hl
 	add	hl, sp
-	ld	sp, ($E30B0A)
+	ld	sp, ($E30B07)
 	push	hl
 	ei
 	call	video.vsync
 	di
 	pop	hl
-	ld	($E30B0A), sp
+	ld	($E30B07), sp
 	ld	sp, hl
 	
 	ld	hl,$F5001C
@@ -317,5 +317,5 @@ D1ABA3:
 	ld sp,$000000
 	pop iy
 	pop ix
-	ei 
+	ei
 	ret

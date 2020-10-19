@@ -4,8 +4,37 @@ library load
 memory management
 keyboard stdin
 file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
-cd for change directory
-Rework timer
-Rework signal
-chdirent
-Thread TLS are just after the top of stack, can create thread by passing single stack pointer and stack size
+
+* thread cleanup :
+- clean the timer fixed data inside the thread and instead create a timer framework detached from thread TLS. Function like alarm() or sleep() just use a 'simplified' timer attached to thread TLS, we don't need sigevent for exemple, but just following >>> this is the "interval" timer
+
+define	KERNEL_THREAD_TIMER			0
+define	KERNEL_THREAD_TIMER_FLAGS		0
+define	KERNEL_THREAD_TIMER_NEXT		1
+define	KERNEL_THREAD_TIMER_PREVIOUS		4
+define	KERNEL_THREAD_TIMER_COUNT		7
+define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	10
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	11
+define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
+(total 17 bytes, remove 5 bytes)
+
+- move thread TLS to be at the top of the stack
+- better memory allocation
+- exit should make all thread zombie and thread need to be reaped by wait()
+
+* signal cleanup
+
+- ???
+
+* timer cleanup
+- allocate memory for timer data
+- push those data correclty into the queue
+- better function / correct function
+
+* memory management changes
+- 3 type of page : slab page, cache page (GFP_KERNEL), and user memory (GFP_USER)
+- cleanup bit, code, and allocation
+
+
+* vfs
+- TODO : mmap()

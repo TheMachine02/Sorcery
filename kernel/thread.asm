@@ -219,6 +219,7 @@ sysdef _core
 ; leaf file format
 	ret
 
+sysdef _exit
 .exit:
 ; signal parent thread of the end of the child thread
 ; also send HL as exit code

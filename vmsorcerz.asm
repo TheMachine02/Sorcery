@@ -26,7 +26,11 @@ assert $ < $D01040
 org	$D01040
 section '.sys' writeable
 ; align this to 4 bytes
+sysinternal:
+; internal API, may be usefull for driver and such, but may be prone to change
 sysjump:
+; the kernel syscall jump table
+; NOTE : DO NOT CHANGE ORDER
 	jp	_open
 	jp	_close
 	jp	_rename
