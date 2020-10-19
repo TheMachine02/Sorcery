@@ -96,6 +96,7 @@ sysjump:
 	jp	_flash_lock
 	jp	_flash_unlock
 	jp	_printk
+	jp	_thread
 ; 	jp	_socket
 ; 	jp	_listen
 ; 	jp	_bind

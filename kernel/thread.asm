@@ -83,45 +83,44 @@ define	WCONTINUED				4
 
 kthread:
 
-.create_no_mem:
-	call	kmm.thread_unmap
-.create_no_pid:
-	ld	l, EAGAIN
-.create_errno:
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_ERRNO), l
-; restore register and pop all the stack
-	exx
-	ei
-	lea	iy, ix+0
-	pop	ix
-	pop	af
-	scf
-	sbc	hl, hl
-	ret
-
+sysdef _thread
 .create:
 ; Create a thread
-; REGSAFE and ERRNO compliant
 ; int thread_create(void* thread_entry, void* thread_arg)
 ; register IY is entry, register HL is send to the stack for void* thread_arg
-; error -1 and c set, 0 and nc otherwise, ERRNO set
+; error -1 and c set, 0 and nc otherwise, errno set
 ; HL, BC, DE copied from current context to the new thread
-; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
-; please note that you can't call create thread in a interrupt disabled context
-	ld	a, i
-	push	af
-	push	ix
+; NOTE: for syscall wrapper : need to grab the pid of the thread and ouptput it to a *thread_t id
+; NOTE: you can't call create thread in a interrupt disabled context, use irq_create for that
+	call	.irq_create
+	jp	c, syserror
+	jp	task_schedule
+
+.create_no_pid:
+	pop	af
+	ld	a, EAGAIN
+	jr	.create_error
+.create_no_mem:
+	pop	af
+	ld	a, ENOMEM
+.create_error:
+; restore register and cleanup
+	exx
+	scf
+	ret
+	
+.irq_create:
 	di
+	push	af
 ; save hl, de, bc registers
 	exx
-	lea	ix, iy+0
 	call	.reserve_pid
 	jr	c, .create_no_pid
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	kmm.thread_map
 	jr	c, .create_no_mem
-; hl is adress    
+	push	iy
+; hl is adress
 	ex	de, hl
 	ld	iy, 0
 	add	iy, de
@@ -178,7 +177,8 @@ kthread:
 	add	iy, de
 	ld	hl, .exit
 	ld	(iy-6), hl
-	ld	(iy-9), ix
+	pop	hl
+	ld	(iy-9), hl
 	ld	d, e			; ld	de, NULL
 	ld	(iy-12), de		; ix [NULL] > int argc, char *argv[] : in the stack
 	ld	(iy-15), de		; iy [NULL] > in the future
@@ -193,15 +193,9 @@ kthread:
 ; return iy = new thread
 	ld	de, -KERNEL_THREAD_STACK_SIZE
 	add	iy, de
-	pop	ix
+	pop	af
 	or	a, a
 	sbc	hl, hl
-	pop	af
-	jp	po, .bb
-; try to reschedule immediately
-	jp	task_schedule
-.bb:
-	or	a, a
 	ret
 	
 sysdef _waitpid

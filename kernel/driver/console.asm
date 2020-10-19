@@ -62,7 +62,7 @@ console:
 	jr	c, .load_thread_adress
 	ld	iy, (kthread_current)
 .load_thread_adress:
-	call	c, kthread.create
+	call	c, kthread.irq_create
 	pop	hl
 ; carry if error
 	ret	c
