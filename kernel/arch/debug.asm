@@ -78,14 +78,7 @@ end macro
 if CONFIG_DEBUG
 
 DEBUG_THREAD:
-	dbg	open
-
-	call	tifs.mount
-	
-	ld	hl, DEBUG_PATH_LINK
-	ld	de, DEBUG_PATH_LINK2
-	call	_symlink
-	
+	dbg	open	
 ; ; hl is path, bc is flags, de is mode
 	ld	hl, DEBUG_PATH_2
 	ld	bc, KERNEL_VFS_O_RW or (KERNEL_VFS_O_CREAT *256)

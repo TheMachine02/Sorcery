@@ -109,6 +109,7 @@ kthread:
 ; HL, BC, DE copied from current context to the new thread
 ; note, for syscall wrapper : need to grap the pid of the thread and ouptput it to a *thread_t id
 ; please note that you can't call create thread in a interrupt disabled context
+	ld	a, i
 	push	af
 	push	ix
 	di
@@ -193,12 +194,16 @@ kthread:
 	ld	de, -KERNEL_THREAD_STACK_SIZE
 	add	iy, de
 	pop	ix
-	pop	af
 	or	a, a
 	sbc	hl, hl
+	pop	af
+	jp	po, .bb
 ; try to reschedule immediately
 	jp	task_schedule
-
+.bb:
+	or	a, a
+	ret
+	
 sysdef _waitpid
 .waitpid:
 ; Ssed to wait for state changes in a child of the calling process, and obtain information about the child whose state has changed. A state change is considered to be: the child terminated; the child was stopped by a signal; or the child was resumed by a signal. In the case of a terminated child, performing a wait allows the system to release the resources associated with the child; if a wait is not performed, then the terminated child remains in a "zombie" state
@@ -395,7 +400,7 @@ sysdef _core
 	ld	a, l
 	rra
 	ret
-	
+
 .free_pid:
 ; free a pid
 ; this should probably be in critical code section if you don't want BAD STUFF TO HAPPEN

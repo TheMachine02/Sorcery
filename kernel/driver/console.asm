@@ -10,14 +10,11 @@ define	console_takeover	$D00715
 define	console_line_head	$D00718
 define	console_line		$D00720
 
-
-; TODO : remove the special function of circular buffer added for console
-
 console:
 
 .nmi_takeover:
 	ld	iy, console_dev
-	res	CONSOLE_FLAGS_THREADED, (iy+CONSOLE_FLAGS)
+	res	CONSOLE_FLAGS_THREADED_BIT, (iy+CONSOLE_FLAGS)
 	ld	hl, nmi_console
 	jr	.fb_takeover_entry
 
@@ -74,12 +71,12 @@ console:
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	ld	(hl), $FF
 	inc	hl
+	ld	ix, (hl)
 	ld	(hl), iy
-	rla
-	ret	nc
-	ccf
-	ei
-	ret
+; stop thread ix, do not enable interrupts
+	ld	c, (ix+0)
+	ld	a, SIGSTOP
+	jp	signal.kill
 	
 .fb_restore:
 ; need to exit the console thread (signal are efficient, since you can raise to your own thread)
@@ -102,9 +99,20 @@ console:
 ; restore keyboard ?
 	ld	a, DRIVER_KEYBOARD_SCAN_CONTINUOUS
 	ld	(DRIVER_KEYBOARD_CTRL), a
+	push	hl
+	push	iy
+	ld	hl, DRIVER_VIDEO_IRQ_LOCK
+	inc	hl
+	ld	hl, (hl)
+	ld	c, (hl)
+	ld	a, SIGCONT
+	call	signal.kill
+	pop	iy
+	pop	hl
 ; kill the thread now
 	ld	de, (hl)
 	ld	hl, (iy+CONSOLE_TAKEOVER)
+	ld	bc, 0
 	ld	(iy+CONSOLE_TAKEOVER), bc
 	call	kfree
 	ex	de, hl
@@ -130,6 +138,12 @@ console:
 	ld	a, (console_dev+CONSOLE_FLAGS)
 	add	a, a
 	ret	m
+	ld	hl, DRIVER_VIDEO_IMSC
+	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
+	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
+	ld	(DRIVER_VIDEO_CTRL), hl
+	ld	hl, (DRIVER_VIDEO_BUFFER)
+	ld	(DRIVER_VIDEO_SCREEN), hl
 	ld	hl, .PALETTE
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	bc, 36

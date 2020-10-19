@@ -35,17 +35,24 @@ kpower:
 	in0	a, (KERNEL_POWER_CHARGING)
 	bit	1, a
 	ret
-
+	
 sysdef _shutdown
 .cycle_off:
-; TODO save and restore LCD parameters
 	di
 	call	kwatchdog.disarm
+	ld	hl, kmem_cache_s16
+	call	kmem.cache_alloc
+	ret	c
+	ld	(kpower_lcd_param), hl
+	ex	de, hl
+	ld	hl, DRIVER_VIDEO_SCREEN
+	ld	bc, 16
+	ldir
 ; backlight / LCD / SPI disable from boot
 	ld	hl, kmem_cache_s512
 	call	kmem.cache_alloc
 ; TODO use emergency memory if this carry
-	ret	c
+	jp	c, .cycle_error
 	ld	(kpower_lcd_mask), hl
 	ex	de, hl
 	ld	hl, DRIVER_VIDEO_PALETTE
@@ -182,6 +189,13 @@ sysdef _shutdown
 	ld	de, DRIVER_VIDEO_TIMING0 + 1
 	ld	c, 8
 	ldir
+	ld	hl, (kpower_lcd_param)
+	ld	de, DRIVER_VIDEO_SCREEN
+	ld	bc, 16
+	ldir
+.cycle_error:
+	ld	hl, (kpower_lcd_param)
+	call	kmem.cache_free
 ; not sure what this is for
 ; 	call	$000080
 ; 	ld	a, b
@@ -190,5 +204,8 @@ sysdef _shutdown
 ; 	ld	a, $DC
 ; 	call	$000640
 ; 	cp	a, $35
+	call	kwatchdog.arm
 	ei
-	jp	kwatchdog.arm
+	or	a, a
+	sbc	hl, hl
+	ret

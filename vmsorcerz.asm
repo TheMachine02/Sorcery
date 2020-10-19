@@ -147,6 +147,9 @@ include	'kernel/dev/console.asm'
 include	'kernel/dev/null.asm'
 include	'kernel/dev/flash.asm'
 
+init_conway:
+include	'conway.asm'
+
 assert $ < $D06000
 
 kernel_size strcalc $D06000 - $

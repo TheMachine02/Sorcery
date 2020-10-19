@@ -554,7 +554,7 @@ define	phy_destroy_inode	22
 	ret
 
 sysdef _symlink
-.inode_symlink:
+.symlink:
 ; int symlink(const char* path1, const char* path2)
 ; hl = path 1 (inode to link), de = path 2
 	push	de
