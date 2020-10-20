@@ -189,7 +189,7 @@ hypervisor:
 	ld	hl, vm_string_boot
 	push	hl
 	call	_sprintf
-	ld	hl, 12
+	ld	hl, 9
 	add	hl, sp
 	ld	sp, hl
 	
