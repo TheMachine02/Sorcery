@@ -240,18 +240,17 @@ atomic_mutex:
 .unlock:
 ; unlock a mutex
 ; destroy a, bc
-	push	de
-	ld	de, (kthread_current)
-	ld	a, (de)
+	push	hl
 	inc	hl
-	cp	a, (hl)
-	dec	hl
-	pop	de
+	ld	a, (hl)
+	ld	hl, (kthread_current)
+	sub	a, (hl)
+	pop	hl
 	ret	nz
 	di
 	ld	(hl), KERNEL_ATOMIC_MUTEX_MAGIC
 	inc	hl
-	ld	(hl), $00
+	ld	(hl), a
 	inc	hl
 	ld	a, (hl)
 	inc	a
