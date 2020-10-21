@@ -189,9 +189,9 @@ hypervisor:
 	ld	hl, vm_string_boot
 	push	hl
 	call	_sprintf
-	pop	hl
-	pop	hl
-	pop	hl
+	ld	hl, 9
+	add	hl, sp
+	ld	sp, hl
 	
 	ld	hl, 19*256+0
 	ld	ix, $000100
