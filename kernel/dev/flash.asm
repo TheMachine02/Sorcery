@@ -4,13 +4,11 @@ define	KERNEL_FLASH_SIZE		$400000
 
 flash:
 .init:
-; 	ld	hl, .phy_write_base
-; 	ld	de, $D18800
-; 	ld	bc, 256
-; 	ldir
+	ld	hl, .phy_program
+	ld	de, flash_program
+	ld	bc, .phy_program_size
+	ldir
 	ld	hl, .FLASH_DEV
-; inode capabilities flags
-; single dev block
 	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_BLOCK_DEVICE
 	ld	de, .phy_mem_ops
 	jp	_mknod
@@ -23,17 +21,11 @@ flash:
 	jp	.phy_write
 	jp	.phy_ioctl
 
-.phy_ioctl:
-	ret
-; no op
-.phy_read:
-	or	a, a
-	sbc	hl, hl
-	ret
+.phy_program:
 
-.phy_write_base:
-
-; org $D18800
+if $ < $D00000
+	org	flash_program
+end if
 
 .phy_erase:
 ; erase sector hl
@@ -95,6 +87,14 @@ flash:
 	pop	hl
 	ret
 
+.phy_ioctl:
+	ret
+; no op
+.phy_read:
+	or	a, a
+	sbc	hl, hl
+	ret
+
 .phy_write:
 ; write hl to flash for bc bytes
 	call	.unlock
@@ -154,3 +154,6 @@ flash:
 	ld	a, $F0
 	ld	($0), a
 	ret
+	
+.phy_program_size:=$-.phy_erase
+org	.phy_program + .phy_program_size

@@ -5,6 +5,9 @@ memory management
 keyboard stdin
 file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
 
+* the thread gid & geid update
+* use thread group id share by a parent and all its children
+
 * thread cleanup :
 - clean the timer fixed data inside the thread and instead create a timer framework detached from thread TLS. Function like alarm() or sleep() just use a 'simplified' timer attached to thread TLS, we don't need sigevent for exemple, but just following >>> this is the "interval" timer
 
@@ -21,10 +24,18 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
 - move thread TLS to be at the top of the stack
 - better memory allocation
 - exit should make all thread zombie and thread need to be reaped by wait()
+- also update time
+
+- execve cleanup fd & clean all memory allocated to the thread (except stack which is reset)
+- clone & fork : 
+ > fork is a "virtual fork" duplicate the thread stack & copy data in it, but do NOT duplicate data. Make the previous thread (who called fork) paused until an execve()
+ >
+ >
 
 * signal cleanup
 
-- ???
+- right now : signal queueing in stack
+- use pending signal & relevant signal block > block make signal pending instead of full ignore
 
 * timer cleanup
 - allocate memory for timer data
@@ -34,7 +45,6 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
 * memory management changes
 - 3 type of page : slab page, cache page (GFP_KERNEL), and user memory (GFP_USER)
 - cleanup bit, code, and allocation
-
 
 * vfs
 - TODO : mmap()
