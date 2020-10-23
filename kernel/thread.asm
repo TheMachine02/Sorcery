@@ -217,6 +217,9 @@ sysdef _core
 .core:
 ; write whole process image to a "core" file in reallocated mode
 ; leaf file format
+
+
+
 	ret
 
 sysdef _exit

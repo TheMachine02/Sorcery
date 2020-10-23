@@ -165,7 +165,7 @@ hypervisor:
 	
 	ld	a, 60
 	ld	(vm_delay), a
-	ld	a, 10
+	ld	a, 4
 	ld	(vm_second), a
 .boot_choose_loop:
 	ld	bc, $00083c
@@ -246,11 +246,15 @@ hypervisor:
 	ld	a, (hl)
 	ld	hl, vm_cursor
 	rra
-	jr	nc, $+3
+	jr	nc, .boot_next0
 	inc	(hl)
+	call	.boot_reset_time
+.boot_next0:
 	bit	2, a
-	jr	z, $+3
+	jr	z, .boot_next1
 	dec	(hl)
+	call	.boot_reset_time
+.boot_next1:
 	jp	p, .boot_still_pos
 	ld	(hl), b
 .boot_still_pos:
@@ -289,6 +293,15 @@ hypervisor:
 	lea	iy, ix-16
 	jp	leaf.exec_static
 
+.boot_reset_time:
+	push	af
+	ld	a, 60
+	ld	(vm_delay), a
+	ld	a, 4
+	ld	(vm_second), a
+	pop	af
+	ret
+	
 .boot_search_leaf:
 	ld	b, $34
 	ld	hl, $0C0000

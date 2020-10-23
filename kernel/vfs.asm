@@ -185,17 +185,27 @@ sysdef _open
 	ld	a, EMFILE
 	jp	syserror
 .open_descriptor_found:
-; TODO : mark fifo opened
 	ld	e, 0
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
 	ld	(ix+KERNEL_VFS_FILE_FLAGS), c
+; mark fifo as open (read / write)
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_FIFO
+	jr	nz, .open_check_trunc
+	push	af
+	ld	a, c
+	and	a, KERNEL_VFS_O_RW
+	or	a, (iy+FIFO_ENDPOINT)
+	ld	(iy+FIFO_ENDPOINT), a
+	pop	af
+.open_check_trunc:
 	bit	3, c	; O_TRUNC
 	jr	z, .extract_fd
 ; if KERNEL_VFS_O_TRUNC is set in c, and the file is a normal file (not a fifo or char or block) reset the file to size 0 (drop all data)
-	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_MASK
+	or	a, a
 	jr	nz, .extract_fd
 ; it is a file
 ; drop all data now
