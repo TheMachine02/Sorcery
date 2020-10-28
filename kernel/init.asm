@@ -50,9 +50,9 @@ init:
 	ld	hl, .arch_initramfs
 	call	lz4.decompress
 ; and init the rest of memory with poison
-	ld	hl, $D08000
-	ld	de, $D08001
-	ld	bc, KERNEL_MM_RAM_SIZE - 32769
+	ld	hl, KERNEL_MM_GFP_RAM
+	ld	de, KERNEL_MM_GFP_RAM + 1
+	ld	bc, KERNEL_MM_GFP_RAM_SIZE
 	ld	(hl), KERNEL_HW_POISON
 	ldir
 ; right now, the RAM image is complete
@@ -128,7 +128,7 @@ if CONFIG_MOUNT_TIFS
 	call	tifs.mount
 	ld	hl, .arch_mount_tifs
 	ld	de, .arch_mount_bin
-	call	kvfs.symlink
+	call	_link
 end if
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	hl, .arch_bin_path
