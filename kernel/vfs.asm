@@ -248,7 +248,10 @@ sysdef _close
 	pop	iy
 .close_no:
 ; and put the inode, decrement reference
-	jp	.inode_deref
+	call	.inode_deref
+	or	a, a
+	sbc	hl, hl
+	ret
 
 sysdef _sync
 ; TODO : implement

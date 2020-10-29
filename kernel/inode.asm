@@ -49,8 +49,9 @@ define	phy_destroy_inode	22
 	dl	$0
 	ret		; phy_write (physical write to backing device)
 	dl	$0
-	ret		; phy_sync (physical sync file to backing device)
+	ret		; phy_sync (physical sync file to backing device) OR phy_ioctl
 	dl	$0
+; those depend from the underlying filesystem, so it should be seperate TODO
 	ret		; phy_read_inode (from backing device)
 	dl	$0
 	ret		; phy_write_inode (from backing device)
@@ -65,21 +66,41 @@ define	phy_destroy_inode	22
 ; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
 	
 .inode_deref:
-; derefency inode iy
-; TODO : locking ?
+; please note that parent MAY have been locked, but anyway, it is not mandatory
+; remember, DO NOT CROSS LOCK
+; NOTE : if the reference reach zero, that mean it is a dangling inode. Locking for write will effectively potential other thread (since it is a fifo)
+; derefence inode iy
 	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
 	ret	nz
+; if zero, try lock and drain
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+; recheck for reference count
+	ld	a, (iy+KERNEL_VFS_INODE_REFERENCE)
+	or	a, a
+; non zero mean someone was waiting for the inode and "saved" it
+	jp	nz, atomic_rw.unlock_write
+
+; just destroy it
 .inode_destroy:
-; TODO : implement
-	ret
 ; there is no more reference to this inode, so it can be freely destroyed
-; we also need to free all child
-; first signal the callback
-; 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
-; 	lea	hl, ix+phy_destroy_inode
-; 	call	.inode_call
-; 	lea	hl, iy+KERNEL_VFS_INODE
-; 	jp	kfree
+; Temporary rule : *do not destroy directory*
+; iy = inode
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	jr	nz, .inode_destroy_nf
+	call	.inode_drop_data
+.inode_destroy_nf:
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	ret	z
+; char, block, fifo, symlink, socket
+	ld	ix, (iy+KERNEL_VFS_INODE_OP)
+	lea	hl, ix+phy_destroy_inode
+	push	iy
+; TODO : fix me
+;	call	.inode_call
+	pop	hl
+	jp	kfree
 	
 .inode_get_lock:
 ; hl is path
