@@ -465,11 +465,8 @@ define	phy_destroy_inode	22
 .inode_allocate_copy_end:
 	ld	(de), a
 	pop	bc
-	pop	hl
-; c is still our flags, hl is our inode
-; hl is our node inode
-	push	hl
 	pop	ix
+; c is still our flags
 ; right here, we have the new inode as ix, the parent as iy, and name of inode as de
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
 	ld	(ix+KERNEL_VFS_INODE_FLAGS), c
@@ -553,8 +550,7 @@ define	phy_destroy_inode	22
 ; iy is the directory entry, write the new entry made
 	ld	(iy+0), hl
 ; copy result to ix
-	push	hl
-	pop	ix
+	ld	ix, (iy+0)
 .inode_allocate_free_direct:
 ; ix is the directory entrie
 	pop	iy
@@ -658,8 +654,8 @@ sysdef _symlink
 	ld	c, a
 	ld	a, KERNEL_VFS_TYPE_SYMLINK
 	call	.inode_create
-	ex	(sp), iy
-	pop	ix
+	lea	ix, iy+0
+	pop	iy
 ; iy = the original inode, ix = either nothing or the created inode
 ; if carry = error set
 	ret	c
