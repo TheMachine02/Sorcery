@@ -128,6 +128,7 @@ sysdef _open
 	pop	hl
 ; dir is still locked, ix is our file (or not, if carry)
 	jr	c, .open_create
+	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
 ; check we didn't ask exclusive creation
 ; check if both excl and creat are set
 	ld	a, b
@@ -247,9 +248,7 @@ sysdef _close
 	pop	iy
 .close_no:
 ; and put the inode, decrement reference
-	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
-	ret	nz
-	jp	.inode_destroy
+	jp	.inode_deref
 
 sysdef _sync
 ; TODO : implement

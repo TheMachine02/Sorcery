@@ -64,6 +64,23 @@ define	phy_destroy_inode	22
 ; best is always locking only ONE inode
 ; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
 	
+.inode_deref:
+; derefency inode iy
+; TODO : locking ?
+	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
+	ret	nz
+.inode_destroy:
+; TODO : implement
+	ret
+; there is no more reference to this inode, so it can be freely destroyed
+; we also need to free all child
+; first signal the callback
+; 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
+; 	lea	hl, ix+phy_destroy_inode
+; 	call	.inode_call
+; 	lea	hl, iy+KERNEL_VFS_INODE
+; 	jp	kfree
+	
 .inode_get_lock:
 ; hl is path
 ; return c = error, none lock
@@ -91,7 +108,7 @@ define	phy_destroy_inode	22
 .inode_get_parse_path:
 ; find the entrie in the directory
 	call	.inode_directory_lookup
-	jr	c, .inode_atomic_read_error
+	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
 ; ix is the new inode, iy the old, hl is still our path
 ; ex : /dev/ need to lock dev for write
 	ld	c, KERNEL_VFS_DIRECTORY_NAME_SIZE
@@ -215,6 +232,7 @@ define	phy_destroy_inode	22
 	call	.inode_directory_lookup
 	pop	de
 	jr	c, .inode_atomic_read_error
+	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
 ; ix is the new inode, iy the old, hl is still our path
 ; ex : /dev/ need to lock dev for write
 ; de > copy to hl
@@ -269,16 +287,14 @@ define	phy_destroy_inode	22
 .inode_directory_get_root_lock:
 	ex	de, hl
 	push	hl
-; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_write
-; 	xor	a, 
 	call	.inode_raw_lock_write
 	pop	hl
+	xor	a, a
 	ret
 
 .inode_directory_lookup:
 ; return c if error with a = error (but NO ERRNO SET)
-; return nc if found, ix is the inode lookup
+; return nc if found, ix is the dirent
 ; also can check partial path ('dev/toto' lookup dev)
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
@@ -324,7 +340,6 @@ define	phy_destroy_inode	22
 	ret
 .inode_directory_lookup_match:
 	pop	iy
-	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
 	xor	a, a
 	ret
 
@@ -357,18 +372,6 @@ define	phy_destroy_inode	22
 	pop	bc
 	pop	hl
 	ret
-	
-.inode_destroy:
-; TODO : implement
-	ret
-; there is no more reference to this inode, so it can be freely destroyed
-; we also need to free all child
-; first signal the callback
-; 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
-; 	lea	hl, ix+phy_destroy_inode
-; 	call	.inode_call
-; 	lea	hl, iy+KERNEL_VFS_INODE
-; 	jp	kfree
 
 .inode_call:
 	jp	(hl)
@@ -578,6 +581,7 @@ sysdef _link
 ; de = name, ix = dirent, iy = parent inode
 ; we can lock the old path inode and increase it ref count
 	ex	(sp), iy
+	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
 	ld	(ix+KERNEL_VFS_DIRECTORY_INODE), iy
 	ex	(sp), iy
 ; copy the name of the inode into the directory
@@ -608,8 +612,35 @@ sysdef _link
 .inode_link_error:
 	pop	iy
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	jp	atomic_rw.unlock_write
-	
+	call	atomic_rw.unlock_write
+	scf
+	sbc	hl, hl
+	ret
+
+sysdef _unlink
+; int unlink(const char *pathname);
+.inode_unlink:
+	call	.inode_directory_get_lock
+	ret	c
+; iy = inode, hl = name
+	call	.inode_directory_lookup
+	jp	c, .inode_atomic_write_error
+; ix = dirent, so delete it and deref the children inode
+	ld	hl, KERNEL_MM_NULL
+	lea	de, ix+KERNEL_VFS_DIRECTORY_ENTRY
+	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ldir
+; ix = children inode to deref, iy is parent
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	lea	iy, ix+0
+	call	.inode_deref
+	pop	hl
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
+
 sysdef _symlink
 .inode_symlink:
 ; int symlink(const char* path1, const char* path2)
@@ -697,7 +728,7 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 	call	atomic_rw.unlock_read
 	scf
 	ret
-	
+
 .inode_raw_lock_write:
 ; lock for write & follow symlink
 ; return c and error, nc otherwise
@@ -754,7 +785,7 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 ; iy is inode number
 ; parse the data and unmap everything (+clear everything)
 	ret
-	
+
 sysdef _rename
 .inode_rename:
 ; int rename(const char *oldpath, const char *newpath);
