@@ -184,18 +184,18 @@ hypervisor:
 	ld	hl, vm_second
 	ld	c, (hl)
 	push	bc
-	ld	hl, .boot_string_enter
-	push	hl
-	ld	hl, vm_string_boot
+	ld	bc, .boot_string_enter
+	push	bc
+	inc	hl
 	push	hl
 	call	_sprintf
-	ld	hl, 9
+	pop	bc
+	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	
-	ld	hl, 19*256+0
+	ld	l, h
+	ld	h, 19
 	ld	ix, $000100
-	ld	bc, vm_string_boot
 	call	.putstring	
 	
 	ld	hl, 1*256+3
