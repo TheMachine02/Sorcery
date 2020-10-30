@@ -29,20 +29,30 @@ define	TIFS_TYPE_IMAGE			26
 tifs:
 
 .phy_mem_ops:
-	ret		; phy_read (physical read from backing device)
+	jp	.phy_read
+	ret			; phy_write (physical write to backing device)
 	dl	$0
-	ret		; phy_write (physical write to backing device)
+	jp	.phy_sync	; phy_sync (physical sync file to backing device)
 	dl	$0
-	ret		; phy_sync (physical sync file to backing device)
-	dl	$0
-	ret		; phy_read_inode (from backing device)
+	ret		; phy_read_inode (from backing device) ; not supported
 	dl	$0
 	ret		; phy_write_inode (from backing device)
 	dl	$00
-	ret		; phy_create_inode
+	ret		; phy_create_inode	; not supported
 	dl	$00
 	ret		; phy_destroy_inode
 
+.phy_read:
+; hl = flash adress (NO DMA, TODO)
+	ldir
+	ret
+	
+.phy_sync:
+; tifs work by finding a free spot somewhere and write the file here (also droping the previous file)
+; if all spot are filed, garbage collect and retry (kinda inefficient indeed)
+
+	ret
+	
 .path:
  db "/tifs/", 0
 
@@ -141,7 +151,8 @@ tifs:
 .mount_create_inode:
 	push	hl
 	lea	hl, iy+0
-	ld	a, KERNEL_VFS_TYPE_FILE or KERNEL_VFS_CAPABILITY_DMA
+	ld	a, KERNEL_VFS_TYPE_FILE
+; or KERNEL_VFS_CAPABILITY_DMA
 	push	iy
 	call	kvfs.inode_create
 	pop	ix
@@ -155,10 +166,10 @@ tifs:
 	ld	(iy+KERNEL_VFS_INODE_SIZE), hl
 	ld	bc, .phy_mem_ops
 	ld	(iy+KERNEL_VFS_INODE_OP), bc
-;	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	.mount_data
-	ld	(iy+KERNEL_VFS_INODE_DMA_POINTER), de
-;	pop	hl
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	.mount_data
+; 	ld	(iy+KERNEL_VFS_INODE_DMA_POINTER), de
+	pop	hl
 ; and let go of the lock
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
@@ -199,28 +210,28 @@ tifs:
 	ld	bc, KERNEL_VFS_PERMISSION_RX
 	jr	.mount_create_inode
 	
-; .mount_data:
-; ; hl is size of file, de is disk adress, iy is inode
-; 	lea	iy, iy+KERNEL_VFS_INODE_DATA
-; 	ld	bc, 1024
-; .do_data:
-; 	push	hl
-; 	ld	hl, 64
-; 	call	kmalloc
-; 	push	hl
-; 	pop	ix
-; 	ld	(iy+0), ix
-; 	lea	iy, iy+3
-; 	pop	hl
-; 	ld	a, 16
-; .do_data_inner:
-; 	ld	(ix+1), de
-; 	lea	ix, ix+4
-; 	ex	de, hl
-; 	add	hl, bc
-; 	ex	de, hl
-; 	sbc	hl, bc
-; 	ret	c
-; 	dec	a
-; 	jr	nz, .do_data_inner
-; 	jr	.do_data
+.mount_data:
+; hl is size of file, de is disk adress, iy is inode
+	lea	iy, iy+KERNEL_VFS_INODE_DATA
+	ld	bc, 1024
+.do_data:
+	push	hl
+	ld	hl, 64
+	call	kmalloc
+	push	hl
+	pop	ix
+	ld	(iy+0), ix
+	lea	iy, iy+3
+	pop	hl
+	ld	a, 16
+.do_data_inner:
+	ld	(ix+1), de
+	lea	ix, ix+4
+	ex	de, hl
+	add	hl, bc
+	ex	de, hl
+	sbc	hl, bc
+	ret	c
+	dec	a
+	jr	nz, .do_data_inner
+	jr	.do_data

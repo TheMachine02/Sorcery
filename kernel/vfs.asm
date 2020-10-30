@@ -536,6 +536,7 @@ sysdef _read
 	
 sysdef _write
 .write:
+; FIXME : case of write to dma enabled inode ?
 	call	.fd_pointer_check
 	ret	c
 ; check we have read permission
