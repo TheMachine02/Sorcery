@@ -163,10 +163,10 @@ hypervisor:
 	ld	bc, .boot_string_choose
 	call	.putstring
 	
-	ld	a, 60
-	ld	(vm_delay), a
-	ld	a, 4
-	ld	(vm_second), a
+	ld	hl, vm_delay
+	ld	(hl), 60
+	inc	hl
+	ld	(hl), 4
 .boot_choose_loop:
 	ld	bc, $00083c
 .wait:
