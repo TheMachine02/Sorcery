@@ -193,8 +193,7 @@ hypervisor:
 	ld	hl, 6
 	add	hl, sp
 	ld	sp, hl
-	ld	l, h
-	ld	h, 19
+	ld	hl, 19*256+0
 	ld	ix, $000100
 	call	.putstring	
 	

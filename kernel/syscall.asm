@@ -192,6 +192,10 @@ sysdef _priv_lock
 ; TODO : put this in the certificate ?
 ; flash unlock and lock
 
+if $ > $D00000
+; find a way to put unlock in flash somewhere ?
+end if
+
 sysdef _flash_unlock
 flash.unlock:
 ; need to be in privileged flash actually
