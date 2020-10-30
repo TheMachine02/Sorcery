@@ -186,7 +186,7 @@ sysdef _open
 	ld	a, EMFILE
 	jp	syserror
 .open_descriptor_found:
-	ld	e, 0
+	ld	e, d
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 ; write important file flags
