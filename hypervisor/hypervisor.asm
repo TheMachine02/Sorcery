@@ -294,12 +294,12 @@ hypervisor:
 	jp	leaf.exec_static
 
 .boot_reset_time:
-	push	af
-	ld	a, 60
-	ld	(vm_delay), a
-	ld	a, 4
-	ld	(vm_second), a
-	pop	af
+	push	hl
+	ld	hl, vm_delay
+	ld	(hl), 60
+	inc	hl
+	ld	(hl), 4
+	pop	hl
 	ret
 	
 .boot_search_leaf:
