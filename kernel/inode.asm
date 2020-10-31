@@ -601,6 +601,7 @@ sysdef _link
 	jr	z, .inode_link_copy_end
 	ldi
 	jp	pe, .inode_link_copy_name
+	xor	a, a
 .inode_link_copy_end:
 	ld	(de), a
 ; hardlink was created
