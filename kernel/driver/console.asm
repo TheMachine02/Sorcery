@@ -611,10 +611,10 @@ console:
 	ld	de, console_line
 	ld	(console_line_head), de
 	dec	de
-	ld	hl, KERNEL_DEV_NULL
+	ld	hl, $E41C00
 	ld	bc, CONSOLE_LINE_SIZE + 1
 	ldir
-	ld	c, 28
+	ld	c, h
 	ld	hl, .PROMPT
 	jp	.phy_write
 
