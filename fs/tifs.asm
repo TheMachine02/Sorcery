@@ -86,10 +86,18 @@ tifs:
 .mount_parse_sector:
 	ld	a, (hl)
 ; unexpected value, quit current sector
-	cp	a, TIFS_FILE_DELETED
-	jr	z, .mount_skip_file
+	inc	hl
+	inc.s	bc
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
 	cp	a, TIFS_FILE_VALID
 	jr	z, .mount_add_file
+; mount_skip_file	
+	add	hl, bc
+	cp	a, TIFS_FILE_DELETED
+	jr	z, .mount_parse_sector
 	pop	hl
 .mount_invalid_sector:
 	ld	bc, 65536
@@ -100,23 +108,8 @@ tifs:
 	djnz	.mount_parse
 	lea	hl, iy+0
 	jp	kfree
-	
-.mount_skip_file:
-	inc	hl
-	inc.s	bc
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
-	inc	hl
-	add	hl, bc
-	jr	.mount_parse_sector
+
 .mount_add_file:
-	inc	hl
-	inc.s	bc
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
-	inc	hl
 	push	hl
 	add	hl, bc
 	ex	(sp), hl
@@ -140,6 +133,9 @@ tifs:
 ; iy is our file name, let's create inode
 ; a = file type, hl = data
 ; offset based on the type ?
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
 	cp	a, TIFS_TYPE_APPV
 	jr	z, .mount_appv
 	cp	a, TIFS_TYPE_EXE
@@ -148,9 +144,6 @@ tifs:
 ; unknown file type for now
 	jr	nz, .mount_strange_file
 .mount_exec:
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
 	inc	hl
 	dec.s	bc
 	dec	bc
@@ -195,9 +188,6 @@ tifs:
 	ret
 	
 .mount_appv:
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
 	push	bc
 ; RO fs for now
 	ld	bc, KERNEL_VFS_PERMISSION_R
