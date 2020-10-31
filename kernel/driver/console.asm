@@ -99,18 +99,12 @@ console:
 ; restore keyboard ?
 	ld	a, DRIVER_KEYBOARD_SCAN_CONTINUOUS
 	ld	(DRIVER_KEYBOARD_CTRL), a
-	push	hl
-	push	iy
-	ld	hl, DRIVER_VIDEO_IRQ_LOCK
-	inc	hl
-	ld	hl, (hl)
+	ld	de, (hl)
+	ld	hl, (DRIVER_VIDEO_IRQ_LOCK+1)
 	ld	c, (hl)
 	ld	a, SIGCONT
 	call	signal.kill
-	pop	iy
-	pop	hl
 ; kill the thread now
-	ld	de, (hl)
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	ld	bc, 0
 	ld	(iy+CONSOLE_TAKEOVER), bc
