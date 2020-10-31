@@ -9,7 +9,7 @@ flash:
 	ld	bc, .phy_program_size
 	ldir
 	ld	hl, .FLASH_DEV
-	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_BLOCK_DEVICE
+	ld	c, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_BLOCK_DEVICE
 	ld	de, .phy_mem_ops
 	jp	_mknod
 
@@ -52,7 +52,7 @@ end if
 	or	a, e
 	call	nz, .phy_suspend
 	ld	a, (hl)
-	cp	a, $FF
+	inc	a
 	jr	nz, .phy_erase_loop
 	ret
 
@@ -100,10 +100,8 @@ end if
 	call	.unlock
 ; we will write hl to de address
 .phy_write_loop:
-	ld	a, (hl)
-	ex	de, hl
+	ld	a, (de)
 	and	a, (hl)
-	ex	de, hl
 	push	hl
 	ld	hl, $000AAA
 	ld	(hl), l
