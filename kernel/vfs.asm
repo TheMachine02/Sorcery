@@ -1127,8 +1127,22 @@ sysdef _dup
 	ret
 	
 sysdef _chroot
-; TODO : implement
+; int chroot(const char *path);
 .chroot:
+	call	.inode_get_lock
+	ret	c
+; iy is the inode
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	jp	nz, .inode_atomic_write_error
+; iy is valid
+	ld	ix, (kthread_current)
+	ld	(ix+KERNEL_THREAD_ROOT_DIRECTORY), ix
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
 	ret
 
 sysdef _access

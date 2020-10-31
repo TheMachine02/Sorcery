@@ -34,8 +34,8 @@ sysjump:
 	jp	_open
 	jp	_close
 	jp	_rename
-	jp	_enosys		; _link
-	jp	_enosys		; _unlink
+	jp	_link
+	jp	_unlink
 	jp	_symlink
 	jp	_read
 	jp	_write

@@ -1,9 +1,10 @@
 FAT 12 flash
-leaf load
-library load
 memory management
 keyboard stdin
-file execution within console (check /bin/ if command not found, else exec /bin/ which override console)
+
+* program execution and library loading
+ - rework LEAF format to be smaller / better optimized
+
 
 * the thread gid & geid update
 * use thread group id share by a parent and all its children

@@ -68,7 +68,7 @@ define	phy_destroy_inode	22
 .inode_deref:
 ; please note that parent MAY have been locked, but anyway, it is not mandatory
 ; remember, DO NOT CROSS LOCK
-; NOTE : if the reference reach zero, that mean it is a dangling inode. Locking for write will effectively potential other thread (since it is a fifo)
+; NOTE : if the reference reach zero, that mean it is a dangling inode. Locking for write will effectively drain potential other thread (since it is a fifo)
 ; derefence inode iy
 	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
 	ret	nz
@@ -106,7 +106,8 @@ define	phy_destroy_inode	22
 ; hl is path
 ; return c = error, none lock
 ; return nc = iy is the locked for write inode
-	ld	iy, kvfs_root
+	ld	iy, (kthread_current)
+	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	ld	a, (hl)
 	cp	a, '/'
 	jr	z, .inode_get_from_root
@@ -204,7 +205,8 @@ define	phy_destroy_inode	22
 ; exemple
 ; /dev/ lock / for write and give back dev//0
 ; /dev/hello lock /dev/ for write and give back hello/0
-	ld	iy, kvfs_root
+	ld	iy, (kthread_current)
+	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	ld	a, (hl)
 	cp	a, '/'
 	jr	z, .inode_directory_get_from_root

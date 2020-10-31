@@ -49,14 +49,15 @@ define	KERNEL_THREAD_LIST_NEXT			$37
 define	KERNEL_THREAD_LIST_PREVIOUS		$3A
 define	KERNEL_THREAD_PROFIL_STRUCTURE		$3D
 define	KERNEL_THREAD_WORKING_DIRECTORY		$40	; pointer to the directory inode
-define	KERNEL_THREAD_TIME_CHILD		$43
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$46	; file descriptor table, TODO : move it to allocated kmem_cache
+define	KERNEL_THREAD_ROOT_DIRECTORY		$43	; pointer to the root directory
+define	KERNEL_THREAD_TIME_CHILD		$46
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$49	; file descriptor table, TODO : move it to allocated kmem_cache
 ; up to $100, table is 189 bytes or 23 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 21 descriptors usables ;
 
 define	KERNEL_THREAD_HEADER_SIZE		$100
 define	KERNEL_THREAD_STACK_SIZE		8192	; 3964 bytes usable
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	22
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	21
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
@@ -134,6 +135,8 @@ sysdef _thread
 	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0
 	ld	hl, kvfs_root
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
+; TODO : inherit from parent
+	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
 ; increase reference count of directory
 	ld	c, KERNEL_VFS_INODE_REFERENCE
 	add	hl, bc
