@@ -152,8 +152,7 @@ sysdef _thread
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
 ; the stack adress is iy + STACK_SIZE - 27
-	lea	hl, iy-27
-	ld	bc, KERNEL_THREAD_STACK_SIZE
+	ld	bc, KERNEL_THREAD_STACK_SIZE-13-256-27
 	add	hl, bc
 	ld	(iy+KERNEL_THREAD_STACK), hl
 ; map the thread to be transparent to the scheduler
