@@ -127,9 +127,9 @@ sysdef _thread
 	add	iy, de
 ; setup the default parameter
 	ld	bc, $100
-	ld	hl, KERNEL_MM_NULL
+	ld	hl, KERNEL_MM_NULL+1
 	ldir
-	ld	(iy+KERNEL_THREAD_QUANTUM), 1
+	ld	(iy+KERNEL_THREAD_QUANTUM), l
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
 	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0

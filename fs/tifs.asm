@@ -218,9 +218,8 @@ tifs:
 	push	hl
 	ld	hl, 64
 	call	kmalloc
-	push	hl
-	pop	ix
-	ld	(iy+0), ix
+	ld	(iy+0), hl
+	ld	ix, (iy+0)
 	lea	iy, iy+3
 	pop	hl
 	ld	a, 16

@@ -233,12 +233,12 @@ sysdef _close
 	ret	c
 ; ix is the pointer to fd, iy is the inode
 	lea	de, ix+0
-	ld	hl, KERNEL_MM_NULL
+	ld	hl, $E40000+(KERNEL_VFS_TYPE_MASK*256)
 	ld	bc, KERNEL_VFS_FILE_DESCRIPTOR_SIZE
 	ldir
 ; if the inode is KERNEL_VFS_TYPE_FILE
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_MASK
+	and	a, h					
 	jr	nz, .close_no
 ; call the special sync file (write all dirty to flash)
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
