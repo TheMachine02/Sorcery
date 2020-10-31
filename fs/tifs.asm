@@ -145,9 +145,20 @@ tifs:
 	cp	a, TIFS_TYPE_EXE
 	jr	z, .mount_exec
 	cp	a, TIFS_TYPE_PROT_EXE
-	jr	z, .mount_exec
 ; unknown file type for now
-	jr	.mount_strange_file
+	jr	nz, .mount_strange_file
+.mount_exec:
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+	dec.s	bc
+	dec	bc
+	push	bc
+; skip $EF7B identifier of 8xp exectuable
+	inc	hl
+	inc	hl
+	ld	bc, KERNEL_VFS_PERMISSION_RX
 .mount_create_inode:
 	push	hl
 	lea	hl, iy+0
@@ -174,8 +185,6 @@ tifs:
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	pop	iy
-	pop	hl
-	jp	.mount_parse_sector
 .mount_strange_file:
 	pop	hl
 	jp	.mount_parse_sector
@@ -194,20 +203,6 @@ tifs:
 	push	bc
 ; RO fs for now
 	ld	bc, KERNEL_VFS_PERMISSION_R
-	jr	.mount_create_inode
-.mount_exec:
-	inc.s	bc
-	ld	c, (hl)
-	inc	hl
-	ld	b, (hl)
-	inc	hl
-	dec	bc
-	dec	bc
-	push	bc
-; skip $EF7B identifier of 8xp exectuable
-	inc	hl
-	inc	hl
-	ld	bc, KERNEL_VFS_PERMISSION_RX
 	jr	.mount_create_inode
 	
 .mount_data:
