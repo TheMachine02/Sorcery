@@ -99,18 +99,12 @@ console:
 ; restore keyboard ?
 	ld	a, DRIVER_KEYBOARD_SCAN_CONTINUOUS
 	ld	(DRIVER_KEYBOARD_CTRL), a
-	push	hl
-	push	iy
-	ld	hl, DRIVER_VIDEO_IRQ_LOCK
-	inc	hl
-	ld	hl, (hl)
+	ld	de, (hl)
+	ld	hl, (DRIVER_VIDEO_IRQ_LOCK+1)
 	ld	c, (hl)
 	ld	a, SIGCONT
 	call	signal.kill
-	pop	iy
-	pop	hl
 ; kill the thread now
-	ld	de, (hl)
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	ld	bc, 0
 	ld	(iy+CONSOLE_TAKEOVER), bc
@@ -405,39 +399,26 @@ console:
 ; de = address
 	ld	hl, 40
 	add	hl, de
-	ex	de, hl
-	push	de
+	push	hl
+	ld	de, 4
 	ld	a, 2
 	ld	c, 8
 .color_block_b:
 	ld	b, 24
 .color_block:
-	ld	(de), a
-	inc	de
+	ld	(hl), a
+	inc	hl
 	djnz	.color_block
 	inc	a
+	add	hl, de
 	dec	c
-	inc	de
-	inc	de
-	inc	de
-	inc	de
 	jr	nz, .color_block_b
 	pop	de
 	ld	hl, 320
 	add	hl, de
 	ex	de, hl
-	ld	a, 10
-	ld	c,220
-.color_copy_block:
+	ld	bc,(320*9)+220
 	ldir
-	ld	c, 100
-	ex	de, hl
-	add	hl, bc
-	ex	de, hl
-	ld	c,220
-	sbc	hl, bc
-	dec	a
-	jr	nz, .color_copy_block
 	ld	iy, console_dev
 	call	.phy_new_line
 	jp	.prompt
