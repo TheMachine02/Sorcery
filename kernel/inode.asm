@@ -469,6 +469,7 @@ define	phy_destroy_inode	22
 	jr	z, .inode_allocate_copy_end
 	ldi
 	jp	pe, .inode_allocate_copy_name
+	xor	a, a
 .inode_allocate_copy_end:
 	ld	(de), a
 	pop	bc
