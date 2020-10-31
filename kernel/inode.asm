@@ -727,8 +727,10 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 	ld	a, ELOOP
 
 .inode_raw_error:
+	push	af
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
+	pop	af
 	scf
 	ret
 
