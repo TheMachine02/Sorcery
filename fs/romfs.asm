@@ -59,8 +59,7 @@ romfs:
 	call	.checksum
 ; compare the checksum and the value stored
 	ld	de, (ix+ROMFS_CHECKSUM)
-	ld	c, (ix+ROMFS_CHECKSUM+3)
-	sub	a, c
+	sub	a, (ix+ROMFS_CHECKSUM+3)
 	sbc	hl, de
 	ret
 	
