@@ -197,7 +197,7 @@ hypervisor:
 	ld	ix, $000100
 	call	.putstring	
 	
-	ld	hl, 1*256+3
+	lea	hl, ix+3
 .boot_display_name:
 	ld	a, (vm_guest_count)
 	ld	b, a
