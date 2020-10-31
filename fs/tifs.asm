@@ -157,9 +157,9 @@ tifs:
 	push	bc
 ; skip $EF7B identifier of 8xp exectuable
 	inc	hl
-	inc	hl
 	ld	bc, KERNEL_VFS_PERMISSION_RX
 .mount_create_inode:
+	inc	hl
 	push	hl
 	lea	hl, iy+0
 	ld	a, KERNEL_VFS_TYPE_FILE
@@ -198,7 +198,6 @@ tifs:
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
-	inc	hl
 	push	bc
 ; RO fs for now
 	ld	bc, KERNEL_VFS_PERMISSION_R
