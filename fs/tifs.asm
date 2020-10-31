@@ -195,7 +195,6 @@ tifs:
 	ret
 	
 .mount_appv:
-	inc.s	bc
 	ld	c, (hl)
 	inc	hl
 	ld	b, (hl)
