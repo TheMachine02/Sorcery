@@ -119,10 +119,8 @@ define	phy_destroy_inode	22
 	inc	hl
 	ld	a, (hl)
 	or	a, a
-	jp	z, .inode_get_direct_lock
+	jp	z, .inode_raw_lock_write
 	push	hl
-;	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-;	call	atomic_rw.lock_read
 	call	.inode_raw_lock_read
 ; iy is the locked inode (and assured to be a file)
 	pop	hl
@@ -130,6 +128,7 @@ define	phy_destroy_inode	22
 .inode_get_parse_path:
 ; find the entrie in the directory
 	call	.inode_directory_lookup
+	jr	c, .inode_atomic_read_error
 	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
 ; ix is the new inode, iy the old, hl is still our path
 ; ex : /dev/ need to lock dev for write
@@ -152,8 +151,6 @@ define	phy_destroy_inode	22
 ; we have the new path at hl
 ; lock dance
 	push	hl
-; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_read
 	call	.inode_raw_lock_read_ex
 	pop	hl
 	jr	c, .inode_atomic_read_error
@@ -164,19 +161,13 @@ define	phy_destroy_inode	22
 	pop	hl
 	jr	.inode_get_parse_path
 .inode_get_lock_entry:
-; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_write
 	call	.inode_raw_lock_write_ex
 	jr	c, .inode_atomic_read_error
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	lea	iy, ix+0
-	xor	a, a
+	or	a, a
 	ret
-.inode_get_direct_lock:
-; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_write
-	jp	.inode_raw_lock_write
 
 .inode_atomic_read_error:
 	push	af
@@ -244,8 +235,6 @@ define	phy_destroy_inode	22
 	jr	z, .inode_directory_get_root_lock
 	ex	de, hl
 	push	hl
-; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_read
 	call	.inode_raw_lock_read
 	pop	hl
 	jp	c, syserror
@@ -281,8 +270,6 @@ define	phy_destroy_inode	22
 ; we have the new path at de
 ; lock dance
 	push	hl
-; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_read
 	call	.inode_raw_lock_read_ex
 	pop	hl
 	jp	c, .inode_atomic_read_error
@@ -295,8 +282,6 @@ define	phy_destroy_inode	22
 .inode_directory_get_lock_entry:
 	ex	de, hl
 	push	hl
-; 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	call	atomic_rw.lock_write
 	call	.inode_raw_lock_write_ex
 	pop	hl
 	jp	c, .inode_atomic_read_error
@@ -305,14 +290,13 @@ define	phy_destroy_inode	22
 	call	atomic_rw.unlock_read
 	pop	hl
 	lea	iy, ix+0
-	xor	a, a
+	or	a, a
 	ret
 .inode_directory_get_root_lock:
 	ex	de, hl
 	push	hl
 	call	.inode_raw_lock_write
 	pop	hl
-	xor	a, a
 	ret
 
 .inode_directory_lookup:
