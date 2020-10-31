@@ -283,17 +283,17 @@ atomic_mutex:
 	ret
 
 .init:
-	push	hl
-	push	de
 	push	bc
-	ex	de, hl
-	ld	hl, .init_data
-	ld	bc, KERNEL_ATOMIC_MUTEX_SIZE
-	ldir
+	ld	bc, $FF00FE
+	ld	(hl), bc
+	inc	hl
+	inc	hl
+	inc	hl
+	mlt	bc
+	ld	(hl), bc
+	dec	hl
+	dec	hl
+	dec	hl
 	pop	bc
-	pop	de
-	pop	hl
 	ret
 	
-.init_data:
- db	$FE, $00, $FF, $00, $00, $00
