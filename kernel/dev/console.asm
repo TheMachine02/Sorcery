@@ -372,8 +372,9 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	add	hl, de
 	ld	bc, 76800 - 11*320
 	ldir
-	ld	hl, $E40000
-	ld	bc, 11*320
+	ld	hl, $E40000+(11*320)
+	ld	b, h
+	ld	c, l
 	ldir
 	pop	bc
 	ret
