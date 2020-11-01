@@ -78,10 +78,8 @@ hypervisor:
 	jr	z, .init_failure
 	ld	bc, 8
 	add	hl, bc
-	jp	(hl)
 .init_failure:
-; hum hum
-	rst	0
+	jp	(hl)
 
 .interrupt:
 	bit	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
