@@ -106,7 +106,6 @@ fifo:
 .read_empty:
 ; bc is our data left to be read
 	pop	hl
-	or	a, a
 	sbc	hl, bc
 	ret
 	
