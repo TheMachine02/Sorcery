@@ -469,6 +469,7 @@ define	phy_destroy_inode	22
 	jr	z, .inode_allocate_copy_end
 	ldi
 	jp	pe, .inode_allocate_copy_name
+	xor	a, a
 .inode_allocate_copy_end:
 	ld	(de), a
 	pop	bc
@@ -600,6 +601,7 @@ sysdef _link
 	jr	z, .inode_link_copy_end
 	ldi
 	jp	pe, .inode_link_copy_name
+	xor	a, a
 .inode_link_copy_end:
 	ld	(de), a
 ; hardlink was created
@@ -756,10 +758,10 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
 	cp	a, KERNEL_VFS_TYPE_SYMLINK
-	jr	nz, .inode_raw_lcw
-; here, swap lock
 	push	hl
 	inc	hl
+	jr	nz, .inode_raw_lcw
+; here, swap lock
 	call	atomic_rw.lock_read
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
@@ -770,8 +772,6 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 	jr	.inode_raw_error
 .inode_raw_lcw:
 ; unlock read iy and lock write hl
-	push	hl
-	inc	hl
 	call	atomic_rw.lock_write
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read

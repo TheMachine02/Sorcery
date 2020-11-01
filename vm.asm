@@ -82,6 +82,7 @@ sulphur:
 	call	_sprintf
 	ld	hl, 5*3
 	add	hl, sp
+	ld	sp, hl
 ; copy the detected OS string to the correct area
 	ld	hl, vm_string
 	ld	de, guest_tios_name_ram
