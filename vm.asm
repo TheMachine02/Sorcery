@@ -82,6 +82,7 @@ sulphur:
 	call	_sprintf
 	ld	hl, 5*3
 	add	hl, sp
+	ld	sp, hl
 ; copy the detected OS string to the correct area
 	ld	hl, vm_string
 	ld	de, guest_tios_name_ram
@@ -90,7 +91,8 @@ sulphur:
 .append_os:
 	ld	hl, LOADER_OS_APPEND
 	ld	de, LOADER_RAM
-	ld	bc, 65536
+	dec.s	bc
+	inc	bc
 	ldir
 	ld	hl, hypervisor_ram
 	ld	de, VM_HYPERVISOR_RAM_ADRESS
