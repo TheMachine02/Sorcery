@@ -100,13 +100,12 @@ fifo:
 	pop	bc
 	pop	af
 ; if po set, we have read all
-	jp	pe, .read
+	jp	pe, .read_loop
 	pop	hl
 	ret
 .read_empty:
 ; bc is our data left to be read
 	pop	hl
-	or	a, a
 	sbc	hl, bc
 	ret
 	
