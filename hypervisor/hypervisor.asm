@@ -78,10 +78,8 @@ hypervisor:
 	jr	z, .init_failure
 	ld	bc, 8
 	add	hl, bc
-	jp	(hl)
 .init_failure:
-; hum hum
-	rst	0
+	jp	(hl)
 
 .interrupt:
 	bit	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
@@ -90,7 +88,6 @@ hypervisor:
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .interrupt_failure
 	jp	(hl)
 .interrupt_failure:
 ; we'll need to acknowledge interrupt ourselves if we are in this very special case where interrupt are on, but we have not yet reached boot code (stupid boot 5.0.0)
