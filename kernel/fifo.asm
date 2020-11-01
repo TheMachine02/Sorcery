@@ -100,7 +100,7 @@ fifo:
 	pop	bc
 	pop	af
 ; if po set, we have read all
-	jp	pe, .read
+	jp	pe, .read_loop
 	pop	hl
 	ret
 .read_empty:
