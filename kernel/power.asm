@@ -144,7 +144,7 @@ sysdef _shutdown
 	out0	($05), a
 	ld	a, $03
 	out0	($06), a
-	wait
+	djnz	$
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
 ; usb ?
@@ -187,11 +187,11 @@ sysdef _shutdown
 ; setup timings
 	ld	hl, video.LCD_TIMINGS
 	ld	de, DRIVER_VIDEO_TIMING0 + 1
-	ld	c, 8
+	ld	bc, 8
 	ldir
 	ld	hl, (kpower_lcd_param)
 	ld	de, DRIVER_VIDEO_SCREEN
-	ld	bc, 16
+	ld	c, 16
 	ldir
 .cycle_error:
 	ld	hl, (kpower_lcd_param)
