@@ -1015,7 +1015,7 @@ sysdef _lseek
 .lseek_set:
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 	ex	de, hl
-	or	a, aread_char_device
+	or	a, a
 	ret
 
 sysdef _fstat
