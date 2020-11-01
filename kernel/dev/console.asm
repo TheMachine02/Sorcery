@@ -43,6 +43,11 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	jp	.phy_read
 	jp	.phy_write_ex
 	jp	.phy_ioctl
+	ret
+	dl	0
+	ret
+	dl	0
+	ret
 
 .phy_read:
 ; file offset hl, buffer is de, bc

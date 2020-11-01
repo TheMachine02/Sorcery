@@ -72,7 +72,6 @@ fifo:
 .write_full:
 	pop	bc
 	pop	hl
-	or	a, a
 	sbc	hl, bc
 	ret
 

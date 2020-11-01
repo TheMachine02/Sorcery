@@ -14,6 +14,11 @@ null:
 	jp	.phy_read
 	jp	.phy_write
 	jp	.phy_ioctl
+	ret
+	dl	0
+	ret
+	dl	0
+	ret
 	
 .phy_read:
 ; offset hl to de for bc size
@@ -47,6 +52,11 @@ zero:
 	jp	.phy_read
 	jp	.phy_write
 	jp	.phy_ioctl
+	ret
+	dl	0
+	ret
+	dl	0
+	ret
 	
 .phy_read:
 ; offset hl to de for bc size

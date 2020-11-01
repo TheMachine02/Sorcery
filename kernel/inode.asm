@@ -13,10 +13,9 @@ define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all
 ; in case of fifo, hold the fifo structure (15 bytes) (data block point to slab structure of 64 bytes with CACHE:BLOCK)
 ; SO FIFO : 32 bytes
 define	KERNEL_VFS_INODE_FIFO_DATA		16
-; in case of DMA, we only need to store 256 bytes indirect for the write structure
-; so 4 indirect page of 64 bytes = 12 bytes + 3 bytes DMA adress
+
 define	KERNEL_VFS_INODE_DMA_DATA		16
-define	KERNEL_VFS_INODE_DMA_POINTER		28
+define	KERNEL_VFS_INODE_DMA_POINTER		1
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_INODE		0	; 3 bytes pointer to inode
@@ -24,7 +23,7 @@ define	KERNEL_VFS_DIRECTORY_NAME		3	; name,
 
 define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
-define	KERNEL_VFS_INODE_NODE_SIZE_DMA		32	; inode size in case of DMA
+define	KERNEL_VFS_INODE_NODE_SIZE_DMA		64	; inode size in case of DMA
 define	KERNEL_VFS_INODE_NODE_SIZE_FIFO		32	; inode size in case of fifo
 define	KERNEL_VFS_INODE_NODE_SIZE_SYMLINK	16	; symlink inode size
 
@@ -32,31 +31,28 @@ define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		16	; 16 bytes per entries, or 4 entries 
 define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
 
 ; block device & char device operation ;
-; files operations ;
+; files operations, take special entries ;
+; expect call with inode lock held ... ;
 define	phy_read		0
 define	phy_write		4
 define	phy_sync		8
 define	phy_ioctl		8
-; inode operation ;
+; inode operation, take inode ;
 define	phy_read_inode		12
-define	phy_write_inode		16
-define	phy_create_inode	18
-define	phy_destroy_inode	22
+define	phy_sync_inode		16
+define	phy_destroy_inode	20
 
 ; jump table for physical operation
 .phy_none:
-	ret		; phy_read (physical read from backing device)
+	ret		; phy_read (physical read page from backing device)
 	dl	$0
-	ret		; phy_write (physical write to backing device)
+	ret		; phy_write (physical write page to backing device)
 	dl	$0
 	ret		; phy_sync (physical sync file to backing device) OR phy_ioctl
 	dl	$0
-; those depend from the underlying filesystem, so it should be seperate TODO
-	ret		; phy_read_inode (from backing device)
+	ret		; phy_read_inode (from backing device) : happen at mount time for supported filesystem
 	dl	$0
-	ret		; phy_write_inode (from backing device)
-	dl	$00
-	ret		; phy_create_inode
+	ret		; phy_sync_inode (sync the inode to the backing device and create it if it doesn't exist), mostly happen at umount time
 	dl	$00
 	ret		; phy_destroy_inode
 
@@ -69,6 +65,7 @@ define	phy_destroy_inode	22
 ; please note that parent MAY have been locked, but anyway, it is not mandatory
 ; remember, DO NOT CROSS LOCK
 ; NOTE : if the reference reach zero, that mean it is a dangling inode. Locking for write will effectively drain potential other thread (since it is a fifo)
+; NOTE : do NOT call this with lock held
 ; derefence inode iy
 	dec	(iy+KERNEL_VFS_INODE_REFERENCE)
 	ret	nz
@@ -93,12 +90,11 @@ define	phy_destroy_inode	22
 .inode_destroy_nf:
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ret	z
-; char, block, fifo, symlink, socket
+; char, block, fifo, symlink, socket, file
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
 	lea	hl, ix+phy_destroy_inode
 	push	iy
-; TODO : fix me
-;	call	.inode_call
+	call	.inode_call
 	pop	hl
 	jp	kfree
 	
@@ -441,9 +437,9 @@ define	phy_destroy_inode	22
 	cp	a, KERNEL_VFS_TYPE_SYMLINK
 	jr	z, .node_regular
 	add	hl, hl
-; size = dma or fifo
-	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, c
-	jr	nz, .node_regular
+; fifo ?
+;	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, c
+;	jr	nz, .node_regular
 	cp	a, KERNEL_VFS_TYPE_FIFO
 	jr	z, .node_regular
 	add	hl, hl

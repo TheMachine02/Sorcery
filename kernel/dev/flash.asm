@@ -20,6 +20,11 @@ flash:
 	jp	.phy_read
 	jp	.phy_write
 	jp	.phy_ioctl
+	ret
+	dl	0
+	ret
+	dl	0
+	ret
 
 .phy_program:
 

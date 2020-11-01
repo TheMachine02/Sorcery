@@ -238,7 +238,7 @@ sysdef _close
 	ldir
 ; if the inode is KERNEL_VFS_TYPE_FILE
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, h					
+	and	a, h
 	jr	nz, .close_no
 ; call the special sync file (write all dirty to flash)
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
@@ -317,7 +317,8 @@ sysdef _read
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 	pop	hl
-	ld	bc, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	ld	bc, (ix+KERNEL_VFS_INODE_DMA_POINTER)
 	add	hl, bc
 	pop	bc
 	ldir

@@ -25,7 +25,8 @@ sysdef _execve
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, l
 	jr	z, .execve_no_dma_xip
 ; does the file support XIP ?
-	ld	ix, (iy+KERNEL_VFS_INODE_DMA_POINTER)
+	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
 	ld	a, (ix+LEAF_HEADER_FLAGS)
 	and	a, LF_XIP
 ; if not, well need to reallocate anyway, so fall back into the default section

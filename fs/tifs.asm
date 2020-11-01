@@ -30,29 +30,56 @@ tifs:
 
 .phy_mem_ops:
 	jp	.phy_read
-	ret			; phy_write (physical write to backing device)
+	ret
 	dl	$0
-	jp	.phy_sync	; phy_sync (physical sync file to backing device)
-	dl	$0
+	jp	.phy_sync
 	ret		; phy_read_inode (from backing device) ; not supported
 	dl	$0
-	ret		; phy_write_inode (from backing device)
+	ret		; phy_sync_inode ; not supported (no inode data written)
 	dl	$00
-	ret		; phy_create_inode	; not supported
-	dl	$00
-	ret		; phy_destroy_inode
+	jp	.phy_destroy
 
 .phy_read:
-; hl = flash adress (NO DMA, TODO)
 	ldir
 	ret
 	
 .phy_sync:
 ; tifs work by finding a free spot somewhere and write the file here (also droping the previous file)
 ; if all spot are filed, garbage collect and retry (kinda inefficient indeed)
-
 	ret
-	
+
+.phy_destroy:
+; marking the variable as removed in flash
+; iy = inode
+	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	ld	hl, (ix+KERNEL_VFS_INODE_DMA_POINTER)
+; hl is pointer to flash memory
+; back search the begin of the variable
+	dec	hl
+	dec	hl
+	dec	hl
+	ex	de, hl
+	ld	hl, -6
+	add	hl, de
+	ex	de, hl
+.field_search:
+; search the TIFS_FILE_ADRESS field by checking if de = bc
+	ld	bc, (hl)
+	ex	de, hl
+	or	a, a
+	sbc	hl, bc
+	add	hl, bc
+	dec	hl
+	dec	de
+	jr	nz, .field_search
+; hl is the TIFS_FILE_ADRESS, bc is the base adress
+; so write $F0 to bc adress with flash routine
+	or	a, a
+	sbc	hl, hl
+	add	hl, bc
+	ld	bc, 1
+	jp	flash.phy_write
+
 .path:
  db "/tifs/", 0
 
@@ -155,8 +182,7 @@ tifs:
 	inc	hl
 	push	hl
 	lea	hl, iy+0
-	ld	a, KERNEL_VFS_TYPE_FILE
-; or KERNEL_VFS_CAPABILITY_DMA
+	ld	a, KERNEL_VFS_TYPE_FILE or KERNEL_VFS_CAPABILITY_DMA
 	push	iy
 	call	kvfs.inode_create
 	pop	ix
@@ -172,10 +198,9 @@ tifs:
 	ld	(iy+KERNEL_VFS_INODE_OP), bc
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	.mount_data
-; 	ld	(iy+KERNEL_VFS_INODE_DMA_POINTER), de
 	pop	hl
 ; and let go of the lock
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	pop	iy
 .mount_strange_file:
