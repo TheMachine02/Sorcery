@@ -650,7 +650,7 @@ sysdef _write
 	srl	h
 	rra
 ; now, we need the modulo
-	ld	de, 0
+	inc.s	de
 	ld	e, (ix+KERNEL_VFS_FILE_OFFSET)
 ; get the last digit
 	ld	a, (ix+KERNEL_VFS_FILE_OFFSET+1)
@@ -1001,28 +1001,23 @@ sysdef _lseek
 	dec	a
 	jr	z, .lseek_cur
 	dec	a
-	jr	z, .lseek_end
 	ld	a, EINVAL
+	jp	nz, syserror
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
+	jr	.lseek_end
+.lseek_cur:
+	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
+.lseek_end:	
+	add	hl, de
+	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
+	ret	nc
+	ld	a, EOVERFLOW
 	jp	syserror
 .lseek_set:
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 	ex	de, hl
 	or	a, a
 	ret
-.lseek_cur:
-	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
-	add	hl, de
-	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	ret	nc
-	ld	a, EOVERFLOW
-	jp	syserror
-.lseek_end:
-	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
-	add	hl, de
-	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	ret	nc
-	ld	a, EOVERFLOW
-	jp	syserror
 
 sysdef _fstat
 .fstat:
@@ -1085,9 +1080,9 @@ sysdef _stat
 	ld	(ix+STAT_RDEVICE), hl
 	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
 	ld	(ix+STAT_SIZE), hl
-	ld	hl, 1024
-	ld	(ix+STAT_BLKSIZE), hl
-	ld	de, 0
+	ld	de, 1024
+	ld	(ix+STAT_BLKSIZE), de
+	ld	d, e
 ; 256 entries to parse, it is quite slow
 ; TODO : find a faster way to count those block
 	ld	c, 16
