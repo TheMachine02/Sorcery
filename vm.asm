@@ -91,8 +91,7 @@ sulphur:
 .append_os:
 	ld	hl, LOADER_OS_APPEND
 	ld	de, LOADER_RAM
-	dec.s	bc
-	inc	bc
+	ld	bc, 65536
 	ldir
 	ld	hl, hypervisor_ram
 	ld	de, VM_HYPERVISOR_RAM_ADRESS
