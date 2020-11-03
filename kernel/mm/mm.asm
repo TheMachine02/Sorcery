@@ -352,7 +352,7 @@ kmm:
 	push	iy
 	inc	hl
 	ld	iy, (hl)
-	ld	a, c
+	ld	c, a
 .page_unlock_notify:
 	ld	a, (iy+KERNEL_THREAD_IO)
 	ld	ix, (iy+QUEUE_NEXT)
