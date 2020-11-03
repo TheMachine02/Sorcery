@@ -2,6 +2,7 @@ define	PROFIL_BUFFSIZE		0
 define	PROFIL_BUFF		3
 define	PROFIL_OFFSET		6
 define	PROFIL_SCALE		9
+define	VM_HYPERVISOR_ADRESS	$0BF000
 
 macro align number
 	rb number - ($ mod number)
@@ -9,6 +10,14 @@ end macro
 
 macro sysdef label
 	label = $
+end macro
+
+macro	hyperjump x
+	jp	x*4+VM_HYPERVISOR_ADRESS
+end macro
+
+macro	hypercall x
+	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
 syscall:
@@ -189,15 +198,13 @@ sysdef _priv_lock
 	out0	($06), a
 	ret
 
-; TODO : put this in the certificate ?
 ; flash unlock and lock
-
-if $ > $D00000
-; find a way to put unlock in flash somewhere ?
-end if
 
 sysdef _flash_unlock
 flash.unlock:
+if $ > $D00000
+	hyperjump	0
+else
 ; need to be in privileged flash actually
 	in0	a, ($06)
 	or	a, 4
@@ -213,15 +220,20 @@ flash.unlock:
 	in0	a, ($28)
 	bit	2, a
 	ret
-	
+end if
+
 sysdef _flash_lock
 flash.lock:
+if $ > $D00000
+	hyperjump	1
+else
 	xor	a, a
 	out0	($28), a
 	in0	a, ($06)
 	res	2, a
 	out0	($06), a
 	ret
+end if
 
 sysdef _profil
 profil:

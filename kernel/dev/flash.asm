@@ -101,7 +101,7 @@ end if
 	ret
 
 .phy_write:
-; write hl to flash for bc bytes
+; write hl to flash de buffer for bc bytes
 	call	.unlock
 ; we will write hl to de address
 .phy_write_loop:

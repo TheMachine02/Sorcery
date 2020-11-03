@@ -74,11 +74,16 @@ tifs:
 	jr	nz, .field_search
 ; hl is the TIFS_FILE_ADRESS, bc is the base adress
 ; so write $F0 to bc adress with flash routine
+	ld	de, .delete_byte
 	or	a, a
 	sbc	hl, hl
 	add	hl, bc
+	ex	de, hl
 	ld	bc, 1
 	jp	flash.phy_write
+
+.delete_byte:
+ db	$F0
 
 .path:
  db "/tifs/", 0

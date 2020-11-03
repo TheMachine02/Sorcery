@@ -27,14 +27,48 @@ vm_string_boot:
 end virtual
 
 hypervisor_ram:=$
-guest_tios_offset:= $ - guest_tios
-guest_tios_interrupt_jp_ram:= guest_tios_interrupt_jp + guest_tios_offset
-guest_tios_nmi_jp_ram:= guest_tios_nmi_jp + guest_tios_offset
-guest_tios_boot_jp_ram:= guest_tios_boot_jp + guest_tios_offset
-guest_tios_name_ram:= guest_tios_name + guest_tios_offset
+hypervisor_offset:= $ - VM_HYPERVISOR_ADRESS
+guest_tios_interrupt_jp_ram:= guest_tios_interrupt_jp + hypervisor_offset
+guest_tios_nmi_jp_ram:= guest_tios_nmi_jp + hypervisor_offset
+guest_tios_boot_jp_ram:= guest_tios_boot_jp + hypervisor_offset
+guest_tios_name_ram:= guest_tios_name + hypervisor_offset
 
 org	VM_HYPERVISOR_ADRESS
 
+hypercall:
+	jr	.flash_unlock
+	dw	0
+	jr	.flash_lock
+	dw	0
+; other if needed
+	
+.flash_unlock:
+; need to be in privileged flash actually
+	in0	a, ($06)
+	or	a, 4
+	out0	($06), a
+; flash sequence
+	ld	a, 4
+	di 
+	jr	$+2
+	di
+	rsmix 
+	im 1
+	out0	($28), a
+	in0	a, ($28)
+	bit	2, a
+	ret
+
+.flash_lock:
+	xor	a, a
+	out0	($28), a
+	in0	a, ($06)
+	res	2, a
+	out0	($06), a
+	ret
+
+; guest data ;
+ 
 guest_tios:
 ; header
 	jr	.init
@@ -396,4 +430,3 @@ hypervisor:
  db "Choose OS to boot from :", 0 
 .boot_string_enter:
  db "Press Enter to boot. Boot selected in %2d second(s)", 0
-
