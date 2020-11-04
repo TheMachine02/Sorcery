@@ -27,11 +27,11 @@ sysdef _dma_access
 	call	.fd_pointer_check
 	ret	c
 ; check we have permission
+	ld	a, (ix+KERNEL_VFS_FILE_FLAGS)
+	cpl
+	and	a, 3
 	ld	a, EACCES
-	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
-	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
+	jp	nz, syserror
 	bit     KERNEL_VFS_CAPABILITY_DMA_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	jp	z, syserror
 ; about locking : using a dma acess will lock the inode for read/write
