@@ -21,7 +21,7 @@ macro	hypercall x
 end macro
 
 syscall:
-; a is the syscall number, other register are paramaters (de,bc,hl,iy)
+; a is the syscall number, other register are paramaters (de,bc,hl,iy,ix)
 ; all register are preserved across syscall (except hl as return register)
 ; use ix for jumping
 	push	ix
