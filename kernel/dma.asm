@@ -27,15 +27,16 @@ sysdef _dma_access
 	call	.fd_pointer_check
 	ret	c
 ; check we have permission
+	ld	a, (ix+KERNEL_VFS_FILE_FLAGS)
+	cpl
+	and	a, 3
 	ld	a, EACCES
-	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
-	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
-	bit     KERNEL_VFS_CAPABILITY_DMA_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	jp	nz, syserror
+	lea	hl, iy+KERNEL_VFS_INODE_FLAGS
+	bit     KERNEL_VFS_CAPABILITY_DMA_BIT, (hl)
 	jp	z, syserror
 ; about locking : using a dma acess will lock the inode for read/write
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	inc	hl	; =iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 	set	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	hl, (iy+KERNEL_VFS_INODE_DMA_DATA)
@@ -94,11 +95,12 @@ sysdef _dma_release
 ; fd is hl, free the file of sub-block DMA read
 	call	.fd_pointer_check
 	ret	c
-	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	lea	hl, iy+KERNEL_VFS_INODE_FLAGS
+	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (hl)
 	ld	a, EACCES
 	jp	z, syserror
-	res	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	res	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (hl)
+	inc	hl	; =iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	or	a, a
 	sbc	hl, hl
