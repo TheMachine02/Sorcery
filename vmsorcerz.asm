@@ -102,6 +102,9 @@ sysjump:
 	jp	_flash_unlock
 	jp	_printk
 	jp	_thread
+	jp	_dma_access
+	jp	_dma_blk
+	jp	_dma_release
 ; 	jp	_socket
 ; 	jp	_listen
 ; 	jp	_bind

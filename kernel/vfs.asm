@@ -25,9 +25,9 @@ define	KERNEL_VFS_TYPE_SYMLINK			5 shl 3
 define	KERNEL_VFS_TYPE_SOCKET			6 shl 3
 
 define	KERNEL_VFS_CAPABILITY_DMA		64		; direct pointer acess
-define	KERNEL_VFS_CAPABILITY_FREE		128		; not used yet
-define	KERNEL_VFS_CAPABILITY_DMA_BIT		6
-define	KERNEL_VFS_CAPABILITY_FREE_BIT		7
+define	KERNEL_VFS_CAPABILITY_ACCESS		128		; not used yet
+define	KERNEL_VFS_CAPABILITY_DMA_BIT		6		; is the inode support DMA
+define	KERNEL_VFS_CAPABILITY_ACCESS_BIT	7		; is the inode is currently being DMA acessed
 
 ; structure file
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
@@ -260,9 +260,89 @@ sysdef _sync
 ; ie, call phy_sync for all file modified and not yet written
 .sync:
 	ret
+
+sysdef _dma_access
+.dma_access:
+; fd hl, return hl = first block pointer that can be read/write (please note that the pointer is valid for the first 1024 bytes only)
+	call	.fd_pointer_check
+	ret	c
+; check we have permission
+	ld	a, EACCES
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
+	jp	z, syserror
+	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
+	jp	z, syserror
+	bit     KERNEL_VFS_CAPABILITY_DMA_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	jp	z, syserror
+; about locking : using a dma acess will lock the inode for read/write
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	set	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	hl, (iy+KERNEL_VFS_INODE_DMA_DATA)
+	ld	a, (hl)
+	or	a, a
+	jr	nz, .dma_cache_hit
+	inc	hl
+	ld	hl, (hl)
+	ret
 	
-; TODO : read and write are almost the SAME routine
-; can we merge it ?
+.dma_cache_hit:
+	ld	hl, KERNEL_MM_RAM shr 2
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ret
+	
+sysdef _dma_blk
+.dma_blk:
+; fd hl, block de
+; assume we have dma_acess
+	call	.fd_pointer_check
+	ret	c
+	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	jp	z, syserror
+	ld	a, e
+	ld	b, a
+	rra
+	rra
+	rra
+	and	a, 00011110b
+	ld	c, a
+	rra
+	add	a, c
+	lea	hl, iy+KERNEL_VFS_INODE_DATA
+	add	a, l
+	ld	l, a
+	ld	a, b
+	and	a, 00001111b
+; hl adress should be aligned to 64 bytes
+	add	a, a
+	add	a, a
+	ld	hl, (hl)
+	add	a, l
+	ld	l, a
+	ld	a, (hl)
+	or	a, a
+	jr	nz, .dma_cache_hit
+	inc	hl
+	ld	hl, (hl)
+	ret
+	
+sysdef _dma_release
+.dma_release:
+; fd is hl, free the file of sub-block DMA read
+	call	.fd_pointer_check
+	ret	c
+	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	ld	a, EACCES
+	jp	z, syserror
+	res	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
 
 sysdef _read
 .read:
@@ -303,26 +383,10 @@ sysdef _read
 	jr	z, .read_block_device
 	cp	a, KERNEL_VFS_TYPE_FIFO
 	jr	z, .read_fifo
-	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, a
-	jr	nz, .read_dma
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
 	jr	nz, .read_file
 	jp	.inode_atomic_read_error
-.read_dma:
-	push	bc
-	push	bc
-	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
-	push	hl
-	add	hl, bc
-	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	pop	hl
-	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
-	ld	bc, (ix+KERNEL_VFS_INODE_DMA_POINTER)
-	add	hl, bc
-	pop	bc
-	ldir
-	jp	.read_unlock
 .read_block_device:
 	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
 	push	hl
@@ -537,7 +601,6 @@ sysdef _read
 	
 sysdef _write
 .write:
-; FIXME : case of write to dma enabled inode ?
 	call	.fd_pointer_check
 	ret	c
 ; check we have read permission
