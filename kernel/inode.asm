@@ -547,8 +547,9 @@ define	phy_destroy_inode	20
 	jp	.inode_atomic_write_error
 ; upper data block was free, so allocate one
 .inode_allocate_free_indirect:
-	ld	hl, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4
-	call	kmalloc
+;	ld	hl, KERNEL_VFS_DIRECTORY_ENTRY_SIZE * 4
+	ld	hl, kmem_cache_s64
+	call	kmem.cache_alloc
 	ld	a, ENOMEM
 	jr	c, .inode_allocate_error
 ; iy is the directory entry, write the new entry made

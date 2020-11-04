@@ -129,8 +129,6 @@ if CONFIG_MOUNT_TIFS
 	ld	hl, .arch_mount_tifs
 	ld	de, .arch_mount_bin
 	call	_link
-	ld	hl, .arch_mount_bin_test
-	call	_unlink
 end if
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	hl, .arch_bin_path
@@ -164,8 +162,6 @@ if CONFIG_MOUNT_TIFS
  db	"/tifs", 0
 .arch_mount_bin:
  db	"/bin", 0
-.arch_mount_bin_test:
- db	"/bin/VMSCZ", 0
 end if
  
 .arch_poison_heap:

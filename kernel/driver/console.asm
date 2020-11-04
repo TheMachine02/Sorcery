@@ -32,8 +32,8 @@ console:
 	sbc	hl, de
 	ret	nz
 ; take control of the video driver mutex
-	ld	hl, 64
-	call	kmalloc
+	ld	hl, kmem_cache_s64
+	call	kmem.cache_alloc
 	ret	c
 .fb_takeover_entry:
 	ld	(iy+CONSOLE_TAKEOVER), hl
