@@ -99,8 +99,9 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 ; ret if po
 ; continue else
 	jr	z, .phy_write_new_line
-	jp	pe, .phy_write_loop
-	ret
+	ret	po
+	jr	.phy_write_loop
+	
 .phy_write_new_line_ex:
 	cpi
 .phy_write_new_line:
