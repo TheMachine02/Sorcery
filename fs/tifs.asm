@@ -52,15 +52,11 @@ tifs:
 ; marking the variable as removed in flash
 ; iy = inode
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
-	ld	de, (ix+KERNEL_VFS_INODE_DMA_POINTER)
-; hl is pointer to flash memory
+	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
+; ix is pointer to flash memory
 ; back search the begin of the variable
-	dec	de
-	dec	de
-	dec	de
-	ld	hl, -6
-	add	hl, de
-	ex	de, hl
+	lea	hl, ix-3
+	lea	de, ix-9
 .field_search:
 ; search the TIFS_FILE_ADRESS field by checking if de = bc
 	ld	bc, (hl)
