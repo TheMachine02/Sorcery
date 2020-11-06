@@ -203,11 +203,10 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	cp	a, 'm' - $30	; this is sgr
 	jr	z, .phy_CSI_sgr
 	sub	a, $11
+; unsupported above 11
+	ret	c
 	sbc	hl, hl
 	ld	l, a
-; unsupported above 11
-	cp	a, 11
-	ret	nc
 	add	hl, hl
 	add	hl, hl
 	push	bc
