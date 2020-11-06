@@ -52,13 +52,12 @@ tifs:
 ; marking the variable as removed in flash
 ; iy = inode
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
-	ld	hl, (ix+KERNEL_VFS_INODE_DMA_POINTER)
+	ld	de, (ix+KERNEL_VFS_INODE_DMA_POINTER)
 ; hl is pointer to flash memory
 ; back search the begin of the variable
-	dec	hl
-	dec	hl
-	dec	hl
-	ex	de, hl
+	dec	de
+	dec	de
+	dec	de
 	ld	hl, -6
 	add	hl, de
 	ex	de, hl
