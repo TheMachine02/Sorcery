@@ -270,8 +270,7 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 	ld	(hl), a
 	sub	a, CONSOLE_CURSOR_MAX_ROW
 	ret	c
-	ld	a, CONSOLE_CURSOR_MAX_ROW - 1
-	ld	(hl), a
+	ld	(hl), CONSOLE_CURSOR_MAX_ROW-1
 .phy_none:
 	ret
 	
@@ -336,11 +335,11 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 .phy_cursor_habs:
 	lea	hl, iy+CONSOLE_CURSOR_COL
 ; move cursor to col n absolute
+	ld	(hl), e
 	ld	a, e
 	cp	a, CONSOLE_CURSOR_MAX_COL
-	jr	nc, $+4
-	ld	a, CONSOLE_CURSOR_MAX_COL - 1
-	ld	(hl), a
+	ret	nc
+	ld	(hl), CONSOLE_CURSOR_MAX_COL-1
 	ret
 
 .phy_cursor_position:
