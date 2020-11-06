@@ -250,9 +250,8 @@ sysdef _kill
 	push	hl	; data = NULL
 	ld	l, a
 	push	hl	; signal
-	ld	ix, _sigreturn
-	push	ix
 	ld	ix, _sighandler
+	pea	ix-15	; = _sigreturn
 	jp	(ix)
 .kill_signal_stop:
 	ld	a, (iy+KERNEL_THREAD_STATUS)
