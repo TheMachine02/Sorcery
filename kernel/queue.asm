@@ -34,6 +34,8 @@ kqueue:
 	pop	ix
 	ret
 	
+.incHLcreate:
+	inc	hl
 .create:
 	ld	(hl), iy
 	dec	hl
@@ -127,10 +129,8 @@ kqueue:
 ; hl is queue pointer (count, queue_current)
 ; insert before lower priority node, starting at head
 	inc	(hl)
-	inc	hl
 	ld	(iy+QUEUE_DATA), a
-	jr	z, .create
-	dec	hl
+	jr	z, .incHLcreate
 	push	hl
 	push	bc
 	ld	b, (hl)
