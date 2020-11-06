@@ -299,13 +299,16 @@ hypervisor:
 	ld	b, 8
 	ld	c, a
 	mlt	bc
-	ld	ix, vm_guest_table
-	add	ix, bc
-	ld	bc, (ix+4)
-	ld	(iy+VM_HYPERVISOR_DATA), bc
+	ld	iy, vm_guest_table
+	add	iy, bc
+	ld	bc, (iy+4)
 	set	VM_HYPERVISOR_LUT, (hl)
-	ld	ix, (ix+0)
-	lea	iy, ix-16
+	dec	hl
+	dec	hl
+	dec	hl
+	ld	(hl), bc	; hl=VM_HYPERVISOR_FLAG+VM_HYPERVISOR_DATA
+	ld	iy, (iy+0)
+	lea	iy, iy-16
 	jp	leaf.exec_static
 
 .boot_reset_time:
