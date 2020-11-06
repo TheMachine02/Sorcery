@@ -27,8 +27,7 @@ sysdef _execve
 ; does the file support XIP ?
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
-	ld	a, (ix+LEAF_HEADER_FLAGS)
-	and	a, LF_XIP
+	bit	3, (ix+LEAF_HEADER_FLAGS)
 ; if not, well need to reallocate anyway, so fall back into the default section
 ; reading could be simpler, but that mean duplicating some code...
 	jr	z, .execve_no_dma_xip
@@ -77,24 +76,18 @@ sysdef _execve
 	ld	a, (iy+LEAF_IDENT_MAG0)
 	cp	a, 0x7F
 	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG1)
-	cp	a, 'L'
-	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG2)
-	cp	a, 'E'
-	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG3)
-	cp	a, 'A'
+	ld	hl, (iy+LEAF_IDENT_MAG1)
+	ld	de, ('A'*65536)+('E'*256)+'L'
+	sbc	hl, de
 	ret	nz
 	ld	a, (iy+LEAF_IDENT_MAG4)
 	cp	a, 'F'
 	ret	nz
 .check_supported:
 	ld	a, (iy+LEAF_HEADER_TYPE)
-	cp	a, LT_EXEC
+	sub	a, LT_EXEC
 	ret	nz
-	ld	a, (iy+LEAF_HEADER_MACHINE)
-	cp	a, LM_EZ80_ADL
+	or	a, (iy+LEAF_HEADER_MACHINE)
 	ret
 	
 .BROKEN:
@@ -172,8 +165,7 @@ sysdef _execve
 	push	ix
 	ld	b, (iy+LEAF_HEADER_SHNUM)
 .alloc_section_loop:
-	ld	a, (ix+LEAF_SECTION_FLAGS)
-	and	a, SHF_ALLOC
+	bit	1, (ix+LEAF_SECTION_FLAGS)
 	jr	nz, .alloc_section_bits
 .alloc_section_next:
 	lea	ix, ix+16
