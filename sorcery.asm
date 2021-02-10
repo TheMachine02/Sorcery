@@ -128,15 +128,15 @@ include	'kernel/timer.asm'
 include	'kernel/vfs.asm'
 include	'kernel/dma.asm'
 include	'kernel/inode.asm'
+; be sure we are in the correct spot for NMI
+ assert $ < $0220A8
+ rb $0220A8-$
+include	'kernel/nmi.asm'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
 include	'kernel/mm/mm.asm'
 include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'
-; be sure we are in the correct spot for NMI
- assert $ < $0220A8
- rb $0220A8-$
-include	'kernel/nmi.asm'
 include	'kernel/arch/pic.asm'
 include	'kernel/arch/leaf.asm'
 include	'kernel/arch/ldso.asm'
@@ -161,6 +161,7 @@ include	'kernel/dev/console.asm'
 include	'kernel/dev/null.asm'
 include	'kernel/dev/flash.asm'
 
-; WARNING : flash breakage right here !
+init_conway:
+include	'conway.asm'
 
 sorcery_end:

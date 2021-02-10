@@ -27,6 +27,7 @@ macro	rsti
 end	macro
 
 ; TODO : crazily optimize all this segment please +++
+; TODO : make atomic_rw priority aware
 
 atomic_rw:
 
@@ -264,7 +265,7 @@ atomic_mutex:
 	push	iy
 	push	af
 	ld	iy, (kthread_current)
-; estore priority of owning thread (only if there is actual waiter, so only if we are here)
+; restore priority of owning thread (only if there is actual waiter, so only if we are here)
 	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
 	ld	(iy+KERNEL_THREAD_NICE), a
 	pop	af

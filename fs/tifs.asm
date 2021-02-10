@@ -51,6 +51,7 @@ tifs:
 .phy_destroy:
 ; marking the variable as removed in flash
 ; iy = inode
+; reading the first value of the first block is okay since tifs write file in-order
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	hl, (ix+KERNEL_VFS_INODE_DMA_POINTER)
 ; hl is pointer to flash memory
@@ -104,6 +105,7 @@ tifs:
 	push	iy
 	call	kvfs.mkdir
 	pop	iy
+	ret	c
 ; goes each page and search
 	ld	b, TIFS_SECTOR_COUNT
 	ld	hl, TIFS_SECTOR_BASE

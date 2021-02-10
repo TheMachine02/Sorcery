@@ -28,7 +28,7 @@ init:
 ; TODO : read kernel paramater
 ; silent : no LCD flashing / console updating, open console only if error
 ; boot 5.0.1 stupidity power ++
-; note 2 : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
+; NOTE : boot 5.0.1 also crash is rst 0h is run with LCD interrupts on
 	di
 	rsmix
 	in0	a, ($03)

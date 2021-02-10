@@ -25,7 +25,7 @@ define	KERNEL_VFS_TYPE_SYMLINK			5 shl 3
 define	KERNEL_VFS_TYPE_SOCKET			6 shl 3
 
 define	KERNEL_VFS_CAPABILITY_DMA		64		; direct pointer acess
-define	KERNEL_VFS_CAPABILITY_ACCESS		128		; not used yet
+define	KERNEL_VFS_CAPABILITY_ACCESS		128		; in use bit
 define	KERNEL_VFS_CAPABILITY_DMA_BIT		6		; is the inode support DMA
 define	KERNEL_VFS_CAPABILITY_ACCESS_BIT	7		; is the inode is currently being DMA acessed
 

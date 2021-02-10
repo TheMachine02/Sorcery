@@ -402,12 +402,14 @@ sysdef _yield
 	push	ix
 	push	iy
 	ld	iy, (kthread_current)
-	lea	hl, iy+KERNEL_THREAD_STATUS
-; hl =status
-	ld	a, (hl)
-	or	a, a
-	jp	z, .do_schedule
-	inc	hl
+; KERNEL_THREAD_STATUS
+	lea	hl, iy+KERNEL_THREAD_PRIORITY
+; NOTE : yield even if the thread is active should boost priority in theory ?
+; ; hl = status
+; 	ld	a, (hl)
+; 	or	a, a
+; 	jp	z, .do_schedule
+; 	inc	hl
 ; hl = priority
 	ld	a, (iy+KERNEL_THREAD_NICE)
 	sra	a

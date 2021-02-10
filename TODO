@@ -49,3 +49,6 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
 
 * vfs
 - TODO : mmap()
+
+* leaf
+change the first $7F to 'rst 0'

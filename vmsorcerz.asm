@@ -25,11 +25,9 @@ sorcery_hypervisor:
 assert $ < $D01040
 org	$D01040
 section '.sys' writeable
-; align this to 4 bytes
-sysinternal:
-; internal API, may be usefull for driver and such, but may be prone to change
 sysjump:
 ; the kernel syscall jump table
+; align this to 4 bytes
 ; NOTE : DO NOT CHANGE ORDER
 	jp	_open
 	jp	_close
@@ -113,6 +111,10 @@ sysjump:
 ; 	jp	_getsockaddrs
 ; 	jp	_sendto
 ; 	jp	_recvfrom
+; NOTE : max 240 syscall, should be way more than enough
+align	1024
+sysinternal:
+; internal API are all within these, driver binding etc
 
 include	'kernel/init.asm'
 include	'kernel/interrupt.asm'
@@ -160,7 +162,7 @@ include	'kernel/dev/flash.asm'
 init_conway:
 include	'conway.asm'
 
-assert $ < $D06000
+assert $ < $D08000
 
-kernel_size strcalc $D06000 - $
+kernel_size strcalc $D08000 - $
 display "kernel space left : ", kernel_size," bytes."

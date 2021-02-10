@@ -10,6 +10,22 @@ end macro
 
 macro sysdef label
 	label = $
+; all register are paramaters (a,de,bc,hl,iy,ix)
+; all register are preserved across syscall (except hl as return register)
+	push	ix
+	push	iy
+	push	de
+	push	bc
+	push	af
+	push	hl
+	ld	hl, sysret
+	ex	(sp), hl
+end macro
+
+macro syscall label
+; for the kernel, syscall are simply calling the label
+; for external libc, it is calling the *JUMP TABLE*
+	call	label
 end macro
 
 macro	hyperjump x
@@ -20,28 +36,6 @@ macro	hypercall x
 	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
-syscall:
-; a is the syscall number, other register are paramaters (de,bc,hl,iy,ix)
-; all register are preserved across syscall (except hl as return register)
-; use ix for jumping
-	push	ix
-	push	iy
-	push	de
-	push	bc
-	push	af
-; stack is : sysret / syscall adress, we also need to preserve hl
-	push	hl
-	ld	hl, sysret
-	ex	(sp), hl
-	push	hl
-	ld	hl, sysjump shr 2
-	ld	l, a
-	add	hl, hl
-	add	hl, hl
-; restore and save hl
-	ex	(sp), hl
-	ret
-
 sysret:
 	ei
 ; end syscall here
@@ -51,7 +45,12 @@ sysret:
 	pop	iy
 	pop	ix
 	or	a, a
-	ret	
+	ret
+
+sysdef _pause
+	call	kthread.suspend
+	ld	a, EINTR
+	jr	syserror
 	
 sysdef _enosys
 sysno:
@@ -82,6 +81,9 @@ sysdef	_kfree
 	ld	a, EFAULT
 	jr	syserror
 
+; those actually set the stack limit
+; TODO : actualize those to be actually * correct *
+	
 sysdef _brk
 	ld	iy, (kthread_current)
 	jr	.brk_check
@@ -112,11 +114,6 @@ sysdef _sbrk
 	ld	(iy+KERNEL_THREAD_BREAK), bc
 	ex	de, hl
 	ret
-
-sysdef _pause
-	call	kthread.suspend
-	ld	a, EINTR
-	jr	syserror
 	
 sysdef _usleep
 ; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
@@ -132,7 +129,7 @@ sysdef _usleep
 	ld	a, l
 	or	a, h
 	ld	a, EINTR
-	jr	nz, syserror
+	jp	nz, syserror
 	ei
 	sbc	hl, hl
 	ret

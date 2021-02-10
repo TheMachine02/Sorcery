@@ -39,6 +39,7 @@ times:
 	inc	hl
 	inc	hl
 	inc	hl
+; child time is valid only when the thread *waited* on the child
 	ld	de, (iy+KERNEL_THREAD_TIME_CHILD)
 	ld	(hl), de
 	inc	hl
