@@ -15,6 +15,9 @@
 	ld de,$E30800
 	ld bc,1024
 	ldir
+	jp $E30800
+
+__D1A8BA:
 	ld hl,$E00105
 	ld (hl),h
 	ld hl,$FFFFFF
@@ -27,9 +30,6 @@
 	push ix
 	push iy
 	ld ($E30B07),sp
-	jp $E30800
-
-__D1A8BA:
 	
 	ld sp,$D5C80D
 	or a,a

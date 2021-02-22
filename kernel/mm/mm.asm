@@ -35,8 +35,8 @@ define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 
 define	KERNEL_MM_GFP_RAM		KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE + KERNEL_MM_RAM
 define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_RAM_SIZE - KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE
-define	KERNEL_MM_GFP_KERNEL		24	; $D06000
-define	KERNEL_MM_GFP_USER		64	; $D10000
+define	KERNEL_MM_GFP_KERNEL		32	; $D08000 : total kernel size
+define	KERNEL_MM_GFP_USER		64	; $D10000 : start of user memory
 ; $D0 ... $D1 should be reserved to kernel / cache
 ; $D1 and after is thread and program memory
 ; this partition reduce fragmentation in the cache area (always map 1K at the time) and general memory fragmentation
