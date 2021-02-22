@@ -76,7 +76,8 @@ define	SCHED_PRIO_MIN				12
 define	NICE_PRIO_MIN				19
 define	NICE_PRIO_MAX				-20
 
-define	ROOT_USER				$01
+define	ROOT_USER				$FF	; maximal permission, bit 7 is ROOT bit
+define	PERMISSION_USER				$01	; minimal permission
 
 define	WNOHANG					1
 define	WUNTRACED				2
@@ -94,7 +95,7 @@ sysdef _thread
 ; NOTE: for syscall wrapper : need to grab the pid of the thread and ouptput it to a *thread_t id
 ; NOTE: you can't call create thread in a interrupt disabled context, use irq_create for that
 	call	.irq_create
-	jp	c, syserror
+	jp	c, user_error
 	jp	task_schedule
 
 .create_no_pid:
@@ -162,7 +163,7 @@ sysdef _thread
 	add	a, a
 	ld	hl, kthread_pid_map
 	ld	l, a
-	ld	(hl), $FF
+	ld	(hl), PERMISSION_USER
 	inc	hl
 	ld	(hl), iy
 ; write parent pid    

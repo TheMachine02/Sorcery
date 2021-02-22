@@ -25,7 +25,7 @@ times:
 	or	a, a
 	sbc	hl, de
 	ld	a, EFAULT
-	jp	z, syserror
+	jp	z, user_error
 	ld	bc, NULL
 	ld	iy, (kthread_current)
 	ld	de, (iy+KERNEL_THREAD_TIME)
@@ -60,4 +60,5 @@ sysdef _stime
 stime:
 ; stime() sets the system’s idea of the time and date. Time, pointed to by t, is measured in seconds from 00:00:00 GMT January 1, 1970. stime() may only be executed by the superuser. 
 ; int stime(time_t time)
+	call	user_perm
 	ret

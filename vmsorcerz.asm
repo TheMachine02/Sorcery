@@ -94,8 +94,6 @@ sysjump:
 	jp	_shutdown
 	jp	_reboot
 	jp	_usleep
-	jp	_priv_lock
-	jp	_priv_unlock
 	jp	_flash_lock
 	jp	_flash_unlock
 	jp	_printk

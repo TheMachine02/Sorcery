@@ -31,10 +31,10 @@ sysdef _dma_access
 	cpl
 	and	a, 3
 	ld	a, EACCES
-	jp	nz, syserror
+	jp	nz, user_error
 	lea	hl, iy+KERNEL_VFS_INODE_FLAGS
 	bit     KERNEL_VFS_CAPABILITY_DMA_BIT, (hl)
-	jp	z, syserror
+	jp	z, user_error
 ; about locking : using a dma acess will lock the inode for read/write
 	inc	hl	; =iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
@@ -62,7 +62,7 @@ sysdef _dma_blk
 	ret	c
 	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	a, EACCES
-	jp	z, syserror
+	jp	z, user_error
 	ld	a, e
 	ld	b, a
 	rra
@@ -98,7 +98,7 @@ sysdef _dma_release
 	lea	hl, iy+KERNEL_VFS_INODE_FLAGS
 	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (hl)
 	ld	a, EACCES
-	jp	z, syserror
+	jp	z, user_error
 	res	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (hl)
 	inc	hl	; =iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write

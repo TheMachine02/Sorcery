@@ -13,11 +13,8 @@
 	ld ($D4BE89),a
 	ld hl, __D1A8BA
 	ld de,$E30800
-	ld bc,$000400
-	ldir 
-	jp $E30800
-
-__D1A8BA:
+	ld bc,1024
+	ldir
 	ld hl,$E00105
 	ld (hl),h
 	ld hl,$FFFFFF
@@ -30,6 +27,9 @@ __D1A8BA:
 	push ix
 	push iy
 	ld ($E30B07),sp
+	jp $E30800
+
+__D1A8BA:
 	
 	ld sp,$D5C80D
 	or a,a

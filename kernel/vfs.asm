@@ -87,7 +87,7 @@ kvfs:
 	ld	a, l
 	cp	a, KERNEL_THREAD_FILE_DESCRIPTOR_MAX
 	ld	a, EBADF
-	jp	nc, syserror
+	jp	nc, user_error
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -103,7 +103,7 @@ kvfs:
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jp	z, syserror
+	jp	z, user_error
 ; reset carry
 	or	a, a
 	ret
@@ -167,7 +167,7 @@ sysdef _open
 	and	a, c
 	xor	a, c
 	ld	a, EACCES
-	jp	nz, syserror
+	jp	nz, user_error
 ; now find free file descriptor
 ; we can drop b from flags, it is useless now
 	ld	ix, (kthread_current)
@@ -184,7 +184,7 @@ sysdef _open
 	djnz	.open_descriptor
 ; no descriptor found
 	ld	a, EMFILE
-	jp	syserror
+	jp	user_error
 .open_descriptor_found:
 	ld	e, d
 	ld	(ix+KERNEL_VFS_FILE_INODE), iy
@@ -272,7 +272,7 @@ sysdef _read
 ; check we have read permission
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
+	jp	z, user_error
 ; iy is inode, de is buffer, bc is count
 ; first the lock
 ; if NDELAY is set, use try_lock
@@ -283,7 +283,7 @@ sysdef _read
 	call	atomic_rw.try_lock_read
 	jr	nc, .read_ndelay
 	ld	a, EAGAIN
-	jp	syserror
+	jp	user_error
 .read_delay:
 	call	atomic_rw.lock_read
 .read_ndelay:
@@ -328,7 +328,7 @@ sysdef _read
 ; both read and write should be set
 	xor	a, FIFO_READ_OPEN or FIFO_WRITE_OPEN
 	ld	a, EBADF
-	jp	nz, syserror
+	jp	nz, user_error
 	call	fifo.read
 	lea	iy, iy-KERNEL_VFS_INODE_FIFO_DATA
 ; save the size readed
@@ -523,7 +523,7 @@ sysdef _write
 ; check we have read permission
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
+	jp	z, user_error
 ; hl is offset in file, iy is inode, de is buffer, bc is count
 ; first the lock
 ; if NDELAY is set, use try_lock
@@ -534,7 +534,7 @@ sysdef _write
 	call	atomic_rw.try_lock_write
 	jr	nc, .write_ndelay
 	ld	a, EAGAIN
-	jp	syserror
+	jp	user_error
 .write_delay:
 	call	atomic_rw.lock_write
 .write_ndelay:
@@ -577,7 +577,7 @@ sysdef _write
 ; both read and write should be set
 	xor	a, FIFO_READ_OPEN or FIFO_WRITE_OPEN
 	ld	a, EBADF
-	jp	nz, syserror
+	jp	nz, user_error
 	call	fifo.write
 	lea	iy, iy-KERNEL_VFS_INODE_FIFO_DATA
 ; save the size readed
@@ -702,7 +702,7 @@ sysdef _write
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	pop	af
-	jp	syserror
+	jp	user_error
 .write_error_pop_l3:
 	pop	de
 .write_error_pop_l2:
@@ -820,7 +820,7 @@ sysdef _ioctl
 	jr	z, .char_dev
 	cp	a, KERNEL_VFS_TYPE_BLOCK_DEVICE
 	ld	a, ENOTTY
-	jp	nz, syserror
+	jp	nz, user_error
 .char_dev:
 ; now, just pass to ioctl of file
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
@@ -879,7 +879,7 @@ sysdef _fchmod
 ; write permission ?
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_W_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
+	jp	z, user_error
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 .chmod_shared:
@@ -973,7 +973,7 @@ sysdef _lseek
 	cp	a, KERNEL_VFS_TYPE_FIFO
 .error:
 	ld	a, ESPIPE
-	jp	z, syserror
+	jp	z, user_error
 ; so now, we have the offset de
 	ld	a, c
 	or	a, a
@@ -982,7 +982,7 @@ sysdef _lseek
 	jr	z, .lseek_cur
 	dec	a
 	ld	a, EINVAL
-	jp	nz, syserror
+	jp	nz, user_error
 	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
 	jr	.lseek_end
 .lseek_cur:
@@ -992,7 +992,7 @@ sysdef _lseek
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
 	ret	nc
 	ld	a, EOVERFLOW
-	jp	syserror
+	jp	user_error
 .lseek_set:
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), de
 	ex	de, hl
@@ -1008,7 +1008,7 @@ sysdef _fstat
 ; read permission ?
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jp	z, syserror
+	jp	z, user_error
 	push	de
 	pop	ix
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK

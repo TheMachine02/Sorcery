@@ -23,9 +23,8 @@ define	KERNEL_MM_FLASH			$000000
 define	KERNEL_MM_FLASH_SIZE		$400000
 ; reserved mask : locked, unevictable, to thread 0
 define	KERNEL_MM_RESERVED_MASK		00101000b
-define	KERNEL_MM_RESERVED_SIZE		4096
-; the first 4096 bytes shouldn't be init by mm module
-define	KERNEL_MM_PROTECTED_SIZE	4096
+; the first 32768 bytes shouldn't be init by mm module
+define	KERNEL_MM_PROTECTED_SIZE	32768
 ; null adress reading always zero, but faster
 define	KERNEL_MM_NULL			$E40000
 ; poison for illegal jp / derefence

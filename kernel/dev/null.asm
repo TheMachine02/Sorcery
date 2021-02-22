@@ -34,7 +34,7 @@ null:
 	
 .phy_ioctl:
 	ld	a, ENOTTY
-	jp	syserror
+	jp	user_error
 	
 zero:
 
@@ -74,4 +74,4 @@ zero:
 	
 .phy_ioctl:
 	ld	a, ENOTTY
-	jp	syserror
+	jp	user_error

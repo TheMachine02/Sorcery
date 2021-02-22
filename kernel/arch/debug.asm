@@ -78,7 +78,7 @@ end macro
 if CONFIG_DEBUG
 
 DEBUG_THREAD:
-	dbg	open	
+	dbg	open
 ; ; hl is path, bc is flags, de is mode
 	ld	hl, DEBUG_PATH_2
 	ld	bc, KERNEL_VFS_O_RW or (KERNEL_VFS_O_CREAT *256)

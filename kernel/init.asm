@@ -196,7 +196,7 @@ name:
 	or	a, a
 	sbc	hl, de
 	ld	a, EFAULT
-	jp	z, syserror
+	jp	z, user_error
 ; copy data
 	ex	de, hl
 	ld	bc, 15
@@ -224,6 +224,7 @@ sysdef _printk
 printk:
 ; (start of header) $01, followed by info level at the start of the string is expected
 ; print time ?
+; String is : $01, LEVEL, [time]
 ; defaut is KERNEL_WARNING 
 ; write to the ring buffer
 	push	hl
@@ -237,3 +238,8 @@ printk:
 	ex	(sp), hl
 	pop	bc
 	jp	console.phy_write
+
+sysdef _dmesg
+dmesg:
+; ouput the whole formated kernel log to file descriptor (console or file)
+	ret

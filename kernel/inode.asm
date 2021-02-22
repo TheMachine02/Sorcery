@@ -120,7 +120,7 @@ define	phy_destroy_inode	20
 	call	.inode_raw_lock_read
 ; iy is the locked inode (and assured to be a file)
 	pop	hl
-	jp	c, syserror
+	jp	c, user_error
 .inode_get_parse_path:
 ; find the entrie in the directory
 	call	.inode_directory_lookup
@@ -170,7 +170,7 @@ define	phy_destroy_inode	20
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	pop	af
-	jp	syserror
+	jp	user_error
 
 .inode_atomic_write_error:
 ; unlock the inode (write locked) and error out
@@ -178,7 +178,7 @@ define	phy_destroy_inode	20
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	pop	af
-	jp	syserror
+	jp	user_error
 	
 .inode_directory_get_lock:
 ; Half - debuged
@@ -224,7 +224,7 @@ define	phy_destroy_inode	20
 	dec	c
 	jr	nz, .__bad_search
 	ld	a, ENAMETOOLONG
-	jp	syserror
+	jp	user_error
 .inode_directory_get_start:
 	ld	a, (hl)
 	or	a, a
@@ -233,7 +233,7 @@ define	phy_destroy_inode	20
 	push	hl
 	call	.inode_raw_lock_read
 	pop	hl
-	jp	c, syserror
+	jp	c, user_error
 .inode_directory_get_parse_path:
 ; find the entrie in the directory
 	push	de

@@ -18,7 +18,7 @@ macro sysdef label
 	push	bc
 	push	af
 	push	hl
-	ld	hl, sysret
+	ld	hl, user_return
 	ex	(sp), hl
 end macro
 
@@ -36,7 +36,30 @@ macro	hypercall x
 	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
-sysret:
+user_perm:
+; NOTE : expect to return to the trampoline at the current code level (so, first routine to be called in the routine, and will exit the routine itself)
+; check for the thread permission currently executing this code span
+	push	af
+	push	hl
+	ld	hl, (kthread_current)
+assert KERNEL_THREAD_PID = 0
+	ld	a, (hl)
+	add	a, a
+	add	a, a
+	ld	hl, kthread_pid_map
+	ld	l, a
+	bit	7, (hl)
+	pop	hl
+	jr	z, .permission_failed
+	pop	af
+	ret
+.permission_failed:
+	pop	af
+	pop	af	; throw away the return adress
+	ld	a, EPERM
+	jr	user_error
+	
+user_return:
 	ei
 ; end syscall here
 	pop	af
@@ -50,13 +73,13 @@ sysret:
 sysdef _pause
 	call	kthread.suspend
 	ld	a, EINTR
-	jr	syserror
+	jr	user_error
 	
 sysdef _enosys
-sysno:
+user_nosys:
 	ld	a, ENOSYS
 
-syserror:
+user_error:
 	ei
 	push	ix
 	ld	ix, (kthread_current)
@@ -73,13 +96,13 @@ sysdef	_kmalloc
 	call	kmalloc
 	ret	nc
 	ld	a, ENOMEM
-	jr	syserror
+	jr	user_error
 
 sysdef	_kfree
 	call	kfree
 	ret	nc
 	ld	a, EFAULT
-	jr	syserror
+	jr	user_error
 
 ; those actually set the stack limit
 ; TODO : actualize those to be actually * correct *
@@ -100,7 +123,7 @@ sysdef _sbrk
 	inc	d
 	or	a, a
 	sbc	hl, bc
-	jr	c, syserror
+	jr	c, user_error
 	add	hl, bc
 ; now check with sp
 	push	hl
@@ -109,7 +132,7 @@ sysdef _sbrk
 	pop	bc
 	or	a, a
 	sbc	hl, bc
-	jr	c, syserror
+	jr	c, user_error
 ; all good, return the old break value
 	ld	(iy+KERNEL_THREAD_BREAK), bc
 	ex	de, hl
@@ -129,7 +152,7 @@ sysdef _usleep
 	ld	a, l
 	or	a, h
 	ld	a, EINTR
-	jp	nz, syserror
+	jp	nz, user_error
 	ei
 	sbc	hl, hl
 	ret
@@ -156,10 +179,12 @@ sysdef _getppid
 sysdef _uadmin
 ; TODO : implement
 ; cmd, fn, mdep
+	call	user_perm
 	ret
 
 ; priority
 sysdef _nice
+	call	user_perm
 ; hl = nice, return the new nice value
 	ld	iy, (kthread_current)
 	ld	a, (iy+KERNEL_THREAD_NICE)
@@ -180,19 +205,6 @@ sysdef _nice
 	sbc	hl, hl
 	rra
 	ld	l, a
-	ret
-
-sysdef _priv_unlock
-; exemple, enable flash sequence and SHA256 port
-	in0	a, ($06)
-	set	2, a
-	out0	($06), a
-	ret
-
-sysdef _priv_lock
-	in0	a, ($06)
-	res	2, a
-	out0	($06), a
 	ret
 
 ; flash unlock and lock
@@ -295,7 +307,7 @@ profil:
 	ret
 .error:
 	pop	hl
-	jp	syserror
+	jp	user_error
 
 .scheduler:
 ; Preserve af and iy and hl++++, also, pc is push on the stack at a very precise adress

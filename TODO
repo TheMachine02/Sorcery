@@ -8,6 +8,7 @@ keyboard stdin
 
 * the thread gid & geid update
 * use thread group id share by a parent and all its children
+* uid
 
 * thread cleanup :
 - clean the timer fixed data inside the thread and instead create a timer framework detached from thread TLS. Function like alarm() or sleep() just use a 'simplified' timer attached to thread TLS, we don't need sigevent for exemple, but just following >>> this is the "interval" timer

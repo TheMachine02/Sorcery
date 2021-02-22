@@ -8,6 +8,8 @@ define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 define	KERNEL_HW_POISON		$C7
 define	KERNEL_MM_RESERVED_MASK		00101000b
 define	KERNEL_MM_PAGE_FREE_MASK	128
+define	ROOT_USER			$FF	; maximal permission, bit 7 is ROOT bit
+define	PERMISSION_USER			$01	; minimal permission
 
 if $<> $D00000
  org	$D00000
@@ -188,12 +190,12 @@ kvfs_root:				; 64 bytes inode, the root of all root
  dl	$000000
  dl	$000000
 kthread_pid_map:			; we are at offset $400
- db	$01
+ db	ROOT_USER
  dl	kernel_idle
  db	252	dup	$00
 kmm_ptlb_map:				; the kernel page alloctor process tlb at offset $500
- db	24	dup	KERNEL_MM_RESERVED_MASK
- db	69	dup	KERNEL_MM_PAGE_FREE_MASK
+ db	32	dup	KERNEL_MM_RESERVED_MASK
+ db	61	dup	KERNEL_MM_PAGE_FREE_MASK
  db	1	dup	KERNEL_MM_RESERVED_MASK
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00
