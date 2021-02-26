@@ -89,7 +89,7 @@ DEBUG_THREAD:
 	ld	bc, 32768
 	call	_write
 	pop	hl
-	push	hl	
+	push	hl
 ; fd is hl, de is offset, bc is whence
 	ld	de, 0
 	ld	bc, SEEK_SET

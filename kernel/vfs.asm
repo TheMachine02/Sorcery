@@ -216,7 +216,7 @@ sysdef _open
 ; get our file descriptor
 	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR
 	ld	de, (kthread_current)
-; carry is reset by last xor
+	or	a, a
 	sbc	hl, de
 	srl	h
 	rr	l

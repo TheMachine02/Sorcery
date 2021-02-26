@@ -6,11 +6,13 @@ vfs_cache:
 ; iy should be the inode
 	push	hl
 	push	bc
+	push	de
 ; cache page within kernel memory in priority
 	ld	de, KERNEL_MM_PAGE_CACHE_MASK
 	ld	b, KERNEL_MM_GFP_KERNEL
 	call	kmm.map_page
 ; if carry : try to reclaim some memory pages
+	pop	de
 	pop	bc
 	pop	hl
 	ret

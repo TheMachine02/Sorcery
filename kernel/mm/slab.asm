@@ -89,7 +89,7 @@ kmem:
 ; quickly save hl, we may not be using it, but anyway
 	ex	de, hl
 ; get the ptlb of the page and the count
-	ld	hl, kmm_ptlb_map or 256
+	ld	hl, kmm_ptlb_map + 256
 	ld	l, (iy+KERNEL_SLAB_PAGE_PTLB)
 	dec	(hl)
 	jr	z, .__cache_alloc_full_page

@@ -242,7 +242,7 @@ console:
 	ret
  	
 .read_keyboard:
-;	ld	de, console_flags
+	ld	de, console_flags
 ;	ld	a, (de)
 	ld	hl, $F50014
 	bit	7, (hl)
@@ -254,7 +254,7 @@ console:
 	jr	z, .swap_2nd
 	or	a, 00000010b
 .swap_2nd:
-;	ld	(de), a
+	ld	(de), a
 	ld	de, .KEYBOARD_KEY
 	ld	c, 7
 .loop1:
