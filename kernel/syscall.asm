@@ -4,10 +4,6 @@ define	PROFIL_OFFSET		6
 define	PROFIL_SCALE		9
 define	VM_HYPERVISOR_ADRESS	$0BF000
 
-macro align number
-	rb number - ($ mod number)
-end macro
-
 macro sysdef label
 	label = $
 ; all register are paramaters (a,de,bc,hl,iy,ix)
@@ -36,9 +32,15 @@ macro	hypercall x
 	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
+sysdef _pause
+	call	kthread.suspend
+	ld	a, EINTR
+	jr	user_error
+
 user_perm:
 ; NOTE : expect to return to the trampoline at the current code level (so, first routine to be called in the routine, and will exit the routine itself)
 ; check for the thread permission currently executing this code span
+; is it superuser or not ?
 	push	af
 	push	hl
 	ld	hl, (kthread_current)
@@ -48,7 +50,7 @@ assert KERNEL_THREAD_PID = 0
 	add	a, a
 	ld	hl, kthread_pid_map
 	ld	l, a
-	bit	7, (hl)
+	bit	SUPER_USER_BIT, (hl)
 	pop	hl
 	jr	z, .permission_failed
 	pop	af
@@ -58,7 +60,7 @@ assert KERNEL_THREAD_PID = 0
 	pop	af	; throw away the return adress
 	ld	a, EPERM
 	jr	user_error
-	
+
 user_return:
 	ei
 ; end syscall here
@@ -69,11 +71,6 @@ user_return:
 	pop	ix
 	or	a, a
 	ret
-
-sysdef _pause
-	call	kthread.suspend
-	ld	a, EINTR
-	jr	user_error
 	
 sysdef _enosys
 user_nosys:
@@ -160,6 +157,7 @@ sysdef _usleep
 sysdef _getpid
 ; pid_t getpid()
 ; return value is register hl
+getpid:
 	ld	hl, (kthread_current)
 	ld	l, (hl)
 	ld	h, 1
@@ -169,6 +167,7 @@ sysdef _getpid
 sysdef _getppid
 ; pid_t getppid()
 ; return value is register hl
+getppid:
 	ld	hl, (kthread_current)
 	ld	de, KERNEL_THREAD_PPID
 	add	hl, de
@@ -176,6 +175,22 @@ sysdef _getppid
 	ex	de, hl
 	ret
 
+sysdef _getuid
+; uid_t getuid()
+; return value is register hl, -1 if super user, 0 is normal user
+getuid:
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	ld	hl, kthread_pid_map
+	add	a, a
+	add	a, a
+	ld	l, a
+	ld	a, (hl)
+assert SUPER_USER_BIT = 7
+	rla
+	sbc	hl, hl
+	ret
+	
 sysdef _uadmin
 ; TODO : implement
 ; cmd, fn, mdep

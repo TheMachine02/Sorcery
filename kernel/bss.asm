@@ -199,7 +199,6 @@ kmm_ptlb_map:				; the kernel page alloctor process tlb at offset $500
  db	1	dup	KERNEL_MM_RESERVED_MASK
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00
-; $700
  db	256	dup	$00
 ; $800 is 256 bytes reserved for flash routine if needed
 flash_program:

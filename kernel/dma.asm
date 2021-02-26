@@ -48,7 +48,7 @@ sysdef _dma_access
 	ret
 	
 .dma_cache_hit:
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, a
 	add	hl, hl
 	add	hl, hl

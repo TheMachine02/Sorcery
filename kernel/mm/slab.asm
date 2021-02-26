@@ -154,11 +154,12 @@ kmem:
 	rra
 	rra
 	and	a, KERNEL_MM_PAGE_OWNER_MASK
-	or	a, KERNEL_MM_PAGE_CACHE_MASK
+	or	a, KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_UNEVICTABLE_MASK
 	ld	e, a
-	ld	a, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
+	ld	d, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
+; we'll map a page in kernel mode
 	ld	b, KERNEL_MM_GFP_KERNEL
-	call	kmm.page_map_single
+	call	kmm.map_page
 	jr	c, .__cache_grow_error
 	push	hl
 	ld	bc, -$D00000
@@ -228,7 +229,7 @@ kmem:
 	rra
 	srl	h
 	rra
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, a
 	add	hl, hl
 	add	hl, hl
@@ -298,7 +299,7 @@ kmem:
 	call	kqueue.remove
 	sbc	hl, hl
 	adc	hl, bc
-	call	kmm.page_flush
+	call	kmm.flush_page
 	jr	.__cache_free_restore
 
 .cache_create:

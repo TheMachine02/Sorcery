@@ -493,7 +493,7 @@ sysdef _read
 	or	a, a
 	jr	z, .read_buff_cache_miss
 ; get data from cache
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, a
 	add	hl, hl
 	add	hl, hl
@@ -760,7 +760,7 @@ sysdef _write
 	ld	l, a
 	set	KERNEL_MM_PAGE_DIRTY, (hl)
 ; get data from cache
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, a
 	add	hl, hl
 	add	hl, hl
@@ -777,7 +777,7 @@ sysdef _write
 .write_buff_cache_miss:
 ; here, we need to allocate data
 ; following does not destroy bc
-	call	cache.page_map
+	call	vfs_cache.map_page
 	jr	c, .write_error_pop_l2
 	ld	(hl), a
 	inc	hl
@@ -791,7 +791,7 @@ sysdef _write
 	push	bc
 	push	af
 	ex	de, hl
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, a
 	add	hl, hl
 	add	hl, hl

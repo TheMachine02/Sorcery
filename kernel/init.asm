@@ -19,6 +19,10 @@ define	kernel_data			$D00000		; start of the init image
 
 define	NULL 				0
 
+macro align number
+	rb number - ($ mod number)
+end macro
+
 ; NOTE : memory map of the initramfs is here
 virtual at kernel_data
 	include 'bss.asm'

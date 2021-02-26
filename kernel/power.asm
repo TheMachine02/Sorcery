@@ -15,7 +15,7 @@ kpower:
 	ld	a, $03
 	ld	(KERNEL_FLASH_CTRL), a
 	out0	(KERNEL_POWER_CPU_CLOCK), a
-; default power up IRQ
+; default power up IRQ (On button IRQ)
 	ld	hl, .irq_handler
 	ld	a, KERNEL_IRQ_POWER
 	call	kinterrupt.irq_request

@@ -4,25 +4,20 @@ define	KERNEL_MM_PAGE_SIZE		1024
 ; mask
 define	KERNEL_MM_PAGE_FREE_MASK	128
 define	KERNEL_MM_PAGE_CACHE_MASK	64
-define	KERNEL_MM_PAGE_SHARED_MASK	32
-define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	16
-define	KERNEL_MM_PAGE_DIRTY_MASK	8
+define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	32
+define	KERNEL_MM_PAGE_DIRTY_MASK	16
+define	KERNEL_MM_PAGE_SHARED_MASK	8
 define	KERNEL_MM_PAGE_LOCK_MASK	7
 define	KERNEL_MM_PAGE_MAX_READER	6	; 7 is reserved for write lock
 ; bit
 define	KERNEL_MM_PAGE_FREE		7
 define	KERNEL_MM_PAGE_CACHE		6
-define	KERNEL_MM_PAGE_SHARED		5
-define	KERNEL_MM_PAGE_UNEVICTABLE	4
-define	KERNEL_MM_PAGE_DIRTY		3
+define	KERNEL_MM_PAGE_UNEVICTABLE	5
+define	KERNEL_MM_PAGE_DIRTY		4
+define	KERNEL_MM_PAGE_SHARED		3
 define	KERNEL_MM_PAGE_LOCK		0	; bit 0 to bit 2
-; physical device
-define	KERNEL_MM_RAM			$D00000
-define	KERNEL_MM_RAM_SIZE		$040000
-define	KERNEL_MM_FLASH			$000000
-define	KERNEL_MM_FLASH_SIZE		$400000
-; reserved mask : locked, unevictable, to thread 0
-define	KERNEL_MM_RESERVED_MASK		00101000b
+; reserved mask : no-free, bound to thread 0
+define	KERNEL_MM_RESERVED_MASK		0
 ; the first 32768 bytes shouldn't be init by mm module
 define	KERNEL_MM_PROTECTED_SIZE	32768
 ; null adress reading always zero, but faster
@@ -33,8 +28,14 @@ define	KERNEL_HW_POISON		$C7
 define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
 define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 
-define	KERNEL_MM_GFP_RAM		KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE + KERNEL_MM_RAM
-define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_RAM_SIZE - KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE
+; physical device
+define	KERNEL_MM_PHY_RAM		$D00000
+define	KERNEL_MM_PHY_RAM_SIZE		$040000
+define	KERNEL_MM_PHY_FLASH		$000000
+define	KERNEL_MM_PHY_FLASH_SIZE	$400000
+; the memory device as seen by the kernel
+define	KERNEL_MM_GFP_RAM		KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE + KERNEL_MM_PHY_RAM
+define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_PHY_RAM_SIZE - KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE
 define	KERNEL_MM_GFP_KERNEL		32	; $D08000 : total kernel size
 define	KERNEL_MM_GFP_USER		64	; $D10000 : start of user memory
 ; $D0 ... $D1 should be reserved to kernel / cache
@@ -405,7 +406,7 @@ kmm:
 	ld	(de), a
 	jr	.page_unlock_shared
 	
-.page_map:
+;.page_map:
 ; register b is page index wanted, return hl = adress or -1 if error
 ; register c is page count wanted
 ; destroy bc, destroy a, destroy de
@@ -465,7 +466,7 @@ kmm:
 	pop	af
 	jp	po, $+5
 	ei
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
@@ -476,9 +477,6 @@ kmm:
 	jr	z, .page_map_found
 	jp	.page_map_no_free
 
-.page_map_flags:
-	ld	e, KERNEL_MM_PAGE_SHARED_MASK or KERNEL_MM_PAGE_CACHE_MASK
-	xor	a, a
 .page_map_single:
 ; register b is page index wanted, return hl = adress or -1 if error, e is flag (SHARED or not)
 ; destroy bc, destroy hl
@@ -505,7 +503,7 @@ kmm:
 	jp	po, $+5
 	ei
 	ld	b, l
-	ld	hl, KERNEL_MM_RAM shr 2
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, b
 	add	hl, hl
 	add	hl, hl
@@ -527,7 +525,7 @@ kmm:
 ; mainly, what happen if you unmap yourself ? > CRASH
 	pop	hl
 	push	hl
-	ld	bc, KERNEL_MM_RAM + KERNEL_MM_PROTECTED_SIZE
+	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE
 	or	a, a
 	sbc	hl, bc
 	jp	nc, .segfault
@@ -538,7 +536,7 @@ kmm:
 	dec	hl
 	dec	h
 	bit	KERNEL_MM_PAGE_CACHE, (hl)
-	call	z, .page_flush
+	call	z, .flush_page
 	inc	h
 	inc	hl
 .thread_unmap_find:
@@ -575,7 +573,7 @@ kmm:
 	cp	a, (hl)
 	jp	nz, .segfault
 	dec	h
-	call	.page_flush
+	call	.flush_page
 	djnz	.page_unmap_cloop
 	ret
 	
@@ -598,12 +596,12 @@ kmm:
 	ex	de, hl
 	
 ; rst $0 : trap execute, illegal instruction
-.page_flush:
+.flush_page:
 ; hl as the ptlb adress
 	push	bc
 	push	hl
 	ld	c, l
- 	ld	hl, KERNEL_MM_RAM shr 2
+ 	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
@@ -625,6 +623,7 @@ kmm:
 
 .physical_to_ptlb:
 ; adress divided by page KERNEL_MM_PAGE_SIZE = 1024
+assert KERNEL_MM_PAGE_SIZE = 1024
 	push	hl
 	dec	sp
 	pop	hl
@@ -636,4 +635,47 @@ kmm:
 	rra
 	ld	hl, kmm_ptlb_map
 	ld	l, a
+	ret
+
+.map_page:
+; register b is page index wanted, return hl = adress and a = page or -1 if error with a=error and c set
+; de is full tlb flag
+; destroy bc, destroy hl
+; get kmm_ptlb_map adress
+	ld	hl, i
+	push	af
+	ld	hl, kmm_ptlb_map
+	ld	l, b
+	ld	a, b
+	cpl
+	ld	bc, 0
+	ld	c, a
+	inc	bc
+	ld	a, KERNEL_MM_PAGE_FREE_MASK
+	di
+; fast search for free page
+	cpir
+	jp	po, .__map_page_full
+	dec	hl
+	ld	(hl), e
+	inc	h
+	ld	(hl), d
+	pop	af
+	jp	po, $+5
+	ei
+	ld	a, l
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	ret
+.__map_page_full:
+; will need to reclaim memory page here
+	scf
+	sbc	hl, hl
+	pop	af
+	scf
+	ld	a, ENOMEM
+	ret	po
+	ei
 	ret

@@ -78,6 +78,7 @@ define	NICE_PRIO_MAX				-20
 
 define	ROOT_USER				$FF	; maximal permission, bit 7 is ROOT bit
 define	PERMISSION_USER				$01	; minimal permission
+define	SUPER_USER_BIT				7
 
 define	WNOHANG					1
 define	WUNTRACED				2
