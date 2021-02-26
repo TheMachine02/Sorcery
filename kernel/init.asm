@@ -40,7 +40,6 @@ init:
 	jp	z, _boot_CheckHardware
 ; load up boot stack
 	ld	sp, $D1A87E
-; shift to soft kinit way to reboot ++
 ; we will use temporary boot code stack
 ; setup master interrupt divisor = define jiffies
 	ld	a, KERNEL_CRYSTAL_DIVISOR
@@ -97,14 +96,25 @@ init:
 	slp
 	jr	.arch_sleep
  
- .arch_initramfs:
+.arch_initramfs:
 file	'initramfs'
 ; NOTE : end guard is part of MPU init (those two $00 are important)
 
 .arch_MPU_init:
  db	$00, $00, $D0, $FF, $7F, $D0
  db	$A8, $00, $D0
-
+ 
+.arch_poison_heap:
+; shouldn't be called within irq
+	di
+	ld	hl, kernel_heap
+	ld	de, kernel_heap + 1
+	ld	bc, 506
+	ld	(hl), KERNEL_HW_POISON
+	ldir
+	ei
+	ret 
+ 
 .arch_init:
 ; NOTE : here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
 ; interrupt will be disabled by most of device init, but that's okay to maintain them in a unknown state anyway
@@ -167,20 +177,9 @@ if CONFIG_MOUNT_TIFS
 .arch_mount_bin:
  db	"/bin", 0
 end if
- 
-.arch_poison_heap:
-; shouldn't be called within irq
-	di
-	ld	hl, kernel_heap
-	ld	de, kernel_heap + 1
-	ld	bc, 506
-	ld	(hl), KERNEL_HW_POISON
-	ldir
-	ei
-	ret
- 
+
 sysdef _reboot
-.reboot:
+reboot:
 ; disable interruption and watchdog then rst 0 to the boot code firmware
 	di
 	call	kwatchdog.disarm
@@ -190,9 +189,8 @@ sysdef _reboot
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 	dec	de
 	ld	(hl), de
-; TODO : we also need to clean the protected port to not crash
 	rst	$00
- 
+
 sysdef _uname
 name:
 ; hl is structure buf

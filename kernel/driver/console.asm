@@ -295,7 +295,7 @@ console:
 ; if command = reboot, we'll do rst 0h
 	ld	hl, .REBOOT
 	call	.check_builtin
-	jp	z, init.reboot
+	jp	z, reboot
 	ld	hl, .COLOR
 	call	.check_builtin
 	jp	z, .color

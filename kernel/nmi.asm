@@ -61,7 +61,7 @@ nmi:
 	ld	hl, .THREAD_NOINIT
 .reboot_trampoline:
 	call	.exception_write
-	jp	init.reboot
+	jp	reboot
 
 .watchdog_violation:
 	ld	hl, .WATCHDOG_EXCEPTION
