@@ -243,7 +243,8 @@ console:
  	
 .read_keyboard:
 	ld	de, console_flags
-;	ld	a, (de)
+	ld	a, (de)
+	and	a, 11111100b
 	ld	hl, $F50014
 	bit	7, (hl)
 	jr	z, .swap_alpha
