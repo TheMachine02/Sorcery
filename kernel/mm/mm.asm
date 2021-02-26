@@ -40,8 +40,10 @@ macro	trap
 end	macro
 
 kmm:
-
- .page_perm_rw:
+; memory adress sanitizer in memory allocation ;
+; read and write permission : every thread can write to an allocated page
+; detect non allocated page write
+.page_perm_rw:
 ; b = page
 ; return nc if permission is okay
 ; 	return nz if cache or shared page or anonymous
@@ -54,7 +56,7 @@ kmm:
 	ld	a, (de)
 	rla
 ; KERNEL_MM_FREE
-	jr	c, .segfault_permission
+	jr	c, .__segfault_permission
 	ld	hl, (kthread_current)
 	and	a, KERNEL_MM_PAGE_CACHE_MASK shl 1
 	ret	nz
@@ -63,12 +65,14 @@ kmm:
 	dec	d
 	cp	a, (hl)
 	ret	z
-	jr	.segfault_permission
- 
+	jr	.__segfault_permission
+
+ ; read, write, execute permission
+ ; detect if the page is a user page ; anything else segfault
 .page_perm_rwox:
 ; b = page
 ; return nc if permission is okay
-; 	return z if thread mapped page
+; 	return z if user mapped page
 ; return c is segfaulted
 ; 	return nz
 ; return de ptlb, destroy a, return hl current_thread
@@ -76,7 +80,7 @@ kmm:
 	ld	e, b
 	ld	a, (de)
 	and	KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
-	jr	nz, .segfault_permission
+	jr	nz, .__segfault_permission
 ; are we the owner ?
 	ld	hl, (kthread_current)
 	inc	d
@@ -84,10 +88,10 @@ kmm:
 	dec	d
 	cp	a, (hl)
 	ret	z
-
-.segfault_permission:
+; segfault cleanup
+.__segfault_permission:
 	pop	bc	; pop the routine adress
-.segfault_critical:
+.__segfault_critical:
 	pop	af	; this is interrupt status
 	jp	po, .segfault
 	ei
@@ -119,7 +123,7 @@ kmm:
 	push	af
 	ld	a, b
 	add	a, c
-	jp	c, .segfault_critical
+	jp	c, .__segfault_critical
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
@@ -246,7 +250,7 @@ kmm:
 ; register c is page count wanted to clean
 ; destroy hl, bc, a
 	dec	c
-	jr	z, .page_unmap_fast
+	jr	z, .unmap_page
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
@@ -274,14 +278,14 @@ kmm:
 	djnz	.page_unmap_cloop
 	ret
 	
-.page_unmap_fast:
+.unmap_page:
 ; register b is page index wanted
 ; destroy a, destroy hl, destroy bc, destroy de
 ; page_perm_rwox
 	ld	de, kmm_ptlb_map
 	ld	e, b
 	ld	a, (de)
-	and	KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
+	and	a, KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
 	jp	nz, .segfault
 ; are we the owner ?
 	ld	hl, (kthread_current)
@@ -344,6 +348,10 @@ assert KERNEL_MM_PAGE_SIZE = 1024
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
+; sanity check ;
+; b > base kernel memory
+	cp	a, KERNEL_MM_GFP_KERNEL
+	jp	c, .__segfault_critical
 	cpl
 	ld	bc, 0
 	ld	c, a
