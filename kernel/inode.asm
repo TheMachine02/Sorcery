@@ -567,6 +567,7 @@ define	phy_destroy_inode	20
 
 sysdef _link
 .inode_link:
+.link:
 ; int link(const char *oldpath, const char *newpath);
 	push	de
 	call	.inode_get_lock
@@ -622,6 +623,7 @@ sysdef _link
 sysdef _unlink
 ; int unlink(const char *pathname);
 .inode_unlink:
+.unlink:
 	call	.inode_directory_get_lock
 	ret	c
 ; iy = inode, hl = name
@@ -645,6 +647,7 @@ sysdef _unlink
 
 sysdef _symlink
 .inode_symlink:
+.symlink:
 ; int symlink(const char* path1, const char* path2)
 ; hl = path 1 (inode to link), de = path 2
 	push	de
@@ -790,6 +793,7 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 
 sysdef _rename
 .inode_rename:
+.rename:
 ; int rename(const char *oldpath, const char *newpath);
 ; hl is old path, bc is newpath
 ; for this we need to find the file (grab inode and parent inode, lock the parent inode for write, remove reference for the file, introduce reference to the new path, etc). QUite some hard work actually

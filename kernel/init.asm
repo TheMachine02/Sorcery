@@ -111,7 +111,7 @@ file	'initramfs'
 ; just don't trigger watchdog please
 	ld	bc, KERNEL_VFS_PERMISSION_RW
 	ld	hl, .arch_dev_path
-	call	_mkdir
+	call	kvfs.mkdir
 	call	video.init
 	call	keyboard.init
 	call	rtc.init
@@ -132,14 +132,14 @@ if CONFIG_MOUNT_TIFS
 	call	tifs.mount
 	ld	hl, .arch_mount_tifs
 	ld	de, .arch_mount_bin
-	call	_link
+	call	kvfs.link
 end if
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
 ;	call	leaf.execve
-	jp	init_conway
+;	jp	init_conway
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	xor	a, a
 	call	console.fb_takeover
@@ -190,6 +190,7 @@ sysdef _reboot
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 	dec	de
 	ld	(hl), de
+; TODO : we also need to clean the protected port to not crash
 	rst	$00
  
 sysdef _uname
