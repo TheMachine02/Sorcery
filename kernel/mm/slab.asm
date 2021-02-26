@@ -89,7 +89,7 @@ kmem:
 ; quickly save hl, we may not be using it, but anyway
 	ex	de, hl
 ; get the ptlb of the page and the count
-	ld	hl, kmm_ptlb_map + 256
+	ld	hl, kmm_ptlb_map or 256
 	ld	l, (iy+KERNEL_SLAB_PAGE_PTLB)
 	dec	(hl)
 	jr	z, .__cache_alloc_full_page
@@ -153,11 +153,11 @@ kmem:
 	rra
 	rra
 	rra
-	and	a, KERNEL_MM_PAGE_OWNER_MASK
+	and	a, KERNEL_MM_PAGE_USER_MASK
 	or	a, KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_UNEVICTABLE_MASK
 	ld	e, a
 	ld	d, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
-; we'll map a page in kernel mode
+; we'll map a page in kernel mode, with cache and unevictable set and data count within tlb
 	ld	b, KERNEL_MM_GFP_KERNEL
 	call	kmm.map_page
 	jr	c, .__cache_grow_error
@@ -238,7 +238,7 @@ kmem:
 	ld	bc, kmm_ptlb_map
 	ld	c, a
 	ld	a, (bc)
-	and	a, KERNEL_MM_PAGE_OWNER_MASK
+	and	a, KERNEL_MM_PAGE_USER_MASK
 	ld	hl, kmem_cache_buffctl shr 3
 	or	a, l
 	ld	l, a

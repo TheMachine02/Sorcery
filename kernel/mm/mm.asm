@@ -25,7 +25,7 @@ define	KERNEL_MM_NULL			$E40000
 ; poison for illegal jp / derefence
 define	KERNEL_HW_POISON		$C7
 
-define	KERNEL_MM_PAGE_OWNER_MASK	31	; owner mask in first byte of ptlb
+define	KERNEL_MM_PAGE_USER_MASK	31	; owner mask in first byte of ptlb
 define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 
 ; physical device
