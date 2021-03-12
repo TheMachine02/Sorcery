@@ -1,8 +1,11 @@
-define	PROFIL_BUFFSIZE		0
-define	PROFIL_BUFF		3
-define	PROFIL_OFFSET		6
-define	PROFIL_SCALE		9
 define	VM_HYPERVISOR_ADRESS	$0BF000
+
+virtual at 0
+	PROFIL_BUFFSIZE:	rb 3
+	PROFIL_BUFF:		rb 3
+	PROFIL_OFFSET:		rb 3
+	PROFIL_SCALE:		rb 3
+end virtual
 
 macro sysdef label
 	label = $

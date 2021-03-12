@@ -8,10 +8,10 @@ define	KERNEL_VFS_CAPABILITY_MASK		11000000b
 define	KERNEL_VFS_PERMISSION_R			1
 define	KERNEL_VFS_PERMISSION_W			2
 define	KERNEL_VFS_PERMISSION_X			4
-define	KERNEL_VFS_PERMISSION_RW		3
-define	KERNEL_VFS_PERMISSION_RWX		7
-define	KERNEL_VFS_PERMISSION_RX		5
-define	KERNEL_VFS_PERMISSION_WX		6
+define	KERNEL_VFS_PERMISSION_RW		KERNEL_VFS_PERMISSION_R or KERNEL_VFS_PERMISSION_W
+define	KERNEL_VFS_PERMISSION_RWX		KERNEL_VFS_PERMISSION_R or KERNEL_VFS_PERMISSION_W or KERNEL_VFS_PERMISSION_X
+define	KERNEL_VFS_PERMISSION_RX		KERNEL_VFS_PERMISSION_R or KERNEL_VFS_PERMISSION_X
+define	KERNEL_VFS_PERMISSION_WX		KERNEL_VFS_PERMISSION_W or KERNEL_VFS_PERMISSION_X
 define	KERNEL_VFS_PERMISSION_R_BIT		0
 define	KERNEL_VFS_PERMISSION_W_BIT		1
 define	KERNEL_VFS_PERMISSION_X_BIT		2
@@ -32,15 +32,18 @@ define	KERNEL_VFS_CAPABILITY_ACCESS_BIT	7		; is the inode is currently being DMA
 ; structure file
 define	KERNEL_VFS_FILE_DESCRIPTOR		0
 define	KERNEL_VFS_FILE_DESCRIPTOR_SIZE		8
-define	KERNEL_VFS_FILE_INODE			0	; 3 bytes, inode pointer
-define	KERNEL_VFS_FILE_OFFSET			3	; 3 bytes, offset within file
-define	KERNEL_VFS_FILE_FLAGS			6	; 1 byte, file flags, mode
+
+virtual at 0
+	KERNEL_VFS_FILE_INODE:	rb 3	; 3 bytes, inode pointer
+	KERNEL_VFS_FILE_OFFSET:	rb 3	; 3 bytes, offset within file
+	KERNEL_VFS_FILE_FLAGS:	rb 1	; 1 byte file flag, mode
+end virtual
 
 ; file flags that control *file*
 ; we can & those with permission to check mode
 define	KERNEL_VFS_O_R				1
 define	KERNEL_VFS_O_W				2
-define	KERNEL_VFS_O_RW				3
+define	KERNEL_VFS_O_RW				KERNEL_VFS_O_W or KERNEL_VFS_O_R
 define	KERNEL_VFS_O_TMPFILE			4	; create a temporary file
 define	KERNEL_VFS_O_TRUNC			8	; trunc file to 0 at open
 define	KERNEL_VFS_O_APPEND			16	; append to end of file all write
@@ -56,9 +59,11 @@ define	KERNEL_VFS_O_NOFOLLOW			4	; do not follow symbolic reference *ignored*
 
 define	KERNEL_VFS_MAX_FOLLOW			4
 
-define	SEEK_SET				0
-define	SEEK_CUR				1
-define	SEEK_END				2
+virtual at 0
+	SEEK_SET:	rb 1
+	SEEK_CUR:	rb 1
+	SEEK_END:	rb 1
+end virtual
 
 ; 20 bytes
 define	STAT_DEVICE				0
