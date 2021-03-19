@@ -399,10 +399,11 @@ console:
 ; 24 * 8 + 4 * 7
 	call	.glyph_adress
 ; de = address
-	ld	hl, 40
+	ex	de, hl
+	ld	de, 40
 	add	hl, de
 	push	hl
-	ld	de, 4
+	ld	e, 4
 	ld	a, 2
 	ld	c, 8
 .color_block_b:
