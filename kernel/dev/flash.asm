@@ -81,17 +81,13 @@ end if
 
 .phy_timeout:
 ; wait a bit more than 50 µs
-	push	hl
-	ld	hl, 73
+	push	bc			; 	  10
+	ld	c, 181			; +	   8
 .phy_timeout_wait:
-	dec	hl
-	add	hl,de
-	or	a,a
-	sbc	hl,de
-	jr	nz, .phy_timeout_wait
-	pop	hl
-	ret
-
+	djnz	.phy_timeout_wait	; +	2348	(=180*13+1*8)
+	pop	bc			; +  	  16
+	ret				; +  	  21
+					; =	2403 ... 2403/48Mhz=50,0625 µs
 .phy_ioctl:
 	ret
 ; no op
