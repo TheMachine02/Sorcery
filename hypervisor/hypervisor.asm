@@ -141,8 +141,7 @@ hypervisor:
 	jr	z, guest_tios.nmi
 	push	hl
 	push	af
-	ld	hl, VM_HYPERVISOR_FLAG+VM_HYPERVISOR_DATA
-	ld	hl, (hl)
+	ld	hl, (VM_HYPERVISOR_FLAG+VM_HYPERVISOR_DATA)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
@@ -245,21 +244,12 @@ hypervisor:
 .boot_reverse_color:
 ;;	ld	hl, 2*256+3
 	push	hl
-	ld	a, h
-	dec	a
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	bc, vm_guest_table
+	ld	l, 8
+	mlt	hl
+	ld	bc, vm_guest_table-8
 	add	hl, bc
-	ld	hl, (hl)
-	ld	bc, 16
-	add	hl, bc
-	push	hl
-	pop	bc	
+	ld	iy, (hl)
+	lea	bc, iy+16
 	pop	hl
 	call	.putstring
 	pop	bc
@@ -301,26 +291,20 @@ hypervisor:
 	jp	nc, .boot_choose_loop
 
 .boot_do:
-	ld	iy, VM_HYPERVISOR_FLAG
+	ld	hl, VM_HYPERVISOR_FLAG+VM_HYPERVISOR_SETTINGS
 	ld	a, (vm_cursor)
 	or	a, a
-	res	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
+	res	VM_HYPERVISOR_LUT, (hl)
 	ret	z
-	sbc	hl, hl
-	ld	l, a
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	bc, vm_guest_table
-	add	hl, bc
-	ld	ix, (hl)
-	inc	hl
-	inc	hl
-	inc	hl
-	inc	hl
-	ld	hl, (hl)
-	ld	(iy+VM_HYPERVISOR_DATA), hl
-	set	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
+	ld	b, 8
+	ld	c, a
+	mlt	bc
+	ld	ix, vm_guest_table
+	add	ix, bc
+	ld	bc, (ix+4)
+	ld	(iy+VM_HYPERVISOR_DATA), bc
+	ld	ix, (ix+0)
+	set	VM_HYPERVISOR_LUT, (hl)
 	lea	iy, ix-16
 	jp	leaf.exec_static
 
@@ -399,14 +383,11 @@ hypervisor:
 	call	leaf.check_file
 	jr	nz, .boot_next
 ; it is one of our !
-	ld	a, (vm_guest_count)
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	add	hl, hl
-	add	hl, hl
-	add	hl, hl
-	ld	bc, vm_guest_table
+	ld	hl, vm_guest_count
+	ld	b, (hl)
+	ld	c, 8
+	mlt	bc
+	inc	hl	; now hl=vm_guest_table
 	add	hl, bc
 	lea	iy, iy + LEAF_HEADER_SIZE
 	ld	(hl), iy
