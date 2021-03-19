@@ -97,11 +97,11 @@ tifs:
 	ld	iy, 0
 	lea	bc, iy+6
 	add	iy, de
+	push	de
 	ld	hl, .path
 	ldir
 	ld	hl, .path
 	ld	c, KERNEL_VFS_PERMISSION_RWX
-	push	iy
 	call	kvfs.mkdir
 	pop	iy
 	ret	c
