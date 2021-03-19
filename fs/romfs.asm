@@ -37,9 +37,9 @@ romfs:
 	cpi
 	ret	nz
 	inc	de
-	jp	pe, .compare
-	ret
-
+	ret	po
+	jr	.compare
+	
 .verify:
 ; z if it is, nz otherwise
 ; check if the given adress (ix) hold a ROMFS file system and if the checksum match
