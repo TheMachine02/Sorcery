@@ -40,8 +40,7 @@ sysdef _dma_access
 	call	atomic_rw.lock_write
 	set	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	hl, (iy+KERNEL_VFS_INODE_DMA_DATA)
-	ld	a, (hl)
-	or	a, a
+	or	a, (hl)
 	jr	nz, .dma_cache_hit
 	inc	hl
 	ld	hl, (hl)
