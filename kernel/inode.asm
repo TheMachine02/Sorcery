@@ -73,7 +73,8 @@ define	phy_destroy_inode	20
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 ; recheck for reference count
-	or	a, (iy+KERNEL_VFS_INODE_REFERENCE)
+	ld	a, (iy+KERNEL_VFS_INODE_REFERENCE)
+	or	a, a
 ; non zero mean someone was waiting for the inode and "saved" it
 	jp	nz, atomic_rw.unlock_write
 
