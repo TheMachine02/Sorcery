@@ -148,7 +148,7 @@ sulphur:
 	call	.write
 	ld	bc, $28
 	ld	a, $4
-	jp	.write
+	jr	.write
 .lock:
 	ld	bc, $28
 	xor	a, a
@@ -159,7 +159,6 @@ sulphur:
 	call	.write
 	ld	bc, $24
 	ld	a, $88
-	jp	.write
 .write:
 	ld	de, $C979ED
 	ld	hl, $D1887C - 3
