@@ -53,16 +53,11 @@ tifs:
 ; iy = inode
 ; reading the first value of the first block is okay since tifs write file in-order
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
-	ld	hl, (ix+KERNEL_VFS_INODE_DMA_POINTER)
+	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
 ; hl is pointer to flash memory
 ; back search the begin of the variable
-	dec	hl
-	dec	hl
-	dec	hl
-	ex	de, hl
-	ld	hl, -6
-	add	hl, de
-	ex	de, hl
+	lea	hl, ix-3
+	lea	de, ix-9
 .field_search:
 ; search the TIFS_FILE_ADRESS field by checking if de = bc
 	ld	bc, (hl)
@@ -98,11 +93,11 @@ tifs:
 	ld	iy, 0
 	lea	bc, iy+6
 	add	iy, de
+	push	de
 	ld	hl, .path
 	ldir
 	ld	hl, .path
 	ld	c, KERNEL_VFS_PERMISSION_RWX
-	push	iy
 	call	kvfs.mkdir
 	pop	iy
 	ret	c
@@ -190,7 +185,7 @@ tifs:
 	push	hl
 	lea	hl, iy+0
 	ld	a, KERNEL_VFS_TYPE_FILE or KERNEL_VFS_CAPABILITY_DMA
-	push	iy
+	push	hl
 	call	kvfs.inode_create
 	pop	ix
 	pop	de

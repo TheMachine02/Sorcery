@@ -311,10 +311,9 @@ sysdef _read
 	jp	.inode_atomic_read_error
 .read_block_device:
 	ld	hl, (ix+KERNEL_VFS_FILE_OFFSET)
-	push	hl
 	add	hl, bc
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
-	pop	hl
+	sbc	hl, bc
 .read_char_device:
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)

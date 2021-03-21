@@ -103,17 +103,17 @@ define	phy_destroy_inode	20
 ; return c = error, none lock
 ; return nc = iy is the locked for write inode
 	ld	iy, (kthread_current)
-	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	ld	a, (hl)
 	cp	a, '/'
 	jr	z, .inode_get_from_root
 ; the path is a relative path, so try to use the inode of the thread (reference is ALWAYS valid)
-	ld	iy, (kthread_current)
 	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
-	dec	hl
+	jr	.inode_get_from_working
 .inode_get_from_root:
+	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	inc	hl
 	ld	a, (hl)
+.inode_get_from_working:	
 	or	a, a
 	jp	z, .inode_raw_lock_write
 	push	hl
@@ -134,15 +134,14 @@ define	phy_destroy_inode	20
 	inc	hl
 	or	a, a
 	jr	z, .inode_get_lock_entry
-	cp	a, '/'
+	sub	a, '/'
 	jr	z, .inode_get_continue
 	dec	c
 	jr	nz, .__bad_search3
 	ld	a, ENAMETOOLONG
 	jr	.inode_atomic_read_error
 .inode_get_continue:
-	ld	a, (hl)
-	or	a, a
+	or	a, (hl)
 	jr	z, .inode_get_lock_entry
 ; we have the new path at hl
 ; lock dance
@@ -193,23 +192,22 @@ define	phy_destroy_inode	20
 ; /dev/ lock / for write and give back dev//0
 ; /dev/hello lock /dev/ for write and give back hello/0
 	ld	iy, (kthread_current)
-	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	ld	a, (hl)
-	cp	a, '/'
+	sub	a, '/'
 	jr	z, .inode_directory_get_from_root
 ; the path is a relative path, so try to use the inode of the thread
-	ld	iy, (kthread_current)
+	xor	a, a
 	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
-	dec	hl
+	jr	.inode_directory_get_from_working
 .inode_directory_get_from_root:
 ; skip the first '/' if it was one
+	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	inc	hl
+.inode_directory_get_from_working:
 	ex	de, hl
-	or	a, a
 	sbc	hl, hl
 	add	hl, de
-	ld	a, (hl)
-	or	a, a
+	or	a, (hl)
 ; we will maintain hl = name actually looked up
 ; de = name AFTER the following '/'
 	jp	z, .inode_directory_get_root_lock
@@ -219,15 +217,14 @@ define	phy_destroy_inode	20
 	inc	hl
 	or	a, a
 	jr	z, .inode_directory_get_root_lock
-	cp	a, '/'
+	sub	a, '/'
 	jr	z, .inode_directory_get_start
 	dec	c
 	jr	nz, .__bad_search
 	ld	a, ENAMETOOLONG
 	jp	user_error
 .inode_directory_get_start:
-	ld	a, (hl)
-	or	a, a
+	or	a, (hl)
 	jr	z, .inode_directory_get_root_lock
 	ex	de, hl
 	push	hl
@@ -252,15 +249,14 @@ define	phy_destroy_inode	20
 	inc	hl
 	or	a, a
 	jr	z, .inode_directory_get_lock_entry
-	cp	a, '/'
+	sub	a, '/'
 	jr	z, .inode_directory_continue
 	dec	c
 	jr	nz, .__bad_search2
 	ld	a, ENAMETOOLONG
 	jr	.inode_atomic_read_error
 .inode_directory_continue:
-	ld	a, (hl)
-	or	a, a
+	or	a, (hl)
 	jr	z, .inode_directory_get_lock_entry
 	ex	de, hl
 ; we have the new path at de

@@ -128,9 +128,9 @@ kmm:
 	ld	l, b
 	ld	a, b
 	cpl
-	ld	bc, 0
+	ld	b, 0
 	ld	c, a
-	inc	bc
+	inc.s	bc
 	ld	a, KERNEL_MM_PAGE_FREE_MASK
 	di
 .page_map_parse:
@@ -188,9 +188,9 @@ kmm:
 	ld	l, b
 	ld	a, b
 	cpl
-	ld	bc, 0
+	ld	b, 0
 	ld	c, a
-	inc	bc
+	inc.s	bc
 	ld	a, KERNEL_MM_PAGE_FREE_MASK
 	di
 ; fast search for free page
@@ -353,9 +353,9 @@ assert KERNEL_MM_PAGE_SIZE = 1024
 	cp	a, KERNEL_MM_GFP_KERNEL
 	jp	c, .__segfault_critical
 	cpl
-	ld	bc, 0
+	ld	b, 0
 	ld	c, a
-	inc	bc
+	inc.s	bc
 	ld	a, KERNEL_MM_PAGE_FREE_MASK
 	di
 ; fast search for free page

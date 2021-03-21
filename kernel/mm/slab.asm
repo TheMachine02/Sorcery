@@ -304,20 +304,17 @@ kmem:
 
 .cache_create:
 	push	iy
-	push	de
 	push	bc
 	ld	iy, kmem_cache_user
-	ld	de, KERNEL_SLAB_CACHE_SIZE
 ; 9 users defined cache are possible
 	ld	b, 9
+	xor	a, a
 .__find_free:
-	ld	a, (iy+KERNEL_SLAB_CACHE_DATA_COUNT) 
-	or	a, a
+	cp	a, (iy+KERNEL_SLAB_CACHE_DATA_COUNT) 
 	jr	z, .__find_slot
 	lea	iy, iy+KERNEL_SLAB_CACHE_SIZE
 	djnz	.__find_free
 	pop	bc
-	pop	de
 	pop	iy
 	sbc	hl, hl
 	scf
@@ -329,7 +326,6 @@ kmem:
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_PAGE), a
 ; TODO : KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
 	pop	bc
-	pop	de
 	pop	iy
 	ret
 

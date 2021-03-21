@@ -112,7 +112,6 @@ fifo:
 ; drain the fifo, make head = tail and set the value pointed to 0
 	ld	hl, (iy+FIFO_HEAD)
 	ld	(iy+FIFO_TAIL), hl
-	ld	(iy+FIFO_HEAD), hl
 	xor	a, a
 	ld	(hl), a
 	sbc	hl, hl
