@@ -82,7 +82,7 @@ end if
 .phy_timeout:
 ; wait a bit more than 50 µs
 	push	bc			; 	  10
-	ld	c, 181			; +	   8
+	ld	b, 181			; +	   8
 .phy_timeout_wait:
 	djnz	.phy_timeout_wait	; +	2348	(=180*13+1*8)
 	pop	bc			; +  	  16
