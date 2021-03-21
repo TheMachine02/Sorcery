@@ -248,8 +248,11 @@ hypervisor:
 	mlt	hl
 	ld	bc, vm_guest_table-8
 	add	hl, bc
-	ld	iy, (hl)
-	lea	bc, iy+16
+	ld	hl, (hl)
+	ld	bc, 16
+	add	hl, bc
+	push	hl
+	pop	bc
 	pop	hl
 	call	.putstring
 	pop	bc
