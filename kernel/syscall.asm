@@ -80,10 +80,17 @@ user_nosys:
 	ld	a, ENOSYS
 
 user_error:
+; cleanup stack (doesn't pass to user_return)  and set error
 	ei
-	push	ix
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_ERRNO), a
+; pop user_return adress
+	pop	hl
+; end syscall here
+	pop	af
+	pop	bc
+	pop	de
+	pop	iy
 	pop	ix
 	scf
 	sbc	hl, hl

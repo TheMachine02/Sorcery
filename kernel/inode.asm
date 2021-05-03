@@ -59,7 +59,6 @@ define	phy_destroy_inode	20
 ; about locking : you should always lock the PARENT first when you need to write both parent & inode to prevent deadlock
 ; inode searching can sleep with parent inode lock waiting for child inode to be free'd for read
 ; best is always locking only ONE inode
-; return iy if found with ref+1 or the partial node iy with ref+1 and partial string hl
 	
 .inode_deref:
 ; please note that parent MAY have been locked, but anyway, it is not mandatory
