@@ -11,11 +11,11 @@ macro sysdef label
 	label = $
 ; all register are paramaters (a,de,bc,hl,iy,ix)
 ; all register are preserved across syscall (except hl as return register)
+	push	af
 	push	ix
 	push	iy
 	push	de
 	push	bc
-	push	af
 	push	hl
 	ld	hl, user_return
 	ex	(sp), hl
@@ -67,12 +67,17 @@ assert KERNEL_THREAD_PID = 0
 user_return:
 	ei
 ; end syscall here
-	pop	af
 	pop	bc
 	pop	de
 	pop	iy
 	pop	ix
+	jr	c, .__user_return_error
+	pop	af
 	or	a, a
+	ret
+.__user_return_error:
+	pop	af
+	scf
 	ret
 	
 sysdef _enosys
@@ -80,7 +85,6 @@ user_nosys:
 	ld	a, ENOSYS
 
 user_error:
-; cleanup stack (doesn't pass to user_return)  and set error
 	ei
 	push	ix
 	ld	ix, (kthread_current)
