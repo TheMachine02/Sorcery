@@ -5,7 +5,9 @@ define	KERNEL_MM_PAGE_FREE_MASK	128	; memory page is free
 define	KERNEL_MM_PAGE_CACHE_MASK	64	; this is a cache page
 define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	32	; set page as not moveable
 define	KERNEL_MM_PAGE_DIRTY_MASK	16	; only used if unevictable is z
-define	KERNEL_MM_PAGE_USER_MASK	31	; owner mask in first byte of ptlb
+define	KERNEL_MM_PAGE_USER_MASK	15	; owner mask in first byte of ptlb
+define	KERNEL_MM_PAGE_COUNTER		1	; the counter is the second byte of ptlb
+define	KERNEL_MM_PAGE_INODE		0	; the inode number for cache page is stored in 2 bytes overlapping flag byte
 ; bit
 define	KERNEL_MM_PAGE_FREE		7
 define	KERNEL_MM_PAGE_CACHE		6
@@ -119,7 +121,9 @@ kmm:
 	ld	e, c
 	jr	z, .page_map_single
 ; map c page from b page to thread a
+	ld	h, a
 	ld	a, i
+	ld	a, h
 	push	af
 	ld	a, b
 	add	a, c
