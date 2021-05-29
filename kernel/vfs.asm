@@ -1224,3 +1224,21 @@ sysdef _fchdir
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 	jr	.chdir_common
+
+sysdef	_fsync
+; fsync(in fd)
+.fsync:
+	call	.fd_pointer_check
+	ret	c
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_read
+	call	.phy_indirect_call
+	pop	hl
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret	
