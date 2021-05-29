@@ -259,11 +259,66 @@ sysdef _close
 	ret
 
 sysdef _sync
-; TODO : implement
 ; sync() causes all pending modifications to filesystem metadata and
 ; cached file data to be written to the underlying filesystems
+; do not drop the cache, but only sync it proprely
 ; ie, call phy_sync for all file modified and not yet written
+; may take a long time to complete
 .sync:
+	ld	a, i
+	push	af
+; parse the mapped page and trigger .phy_sync for inode if there is a dirty page
+	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL
+	ld	b, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
+	di
+.__sync_parse:	
+	ld	a, (hl)
+; we want both CACHE and DIRTY bit set
+	bit	KERNEL_MM_PAGE_CACHE, (hl)
+	jr	z, .__sync_continue
+	bit	KERNEL_MM_PAGE_DIRTY, (hl)
+	jr	z, .__sync_continue
+	push	hl
+; we have a dirty inode, let's sync it
+	ld	a, (hl)
+	and	a, KERNEL_MM_PAGE_USER_MASK
+	ld	iy, KERNEL_MM_PHY_RAM shr 2
+	inc	h
+	ld	l, (hl)
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	push	bc
+; we will lock the inode for write right here, waiting on completion of any write / read operation
+; we enter interrupt state as disabled, the atomic_rw will reset it
+; also note that atomicity is important for reading the dirtyness
+; if the operation currently on inode was sync, we will "sync" twice, but that's okay since sync should skip if all pages are not dirty
+	push	hl
+	pop	iy
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+; we are lock right now, so sync it
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_read
+	call	.phy_indirect_call
+	pop	hl
+	call	atomic_rw.unlock_write	
+	pop	bc
+	pop	hl
+; set atomicity before reading tlb
+	di
+.__sync_continue:
+	inc	hl
+	djnz	.__sync_parse
+	sbc	hl, hl
+	pop	af
+	ret	po
+	ei
 	ret
 
 sysdef _read
