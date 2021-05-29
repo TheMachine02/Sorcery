@@ -105,6 +105,7 @@ sysdef _thread
 	jr	.create_error
 .create_no_mem:
 	pop	af
+	pop	af
 	ld	a, ENOMEM
 .create_error:
 ; restore register and cleanup
@@ -119,9 +120,11 @@ sysdef _thread
 	exx
 	call	.reserve_pid
 	jr	c, .create_no_pid
+	push	af
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	kmm.thread_map
 	jr	c, .create_no_mem
+	pop	af
 	push	iy
 ; hl is adress
 	ex	de, hl

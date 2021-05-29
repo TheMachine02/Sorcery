@@ -226,8 +226,8 @@ tifs:
 	ld	bc, 1024
 .do_data:
 	push	hl
-	ld	hl, 64
-	call	kmalloc
+	ld	hl, kmem_cache_s64
+	call	kmem.cache_alloc
 	ld	(iy+0), hl
 	ld	ix, (iy+0)
 	lea	iy, iy+3

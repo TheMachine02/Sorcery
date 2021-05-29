@@ -82,15 +82,9 @@ user_nosys:
 user_error:
 ; cleanup stack (doesn't pass to user_return)  and set error
 	ei
+	push	ix
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_ERRNO), a
-; pop user_return adress
-	pop	hl
-; end syscall here
-	pop	af
-	pop	bc
-	pop	de
-	pop	iy
 	pop	ix
 	scf
 	sbc	hl, hl
@@ -139,7 +133,7 @@ sysdef _sbrk
 	pop	bc
 	or	a, a
 	sbc	hl, bc
-	jr	c, user_error
+	jp	c, user_error
 ; all good, return the old break value
 	ld	(iy+KERNEL_THREAD_BREAK), bc
 	ex	de, hl

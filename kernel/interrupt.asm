@@ -66,8 +66,6 @@ kinterrupt:
 .irq_enable:
 	push	hl
 	push	bc
-	ld	hl, i
-	push	af
 ; enable a specific IRQ or a specific IRQ combinaison
 	ld	c, a
 	rra
@@ -78,10 +76,14 @@ kinterrupt:
 	ld	a, c
 	and	a, 00001111b
 ; critical section ;
+	ld	c, a
+	ld	a, i
+	push	af
 	di
 ; this is the first byte
 	ld	hl, KERNEL_INTERRUPT_IMSC
-	or	a, (hl)
+	ld	a, (hl)
+	or	a, c
 	ld	(hl), a
 	inc	hl
 	ld	a, (hl)
@@ -97,8 +99,6 @@ kinterrupt:
 .irq_disable:
 	push	hl
 	push	bc
-	ld	hl, i
-	push	af
 ; enable a specific IRQ
 	ld	c, a
 	rra
@@ -110,11 +110,15 @@ kinterrupt:
 	ld	a, c
 	cpl
 	and	a, 00001111b
+	ld	c, a
 ; critical section ;
+	ld	a, i
+	push	af
 	di
 ; this is the first byte
 	ld	hl, KERNEL_INTERRUPT_IMSC
-	and	a, (hl)
+	ld	a, (hl)
+	and	a, c
 	ld	(hl), a
 	inc	hl
 	ld	a, (hl)
@@ -144,11 +148,12 @@ kinterrupt:
 	
 ;; C function : irqstate_t irq_save(void)
 .irq_save:
-; destroy only flags
-	ld	hl, i
+	push	af
+	ld	a, i
 	di
 	push	af
 	pop	hl
+	pop	af
 	ret
 
 ; C function : void irq_restore(irqstate_t flags)

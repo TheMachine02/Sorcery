@@ -119,7 +119,7 @@ kmm:
 	ld	e, c
 	jr	z, .page_map_single
 ; map c page from b page to thread a
-	ld	hl, i
+	ld	a, i
 	push	af
 	ld	a, b
 	add	a, c
@@ -182,7 +182,7 @@ kmm:
 ; register b is page index wanted, return hl = adress or -1 if error, e is flag (SHARED or not)
 ; destroy bc, destroy hl
 ; get kmm_ptlb_map adress
-	ld	hl, i
+	ld	a, i
 	push	af
 	ld	hl, kmm_ptlb_map
 	ld	l, b
@@ -343,7 +343,7 @@ assert KERNEL_MM_PAGE_SIZE = 1024
 ; de is full tlb flag
 ; destroy bc, destroy hl
 ; get kmm_ptlb_map adress
-	ld	hl, i
+	ld	a, i
 	push	af
 	ld	hl, kmm_ptlb_map
 	ld	l, b

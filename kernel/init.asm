@@ -117,7 +117,7 @@ file	'initramfs'
  
 .arch_init:
 ; NOTE : here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
-; interrupt will be disabled by most of device init, but that's okay to maintain them in a unknown state anyway
+; interrupt will be disabled by most of device in it, but that's okay to maintain them in a unknown state anyway
 ; just don't trigger watchdog please
 	ld	bc, KERNEL_VFS_PERMISSION_RW
 	ld	hl, .arch_dev_path
