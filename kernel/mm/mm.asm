@@ -33,6 +33,8 @@ define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_PHY_RAM_SIZE - KERNEL_MM_GFP_KERNEL * K
 define	KERNEL_MM_GFP_KERNEL		32	; $D08000 : total kernel size
 define	KERNEL_MM_GFP_USER		64	; $D10000 : start of user memory
 define	KERNEL_MM_GFP_CRITICAL		28	; 4K of critical RAM area ? (TODO : to be defined)
+define	KERNEL_MM_PAGE_MAX		256
+
 ; $D0 ... $D1 should be reserved to kernel / cache
 ; $D1 and after is thread and program memory
 ; this partition reduce fragmentation in the cache area (always map 1K at the time) and general memory fragmentation
@@ -109,14 +111,14 @@ kmm:
 ; Say, I WISH YOU THE BEST
 	ret
 	
-;.page_map:
+.map_pages:
 ; register b is page index wanted, return hl = adress or -1 if error
 ; register c is page count wanted
 ; destroy bc, destroy a, destroy de
 	ld	hl, (kthread_current)
 	or	a, a
 	ld	a, (hl)
-.thread_map:
+.map_user_pages:
 	dec	c
 	ld	e, c
 	jr	z, .page_map_single
@@ -223,8 +225,9 @@ kmm:
 	ei
 	ret
 
-.thread_unmap:
-; unmap all memory of a given thread
+.unmap_user_pages:
+; unmap all the pages belonging to an thread
+; a = pid
 ; sanity check guard, call by kernel
 ; of course, it is easy to bypass, but at least it is here
 ; mainly, what happen if you unmap yourself ? > CRASH
@@ -234,27 +237,32 @@ kmm:
 	or	a, a
 	sbc	hl, bc
 	jp	nc, .segfault
-	ld	hl, kmm_ptlb_map + 256
-	ld	bc, 256
-	jr	.thread_unmap_find
-.thread_unmap_loop:
+	ld	hl, kmm_ptlb_map + KERNEL_MM_PAGE_MAX + KERNEL_MM_GFP_KERNEL
+	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
+	jr	.__unmap_user_pages_parse
+.__unmap_user_pages_flush:
 	dec	hl
 	dec	h
 	bit	KERNEL_MM_PAGE_CACHE, (hl)
 	call	z, .flush_page
 	inc	h
 	inc	hl
-.thread_unmap_find:
+.__unmap_user_pages_parse:
 	cpir
-	jp	pe, .thread_unmap_loop
+	jp	pe, .__unmap_user_pages_flush
 	ret
 
-.page_unmap:
+.unmap_pages:
 ; register b is page index wanted
 ; register c is page count wanted to clean
 ; destroy hl, bc, a
 	dec	c
 	jr	z, .unmap_page
+	ld	a, b
+; sanity check ;
+; b > base kernel memory
+	cp	a, KERNEL_MM_GFP_KERNEL
+	jp	c, .segfault
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
@@ -267,11 +275,12 @@ kmm:
 	ld	b, c
 	ld	de, (kthread_current)
 	ld	a, (de)
-	ld	e, a	; thread pid
-.page_unmap_cloop:
+; thread pid
+	ld	e, a
+.__unmap_pages_loop:
 ; page_perm_rwox
 	ld	a, (hl)
-	and	KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_FREE_MASK
+	and	a, KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_FREE_MASK
 	jp	nz, .segfault
 	inc	h
 	ld	a, e
@@ -279,9 +288,9 @@ kmm:
 	jp	nz, .segfault
 	dec	h
 	call	.flush_page
-	djnz	.page_unmap_cloop
+	djnz	.__unmap_pages_loop
 	ret
-	
+
 .unmap_page:
 ; register b is page index wanted
 ; destroy a, destroy hl, destroy bc, destroy de
@@ -291,6 +300,11 @@ kmm:
 	ld	a, (de)
 	and	a, KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
 	jp	nz, .segfault
+	ld	a, b
+; sanity check ;
+; b > base kernel memory
+	cp	a, KERNEL_MM_GFP_KERNEL
+	jp	c, .segfault
 ; are we the owner ?
 	ld	hl, (kthread_current)
 	inc	d
