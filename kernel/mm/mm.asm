@@ -13,7 +13,6 @@ define	KERNEL_MM_PAGE_FREE		7
 define	KERNEL_MM_PAGE_CACHE		6
 define	KERNEL_MM_PAGE_UNEVICTABLE	5
 define	KERNEL_MM_PAGE_DIRTY		4
-define	KERNEL_MM_PAGE_COUNTER		0	; the counter is the second byte of ptlb
 ; reserved mask : no-free, bound to thread 0
 define	KERNEL_MM_RESERVED_MASK		0
 ; the first 32768 bytes shouldn't be init by mm module
@@ -29,7 +28,7 @@ define	KERNEL_MM_PHY_FLASH		$000000
 define	KERNEL_MM_PHY_FLASH_SIZE	$400000
 ; the memory device as seen by the kernel
 define	KERNEL_MM_GFP_RAM		KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE + KERNEL_MM_PHY_RAM
-define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_PHY_RAM_SIZE - KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE
+define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_PHY_RAM_SIZE - (KERNEL_MM_GFP_KERNEL * KERNEL_MM_PAGE_SIZE)
 define	KERNEL_MM_GFP_KERNEL		32	; $D08000 : total kernel size
 define	KERNEL_MM_GFP_USER		64	; $D10000 : start of user memory
 define	KERNEL_MM_GFP_CRITICAL		28	; 4K of critical RAM area ? (TODO : to be defined)
@@ -110,7 +109,7 @@ kmm:
 	sbc	hl, hl
 ; Say, I WISH YOU THE BEST
 	ret
-	
+
 .map_pages:
 ; register b is page index wanted, return hl = adress or -1 if error
 ; register c is page count wanted
@@ -280,7 +279,7 @@ kmm:
 .__unmap_pages_loop:
 ; page_perm_rwox
 	ld	a, (hl)
-	and	a, KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_FREE_MASK
+	and	a, KERNEL_MM_PAGE_FREE_MASK
 	jp	nz, .segfault
 	inc	h
 	ld	a, e
@@ -298,7 +297,7 @@ kmm:
 	ld	de, kmm_ptlb_map
 	ld	e, b
 	ld	a, (de)
-	and	a, KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
+	and	a, KERNEL_MM_PAGE_FREE_MASK
 	jp	nz, .segfault
 	ld	a, b
 ; sanity check ;

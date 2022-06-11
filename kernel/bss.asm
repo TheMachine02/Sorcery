@@ -6,7 +6,7 @@ define	BOOT_DIRTY_MEMORY2		$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 
 define	KERNEL_HW_POISON		$C7
-define	KERNEL_MM_RESERVED_MASK		00101000b
+define	KERNEL_MM_RESERVED_MASK		0
 define	KERNEL_MM_PAGE_FREE_MASK	128
 define	ROOT_USER			$FF	; maximal permission, bit 7 is ROOT bit
 define	PERMISSION_USER			$01	; minimal permission
