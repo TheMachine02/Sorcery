@@ -41,6 +41,8 @@ define	phy_ioctl		8
 define	phy_read_inode		12
 define	phy_sync_inode		16
 define	phy_destroy_inode	20
+; filesystem operation ;
+define	phy_stat		24
 
 ; jump table for physical operation
 .phy_none:
@@ -55,6 +57,12 @@ define	phy_destroy_inode	20
 	ret		; phy_sync_inode (sync the inode to the backing device and create it if it doesn't exist), mostly happen at umount time
 	dl	$00
 	ret		; phy_destroy_inode
+	dl	$0
+; exactly 4 bytes, convenient !
+.phy_none_statfs:
+	ld	a, ENOSYS
+	scf
+	ret
 
 ; about locking : you should always lock the PARENT first when you need to write both parent & inode to prevent deadlock
 ; inode searching can sleep with parent inode lock waiting for child inode to be free'd for read
@@ -784,6 +792,7 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 ; TODO : implement
 ; iy is inode number
 ; parse the data and unmap everything (+clear everything)
+; (parse map page)
 	ret
 
 sysdef _rename

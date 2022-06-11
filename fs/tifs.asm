@@ -38,6 +38,12 @@ tifs:
 	ret		; phy_sync_inode ; not supported (no inode data written)
 	dl	$00
 	jp	.phy_destroy
+	jp	.phy_stat
+
+.phy_stat:
+	ld	a, ENOSYS
+	scf
+	ret
 
 .phy_read:
 	ldir

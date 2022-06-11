@@ -271,7 +271,7 @@ sysdef _sync
 	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL
 	ld	b, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
 	di
-.__sync_parse:	
+.__sync_parse:
 	ld	a, (hl)
 ; we want both CACHE and DIRTY bit set
 	bit	KERNEL_MM_PAGE_CACHE, (hl)
@@ -304,7 +304,7 @@ sysdef _sync
 ; we are lock right now, so sync it
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
-	lea	iy, iy+phy_read
+	lea	iy, iy+phy_sync
 	call	.phy_indirect_call
 	pop	hl
 	call	atomic_rw.unlock_write	
@@ -1058,6 +1058,51 @@ sysdef _lseek
 	or	a, a
 	ret
 
+sysdef _fstatfs
+; int fstatfs(int fd, struct statfs *buf);   
+	call	.fd_pointer_check
+	ret	c
+; read permission ?
+	ld	a, EACCES
+	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
+	jp	z, user_error
+	push	de
+	pop	ix
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_write
+	jr	.statfs_fill
+	
+sysdef _statfs
+; int statfs(const char *path, struct statfs *buf);
+	push	de
+	call	.inode_get_lock
+	pop	ix
+; if carry, error should have been set (could be acess in read/write/file not found etc) (return non locked)
+	ret	c
+.statfs_fill:
+	pea	iy + KERNEL_VFS_INODE_ATOMIC_LOCK
+; check inode
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_DIRECTORY and KERNEL_VFS_TYPE_FILE
+	jr	z, .statfs_error
+	ld	iy, (iy+KERNEL_VFS_INODE_OP)
+	lea	iy, iy+phy_stat
+; phy_stat set the buffer (ix)
+	call	.phy_indirect_call
+	pop	hl
+.statfs_clean:
+	push	af
+	call	atomic_rw.unlock_write
+	pop	af
+	jp	c, user_error
+	or	a, a
+	sbc	hl, hl
+	ret
+.statfs_error:
+	ld	a, ENOSYS
+	scf
+	jr	.statfs_clean
+
 sysdef _fstat
 .fstat:
 ; int fstat(int fd, struct stat *statbuf);
@@ -1234,10 +1279,9 @@ sysdef	_fsync
 	call	atomic_rw.lock_write
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	ld	iy, (iy+KERNEL_VFS_INODE_OP)
-	lea	iy, iy+phy_read
+	lea	iy, iy+phy_sync
 	call	.phy_indirect_call
 	pop	hl
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
 	or	a, a
 	sbc	hl, hl
