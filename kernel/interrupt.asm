@@ -43,6 +43,7 @@ kinterrupt:
 	ld	i, hl
 	xor	a, a
 	ld	(kinterrupt_irq_boot_ctx), a
+	ld	(kinterrupt_page_lru), a
 	ld	hl, .irq_context_restore
 	ld	(kinterrupt_irq_ret_ctx), hl
 	ret
@@ -216,6 +217,9 @@ kinterrupt:
 ; this is the master clock IRQ handler
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
 	set	4, (hl)
+.irq_crystal_lru:
+	ld	hl, kinterrupt_page_lru
+	inc	(hl)
 .irq_crystal_clock:
 ; update timer queue first, then check if we need to reschedule
 	ld	hl, ktimer_queue

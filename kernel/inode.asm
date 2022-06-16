@@ -93,7 +93,7 @@ define	phy_stat		24
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
 	jr	nz, .inode_destroy_nf
-	call	.inode_drop_data
+	call	vfs_cache.drop_page
 .inode_destroy_nf:
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ret	z
@@ -786,13 +786,6 @@ assert KERNEL_VFS_INODE_ATOMIC_LOCK = 1
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.lock_write
 	or	a, a
-	ret
-
-.inode_drop_data:
-; TODO : implement
-; iy is inode number
-; parse the data and unmap everything (+clear everything)
-; (parse map page)
 	ret
 
 sysdef _rename

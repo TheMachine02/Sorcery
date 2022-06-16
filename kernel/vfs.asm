@@ -216,7 +216,7 @@ sysdef _open
 ; it is a file
 ; drop all data now
 ; parse block data and free everything
-	call	.inode_drop_data
+	call	vfs_cache.drop_page
 .extract_fd:
 ; get our file descriptor
 	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR

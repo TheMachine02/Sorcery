@@ -48,7 +48,7 @@ sysjump:
 	jp	_dup
 	jp	_getpid
 	jp	_getppid
-	jp	_enosys		; _statfs
+	jp	_statfs
 	jp	_execve
 	jp	_enosys		; _getdirent
 	jp	_time

@@ -8,6 +8,7 @@ define	KERNEL_MM_PAGE_DIRTY_MASK	16	; only used if unevictable is z
 define	KERNEL_MM_PAGE_USER_MASK	15	; owner mask in first byte of ptlb
 define	KERNEL_MM_PAGE_COUNTER		1	; the counter is the second byte of ptlb
 define	KERNEL_MM_PAGE_INODE		0	; the inode number for cache page is stored in 2 bytes overlapping flag byte
+define	KERNEL_MM_PAGE_LRU		2	; the decay value is stored in the third bytes of ptlb
 ; bit
 define	KERNEL_MM_PAGE_FREE		7
 define	KERNEL_MM_PAGE_CACHE		6
