@@ -1,11 +1,19 @@
-null:
-
+mem:
 .init:
-.phy_init:
-	ld	hl, .NULL_DEV
+	ld	hl, random.RAND_DEV
+	ld	bc, KERNEL_VFS_PERMISSION_R or KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	ld	de, random.phy_mem_ops
+	call	_mknod
+	ld	hl, null.NULL_DEV
 	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
-	ld	de, .phy_mem_ops
+	ld	de, null.phy_mem_ops
+	call	_mknod
+	ld	hl, zero.ZERO_DEV
+	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
+	ld	de, zero.phy_mem_ops
 	jp	_mknod
+
+null:
 
 .NULL_DEV:
  db "/dev/null", 0
@@ -37,13 +45,6 @@ null:
 	jp	user_error
 	
 zero:
-
-.init:
-.phy_init:
-	ld	hl, .ZERO_DEV
-	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
-	ld	de, .phy_mem_ops
-	jp	_mknod
 
 .ZERO_DEV:
  db "/dev/zero", 0

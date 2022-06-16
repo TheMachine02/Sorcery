@@ -126,7 +126,7 @@ console:
 	ld	l, console_takeover and $FF
 	dec	b
 	ld	(hl), bc
-	jp	.phy_init
+	jp	tty.phy_init
 	
 .init_screen:
 	ld	a, (console_dev+CONSOLE_FLAGS)
@@ -149,7 +149,7 @@ console:
 	call	.blit
 	ld	c, 37
 	ld	hl, .SPLASH_NAME
-	jp	.phy_write
+	jp	tty.phy_write
 
 .thread:
 ; profiling exemple
@@ -195,7 +195,7 @@ console:
 	ld	a, (hl)
 	ld	hl, console_blink
 	bit	CONSOLE_BLINK_RATE, (hl)
-	call	z, .putchar
+	call	z, tty.putchar
 	ld	a, (console_key)
 	cp	a, $FD
 	call	nz, .handle_console_stdin
@@ -204,7 +204,7 @@ console:
 	inc	(hl)
 	bit	CONSOLE_BLINK_RATE, (hl)
 	ld	a, '_'
-	call	z, .putchar
+	call	z, tty.putchar
 	jr	.run_loop
 	
 .blit:
@@ -283,7 +283,7 @@ console:
 
 .handle_key_enter:
 	ld	iy, console_dev
-	call	.phy_new_line
+	call	tty.phy_new_line
 	ld	hl, console_line
 	ld	bc, 0
 	xor	a, a
@@ -359,7 +359,7 @@ console:
 .unknown_command:
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
-	call	.phy_write
+	call	tty.phy_write
 	jp	.prompt
 	
 .check_builtin:
@@ -386,8 +386,8 @@ console:
 	cpi
 	jp	po, .clean_command
 	ld	hl, console_line + 5
-	call	.phy_write
-	call	.phy_new_line	
+	call	tty.phy_write
+	call	tty.phy_new_line	
 	jr	.clean_command
 
 .shutdown:
@@ -397,7 +397,7 @@ console:
 .color:
 	ld	hl, (console_cursor_xy)
 ; 24 * 8 + 4 * 7
-	call	.glyph_adress
+	call	tty.glyph_adress
 ; de = address
 	ex	de, hl
 	ld	de, 40
@@ -423,7 +423,7 @@ console:
 	ld	bc,(320*9)+220
 	ldir
 	ld	iy, console_dev
-	call	.phy_new_line
+	call	tty.phy_new_line
 	jp	.prompt
 .uptime:
 	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
@@ -444,7 +444,7 @@ console:
 	ld	sp, hl
 	ld	hl, console_line
 	ld	bc, 34
-	call	.phy_write
+	call	tty.phy_write
 	jp	.prompt
 
 .handle_key_del:
@@ -490,13 +490,13 @@ console:
 	
 	ld	hl, .KEY_LEFT_CSI
 	ld	bc, 3
-	call	.phy_write
+	call	tty.phy_write
 	
 .refresh_line:
 ; bc = string, hl xy
 	ld	hl, (console_cursor_xy)
 	push	hl
-	call	.glyph_adress
+	call	tty.glyph_adress
 	ld	hl, (console_line_head)
 .refresh_line_loop:
 	ld	a, (hl)
@@ -506,7 +506,7 @@ console:
 	push	hl
 	ld	hl, console_cursor_xy
 	inc	(hl)
-	call	.glyph_char_address
+	call	tty.glyph_char_address
 	pop	hl
 	ld	a, (console_cursor_xy)
 	cp	a, CONSOLE_CURSOR_MAX_COL
@@ -514,14 +514,14 @@ console:
 .refresh_new_line:
 	push	hl
 	ld	hl, console_cursor_xy
-	call	.phy_new_line_ex
+	call	tty.phy_new_line_ex
 ; recompute adress from console_cursor
 	ld	hl, (console_cursor_xy)
-	call	.glyph_adress
+	call	tty.glyph_adress
 	pop	hl
 	jr	.refresh_line_loop
 .refresh_line_restore:
-	call	.glyph_char_address
+	call	tty.glyph_char_address
 	pop	hl
 	ld	(console_cursor_xy), hl
 	ret  
@@ -571,7 +571,7 @@ console:
 	ld	(console_line_head), de
 ; putchar(a)
 	ld	bc, 1
-	jp	.phy_write
+	jp	tty.phy_write
 
 .handle_key_up:
 	ret
@@ -584,7 +584,7 @@ console:
 	ld	(console_line_head), hl
 	ld	hl, .KEY_RIGHT_CSI
 	ld	bc, 3
-	jp	.phy_write
+	jp	tty.phy_write
 
 .KEY_RIGHT_CSI:
  db $1B, "[C"
@@ -597,7 +597,7 @@ console:
 	ld	(console_line_head), hl
 	ld	hl, .KEY_LEFT_CSI
 	ld	bc, 3
-	jp	.phy_write
+	jp	tty.phy_write
 	
 .KEY_LEFT_CSI:
  db $1B, "[D"
@@ -607,7 +607,7 @@ console:
 ; reset cursor xy and put prompt
 	ld	hl, .KEY_CLEAR_CSI
 	ld	bc, 4
-	call	.phy_write
+	call	tty.phy_write
 
 .prompt:
 ; flush the line buffer
@@ -619,7 +619,7 @@ console:
 	ldir
 	ld	c, h
 	ld	hl, .PROMPT
-	jp	.phy_write
+	jp	tty.phy_write
 
 .KEY_CLEAR_CSI:
  db $1B, "[2J"	

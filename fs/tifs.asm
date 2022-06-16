@@ -87,9 +87,26 @@ tifs:
 .delete_byte:
  db	$F0
 
-.path:
+.path_root:
  db "/tifs/", 0
+.path_bin:
+ db "/bin/", 0
+.path_lib:
+ db "/lib/", 0
 
+; TODO : in the futur, detect if the path where tifs is mounted is root and if so, hard link bin and lib 
+; and generate tifs path (because all stuff in root is nasty)
+
+.mount_root:
+; mount the tifs as root
+	call	.mount
+	ld	hl, .path_root
+	ld	de, .path_bin
+	call	kvfs.link
+	ld	hl, .path_root
+	ld	de, .path_lib
+	jp	kvfs.link
+ 
 .mount:
 	ld	hl, kmem_cache_s16
 	call	kmem.cache_alloc
@@ -100,9 +117,9 @@ tifs:
 	lea	bc, iy+6
 	add	iy, de
 	push	de
-	ld	hl, .path
+	ld	hl, .path_root
 	ldir
-	ld	hl, .path
+	ld	hl, .path_root
 	ld	c, KERNEL_VFS_PERMISSION_RWX
 	call	kvfs.mkdir
 	pop	iy

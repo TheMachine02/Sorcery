@@ -29,6 +29,8 @@ define	CONSOLE_BLINK_RATE	1
 define	CONSOLE_CURSOR_MAX_COL	50
 define	CONSOLE_CURSOR_MAX_ROW	20
 
+tty:
+
 .phy_init:
 	ld	hl, .CONSOLE_DEV
 ; single character device, (so write / read / ioctl), no seek capabilities exposed

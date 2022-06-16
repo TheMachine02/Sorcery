@@ -128,21 +128,16 @@ file	'initramfs'
 	call	console.init
 ; flash device ;
 	call	flash.init
-; dev/zero & dev/null
-	call	null.init
-	call	zero.init
+	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
 ; debug thread & other debugging stuff
 ; enabled if kernel is compiled with debug option
 	dbg	thread
-; mount a filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
-if CONFIG_MOUNT_TIFS
+; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
+if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs
-	call	tifs.mount
-	ld	hl, .arch_mount_tifs
-	ld	de, .arch_mount_bin
-	call	kvfs.link
+	call	tifs.mount_root
 end if
 ; if no bin/init found, error out and do a console takeover (console.fb_takeover, which will spawn a console, and the init thread will exit)
 	ld	hl, .arch_bin_path
@@ -170,13 +165,6 @@ end if
 
 .arch_bin_error:
  db	"Failed to execute /bin/init",10,"Running emergency shell",10,0
-
-if CONFIG_MOUNT_TIFS
-.arch_mount_tifs:
- db	"/tifs", 0
-.arch_mount_bin:
- db	"/bin", 0
-end if
 
 sysdef _reboot
 reboot:
@@ -240,7 +228,7 @@ printk:
 	sbc	hl, bc
 	ex	(sp), hl
 	pop	bc
-	jp	console.phy_write
+	jp	tty.phy_write
 
 sysdef _dmesg
 dmesg:

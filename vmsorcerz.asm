@@ -116,6 +116,7 @@ sysinternal:
 
 include	'kernel/init.asm'
 include	'kernel/interrupt.asm'
+include	'kernel/nmi.asm'
 include	'kernel/watchdog.asm'
 include	'kernel/power.asm'
 include	'kernel/thread.asm'
@@ -131,18 +132,14 @@ include	'kernel/dma.asm'
 include	'kernel/inode.asm'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/debug.asm'
-include	'kernel/mm/mm.asm'
-include	'kernel/mm/vfs_cache.asm'
-include	'kernel/mm/slab.asm'
-include	'kernel/compress/lz4.asm'
-include	'kernel/nmi.asm'
 include	'kernel/arch/pic.asm'
 include	'kernel/arch/leaf.asm'
 include	'kernel/arch/ldso.asm'
-include	'fs/romfs.asm'
-include	'fs/tifs.asm'
+include	'kernel/mm/mm.asm'
+include	'kernel/mm/slab.asm'
+include	'kernel/mm/vfs_cache.asm'
+include	'kernel/compress/lz4.asm'
 include	'kernel/font/gohufont.inc'
-
 ; driver & device
 include	'kernel/driver/video.asm'
 include	'kernel/driver/rtc.asm'
@@ -152,13 +149,17 @@ include	'kernel/driver/spi.asm'
 include	'kernel/driver/usb.asm'
 include	'kernel/driver/mtd.asm'
 include	'kernel/driver/console.asm'
-; NOTE : dev console must follow driver/console code
-include	'kernel/dev/console.asm'
-include	'kernel/dev/null.asm'
-include	'kernel/dev/flash.asm'
+; various device
+include 'kernel/dev/flash.asm'
+include 'kernel/dev/tty.asm'
+include 'kernel/dev/mem.asm'
+include 'kernel/dev/random.asm'
+; filesystem
+include	'fs/romfs.asm'
+include	'fs/tifs.asm'
 
-init_conway:
-include	'conway.asm'
+; init_conway:
+; include	'conway.asm'
 
 assert $ < $D08000
 
