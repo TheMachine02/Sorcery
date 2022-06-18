@@ -23,7 +23,6 @@ define	KERNEL_VFS_TYPE_BLOCK_DEVICE		3 shl 3
 define	KERNEL_VFS_TYPE_FIFO			4 shl 3
 define	KERNEL_VFS_TYPE_SYMLINK			5 shl 3
 define	KERNEL_VFS_TYPE_SOCKET			6 shl 3
-define	KERNEL_VFS_TYPE_COMPAT			7 shl 3
 
 define	KERNEL_VFS_CAPABILITY_DMA		64		; direct pointer acess
 define	KERNEL_VFS_CAPABILITY_ACCESS		128		; in use bit

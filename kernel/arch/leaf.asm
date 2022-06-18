@@ -17,26 +17,23 @@ sysdef _execve
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	l, a
 	and	a, KERNEL_VFS_TYPE_MASK
-	jr	z, .execve_perm
-	cp	a, KERNEL_VFS_TYPE_COMPAT
-	ld	a, ENOMEM
+	ld	a, ENOEXEC
 	jp	nz, kvfs.inode_atomic_write_error
-.execve_perm:
 	bit	KERNEL_VFS_PERMISSION_X_BIT, l
 	jp	z, kvfs.inode_atomic_write_error
 ; check if inode is DMA, else allocate the header and make it point to ix
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, l
-	jr	z, .execve_no_xip
+	jp	z, .execve_no_xip
 ; we have an DMA inode, so we may check both compat and XIP
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
-	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
-	and	a, KERNEL_VFS_TYPE_MASK
-	cp	a, KERNEL_VFS_TYPE_COMPAT
-	jr	z, .execve_compat_xip
 ; try to execute a leaf file
 .execve_leaf_xip:
 	call	.leaf_check_file
+; if it is not a leaf file, assume compat file (since it is executable)
+	jr	nz, .execve_compat_xip
+	call	.leaf_check_supported
+	ld	a, ENOEXEC
 	jp	nz, kvfs.inode_atomic_write_error
 ; does the file support XIP ?
 	bit	LF_XIP_BIT, (ix+LEAF_HEADER_FLAGS)
@@ -61,6 +58,12 @@ sysdef _execve
 	sbc	hl, hl
 	ret
 .execve_compat_xip:
+	ld	hl, (ix+0)
+	ld	de, $007BEF
+	or	a, a
+	sbc.s	hl, de
+	ld	a, ENOEXEC
+	jp	nz, kvfs.inode_atomic_write_error
 ; we have ix = program
 	ld	de, (iy+KERNEL_VFS_INODE_SIZE)
 ; hl / 1024 + 1
@@ -81,7 +84,9 @@ sysdef _execve
 ; copy the file
 	ld	de, $D1A881
 	ld	bc, (iy+KERNEL_VFS_INODE_SIZE)
-	lea	hl, ix+0
+	dec	bc
+	dec	bc
+	lea	hl, ix+2
 	ldir
 ; and execute the program
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
@@ -132,7 +137,8 @@ sysdef _execve
 	ret	nz
 	ld	a, (iy+LEAF_IDENT_MAG4)
 	cp	a, 'F'
-	ret	nz
+	ret
+
 .leaf_check_supported:
 	ld	a, (iy+LEAF_HEADER_TYPE)
 	sub	a, LT_EXEC
