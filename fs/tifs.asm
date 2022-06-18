@@ -202,8 +202,11 @@ tifs:
 ; unknown file type for now
 	jr	nz, .mount_strange_file
 .mount_exec:
+	dec	bc
+	dec	bc
 	push	bc
-; don't skip $EF7B identifier of 8xp exectuable
+	inc	hl
+	inc	hl
 	ld	bc, KERNEL_VFS_PERMISSION_RX
 .mount_create_inode:
 	inc	hl

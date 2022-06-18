@@ -58,13 +58,8 @@ sysdef _execve
 	sbc	hl, hl
 	ret
 .execve_compat_xip:
-	ld	hl, (ix+0)
-	ld	de, $007BEF
-	or	a, a
-	sbc.s	hl, de
-	ld	a, ENOEXEC
-	jp	nz, kvfs.inode_atomic_write_error
 ; we have ix = program
+; we don't have a leaf file
 	ld	de, (iy+KERNEL_VFS_INODE_SIZE)
 ; hl / 1024 + 1
 	ld	bc, 1024
