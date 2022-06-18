@@ -88,7 +88,7 @@ tifs:
  db	$F0
 
 .path_root:
- db "/tifs/", 0
+ db "/dev/tifs/", 0
 .path_bin:
  db "/bin/", 0
 .path_lib:
@@ -100,6 +100,12 @@ tifs:
 .mount_root:
 ; mount the tifs as root
 	call	.mount
+; 	ld	hl, .path_bin
+; 	ld	bc, KERNEL_VFS_PERMISSION_RW
+; 	call	kvfs.mkdir
+; 	ld	hl, .path_lib
+; 	ld	bc, KERNEL_VFS_PERMISSION_RW
+; 	call	kvfs.mkdir
 	ld	hl, .path_root
 	ld	de, .path_bin
 	call	kvfs.link
@@ -108,13 +114,13 @@ tifs:
 	jp	kvfs.link
  
 .mount:
-	ld	hl, kmem_cache_s16
+	ld	hl, kmem_cache_s32
 	call	kmem.cache_alloc
 	ret	c
 ; this will be our temporary buffer for path
 	ex	de, hl
 	ld	iy, 0
-	lea	bc, iy+6
+	lea	bc, iy+10
 	add	iy, de
 	push	de
 	ld	hl, .path_root
@@ -175,7 +181,7 @@ tifs:
 	dec	c
 	jr	z, .mount_strange_file
 ; copy file name to our temporary buffer
-	lea	de, iy+6
+	lea	de, iy+10
 	inc	hl
 	ldir
 ; blit a zero to be a null terminated string \*/
@@ -196,18 +202,14 @@ tifs:
 ; unknown file type for now
 	jr	nz, .mount_strange_file
 .mount_exec:
-	inc	hl
-	dec.s	bc
-	dec	bc
 	push	bc
-; skip $EF7B identifier of 8xp exectuable
-	inc	hl
+; don't skip $EF7B identifier of 8xp exectuable
 	ld	bc, KERNEL_VFS_PERMISSION_RX
 .mount_create_inode:
 	inc	hl
 	push	hl
 	lea	hl, iy+0
-	ld	a, KERNEL_VFS_TYPE_COMPAT or KERNEL_VFS_CAPABILITY_DMA
+	ld	a, KERNEL_VFS_TYPE_FILE or KERNEL_VFS_CAPABILITY_DMA
 	push	hl
 	call	kvfs.inode_create
 	pop	ix
@@ -239,7 +241,6 @@ tifs:
 	
 .mount_appv:
 	push	bc
-; RO fs for now
 	ld	bc, KERNEL_VFS_PERMISSION_R
 	jr	.mount_create_inode
 	
