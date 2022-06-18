@@ -6,7 +6,7 @@ define	KERNEL_MM_PAGE_CACHE_MASK	64	; this is a cache page
 define	KERNEL_MM_PAGE_UNEVICTABLE_MASK	32	; set page as not moveable
 define	KERNEL_MM_PAGE_DIRTY_MASK	16	; only used if unevictable is z
 define	KERNEL_MM_PAGE_USER_MASK	15	; owner mask in first byte of ptlb
-define	KERNEL_MM_PAGE_COUNTER		1	; the counter is the second byte of ptlb
+define	KERNEL_MM_PAGE_USER_DATA	1	; user data
 define	KERNEL_MM_PAGE_INODE		0	; the inode number for cache page is stored in 2 bytes overlapping flag byte
 define	KERNEL_MM_PAGE_LRU		2	; the decay value is stored in the third bytes of ptlb
 ; bit
@@ -33,6 +33,7 @@ define	KERNEL_MM_GFP_RAM_SIZE		KERNEL_MM_PHY_RAM_SIZE - (KERNEL_MM_GFP_KERNEL * 
 define	KERNEL_MM_GFP_KERNEL		32	; $D08000 : total kernel size
 define	KERNEL_MM_GFP_USER		64	; $D10000 : start of user memory
 define	KERNEL_MM_GFP_CRITICAL		28	; 4K of critical RAM area ? (TODO : to be defined)
+define	KERNEL_MM_GFP_USER_COMPAT	106	; $D1A800 : compat
 define	KERNEL_MM_PAGE_MAX		256
 
 ; $D0 ... $D1 should be reserved to kernel / cache
@@ -118,6 +119,7 @@ kmm:
 	ld	hl, (kthread_current)
 	or	a, a
 	ld	a, (hl)
+; map pages to a thread with pid = a
 .map_user_pages:
 	dec	c
 	ld	e, c
@@ -355,6 +357,12 @@ assert KERNEL_MM_PAGE_SIZE = 1024
 	ld	hl, kmm_ptlb_map
 	ld	l, a
 	ret
+
+.map_user_page:
+; map a single page to an user thread
+; a = pid
+	ld	d, a
+	ld	e, 0
 
 .map_page:
 ; register b is page index wanted, return hl = adress and a = page or -1 if error with a=error and c set

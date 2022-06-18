@@ -345,15 +345,14 @@ console:
 ; create thread with execve as thread is a good idea, however, the thread creation will always be correct
 ; then I need to retrieve error code of execve and then utimately error code of exit thread
 	dbg	open
-;	call	leaf.program
-	scf
+	call	leaf.execve
 	jr	c, .unknown_command
-; right here, we should wait for sigchild
-.exclusive_wait_command:
-	call	signal.wait
-	ld	a, l
-	cp	a, SIGCHLD
-	jr	nz, .exclusive_wait_command
+; ; right here, we should wait for sigchild
+; .exclusive_wait_command:
+; 	call	signal.wait
+; 	ld	a, l
+; 	cp	a, SIGCHLD
+; 	jr	nz, .exclusive_wait_command
 .clean_command:
 	jp	.prompt
 .unknown_command:

@@ -79,7 +79,7 @@ user_return:
 	pop	af
 	scf
 	ret
-	
+
 sysdef _enosys
 user_nosys:
 	ld	a, ENOSYS

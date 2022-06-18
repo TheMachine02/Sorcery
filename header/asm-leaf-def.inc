@@ -63,6 +63,12 @@ define	LF_COMPRESSED		1
 define	LF_STATIC		2
 define	LF_REALLOC		4
 define	LF_XIP			8
+
+define	LF_COMPRESSED_BIT	0
+define	LF_STATIC_BIT		1
+define	LF_REALLOC_BIT		2
+define	LF_XIP_BIT		3
+
  
 ; section type
 define	SHT_NULL		0

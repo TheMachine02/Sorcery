@@ -41,6 +41,7 @@ end struct
 
 purge struct?
 
+
 define	LEAF_HEADER		0
 define	LEAF_HEADER_IDENT	0	; 5 bytes
 define	LEAF_IDENT		0	; start
@@ -58,6 +59,7 @@ define	LEAF_HEADER_SHNUM	14	; 1 bytes, number of section
 define	LEAF_HEADER_SHSTRNDX	15	; 1 bytes, string section index
 
 define	LEAF_HEADER_SIZE	16
+
 ; header is 16 bytes
 
 define	LEAF_SECTION		0
@@ -104,6 +106,12 @@ define	LF_COMPRESSED		1
 define	LF_STATIC		2
 define	LF_REALLOC		4
 define	LF_XIP			8
+
+define	LF_COMPRESSED_BIT	0
+define	LF_STATIC_BIT		1
+define	LF_REALLOC_BIT		2
+define	LF_XIP_BIT		3
+
  
 ; section type
 define	SHT_NULL		0
@@ -149,7 +157,8 @@ R_Z80_BYTE1	= 8
 R_Z80_BYTE2	= 9
 R_Z80_BYTE3	= 10
 R_Z80_WORD0	= 11
-R_Z80_WORD1	= 12
+R_Z80_WORD1	= 12 
+
 
 LEAF::
 
