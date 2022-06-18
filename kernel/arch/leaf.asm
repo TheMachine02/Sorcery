@@ -54,6 +54,7 @@ sysdef _execve
 .execve_return:
 	pop	hl
 	call	atomic_rw.unlock_write
+	call	kwatchdog.arm
 	or	a, a
 	sbc	hl, hl
 	ret
@@ -66,6 +67,7 @@ sysdef _execve
 	call	fpu.uidiv
 ; map pages
 	ld	c, e
+	inc	c
 	ld	b, KERNEL_MM_GFP_USER_COMPAT
 	push	bc
 	call	kmm.map_pages
@@ -79,10 +81,10 @@ sysdef _execve
 ; copy the file
 	ld	de, $D1A881
 	ld	bc, (iy+KERNEL_VFS_INODE_SIZE)
-	dec	bc
-	dec	bc
-	lea	hl, ix+2
+	lea	hl, ix+0
 	ldir
+; disable watchdog
+	call	kwatchdog.disarm
 ; and execute the program
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	ld	hl, .execve_return

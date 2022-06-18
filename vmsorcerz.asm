@@ -91,6 +91,14 @@ sysjump:
 	jp	_enosys		; _setrlimit
 	jp	_enosys		; _setsid
 	jp	_enosys		; _getsid
+	jp	_enosys		; _socket
+	jp	_enosys		; _listen
+	jp	_enosys		; _bind
+	jp	_enosys		; _connect
+	jp	_enosys		; _accept
+	jp	_enosys		; _getsockaddrs
+	jp	_enosys		; _sendto
+	jp	_enosys		; _recvfrom
 	jp	_shutdown
 	jp	_reboot
 	jp	_usleep
@@ -101,14 +109,7 @@ sysjump:
 	jp	_dma_access
 	jp	_dma_blk
 	jp	_dma_release
-; 	jp	_socket
-; 	jp	_listen
-; 	jp	_bind
-; 	jp	_connect
-; 	jp	_accept
-; 	jp	_getsockaddrs
-; 	jp	_sendto
-; 	jp	_recvfrom
+	jp	_void
 ; NOTE : max 240 syscall, should be way more than enough
 align	1024
 sysinternal:

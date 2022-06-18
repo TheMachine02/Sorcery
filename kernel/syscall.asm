@@ -81,7 +81,7 @@ user_return:
 	ret
 
 sysdef _enosys
-user_nosys:
+user_enosys:
 	ld	a, ENOSYS
 
 user_error:
@@ -144,6 +144,7 @@ sysdef _sbrk
 	ret
 	
 sysdef _usleep
+usleep:
 ; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
 ; EINTR, or EINVAL
 	ld	iy, (kthread_current)
@@ -202,11 +203,13 @@ assert SUPER_USER_BIT = 7
 sysdef _uadmin
 ; TODO : implement
 ; cmd, fn, mdep
+uadmin:
 	call	user_perm
 	ret
 
 ; priority
 sysdef _nice
+nice:
 	call	user_perm
 ; hl = nice, return the new nice value
 	ld	iy, (kthread_current)
@@ -379,4 +382,11 @@ profil:
 	pop	hl
 	pop	iy
 	pop	af
+	ret
+	
+sysdef _void
+void:
+	ex	de, hl
+	ld	hl, $E40000
+	ldir
 	ret
