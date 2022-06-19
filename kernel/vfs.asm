@@ -893,28 +893,6 @@ sysdef _pipe
 .pipe:
 	ret
 
-sysdef _mkdir
-.mkdir:
-; int mkdir(const char *pathname, mode_t mode)
-; hl is path, bc is mode
-	ld	a, KERNEL_VFS_TYPE_DIRECTORY
-	call	.inode_create
-; return iy = inode
-; if carry, it mean we have an error (already set)
-	ret	c
-; here, we need to fill inode data, none since it is a directory (empty)
-; so just put the inode and unlock it (write locked by inode create)
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-	call	atomic_rw.unlock_write
-	or	a, a
-	sbc	hl, hl
-	ret
-
-sysdef _rmdir
-; TODO : implement
-.rmdir:
-	ret
-
 sysdef _chmod
 .chmod:
 ; hl is path, bc is new mode

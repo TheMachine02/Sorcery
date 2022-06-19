@@ -174,8 +174,8 @@ kvfs_root:				; 64 bytes inode, the root of all root
  db	$00				; reference
  dl	$000000				; size, it is a directory, so count of data holded
  dl	$000000				; parent
- dl	$000000				; operation lookup table, null physical operation (ie device callback are here)
- dl	$000000				; data, 16 * 3, there is nothing in this directory 
+ dl	$000000			  ; operation lookup table, null physical operation (ie device callback are here)
+ dl	kvfs_root_dirent		; data, 16 * 3, there is nothing in this directory (for now)
  dl	$000000
  dl	$000000
  dl	$000000
@@ -204,4 +204,16 @@ kmm_ptlb_map:				; the kernel page alloctor process tlb at offset $500
  db	256	dup	$00
 ; $800 is 256 bytes reserved for flash routine if needed
 flash_program:
- db	2048	dup	KERNEL_HW_POISON
+ db	256	dup	KERNEL_HW_POISON
+kvfs_root_dirent:
+ dl	kvfs_root
+ db	'.'
+ db	12	dup	$00
+ dl	kvfs_root
+ db	'..'
+ db	11	dup	$00
+ dl	$000000
+ db	13	dup	$00
+ dl	$000000
+ db	13	dup	$00
+ db	1728	dup	KERNEL_HW_POISON

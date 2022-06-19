@@ -19,7 +19,7 @@ define	KERNEL_VFS_INODE_DMA_POINTER		1
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_INODE		0	; 3 bytes pointer to inode
-define	KERNEL_VFS_DIRECTORY_NAME		3	; name, 
+define	KERNEL_VFS_DIRECTORY_NAME		3	; name
 
 define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
@@ -104,7 +104,7 @@ define	phy_stat		24
 	call	.inode_call
 	pop	hl
 	jp	kfree
-	
+
 .inode_get_lock:
 ; hl is path
 ; return c = error, none lock
@@ -438,18 +438,31 @@ define	phy_stat		24
 	and	a, KERNEL_VFS_TYPE_MASK
 	ld	hl, KERNEL_VFS_INODE_NODE_SIZE_SYMLINK
 	cp	a, KERNEL_VFS_TYPE_SYMLINK
-	jr	z, .node_regular
+	jr	z, .inode_regular
 	add	hl, hl
 ; fifo ?
-;	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, c
-;	jr	nz, .node_regular
 	cp	a, KERNEL_VFS_TYPE_FIFO
-	jr	z, .node_regular
+	jr	z, .inode_regular
 	add	hl, hl
-.node_regular:
-	call	kmalloc
+.inode_regular:
+	call	kmem.cache_malloc
 	ld	a, ENOMEM
 	jp	c, .inode_atomic_write_error
+; if it is a directory, we need a dirent ready
+	ld	a, c
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	jr	nz, .inode_copy
+	push	hl
+	ld	hl, kmem_cache_s64
+	call	kmem.cache_alloc
+	ex	(sp), hl
+	jr	nc, .inode_copy
+; unalloc the inode and unlock parent and error out
+	call	kmem.cache_free
+	ld	a, ENOMEM
+	jp	.inode_atomic_write_error
+.inode_copy:
 ; hl is our new little inode \o/
 ; copy everything in the dir entrie
 	ld	(ix+KERNEL_VFS_DIRECTORY_INODE), hl
@@ -478,6 +491,28 @@ define	phy_stat		24
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
 	ld	(ix+KERNEL_VFS_INODE_FLAGS), c
 	ld	(ix+KERNEL_VFS_INODE_PARENT), iy
+; in case of directory inode, we have the dirent on the stack
+	ld	a, c
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	jr	nz, .inode_allocate_continue_init
+	pop	hl
+	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	a, '.'
+	ld	(ix+KERNEL_VFS_INODE_DATA), hl
+	ld	(hl), ix
+	add	hl, bc
+	ld	(hl), iy
+	inc	hl
+	inc	hl
+	inc	hl
+	ld	(hl), a
+	inc	hl
+	ld	(hl), a
+	scf
+	sbc	hl, bc
+	ld	(hl), a
+.inode_allocate_continue_init:
 	lea	hl, ix+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.init
 ; hard take the write lock
@@ -485,7 +520,7 @@ define	phy_stat		24
 	dec	(hl)
 ; copy parent methode inheriting filesystem and mount propriety
 	ld	hl, (iy+KERNEL_VFS_INODE_OP)
-	ld	(ix+KERNEL_VFS_INODE_OP), hl
+	ld	(ix+KERNEL_VFS_INODE_OP), hl	
 ; unlock parent inode
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
@@ -814,3 +849,52 @@ sysdef _rename
 ; TODO : implement
 	ret
 
+sysdef _mkdir
+.mkdir:
+.inode_mkdir:
+; int mkdir(const char *pathname, mode_t mode)
+; hl is path, bc is mode
+	ld	a, KERNEL_VFS_TYPE_DIRECTORY
+	call	.inode_create
+; return iy = inode
+; if carry, it mean we have an error (already set)
+	ret	c
+; inode creation routine take care of creating special directory
+; unlock the inode (write locked by inode create)
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
+
+sysdef _rmdir
+; TODO : implement
+.rmdir:
+.inode_rmdir:
+	ret
+; 	call	.inode_directory_get_lock
+; 	ret	c
+; ; iy = inode, hl = name
+; 	call	.inode_directory_lookup
+; 	jp	c, .inode_atomic_write_error
+; ; ix = dirent, so delete it and deref the children inode
+; 	ld	hl, KERNEL_MM_NULL
+; 	lea	de, ix+KERNEL_VFS_DIRECTORY_ENTRY
+; 	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
+; 	ld	a, (ix+KERNEL_VFS_INODE_FLAGS)
+; 	and	a, KERNEL_VFS_TYPE_MASK
+; 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+; 	ld	a, ENOTDIR
+; 	jp	nz, .inode_atomic_write_error
+; ; now check the directory inode is empty (excepted . and ..)
+; 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+; 	ldir
+; ; ix = children inode to deref, iy is parent
+; 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+; 	lea	iy, ix+0
+; 	call	.inode_deref
+; 	pop	hl
+; 	call	atomic_rw.unlock_write
+; 	or	a, a
+; 	sbc	hl, hl
+; 	ret
