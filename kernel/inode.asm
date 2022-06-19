@@ -636,6 +636,12 @@ sysdef _unlink
 	ld	hl, KERNEL_MM_NULL
 	lea	de, ix+KERNEL_VFS_DIRECTORY_ENTRY
 	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
+; check the inode is NOT a directory (see rmdir for that)
+	ld	a, (ix+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	ld	a, EISDIR
+	jp	z, .inode_atomic_write_error
 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ldir
 ; ix = children inode to deref, iy is parent
