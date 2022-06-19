@@ -137,6 +137,7 @@ hypervisor:
 	ret
 
 .nmi:
+	ld	iy, $D00080
 	bit	VM_HYPERVISOR_LUT, (iy+VM_HYPERVISOR_SETTINGS)
 	jr	z, guest_tios.nmi
 	push	hl

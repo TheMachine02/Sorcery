@@ -54,7 +54,7 @@ sysdef _execve
 .execve_return:
 	pop	hl
 	call	atomic_rw.unlock_write
-	call	kwatchdog.arm
+; 	call	kwatchdog.arm
 	or	a, a
 	sbc	hl, hl
 	ret
@@ -84,7 +84,7 @@ sysdef _execve
 	lea	hl, ix+0
 	ldir
 ; disable watchdog
-	call	kwatchdog.disarm
+; 	call	kwatchdog.disarm
 ; and execute the program
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	ld	hl, .execve_return
@@ -125,22 +125,22 @@ sysdef _execve
 	
 .leaf_check_file:
 ; iy = file adress (static for now, we'll need read syscall)
-	ld	a, (iy+LEAF_IDENT_MAG0)
+	ld	a, (ix+LEAF_IDENT_MAG0)
 	cp	a, $7F
 	ret	nz
-	ld	hl, (iy+LEAF_IDENT_MAG1)
+	ld	hl, (ix+LEAF_IDENT_MAG1)
 	ld	de, 'L'+('E'*256)+('A'*65536)
 	sbc	hl, de
 	ret	nz
-	ld	a, (iy+LEAF_IDENT_MAG4)
+	ld	a, (ix+LEAF_IDENT_MAG4)
 	cp	a, 'F'
 	ret
 
 .leaf_check_supported:
-	ld	a, (iy+LEAF_HEADER_TYPE)
+	ld	a, (ix+LEAF_HEADER_TYPE)
 	sub	a, LT_EXEC
 	ret	nz
-	or	a, (iy+LEAF_HEADER_MACHINE)
+	or	a, (ix+LEAF_HEADER_MACHINE)
 	ret
 ; 	
 ; .BROKEN:

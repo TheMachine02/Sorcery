@@ -1,4 +1,6 @@
 #!/bin/bash
+rm -rf bin
+mkdir bin
 #generate config
 version=${1:-0.1.5}
 str=$(git rev-parse --short HEAD)
@@ -26,3 +28,13 @@ sha256sum -b bin/sorcery-$version-slp | sed 's/ \*.*//'> bin/sha256
 truncate bin/sha256 -s -1
 # cleanup
 rm image.asm initramfs bin/initramfs
+
+# build a small demo executable
+fasmg executable.asm bin/crc
+echo "include	'header/include/ez80.inc'" > crc.asm
+echo "include	'header/include/tiformat.inc'" >> crc.asm
+echo "format	ti executable archived 'CRC'" >> crc.asm
+echo "file	'bin/crc'" >> crc.asm
+fasmg crc.asm bin/CRC.8xp
+# cleanup
+rm crc.asm
