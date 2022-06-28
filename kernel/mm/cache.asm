@@ -1,6 +1,4 @@
-vfs_cache:
-
-.map_page:
+.map_cache_page:
 ; doesnt destroy hl, bc
 ; return page in a or error in a with carry set
 ; iy should be the inode
@@ -24,7 +22,7 @@ vfs_cache:
 	or	a, e
 	ld	e, a
 	ld	b, KERNEL_MM_GFP_KERNEL
-	call	kmm.map_page
+	call	.map_page
 ; TODO : if carry : try to reclaim some memory pages
 	pop	iy
 	pop	de
@@ -32,14 +30,14 @@ vfs_cache:
 	pop	hl
 	ret
 	
-.dirty_page:
+.dirty_cache_page:
 ; a is page
 	ld	hl, kmm_ptlb_map
 	ld	l, a
 	set	KERNEL_MM_PAGE_DIRTY, (hl)
 	ret	
 	
-.drop_page:
+.drop_cache_page:
 ; unmap all pages belonging to an inode (de should be inode flags)
 ; compute the id from inode number
 ; for inode, we need to extract the 12 bits of information and merge it with the tlb
@@ -59,8 +57,8 @@ vfs_cache:
 ; let's go
 	ld	hl, kmm_ptlb_map + KERNEL_MM_PAGE_MAX + KERNEL_MM_GFP_KERNEL
 	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
-	jr	.__drop_page_parse
-.__drop_page_flush:
+	jr	.__drop_cache_page_parse
+.__drop_cache_page_flush:
 	push	af
 	dec	hl
 	dec	h
@@ -68,14 +66,14 @@ vfs_cache:
 	ld	a, (hl)
 	and	a, KERNEL_MM_PAGE_USER_MASK
 	cp	a, e
-	call	z, kmm.flush_page
+	call	z, .flush_page
 	inc	h
 	inc	hl
 	pop	af
-.__drop_page_parse:
+.__drop_cache_page_parse:
 	cpir
-	jp	pe, .__drop_page_flush
+	jp	pe, .__drop_cache_page_flush
 	ret
 	
-.evict_page:
+.evict_cache_page:
 	ret 

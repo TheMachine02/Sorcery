@@ -44,7 +44,7 @@ macro	trap
 	db $FD, $FF
 end	macro
 
-kmm:
+mm:
 ; memory adress sanitizer in memory allocation ;
 ; read and write permission : every thread can write to an allocated page
 ; detect non allocated page write
@@ -112,20 +112,23 @@ kmm:
 ; Say, I WISH YOU THE BEST
 	ret
 
+.map_user_pages:
+; map pages to a thread with pid = a
+	ld	d, a
+	ld	e, 0
+	
 .map_pages:
 ; register b is page index wanted, return hl = adress or -1 if error
 ; register c is page count wanted
-; destroy bc, destroy a, destroy de
-	ld	hl, (kthread_current)
-	or	a, a
-	ld	a, (hl)
-; map pages to a thread with pid = a
-.map_user_pages:
+; de is tlb flags
+; destroy bc, destroy a, destroy de, destroy ix
 	dec	c
-	ld	e, c
-	jr	z, .page_map_single
+	jr	z, .map_page
+	push	de
+	pop	ix
 ; map c page from b page to thread a
 	ld	h, a
+	ld	e, c
 	ld	a, i
 	ld	a, h
 	push	af
@@ -141,19 +144,19 @@ kmm:
 	inc.s	bc
 	ld	a, KERNEL_MM_PAGE_FREE_MASK
 	di
-.page_map_parse:
+.__map_pages_parse:
 ; fast search for free page
 	cpir
-	jp	po, .page_map_no_free
+	jp	po, .__map_page_full
 ; else check we have at least c page free
 	ld	d, e
-.page_map_length:
+.__map_pages_length:
 	cpi
-	jp	po, .page_map_except
-	jr	nz, .page_map_parse
+	jp	po, .__map_pages_except
+	jr	nz, .__map_pages_parse
 	dec	d
-	jr	nz, .page_map_length
-.page_map_found:
+	jr	nz, .__map_pages_length
+.__map_pages_write_tlb:
 ; e is lenght, hl is last adress + 1
 	dec	hl
 	ld	a, l
@@ -165,198 +168,27 @@ kmm:
 	ld	c, l	; save l for latter
 	pop	af
 	push	af
-.page_map_owner:
-	ld	(hl), 0
-	inc	h
-	ld	(hl), a
-	dec	h
-	inc	hl
-	djnz	.page_map_owner
-	pop	af
-	jp	po, $+5
-	ei
-	ld	hl, KERNEL_MM_PHY_RAM shr 2
-	ld	h, c
-	add	hl, hl
-	add	hl, hl
-	ret
-.page_map_except:
-	jp	nz, .page_map_no_free
-	dec	d
-	jr	z, .page_map_found
-	jp	.page_map_no_free
-
-.page_map_single:
-; register b is page index wanted, return hl = adress or -1 if error, e is flag (SHARED or not)
-; destroy bc, destroy hl
-; get kmm_ptlb_map adress
-	ld	a, i
-	push	af
-	ld	hl, kmm_ptlb_map
-	ld	l, b
-	ld	a, b
-	cpl
-	ld	b, 0
-	ld	c, a
-	inc.s	bc
-	ld	a, KERNEL_MM_PAGE_FREE_MASK
-	di
-; fast search for free page
-	cpir
-	jp	po, .page_map_no_free
-	dec	hl
+	lea	de, ix+0
+.__map_pages_write_flags:
 	ld	(hl), e
 	inc	h
+	ld	(hl), d
+	dec	h
+	inc	hl
+	djnz	.__map_pages_write_flags
 	pop	af
-	ld	(hl), a
 	jp	po, $+5
 	ei
-	ld	b, l
 	ld	hl, KERNEL_MM_PHY_RAM shr 2
-	ld	h, b
-	add	hl, hl
-	add	hl, hl
-	ret
-.page_map_no_free:
-; will need to reclaim cache memory page
-	scf
-	sbc	hl, hl
-	pop	af
-	scf
-	ret	po
-	ei
-	ret
-
-.unmap_user_pages:
-; unmap all the pages belonging to an thread
-; a = pid
-; sanity check guard, call by kernel
-; of course, it is easy to bypass, but at least it is here
-; mainly, what happen if you unmap yourself ? > CRASH
-	pop	hl
-	push	hl
-	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE
-	or	a, a
-	sbc	hl, bc
-	jp	nc, .segfault
-	ld	hl, kmm_ptlb_map + KERNEL_MM_PAGE_MAX + KERNEL_MM_GFP_KERNEL
-	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
-	jr	.__unmap_user_pages_parse
-.__unmap_user_pages_flush:
-	dec	hl
-	dec	h
-	bit	KERNEL_MM_PAGE_CACHE, (hl)
-	call	z, .flush_page
-	inc	h
-	inc	hl
-.__unmap_user_pages_parse:
-	cpir
-	jp	pe, .__unmap_user_pages_flush
-	ret
-
-.unmap_pages:
-; register b is page index wanted
-; register c is page count wanted to clean
-; destroy hl, bc, a
-	dec	c
-	jr	z, .unmap_page
-	ld	a, b
-; sanity check ;
-; b > base kernel memory
-	cp	a, KERNEL_MM_GFP_KERNEL
-	jp	c, .segfault
-	ld	hl, kmm_ptlb_map
-	ld	l, b
-	ld	a, b
-	add	a, c
-	jp	c, .segfault
-; okay nice. Now, we will unmap page
-; hl = first page
-; check permission first
-	inc	c
-	ld	b, c
-	ld	de, (kthread_current)
-	ld	a, (de)
-; thread pid
-	ld	e, a
-.__unmap_pages_loop:
-; page_perm_rwox
-	ld	a, (hl)
-	and	a, KERNEL_MM_PAGE_FREE_MASK
-	jp	nz, .segfault
-	inc	h
-	ld	a, e
-	cp	a, (hl)
-	jp	nz, .segfault
-	dec	h
-	call	.flush_page
-	djnz	.__unmap_pages_loop
-	ret
-
-.unmap_page:
-; register b is page index wanted
-; destroy a, destroy hl, destroy bc, destroy de
-; page_perm_rwox
-	ld	de, kmm_ptlb_map
-	ld	e, b
-	ld	a, (de)
-	and	a, KERNEL_MM_PAGE_FREE_MASK
-	jp	nz, .segfault
-	ld	a, b
-; sanity check ;
-; b > base kernel memory
-	cp	a, KERNEL_MM_GFP_KERNEL
-	jp	c, .segfault
-; are we the owner ?
-	ld	hl, (kthread_current)
-	inc	d
-	ld	a, (de)
-	dec	d
-	cp	a, (hl)
-	jp	nz, .segfault
-	ex	de, hl
-	
-; rst $0 : trap execute, illegal instruction
-.flush_page:
-; hl as the ptlb adress
-	push	bc
-	push	hl
-	ld	c, l
- 	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, c
 	add	hl, hl
 	add	hl, hl
-	ld	bc, KERNEL_MM_PAGE_SIZE - 1
-	ex	de, hl
-	sbc	hl, hl
-	adc	hl, de
-	ld	(hl), KERNEL_HW_POISON
-	inc	de
-	ldir
-	pop	hl
-; write first free_mask, so the page will be considered as free even if hell break loose and the thread is killed between the two following write
-	ld	(hl), KERNEL_MM_PAGE_FREE_MASK
-	inc	h
-	ld	(hl), c
-	dec	h
-	pop	bc
 	ret
-
-.physical_to_ptlb:
-; adress divided by page KERNEL_MM_PAGE_SIZE = 1024
-assert KERNEL_MM_PAGE_SIZE = 1024
-	push	hl
-	dec	sp
-	pop	hl
-	inc	sp
-	ld	a, l
-	srl	h
-	rra
-	srl	h
-	rra
-	ld	hl, kmm_ptlb_map
-	ld	l, a
-	ret
+.__map_pages_except:
+	jp	nz, .__map_page_full
+	dec	d
+	jr	z, .__map_pages_write_tlb
+	jp	.__map_page_full
 
 .map_user_page:
 ; map a single page to an user thread
@@ -409,4 +241,149 @@ assert KERNEL_MM_PAGE_SIZE = 1024
 	ld	a, ENOMEM
 	ret	po
 	ei
+	ret
+
+.drop_user_pages:
+; unmap all the pages belonging to an thread
+; a = pid
+; sanity check guard, call by kernel
+; of course, it is easy to bypass, but at least it is here
+; mainly, what happen if you unmap yourself ? > CRASH
+	pop	hl
+	push	hl
+	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE
+	or	a, a
+	sbc	hl, bc
+	jp	nc, .segfault
+	ld	hl, kmm_ptlb_map + KERNEL_MM_PAGE_MAX + KERNEL_MM_GFP_KERNEL
+	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
+	jr	.__drop_user_pages_parse
+.__drop_user_pages_flush:
+	dec	hl
+	dec	h
+	bit	KERNEL_MM_PAGE_CACHE, (hl)
+	call	z, .flush_page
+	inc	h
+	inc	hl
+.__drop_user_pages_parse:
+	cpir
+	jp	pe, .__drop_user_pages_flush
+	ret
+
+.unmap_user_pages:
+; ; register b is page index wanted
+; ; register c is page count wanted to clean
+; ; destroy hl, bc, a
+; a is pid
+	ld	d, a
+	ld	e, 0
+.unmap_pages:
+; de is full tlb flag
+	dec	c
+	jr	z, .unmap_page
+	ld	a, b
+; sanity check ;
+; b > base kernel memory
+	cp	a, KERNEL_MM_GFP_KERNEL
+	jp	c, .segfault
+	ld	hl, kmm_ptlb_map
+	ld	l, b
+	ld	a, b
+	add	a, c
+	jp	c, .segfault
+; okay nice. Now, we will unmap page and check full tlb bytes
+; hl = first page
+; check permission first
+	inc	c
+	ld	b, c
+.__unmap_pages_loop:
+; page_perm_rwox
+	ld	a, (hl)
+	cp	a, e
+	jp	nz, .segfault
+	inc	h
+	ld	a, (hl)
+	cp	a, d
+	jp	nz, .segfault
+	dec	h
+	call	.flush_page
+	djnz	.__unmap_pages_loop
+	ret
+
+.unmap_user_page:
+; register b is page index wanted
+; destroy a, destroy hl, destroy bc, destroy de
+; page_perm_rwox
+; a = pid
+	ld	d, a
+	ld	e, 0
+
+.unmap_page:
+; de is full flags
+	ld	hl, kmm_ptlb_map
+	ld	l, b
+	ld	a, (hl)
+	cp	a, e
+	jp	nz, .segfault
+	ld	a, b
+; sanity check ;
+; b > base kernel memory
+	cp	a, KERNEL_MM_GFP_KERNEL
+	jp	c, .segfault
+; are we the owner ?
+	inc	h
+	ld	a, (hl)
+	cp	a, d
+	dec	l
+	jp	nz, .segfault
+	
+; rst $0 : trap execute, illegal instruction
+.flush_page:
+; hl as the ptlb adress
+	push	bc
+	push	hl
+	ld	c, l
+ 	ld	hl, KERNEL_MM_PHY_RAM shr 2
+	ld	h, c
+	add	hl, hl
+	add	hl, hl
+	ld	bc, KERNEL_MM_PAGE_SIZE - 1
+	ex	de, hl
+	sbc	hl, hl
+	adc	hl, de
+	ld	(hl), KERNEL_HW_POISON
+	inc	de
+	ldir
+	pop	hl
+; write first free_mask, so the page will be considered as free even if hell break loose and the thread is killed between the two following write
+	ld	(hl), KERNEL_MM_PAGE_FREE_MASK
+	inc	h
+	ld	(hl), c
+	dec	h
+	pop	bc
+	ret
+
+.physical_to_ptlb:
+; adress divided by page KERNEL_MM_PAGE_SIZE = 1024
+assert KERNEL_MM_PAGE_SIZE = 1024
+	push	hl
+	dec	sp
+	pop	hl
+	inc	sp
+	ld	a, l
+	srl	h
+	rra
+	srl	h
+	rra
+	ld	hl, kmm_ptlb_map
+	ld	l, a
+	ret
+
+.is_anonymous:
+; a is page id
+; z flag set if true / nz if not
+	ld	hl, kmm_ptlb_map
+	ld	l, a
+	ld	a, (hl)
+	or	a, a
 	ret

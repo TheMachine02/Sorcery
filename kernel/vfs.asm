@@ -85,7 +85,7 @@ kvfs:
 	jp	(iy)
 
 .fd_pointer_check:
-; return nc is corret, c with error set if not
+; return nc is correct, c with error set if not
 ; ix = file descriptor, iy = inode
 ; destroy hl
 ; 0 - 22 or 23 descriptor
@@ -216,7 +216,9 @@ sysdef _open
 ; it is a file
 ; drop all data now
 ; parse block data and free everything
-	call	vfs_cache.drop_page
+; TODO : implement
+; physically destroy the inode and then sync it with all block free ? May be the simplest form
+; on tifs for example, this will delete the file on the support, and it will be sync later correctly since sync inode is not a valid operation on tifs
 .extract_fd:
 ; get our file descriptor
 	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR
@@ -836,7 +838,7 @@ sysdef _write
 .write_buff_cache_miss:
 ; here, we need to allocate data
 ; following does not destroy bc
-	call	vfs_cache.map_page
+	call	mm.map_cache_page
 	jr	c, .write_error_pop_l2
 	ld	(hl), a
 	inc	hl

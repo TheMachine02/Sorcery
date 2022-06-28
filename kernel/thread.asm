@@ -122,7 +122,7 @@ sysdef _thread
 	jr	c, .create_no_pid
 	push	af
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
-	call	kmm.map_user_pages
+	call	mm.map_user_pages
 	jr	c, .create_no_mem
 	pop	af
 	push	iy
@@ -288,7 +288,7 @@ sysdef _exit
 ; unmap the memory of the thread
 ; this also unmap the stack
 	ld	a, (iy+KERNEL_THREAD_PID)
-	call	kmm.unmap_user_pages
+	call	mm.drop_user_pages
 ; that will reset everything belonging to the thread
 	ld	bc, QUEUE_SIZE
 	ld	a, $FF

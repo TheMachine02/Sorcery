@@ -17,7 +17,7 @@ echo "building multiboot loader..."
 fasmg vm.asm bin/VMLOADER.8xp
 echo "building kernel..."
 # build kernel
-fasmg sorcery.asm bin/SORCERY.8xp
+# fasmg sorcery.asm bin/SORCERY.8xp
 fasmg vmsorcerz.asm bin/sorcery-$version-slp
 echo "include	'header/include/ez80.inc'" > image.asm
 echo "include	'header/include/tiformat.inc'" >> image.asm

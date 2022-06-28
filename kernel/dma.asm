@@ -1,26 +1,3 @@
-define	MAP_ANONYMOUS		1 shl 0
-define	MAP_PRIVATE		1 shl 1
-define	MAP_FIXED		1 shl 2
-
-; addr need to be PAGE aligned, as well as length and offset (in file offset)
-
-sysdef _mmap
-; void *mmap(void *addr, size_t length, int flags, int fd, off_t offset);
-; hl adress, de length, bc flag, ix fd, iy offset
-.mmap:
-; map a file onto memory at specified (or close by) adress
-; if MAP_ANONYMOUS : just map memory but no file backing > map page as belonging to the thread as thread memory
-; note that change to file will be asynchronously seen
-; set cache page as non evictable
-	ret
-	
-sysdef _munmap
-; int munmap(void *addr, size_t length); 
-.munmap:
-; mark cache page as evictable if needed
-; if page are thread page, mapping was ANONYMOUS, so free them
-	ret
-	
 sysdef _dma_access
 .dma_access:
 ; fd hl, return hl = first block pointer that can be read/write (please note that the pointer is valid for the first 1024 bytes only)

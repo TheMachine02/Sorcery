@@ -159,7 +159,7 @@ kmem:
 	ld	d, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
 ; we'll map a page in kernel mode, with cache and unevictable set and data count within tlb
 	ld	b, KERNEL_MM_GFP_KERNEL
-	call	kmm.map_page
+	call	mm.map_page
 	jr	c, .__cache_grow_error
 	push	hl
 	ld	bc, -$D00000
@@ -299,7 +299,7 @@ kmem:
 	call	kqueue.remove
 	sbc	hl, hl
 	adc	hl, bc
-	call	kmm.flush_page
+	call	mm.flush_page
 	jr	.__cache_free_restore
 
 .cache_create:

@@ -3,6 +3,7 @@ define	KERNEL_VFS_INODE			0
 define	KERNEL_VFS_INODE_FLAGS			0	; 1 byte, inode flag
 define	KERNEL_VFS_INODE_ATOMIC_LOCK		1	; rw lock, 5 bytes
 define	KERNEL_VFS_INODE_REFERENCE		6	; 1 byte, number of reference to this inode
+; TODO : WARNING : need to make sure reference never overflow, so put check everywhere
 define	KERNEL_VFS_INODE_SIZE			7	; 3 bytes, size of the inode
 define	KERNEL_VFS_INODE_DEVICE			7	; 2 bytes, device number if applicable
 define	KERNEL_VFS_INODE_LINK			7	; 3 bytes, link if applicable
@@ -10,6 +11,8 @@ define	KERNEL_VFS_INODE_PARENT			10	; 3 bytes, parent of the inode, NULL mean ro
 define	KERNEL_VFS_INODE_OP			13	; 3 bytes, memory operation pointer
 define	KERNEL_VFS_INODE_DATA			16	; starting from 8, we arrive at data path (all block are indirect)
 ; 3*16, 48 bytes
+; in case of file, those block hold reference to actual pages (4*16 per slab)
+; in case of directory, it is dirent
 ; in case of fifo, hold the fifo structure (15 bytes) (data block point to slab structure of 64 bytes with CACHE:BLOCK)
 ; SO FIFO : 32 bytes
 define	KERNEL_VFS_INODE_FIFO_DATA		16
@@ -93,8 +96,10 @@ define	phy_stat		24
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
 	jr	nz, .inode_destroy_nf
-	call	vfs_cache.drop_page
+	call	mm.drop_cache_page
 .inode_destroy_nf:
+; TODO : we also need to drop slab pages (all indirect for both directory (up to 16 dirent and data page for normal inode)
+; for fifo, drop the buffer
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ret	z
 ; char, block, fifo, symlink, socket, file

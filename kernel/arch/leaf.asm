@@ -70,7 +70,9 @@ sysdef _execve
 	inc	c
 	ld	b, KERNEL_MM_GFP_USER_COMPAT
 	push	bc
-	call	kmm.map_pages
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	call	mm.map_user_pages
 	pop	bc
 	jp	c, kvfs.inode_atomic_write_error
 ; check if hl = correct adress
@@ -112,7 +114,9 @@ sysdef _execve
 	jp	kvfs.inode_atomic_write_error
 
 .execve_compat_nomem:
-	call	kmm.unmap_pages
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	call	mm.unmap_user_pages
 	ld	a, ENOMEM
 	jp	kvfs.inode_atomic_write_error
 
