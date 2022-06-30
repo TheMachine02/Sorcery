@@ -22,7 +22,7 @@ define	KERNEL_VFS_INODE_DMA_POINTER		1
 
 define	KERNEL_VFS_DIRECTORY_ENTRY		0
 define	KERNEL_VFS_DIRECTORY_INODE		0	; 3 bytes pointer to inode
-define	KERNEL_VFS_DIRECTORY_NAME		3	; name
+define	KERNEL_VFS_DIRECTORY_NAME		3	; name, 12 bytes max
 
 define	KERNEL_VFS_INODE_FILE_SIZE		16*16*KERNEL_MM_PAGE_SIZE	; maximum file size
 define	KERNEL_VFS_INODE_NODE_SIZE		64	; size in byte of inode
@@ -99,9 +99,13 @@ define	phy_stat		24
 	call	mm.drop_cache_page
 .inode_destroy_nf:
 ; TODO : we also need to drop slab pages (all indirect for both directory (up to 16 dirent and data page for normal inode)
-; for fifo, drop the buffer
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ret	z
+	cp	a, KERNEL_VFS_TYPE_FIFO
+	jr	nz, .inode_destroy_call
+	ld	hl, (iy+KERNEL_VFS_INODE_FIFO_DATA+FIFO_BOUND_LOW)
+	call	kfree
+.inode_destroy_call:
 ; char, block, fifo, symlink, socket, file
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
 	lea	hl, ix+phy_destroy_inode
