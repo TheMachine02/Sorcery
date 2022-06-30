@@ -151,7 +151,30 @@ tifs:
 	ld	bc, TIFS_WRITE_HEADER_SIZE
 	call	flash.phy_write
 ; now, write data \o/
-; TODO
+	push	de
+	lea	hl, ix+0
+	call	kfree
+	pop	de
+; TODO : write data and mark page of the inode as 'non dirty'
+; get approx size for knowing how much we loop (lot of special case to handle...)
+	ld	ix, (iy+KERNEL_VFS_INODE_DATA)
+	ld	b, 4
+.__phy_sync_mark_page:
+	ld	hl, (ix+0)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+; if zero, we write NULL data equivalent
+	jr	nz, .__phy_sync_process_indirect
+; 16 blocks, so write 16384 NULL bytes
+	ld	hl, KERNEL_MM_NULL
+	ld	bc, KERNEL_MM_PAGE_SIZE * 16
+	call	flash.phy_write
+	djnz	.__phy_sync_mark_page
+	ret
+.__phy_sync_process_indirect:
+
+
 	ret
 
 .phy_destroy:
@@ -191,8 +214,8 @@ tifs:
 .delete_byte:
  db	$F0
 
-.path_root:
- db "/dev/tifs/", 0
+.path_home:
+ db "/home/", 0
 .path_bin:
  db "/bin/", 0
 .path_lib:
@@ -210,10 +233,10 @@ tifs:
 ; 	ld	hl, .path_lib
 ; 	ld	bc, KERNEL_VFS_PERMISSION_RW
 ; 	call	kvfs.mkdir
-	ld	hl, .path_root
+	ld	hl, .path_home
 	ld	de, .path_bin
 	call	kvfs.link
-	ld	hl, .path_root
+	ld	hl, .path_home
 	ld	de, .path_lib
 	jp	kvfs.link
  
@@ -224,12 +247,12 @@ tifs:
 ; this will be our temporary buffer for path
 	ex	de, hl
 	ld	iy, 0
-	lea	bc, iy+10
+	lea	bc, iy+6
 	add	iy, de
 	push	de
-	ld	hl, .path_root
+	ld	hl, .path_home
 	ldir
-	ld	hl, .path_root
+	ld	hl, .path_home
 	ld	c, KERNEL_VFS_PERMISSION_RWX
 	call	kvfs.mkdir
 	pop	iy
@@ -269,7 +292,9 @@ tifs:
 	pop	bc
 	djnz	.mount_parse
 	lea	hl, iy+0
-	jp	kfree
+	call	kfree
+	ld	hl, .tifs_root_message
+	jp	printk
 
 .mount_add_file:
 	push	hl
@@ -285,7 +310,7 @@ tifs:
 	dec	c
 	jr	z, .mount_strange_file
 ; copy file name to our temporary buffer
-	lea	de, iy+10
+	lea	de, iy+6
 	inc	hl
 	ldir
 ; blit a zero to be a null terminated string \*/
@@ -375,3 +400,7 @@ tifs:
 	dec	a
 	jr	nz, .do_data_inner
 	jr	.do_data
+
+.tifs_root_message:
+ db	"tifs: root partition found", 10, 0
+

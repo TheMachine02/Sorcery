@@ -13,7 +13,15 @@ define CONFIG_USE_GLYPH_NUMBER		0
 
 ; clock settings ;
 define	CONFIG_CRYSTAL_DIVISOR		3
-; 0 = div 74
-; 1 = div 154
-; 2 = div 218 (or about 150 Hz)
-; 3 = div 314 (or about 105 Hz)
+if CONFIG_CRYSTAL_DIVISOR=3
+	define	CONFIG_CRYSTAL_HEART	"105"
+end if
+if CONFIG_CRYSTAL_DIVISOR=2
+	define	CONFIG_CRYSTAL_HEART	"150"
+end if
+if CONFIG_CRYSTAL_DIVISOR=1
+	define	CONFIG_CRYSTAL_HEART	"212"
+end if
+if CONFIG_CRYSTAL_DIVISOR=0
+	define	CONFIG_CRYSTAL_HEART	"442"
+end if

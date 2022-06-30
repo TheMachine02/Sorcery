@@ -5,6 +5,7 @@ define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
 define	KERNEL_STACK_SIZE		87		; size of the stack
 define	KERNEL_CRYSTAL_CTLR		$00		; port 00 is master control
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
+define	KERNEL_CRYSTAL_HEART		CONFIG_CRYSTAL_HEART
 define	KERNEL_DEV_NULL			$E40000
 define	KERNEL_LCD_CLOCK_DIVISOR	$E30008		; the LCD clock timings is derived from CPU clock
 define	KERNEL_EMERG			0 
@@ -126,14 +127,15 @@ file	'initramfs'
 	call	keyboard.init
 	call	rtc.init
 	call	console.init
-; flash device ;
 	call	flash.init
 	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
-; debug thread & other debugging stuff
-; enabled if kernel is compiled with debug option
-	dbg	thread
+; delayed console takeover after device init
+	xor	a, a
+	call	console.fb_takeover
+	ld	hl, .arch_heart
+	call	printk
 ; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
 if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs
@@ -143,11 +145,9 @@ end if
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-;	call	leaf.execve
+; 	call	leaf.execve
 ;	jp	init_conway
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
-	xor	a, a
-	call	console.fb_takeover
 	ei
 	ld	hl, .arch_bin_error
 	call	printk
@@ -164,8 +164,11 @@ end if
  dl	NULL
 
 .arch_bin_error:
- db	"Failed to execute /bin/init",10,"Running emergency shell",10,0
+ db	"failed to execute /bin/init",10,"running emergency shell",10,0
 
+.arch_heart:
+ db	"interrupt heartbeat=",KERNEL_CRYSTAL_HEART, "Hz",10, 0
+ 
 sysdef _reboot
 reboot:
 ; disable interruption and watchdog then rst 0 to the boot code firmware
