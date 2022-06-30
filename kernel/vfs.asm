@@ -152,9 +152,9 @@ sysdef _open
 	ld	a, ENOENT
 	jp	z, .inode_atomic_write_error
 	push	bc
-; mode & inode type in de
+; mode & inode type in de (use mode)
 	ld	d, KERNEL_VFS_TYPE_FILE
-	ld	e, KERNEL_VFS_PERMISSION_RWX
+; 	ld	e, KERNEL_VFS_PERMISSION_RWX
 	call	.inode_create_parent
 	pop	bc
 ; if inode create c, the eror should already have been set, so just return
