@@ -32,14 +32,14 @@ define	CONSOLE_CURSOR_MAX_ROW	20
 tty:
 
 .phy_init:
-	ld	hl, .CONSOLE_DEV
+	ld	hl, .TTY_DEV
 ; single character device, (so write / read / ioctl), no seek capabilities exposed
 	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	ld	de, .phy_mem_ops
 	jp	_mknod
 
-.CONSOLE_DEV:
- db "/dev/console", 0
+.TTY_DEV:
+ db "/dev/tty", 0
 
 .phy_mem_ops:
 	jp	.phy_read
@@ -116,7 +116,10 @@ tty:
 	cp	a, 10
 	jr	z, .phy_write_new_line_ex
 	cp	a, $1B
-	jr	nz, .phy_write_loop
+	jr	z, .phy_escape_sequence
+	cpi
+	ret	po
+	jr	.phy_write_loop
 
 ; process an escape sequence sequentially, from string
 .phy_escape_sequence:

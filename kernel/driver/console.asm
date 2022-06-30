@@ -309,6 +309,9 @@ console:
 	ld	hl, .ECHO
 	call	.check_builtin
 	jp	z, .echo
+	ld	hl, .LS
+	call	.check_builtin
+	jp	z, .ls
 	ld	hl, .EXIT
 	call	.check_builtin
 	jp	z, .fb_restore
@@ -386,7 +389,7 @@ console:
 	jp	po, .clean_command
 	ld	hl, console_line + 5
 	call	tty.phy_write
-	call	tty.phy_new_line	
+	call	tty.phy_new_line
 	jr	.clean_command
 
 .shutdown:
@@ -444,6 +447,127 @@ console:
 	ld	hl, console_line
 	ld	bc, 34
 	call	tty.phy_write
+	jp	.prompt
+
+.LS_SPACE:
+ db " "
+.LS_ROOT:
+ db "/",0
+	
+.ls:
+	ld	hl, console_line + 2
+	ld	a, (hl)
+	or	a, a
+	jr	nz, .ls_find_arg
+	ld	hl, .LS_ROOT
+	ld	bc, 1
+	jr	.ls_list
+.ls_find_arg:
+; skip space
+	cp	a, ' '
+	jp	nz, .ls_error
+.ls_skip_space:
+	inc	hl
+	ld	a, (hl)
+	cp	a, ' '
+	jr	z, .ls_skip_space
+	push	hl
+	xor	a, a
+	ld	bc, 0
+	cpir
+	sbc	hl, hl
+	sbc	hl, bc
+	push	hl
+	pop	bc
+	cpi
+	pop	hl
+	jp	po, .ls_error
+.ls_list:
+	push	bc
+	push	hl
+	call	kvfs.inode_get_lock
+; iy = inode
+	pop	hl
+	pop	bc
+	jp	c, .ls_error
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	jr	z, .ls_dir
+	call	tty.phy_write
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	ld	iy, console_dev
+	call	tty.phy_new_line
+	jp	.prompt
+.ls_dir:
+	push	iy
+; we have a dir, parse all dirent
+	ld	b, 16
+	lea	iy, iy+KERNEL_VFS_INODE_DATA
+.ls_dirent:
+	push	bc
+	ld	ix, (iy+0)
+	lea	hl, ix+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .ls_next_dirent
+	ld	a, (ix+KERNEL_VFS_DIRECTORY_NAME)
+	or	a, a
+	call	nz, .ls_display_dirent
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	a, (ix+KERNEL_VFS_DIRECTORY_NAME)
+	or	a, a
+	call	nz, .ls_display_dirent
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	a, (ix+KERNEL_VFS_DIRECTORY_NAME)
+	or	a, a
+	call	nz, .ls_display_dirent
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	a, (ix+KERNEL_VFS_DIRECTORY_NAME)
+	or	a, a
+	call	nz, .ls_display_dirent
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+.ls_next_dirent:
+	lea	iy, iy+3
+	pop	bc
+	djnz	.ls_dirent
+	pop	iy
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	ld	iy, console_dev
+	call	tty.phy_new_line
+	jp	.prompt
+.ls_display_dirent:
+	push	iy
+	push	ix
+	lea	hl, ix+KERNEL_VFS_DIRECTORY_NAME
+	push	hl
+	xor	a, a
+	ld	bc, 0
+	cpir
+	sbc	hl, hl
+	sbc	hl, bc
+	push	hl
+	pop	bc
+	dec	bc
+	pop	hl
+	call	tty.phy_write
+	ld	hl, .LS_SPACE
+	ld	bc, 1
+	call	tty.phy_write
+	pop	ix
+	pop	iy
+	ret
+.ls_error:
+	ld	hl, .LS_ERROR
+	ld	bc, 30
+	call	tty.phy_write
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	ld	iy, console_dev
+	call	tty.phy_new_line
 	jp	.prompt
 
 .handle_key_del:
@@ -641,6 +765,8 @@ console:
  db 9, "shutdown", 0
 .EXIT:
  db 5, "exit", 0
+.LS:
+ db 2, "ls"
  
 .BINARY_PATH:
  db "/bin/",0
@@ -651,6 +777,9 @@ console:
 .UPTIME_STR:
 ; db "Up since 0000 day(s), 00h 00m 00s", 0
  db "Up since %04d day(s), %02dh %02dm %02ds" , 10, 0
+ 
+.LS_ERROR:
+ db "No file or folder of this type", 0
  
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# "
