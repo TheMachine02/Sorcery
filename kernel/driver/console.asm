@@ -312,6 +312,9 @@ console:
 	ld	hl, .LS
 	call	.check_builtin
 	jp	z, .ls
+	ld	hl, .FREE
+	call	.check_builtin
+	jp	z, .free
 	ld	hl, .EXIT
 	call	.check_builtin
 	jp	z, .fb_restore
@@ -449,6 +452,44 @@ console:
 	call	tty.phy_write
 	jp	.prompt
 
+.free:
+	ld	hl, KERNEL_MM_GFP_KERNEL
+	push	hl
+	ld	c, 0
+	ld	b, KERNEL_MM_PAGE_MAX-KERNEL_MM_GFP_KERNEL
+	ld	hl, kmm_ptlb_map
+	ld	l, KERNEL_MM_GFP_KERNEL
+.free_count:
+	ld	a, (hl)
+	cp	a, KERNEL_MM_PAGE_FREE_MASK
+	jr	nz, $+3
+	inc	c
+	inc	hl
+	djnz	.free_count
+; c = free
+	xor	a, a
+	sub	a, c
+	sub	a, KERNEL_MM_GFP_KERNEL
+; a = used
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	push	hl
+	ld	l, c
+	push	hl
+	ld	hl, .FREE_STR
+	push	hl
+	ld	hl, console_line
+	push	hl
+	call	_boot_sprintf_safe
+	ld	hl, 15
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, console_line
+	ld	bc, 66
+	call	tty.phy_write
+	jp	.prompt
+
 .LS_SPACE:
  db " "
 .LS_ROOT:
@@ -550,6 +591,16 @@ console:
 	sbc	hl, hl
 	sbc	hl, bc
 	push	hl
+	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	ld	a, (hl)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	ld	hl, .LS_COLOR_NONE
+	jr	nz, .ls_color
+	ld	hl, .LS_COLOR_FOLDER
+.ls_color:
+	ld	bc, 5
+	call	tty.phy_write
 	pop	bc
 	dec	bc
 	pop	hl
@@ -767,6 +818,8 @@ console:
  db 5, "exit", 0
 .LS:
  db 2, "ls"
+.FREE:
+ db 5, "free",0
  
 .BINARY_PATH:
  db "/bin/",0
@@ -774,12 +827,22 @@ console:
 .BIN_ARGV:
  dl	NULL
 
+.FREE_STR:
+ db "available memory: %03d KiB",10 ; 26
+ db "used: %03d KiB", 10
+ db "hardware reserved: %02d KiB",10,0
+ 
 .UPTIME_STR:
-; db "Up since 0000 day(s), 00h 00m 00s", 0
- db "Up since %04d day(s), %02dh %02dm %02ds" , 10, 0
+; db "up since 0000 day(s), 00h 00m 00s", 0
+ db "up since %04d day(s), %02dh %02dm %02ds" , 10, 0
  
 .LS_ERROR:
- db "No file or folder of this type", 0
+ db "no file or folder of this type", 0
+ 
+.LS_COLOR_FOLDER:
+ db $1B,"[35m"
+.LS_COLOR_NONE:
+ db $1B,"[39m"
  
 .PROMPT:
  db $1B,"[31mroot",$1B,"[39m:", $1B,"[34m~", $1B, "[39m# "
