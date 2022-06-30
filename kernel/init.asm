@@ -133,7 +133,7 @@ file	'initramfs'
 ;	call	mtd.init
 ; debug thread & other debugging stuff
 ; enabled if kernel is compiled with debug option
-; 	dbg	thread
+	dbg	thread
 ; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
 if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs

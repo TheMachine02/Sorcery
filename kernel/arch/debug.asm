@@ -80,7 +80,7 @@ if CONFIG_DEBUG
 DEBUG_THREAD:
 	dbg	open
 ; ; hl is path, bc is flags, de is mode
-	ld	hl, DEBUG_PATH_2
+	ld	hl, DEBUG_PATH
 	ld	bc, KERNEL_VFS_O_RW or (KERNEL_VFS_O_CREAT *256)
 	call	_open
 
@@ -88,28 +88,18 @@ DEBUG_THREAD:
 	ld	de, $D01000
 	ld	bc, 32768
 	call	_write
-	pop	hl
-	push	hl
-; fd is hl, de is offset, bc is whence
-	ld	de, 0
-	ld	bc, SEEK_SET
-	call	_lseek
-	pop	hl
-	ld	de, $D60000
-	ld	bc, 32768
-	call	_read
-
+	pop	ix
+; ; hl adress, de length, bc flag, ix fd, iy offset
+	ld	hl, $D30000
+	ld	de, 32768
+	ld	bc, MAP_PRIVATE
+	ld	iy, 0
+	call	_mmap
+	
+	
 	ret
 
 DEBUG_PATH:
- db "/tifs/SORCERY",0
-DEBUG_PATH_2:
- db "/file", 0
- 
-DEBUG_PATH_LINK:
- db "/tifs/", 0
- 
-DEBUG_PATH_LINK2:
- db "/bin/", 0
+ db "/shmfile", 0
  
  end if
