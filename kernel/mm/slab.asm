@@ -303,6 +303,7 @@ kmem:
 	jr	.__cache_free_restore
 
 .cache_create:
+	tsti
 	push	iy
 	push	bc
 	ld	iy, kmem_cache_user
@@ -314,6 +315,8 @@ kmem:
 	jr	z, .__find_slot
 	lea	iy, iy+KERNEL_SLAB_CACHE_SIZE
 	djnz	.__find_free
+.__find_error:
+	rsti
 	pop	bc
 	pop	iy
 	sbc	hl, hl
@@ -324,7 +327,17 @@ kmem:
 	ld	(iy+KERNEL_SLAB_CACHE_COUNT), $FF
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_SIZE), hl
 	ld	(iy+KERNEL_SLAB_CACHE_DATA_PAGE), a
-; TODO : KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
+; KERNEL_SLAB_CACHE_DATA_COUNT= 1024 / hl rounded to down
+	ld	de, KERNEL_MM_PAGE_SIZE
+	inc.s	bc
+	ld	b, h
+	ld	c, l
+	call	fpu.uidiv
+	ld	a, e
+	or	a, a
+	jr	z, .__find_error
+	ld	(iy+KERNEL_SLAB_CACHE_DATA_COUNT), a
+	rsti
 	pop	bc
 	pop	iy
 	ret

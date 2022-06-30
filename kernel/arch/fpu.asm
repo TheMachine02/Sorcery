@@ -1,7 +1,7 @@
 fpu:
 
-.uidiv:
-;; divide 16 bits DE by 16 bits BC and output the 16 bits BC result. HL is the remainder
+;.uidiv:
+;; divide 16 bits DE by 16 bits BC and output the 16 bits result. HL is the remainder
 ;; Thanks Xeda for this routine
 ;; Inputs: DE is the numerator, BC is the divisor
 ;; Outputs: DE is the result
