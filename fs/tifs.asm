@@ -1,4 +1,5 @@
 define	TIFS_SECTOR_FLAG		$F0
+define	TIFS_FREE_FLAG			$FF
 define	TIFS_SECTOR_BASE		$0C0000
 define	TIFS_SECTOR_COUNT		$34
 ; valid 0FCh
@@ -26,6 +27,9 @@ define	TIFS_TYPE_APPV			21
 define	TIFS_TYPE_GROUP			23
 define	TIFS_TYPE_IMAGE			26
 
+define	TIFS_WRITE_OFFSET_SIZE		19
+define	TIFS_WRITE_HEADER_SIZE		22
+
 tifs:
 
 .phy_mem_ops:
@@ -52,11 +56,111 @@ tifs:
 .phy_sync:
 ; tifs work by finding a free spot somewhere and write the file here (also droping the previous file)
 ; if all spot are filed, garbage collect and retry (kinda inefficient indeed)
+; doesn't sync all special file (dev, char, fifo, symlink etc since it is unsupported in this fs)
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_FILE
+	ld	a, EIO
+	ret	nz
+	ld	a, (iy+KERNEL_VFS_INODE_SIZE)
+	or	a, a
+	ld	a, ENOMEM
+	ret	nz
+; goes each page and search for an empty spot
+	ld	b, TIFS_SECTOR_COUNT
+	ld	hl, TIFS_SECTOR_BASE
+.__phy_sync_parse:
+	push	bc
+; create an inode for each file found and fill it
+	ld	a, (hl)
+	cp	a, TIFS_FREE_FLAG
+; whole sector is free, write there
+	jr	z, .__phy_sync_valid
+	cp	a, TIFS_SECTOR_FLAG
+	jr	nz, .__phy_sync_invalid_sector
+	inc	hl
+	push	hl
+.__phy_sync_parse_sector:
+	ld	a, (hl)
+	inc	hl
+	inc.s	bc
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc	hl
+	cp	a, TIFS_FREE_FLAG
+	jr	nz, .phy_sync_parse_continue
+; check for space
+	push	hl
+	ld	de, (iy+KERNEL_VFS_INODE_SIZE)
+	or	a, a
+	sbc.s	hl, de
+	ld	de, TIFS_WRITE_HEADER_SIZE
+	or	a, a
+	sbc.s	hl, de
+	pop	hl
+	jp	p, .__phy_sync_valid
+	jr	.__phy_sync_invalid_sector
+.phy_sync_parse_continue:
+	add	hl, bc
+	cp	a, TIFS_FILE_DELETED
+	jr	z, .__phy_sync_parse_sector
+	cp	a, TIFS_FILE_VALID
+	jr	z, .__phy_sync_parse_sector
+	pop	hl
+.__phy_sync_invalid_sector:
+	ld	bc, 65536
+	add	hl, bc
+	ld	h, b
+	ld	l, c
+	pop	bc
+	djnz	.__phy_sync_parse
+	ret
+.__phy_sync_valid:
+; actually write the file to flash
+	push	hl
+; hl is the valid adress
+	ld	hl, kmem_cache_s32
+	call	kmem.cache_alloc
+	ret	c
+	push	hl
+	pop	ix
+; write in hl all good stuff, and write it to flash
+	ld	(ix+TIFS_FILE_FLAG), TIFS_FILE_VALID
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
+	ld	bc, TIFS_WRITE_OFFSET_SIZE
+	add	hl, bc
+	ld	(ix+TIFS_FILE_SIZE), hl
+	ld	a, TIFS_TYPE_APPV
+	bit	KERNEL_VFS_PERMISSION_X_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
+	jr	z, $+4
+	ld	a, TIFS_TYPE_PROT_EXE
+	ld	(ix+TIFS_FILE_TYPE), a
+	ld	(ix+TIFS_FILE_ATTRIBUTE), a
+	ld	(ix+TIFS_FILE_VERSION), a
+; adress = de + TIFS_WRITE_HEADER_SIZE
+	pop	hl
+	push	hl
+	ld	bc, TIFS_WRITE_HEADER_SIZE
+	add	hl, bc
+	ld	(ix+TIFS_FILE_ADRESS), hl
+	ld	(ix+TIFS_FILE_NAME_SIZE), 12
+	ld	(ix+TIFS_FILE_NAME), 'A'
+	ld	(ix+TIFS_FILE_NAME), '0'
+	pop	de
+	ld	bc, TIFS_WRITE_HEADER_SIZE
+	call	flash.phy_write
+; now, write data \o/
+; TODO
 	ret
 
 .phy_destroy:
 ; marking the variable as removed in flash
 ; iy = inode
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_FILE
+	ret	nz
 ; reading the first value of the first block is okay since tifs write file in-order
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
@@ -152,7 +256,7 @@ tifs:
 	inc	hl
 	cp	a, TIFS_FILE_VALID
 	jr	z, .mount_add_file
-; mount_skip_file	
+; mount_skip_file
 	add	hl, bc
 	cp	a, TIFS_FILE_DELETED
 	jr	z, .mount_parse_sector
