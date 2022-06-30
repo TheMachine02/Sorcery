@@ -125,16 +125,13 @@ mm:
 	dec	c
 	jr	z, .map_page
 	push	de
-	pop	ix
-; map c page from b page to thread a
-	ld	h, a
+; map c page from b page
 	ld	e, c
 	ld	a, i
-	ld	a, h
 	push	af
 	ld	a, b
 	add	a, c
-	jp	c, .__segfault_critical
+	jp	c, .__segfault_permission
 	ld	hl, kmm_ptlb_map
 	ld	l, b
 	ld	a, b
@@ -166,9 +163,7 @@ mm:
 	inc	e
 	ld	b, e
 	ld	c, l	; save l for latter
-	pop	af
-	push	af
-	lea	de, ix+0
+	pop	de
 .__map_pages_write_flags:
 	ld	(hl), e
 	inc	h
