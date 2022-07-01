@@ -125,10 +125,11 @@ kpower_lcd_mask:			; we need to save the lcd data (and the whales)
  db	3	dup	KERNEL_HW_POISON
 kpower_lcd_param:
  db	3	dup	KERNEL_HW_POISON
-kinterrupt_page_lru:
+kinterrupt_lru_page:
  db	KERNEL_HW_POISON		; vfs cache decay
-unallocated_zero:
- db	30	dup	KERNEL_HW_POISON
+klru_pages:
+ db	8	dup	KERNEL_HW_POISON
+ db	22	dup	KERNEL_HW_POISON
 kmem_cache_buffctl:			; 16 slub buffers, 7 defined, 9 user defined
 kmem_cache_s8:
  db	4	dup	$FF
