@@ -14,27 +14,26 @@ console:
 
 .nmi_takeover:
 	ld	iy, console_dev
-	res	CONSOLE_FLAGS_THREADED_BIT, (iy+CONSOLE_FLAGS)
 	ld	hl, nmi_console
 	jr	.fb_takeover_entry
 
-; argument : register a is if the CONSOLE is threaded or not (0 not threaded, CONSOLE_FLAGS_THREADED else or $FF)
+; takeover the tty console and launch a dedicated thread to it
+; if console is already noisy (flags silent), don't launch an other console
 .fb_takeover:
-	di
 	ld	iy, console_dev
-	and	a, CONSOLE_FLAGS_THREADED
-	or	a, (iy+CONSOLE_FLAGS)
-	ld	(iy+CONSOLE_FLAGS), a
+	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
+	jr	z, .__fb_takeover_error
+	di
 ; check CONSOLE_TAKEOVER is null
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	ret	nz
+	jr	nz, .__fb_takeover_error
 ; take control of the video driver mutex
 	ld	hl, kmem_cache_s64
 	call	kmem.cache_alloc
-	ret	c
+	jr	c, .__fb_takeover_error
 .fb_takeover_entry:
 	ld	(iy+CONSOLE_TAKEOVER), hl
 	ex	de, hl
@@ -46,44 +45,45 @@ console:
 	ld	hl, DRIVER_VIDEO_PALETTE
 	ld	c, 36
 	ldir
-	ld	hl, KERNEL_INTERRUPT_ISR_DATA_VIDEO
+	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	ld	c, 6
 	ldir
 ; 58 + 3 bytes in grand total, free 3 bytes
 ; mark console as present
 	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 ; init the screen now
-	push	de
 	call	.fb_init
-	ld	a, (iy+CONSOLE_FLAGS)
-; get bit 7 (THREADED)
-	rla
-	ld	iy, .thread
-	jr	c, .load_thread_adress
-	ld	iy, (kthread_current)
-.load_thread_adress:
-	call	c, kthread.irq_create
-	pop	hl
-; carry if error
-	ret	c
 ; take lcd mutex control
-	ld	(hl), iy
+; stop thread holding the mutex
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
 	ld	(hl), $FF
 	inc	hl
-	ld	ix, (hl)
-	ld	(hl), iy
-; stop thread ix, do not enable interrupts
-	ld	c, (ix+0)
+	ld	a, (hl)
+	or	a, a
+	ret	z
+	ld	(hl), 0
+	ld	c, a
 	ld	a, SIGSTOP
-	jp	signal.kill
+	call	signal.kill
+	or	a, a
+	ret
 	
+.__fb_takeover_error:
+	scf
+	ret
+
 .fb_restore:
-; need to exit the console thread (signal are efficient, since you can raise to your own thread)
+	di
+; restore the fb console
 ; restore the mutex and the propriety
+; it doesn't destroy the thread
 	ld	iy, console_dev
 	set	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ld	hl, (iy+CONSOLE_TAKEOVER)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ret	z
 ; restore status
 	ld	de, DRIVER_VIDEO_SCREEN
 	ld	bc, 16
@@ -92,46 +92,25 @@ console:
 	ld	de, DRIVER_VIDEO_PALETTE
 	ld	c, 36
 	ldir
-; restore mutex
-	ld	de, KERNEL_INTERRUPT_ISR_DATA_VIDEO
+	ld	de, DRIVER_VIDEO_IRQ_LOCK
 	ld	c, 6
 	ldir
 ; restore keyboard ?
 	ld	a, DRIVER_KEYBOARD_SCAN_CONTINUOUS
 	ld	(DRIVER_KEYBOARD_CTRL), a
-	ld	de, (hl)
-	push	de
-	ld	hl, (DRIVER_VIDEO_IRQ_LOCK+1)
-	ld	c, (hl)
-	ld	a, SIGCONT
-	call	signal.kill
-; kill the thread now
 	ld	hl, (iy+CONSOLE_TAKEOVER)
 	ld	bc, 0
 	ld	(iy+CONSOLE_TAKEOVER), bc
 	call	kfree
-	pop	hl
-	ld	c, (hl)
-	ld	a, SIGKILL
+	ld	hl, DRIVER_VIDEO_IRQ_LOCK+1
+	ld	a, (hl)
+	or	a, a
+	ret	z
+	ld	c, a
+	ld	a, SIGCONT
 	jp	signal.kill
 
-.init:
-	di
-	ld	bc, $0100
-	ld	hl, console_dev
-	ld	(hl), bc
-	ld	l, (console_flags) and $FF
-	ld	(hl), 1 shl CONSOLE_FLAGS_SILENT
-	inc	hl
-	ld	(hl), $FD
-	ld	l, (console_takeover) and $FF
-	dec	b
-	ld	(hl), bc
-	jp	tty.phy_init
-	
 .fb_init:
-	ld	hl, console_dev+CONSOLE_FLAGS
-	res	CONSOLE_FLAGS_SILENT, (hl)
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
@@ -151,7 +130,36 @@ console:
 	ld	hl, .SPLASH_NAME
 	jp	tty.phy_write
 
-.thread:
+.init:
+	di
+	ld	bc, $0100
+	ld	hl, console_dev
+	ld	(hl), bc
+	ld	l, (console_flags) and $FF
+	ld	(hl), 1 shl CONSOLE_FLAGS_SILENT
+	inc	hl
+	ld	(hl), $FD
+	ld	l, (console_takeover) and $FF
+	dec	b
+	ld	(hl), bc
+	jp	tty.phy_init
+
+.exit:
+	call	.fb_restore
+	jp	kthread.exit
+
+.irq_switch:
+; NOTE : we will need to SIGSTOP the thread owning the mutex (wich may or may be not the thread running)
+; if it is the currently running thread, due to the fact that fb_takeover is running in interrupt span
+; it may be complex
+; thread create irq will set reschedule byte, so we might be good
+; however, signal is STILL broken
+	call	.fb_takeover
+	ret	c
+	ld	iy, .fb_vt
+	jp	kthread.irq_create
+
+.fb_vt:
 ; profiling exemple
 ; 	ld	hl, kmem_cache_s512
 ; 	call	kmem.cache_alloc
@@ -164,8 +172,8 @@ console:
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
-; around 100 ms repeat time
-	ld	b, 8
+; around 140 ms repeat time
+	ld	b, 12
 .wait_keyboard:
 	push	bc
 	ld	hl, DRIVER_KEYBOARD_CTRL
@@ -318,7 +326,7 @@ console:
 	jp	z, .free
 	ld	hl, .EXIT
 	call	.check_builtin
-	jp	z, .fb_restore
+	jp	z, .exit
 ; try to exec the program in /bin/xxxx
 ; bc = string size
 	ld	hl, console_line

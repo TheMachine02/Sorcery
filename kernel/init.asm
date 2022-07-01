@@ -131,8 +131,6 @@ file	'initramfs'
 	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
-; delayed console init after device init
-	call	console.fb_init
 	ld	hl, .arch_heart
 	call	printk
 ; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
@@ -140,17 +138,19 @@ if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs
 	call	tifs.mount_root
 end if
-; if no bin/init found, error out and do a console "takeover" (console.fb_takeover, which will spawn a console, and the init thread will exit)
+; if no bin/init found, error out and do a console takeover
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
 	call	leaf.execve
-;	jp	init_conway
-; right now, we just do the console "takeover" directly (if this carry : system error, deadlock, since NO thread is left)
+	jp	init_conway
+; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
+	call	console.fb_takeover
+	ret	c
 	ei
 	ld	hl, .arch_bin_error
 	call	printk
-	jp	console.thread
+	jp	console.fb_vt
 
 .arch_dev_path:
  db	"/dev",0
