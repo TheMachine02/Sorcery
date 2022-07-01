@@ -257,10 +257,9 @@ sysdef _kill
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 ; if running or interruptible > switch to stopped
 ; if stopped, idle or zombie : don't touch
-	tst	a, 11111110b
-	jr	nz, .kill_clean
-	dec	a	; interruptible
-	call	z, task_switch_stopped
+	cp	a, TASK_STOPPED
+	jr	nc, .kill_clean
+	call	task_switch_stopped
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_STOPPED
 	jr	.kill_clean
 .kill_signal_kill:
@@ -270,6 +269,12 @@ sysdef _kill
 	jr	z, .kill_clean
 	or	a, a
 	call	nz, task_switch_running
+; are we us ?
+	ld	de, (kthread_current)
+	lea	hl, iy+0
+	or	a, a
+	sbc	hl, de
+	jp	z, kthread.exit
 	ld	iy, (iy+KERNEL_THREAD_STACK)
 ; insert shamelessly thread exit routine
 	ld	hl, kthread.exit
