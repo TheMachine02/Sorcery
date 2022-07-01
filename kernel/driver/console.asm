@@ -164,8 +164,8 @@ console:
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
-; around 140 ms repeat time
-	ld	b, 12
+; around 100 ms repeat time
+	ld	b, 8
 .wait_keyboard:
 	push	bc
 	ld	hl, DRIVER_KEYBOARD_CTRL
