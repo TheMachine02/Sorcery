@@ -244,7 +244,6 @@ mm:
 ; sanity check guard, call by kernel
 ; of course, it is easy to bypass, but at least it is here
 ; mainly, what happen if you unmap yourself ? > CRASH
-	dbg	open
 	pop	hl
 	push	hl
 	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE

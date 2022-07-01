@@ -217,4 +217,8 @@ kvfs_root_dirent:
  db	13	dup	$00
  dl	$000000
  db	13	dup	$00
- db	1728	dup	KERNEL_HW_POISON
+ db	192	dup	KERNEL_HW_POISON
+; tty device
+tty_dev:
+ db	256	dup	0
+ db	1280	dup	KERNEL_HW_POISON

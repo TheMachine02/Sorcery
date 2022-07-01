@@ -162,8 +162,8 @@ include 'kernel/dev/random.asm'
 include	'fs/romfs.asm'
 include	'fs/tifs.asm'
 
-; init_conway:
-; include	'conway.asm'
+init_conway:
+include	'conway.asm'
 
 assert $ < $D08000
 

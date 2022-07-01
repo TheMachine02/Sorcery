@@ -1,14 +1,14 @@
-define	console_dev		$D00700
-define	console_style		$D00700
-define	console_fg_color	$D00701
-define	console_bg_color	$D00702
-define	console_cursor_xy	$D00703
-define	console_blink		$D00706
-define	console_flags		$D00707
-define	console_key		$D00708
-define	console_takeover	$D00715
-define	console_line_head	$D00718
-define	console_line		$D00720
+define	console_dev		tty_dev
+define	console_style		tty_dev
+define	console_fg_color	tty_dev+CONSOLE_FG_COLOR
+define	console_bg_color	tty_dev+CONSOLE_BG_COLOR
+define	console_cursor_xy	tty_dev+CONSOLE_CURSOR
+define	console_blink		tty_dev+CONSOLE_BLINK
+define	console_flags		tty_dev+CONSOLE_FLAGS
+define	console_key		tty_dev+CONSOLE_KEY
+define	console_takeover	tty_dev+CONSOLE_TAKEOVER
+define	console_line_head	tty_dev+CONSOLE_LINE_HEAD
+define	console_line		tty_dev+CONSOLE_LINE
 
 console:
 
@@ -54,7 +54,7 @@ console:
 	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 ; init the screen now
 	push	de
-	call	.init_screen
+	call	.fb_init
 	ld	a, (iy+CONSOLE_FLAGS)
 ; get bit 7 (THREADED)
 	rla
@@ -119,16 +119,16 @@ console:
 	ld	bc, $0100
 	ld	hl, console_dev
 	ld	(hl), bc
-	ld	l, console_flags and $FF
+	ld	l, (console_flags) and $FF
 	ld	(hl), 1 shl CONSOLE_FLAGS_SILENT
 	inc	hl
 	ld	(hl), $FD
-	ld	l, console_takeover and $FF
+	ld	l, (console_takeover) and $FF
 	dec	b
 	ld	(hl), bc
 	jp	tty.phy_init
 	
-.init_screen:
+.fb_init:
 	ld	a, (console_dev+CONSOLE_FLAGS)
 	add	a, a
 	ret	m

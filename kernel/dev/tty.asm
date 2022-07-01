@@ -75,7 +75,7 @@ tty:
 	ret
 
 .phy_write_do:
-	ld	iy, console_dev
+	ld	iy, tty_dev
 	bit	CONSOLE_FLAGS_ESC, (iy+CONSOLE_FLAGS)
 	jr	nz, .phy_escape_sequence_ex
 ; find address of the glyph on the screen
@@ -559,7 +559,7 @@ if CONFIG_USE_GLYPH_NUMBER = 1
 	ld	bc, font.TRANSLATION_TABLE
 	add	hl, bc
 	push	iy
-	ld	iy, console_dev
+	ld	iy, tty_dev
 ; load foreground & background color
 ;	ld	bc, (iy+CONSOLE_FG_COLOR)
 	ld	bc, (iy+CONSOLE_FG_COLOR-1)
