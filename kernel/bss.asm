@@ -10,6 +10,7 @@ define	KERNEL_MM_RESERVED_MASK		0
 define	KERNEL_MM_PAGE_FREE_MASK	128
 define	ROOT_USER			$FF	; maximal permission, bit 7 is ROOT bit
 define	PERMISSION_USER			$01	; minimal permission
+define	KERNEL_DEBUG			7
 
 if $<> $D00000
  org	$D00000
@@ -105,7 +106,15 @@ kernel_heap:				; kernel heap bottom (HW heap), also 512 bytes scrap, used for l
 nmi_context:				; 64 bytes context, offset $40 within heap
  db	64	dup	KERNEL_HW_POISON
 nmi_console:				; 64 bytes console save
- db	378	dup	KERNEL_HW_POISON
+ db	64	dup	KERNEL_HW_POISON
+log_level:
+ db	1	dup	KERNEL_DEBUG
+log_head:
+ db	3	dup	KERNEL_HW_POISON
+log_buffer:
+ db	256	dup	KERNEL_HW_POISON
+; still around 54 bytes free in the kernel heap
+ db	54	dup	KERNEL_HW_POISON
 nmi_stack:				; interrupt stack. Anyway, if we were in a interrupt, we'll reboot
 kinterrupt_irq_boot_ctx:=$D177BA	; 1 byte, if nz, execute boot isr handler
 kinterrupt_irq_stack_isr: 		;  constant, head of stack

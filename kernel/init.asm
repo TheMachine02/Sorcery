@@ -144,8 +144,8 @@ end if
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-; 	call	leaf.execve
-	jp	init_conway
+	call	leaf.execve
+;	jp	init_conway
 ; right now, we just do the console "takeover" directly (if this carry : system error, deadlock, since NO thread is left)
 	ei
 	ld	hl, .arch_bin_error

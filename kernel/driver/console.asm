@@ -100,6 +100,7 @@ console:
 	ld	a, DRIVER_KEYBOARD_SCAN_CONTINUOUS
 	ld	(DRIVER_KEYBOARD_CTRL), a
 	ld	de, (hl)
+	push	de
 	ld	hl, (DRIVER_VIDEO_IRQ_LOCK+1)
 	ld	c, (hl)
 	ld	a, SIGCONT
@@ -109,11 +110,11 @@ console:
 	ld	bc, 0
 	ld	(iy+CONSOLE_TAKEOVER), bc
 	call	kfree
-	ex	de, hl
+	pop	hl
 	ld	c, (hl)
 	ld	a, SIGKILL
 	jp	signal.kill
-	
+
 .init:
 	di
 	ld	bc, $0100
@@ -129,9 +130,8 @@ console:
 	jp	tty.phy_init
 	
 .fb_init:
-	ld	a, (console_dev+CONSOLE_FLAGS)
-	add	a, a
-	ret	m
+	ld	hl, console_dev+CONSOLE_FLAGS
+	res	CONSOLE_FLAGS_SILENT, (hl)
 	ld	hl, DRIVER_VIDEO_IMSC
 	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
 	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
@@ -188,7 +188,8 @@ console:
 	ld	a, $FD
 .process_key:
 	ld	(hl), a
-	call	video.vsync
+; use vsync busy call
+	call	video.vsync_atomic
 ; wait for vsync, we are in vblank now (are we ?)
 ; the syscall destroy a but not hl
 	ld	hl, (console_line_head)

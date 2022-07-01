@@ -3,6 +3,8 @@
 	ld de,$D40000
 	ld bc,$025800
 	ldir
+	ld hl,$D40000
+	ld ($E30010), hl
 	
 	ld hl,$010101
 	ld a,l
@@ -30,7 +32,6 @@ __D1A8BA:
 	push ix
 	push iy
 	ld ($E30B07),sp
-	
 	ld sp,$D5C80D
 	or a,a
 	sbc hl,hl
@@ -154,7 +155,7 @@ D1AA29:
 	ex de,hl
 	dec a
 	jr nz,D1AA29
-
+	
 	ld sp,$D4E70D
 	or a,a
 	sbc hl,hl
