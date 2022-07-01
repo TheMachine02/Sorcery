@@ -200,6 +200,9 @@ sysdef _thread
 ; return iy = new thread
 	ld	de, -KERNEL_THREAD_STACK_SIZE
 	add	iy, de
+; set reschedule value
+	ld	hl, i
+	ld	(hl), $80
 	pop	af
 	or	a, a
 	sbc	hl, hl
