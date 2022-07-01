@@ -24,10 +24,7 @@ define	DRIVER_VIDEO_TIMING3		$E3000C
 
 define	DRIVER_VIDEO_IRQ		00100000b
 define	DRIVER_VIDEO_IRQ_LOCK		KERNEL_INTERRUPT_ISR_DATA_VIDEO
-define	DRIVER_VIDEO_IRQ_LOCK_THREAD	KERNEL_INTERRUPT_ISR_DATA_VIDEO + 1
 define	DRIVER_VIDEO_IRQ_LOCK_SET	0
-
-; TODO fix race condition in lock and make use of kernel atomic_mutex
 
 video:
 
@@ -54,7 +51,8 @@ video:
 	call	.clear_screen
 	call	.clear_buffer
 ; IRQ handle
-	call	.irq_lock_reset
+	ld	hl, DRIVER_VIDEO_IRQ_LOCK
+	call	atomic_mutex.init
 	ld	hl, .irq_handler
 	ld	a, DRIVER_VIDEO_IRQ
 	jp	kinterrupt.irq_request
@@ -66,40 +64,24 @@ video:
 	bit	DRIVER_VIDEO_IRQ_LOCK_SET, (hl)
 	ret	z
 	inc	hl
+	ld	a, (hl)
+	add	a, a
+	add	a, a
+	ld	hl, kthread_pid_map
+	ld	l, a
+	inc	hl
 	ld	iy, (hl)
 ; signal the IRQ to a waiting (helper / or not ) thread
 	ld	a, DRIVER_VIDEO_IRQ
 	jp	kthread.irq_resume
 
 .irq_lock:
-	di
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
-	sra	(hl)
-	jr	nc, .irq_lock_acquire
-	call	kthread.yield
-	jr	.irq_lock
-.irq_lock_acquire:
-	ld	hl, (kthread_current)
-	ld	(DRIVER_VIDEO_IRQ_LOCK_THREAD), hl
-	ei
-	ret
-
+	jp	atomic_mutex.lock
+	
 .irq_unlock:
-; does we own it ?
-	ld	hl, (kthread_current)
-	ld	de, (DRIVER_VIDEO_IRQ_LOCK_THREAD)
-	or	a, a
-	sbc	hl, de
-; nope, bail out
-	ret	nz
-; set them freeeeee
-.irq_lock_reset:
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
-	ld	(hl), KERNEL_ATOMIC_MUTEX_MAGIC
-	inc	hl
-	ld	de, NULL
-	ld	(hl), de
-	ret
+	jp	atomic_mutex.unlock
 	
 .swap:
 	ld	a, i
