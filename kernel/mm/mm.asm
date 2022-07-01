@@ -124,11 +124,11 @@ mm:
 ; destroy bc, destroy a, destroy de, destroy ix
 	dec	c
 	jr	z, .map_page
-	push	de
 ; map c page from b page
-	ld	e, c
 	ld	a, i
 	push	af
+	push	de
+	ld	e, c
 	ld	a, b
 	add	a, c
 	jp	c, .__segfault_permission
@@ -244,13 +244,14 @@ mm:
 ; sanity check guard, call by kernel
 ; of course, it is easy to bypass, but at least it is here
 ; mainly, what happen if you unmap yourself ? > CRASH
+	dbg	open
 	pop	hl
 	push	hl
 	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE
 	or	a, a
 	sbc	hl, bc
 	jp	nc, .segfault
-	ld	hl, kmm_ptlb_map + KERNEL_MM_PAGE_MAX + KERNEL_MM_GFP_KERNEL
+	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL + KERNEL_MM_PAGE_MAX
 	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
 	jr	.__drop_user_pages_parse
 .__drop_user_pages_flush:
