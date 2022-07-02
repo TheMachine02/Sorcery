@@ -142,15 +142,19 @@ end if
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-	call	leaf.execve
-	jp	init_conway
+; 	call	leaf.execve
+	ld	hl, .arch_bin_error
+	call	printk
+; 	jp	init_conway
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	call	console.fb_takeover
 	ret	c
+	call	console.fb_init
+; output kernel log to help user
+	call	dmesg
 	ei
-	ld	hl, .arch_bin_error
-	call	printk
-	jp	console.fb_vt
+; and open a virtual terminal
+	jp	console.vt_prompt
 
 .arch_dev_path:
  db	"/dev",0
@@ -234,5 +238,5 @@ printk:
 
 sysdef _dmesg
 dmesg:
-; ouput the whole formated kernel log to file descriptor (console or file)
+; ouput the whole formated kernel log to console (used in takeover)
 	ret

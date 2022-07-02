@@ -15,10 +15,9 @@ console:
 .nmi_takeover:
 	ld	iy, console_dev
 	ld	hl, nmi_console
-	jr	.fb_takeover_entry
+	call	.fb_takeover_force
+	jp	.fb_init
 
-; takeover the tty console and launch a dedicated thread to it
-; if console is already noisy (flags silent), don't launch an other console
 .fb_takeover:
 	ld	iy, console_dev
 	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
@@ -34,7 +33,7 @@ console:
 	ld	hl, kmem_cache_s64
 	call	kmem.cache_alloc
 	jr	c, .__fb_takeover_error
-.fb_takeover_entry:
+.fb_takeover_force:
 	ld	(iy+CONSOLE_TAKEOVER), hl
 	ex	de, hl
 ; save LCD state
@@ -51,8 +50,6 @@ console:
 ; 58 + 3 bytes in grand total, free 3 bytes
 ; mark console as present
 	res	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
-; init the screen now
-	call	.fb_init
 ; take lcd mutex control
 ; stop thread holding the mutex
 	ld	hl, DRIVER_VIDEO_IRQ_LOCK
@@ -67,7 +64,7 @@ console:
 	call	signal.kill
 	or	a, a
 	ret
-	
+
 .__fb_takeover_error:
 	scf
 	ret
@@ -129,7 +126,7 @@ console:
 	ld	c, 37
 	ld	hl, .SPLASH_NAME
 	jp	tty.phy_write
-
+	
 .init:
 	di
 	ld	bc, $0100
@@ -156,10 +153,12 @@ console:
 ; however, signal is STILL broken
 	call	.fb_takeover
 	ret	c
-	ld	iy, .fb_vt
+	ld	iy, .vt_init
 	jp	kthread.irq_create
 
-.fb_vt:
+.vt_init:
+	call	.fb_init
+.vt_prompt:
 ; profiling exemple
 ; 	ld	hl, kmem_cache_s512
 ; 	call	kmem.cache_alloc
@@ -172,8 +171,8 @@ console:
 	call	.prompt
 .run_loop:
 ; wait keyboard scan
-; around 140 ms repeat time
-	ld	b, 12
+; around 100 ms repeat time
+	ld	b, 8
 .wait_keyboard:
 	push	bc
 	ld	hl, DRIVER_KEYBOARD_CTRL
@@ -197,6 +196,7 @@ console:
 .process_key:
 	ld	(hl), a
 ; use vsync busy call
+; use atomic vsync since we dont have the video mutex
 	call	video.vsync_atomic
 ; wait for vsync, we are in vblank now (are we ?)
 ; the syscall destroy a but not hl
