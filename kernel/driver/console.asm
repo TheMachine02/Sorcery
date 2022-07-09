@@ -327,6 +327,9 @@ console:
 	ld	hl, .EXIT
 	call	.check_builtin
 	jp	z, .exit
+	ld	hl, .DMESG
+	call	.check_builtin
+	jp	z, .dmesg
 ; try to exec the program in /bin/xxxx
 ; bc = string size
 	ld	hl, console_line
@@ -406,6 +409,10 @@ console:
 
 .shutdown:
 	call	kpower.cycle_off
+	jr	.clean_command
+
+.dmesg:
+	call	dmesg
 	jr	.clean_command
 	
 .color:
@@ -829,6 +836,8 @@ console:
  db 2, "ls"
 .FREE:
  db 5, "free",0
+.DMESG:
+ db 6, "dmesg",0
  
 .BINARY_PATH:
  db "/bin/",0

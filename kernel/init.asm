@@ -256,18 +256,19 @@ dmesg:
 ; output the whole ring buffer to tty device
 ; iy is the ring read, de is destination buffer, bc is size
 	ld	bc, (iy+RING_SIZE)
+	ld	hl, (iy+FIFO_TAIL)
 	ld	a, c
 	or	a, b
 	ret	z
 .tty_loop:
 	push	bc
 	push	iy
-	ld	hl, (iy+FIFO_TAIL)
+	push	hl
 	ld	bc, 1
 	call	tty.phy_write
+	pop	hl
 	pop	iy
 	pop	bc
-	ld	hl, (iy+FIFO_TAIL)
 	cpi
 	push	af
 	push	bc
@@ -278,7 +279,6 @@ dmesg:
 	jr	nz, .tty_rewind
 	ld	hl, (iy+RING_BOUND_LOW)
 .tty_rewind:
-	ld	(iy+RING_TAIL), hl
 	pop	bc
 	pop	af
 ; if po set, we have read all
