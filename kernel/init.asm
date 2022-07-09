@@ -85,6 +85,9 @@ init:
 	call	kinterrupt.init
 	call	kpower.init
 	call	kwatchdog.init
+	call	dmesg.init
+	ld	hl, .arch_heart
+	call	printk
 ; create the kernel init thread
 	ld	iy, .arch_init
 	call	kthread.create
@@ -131,8 +134,6 @@ file	'initramfs'
 	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
-	ld	hl, .arch_heart
-	call	printk
 ; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
 if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs
@@ -142,7 +143,7 @@ end if
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-; 	call	leaf.execve
+	call	leaf.execve
 	ld	hl, .arch_bin_error
 	call	printk
 ; 	jp	init_conway
@@ -167,10 +168,10 @@ end if
  dl	NULL
 
 .arch_bin_error:
- db	"failed to execute /bin/init",10,"running emergency shell",10,0
+ db	$01, KERNEL_ERR, "init: failed to execute /bin/init",10,"init: running emergency shell",10,0
 
 .arch_heart:
- db	"interrupt heartbeat=",KERNEL_CRYSTAL_HEART, "Hz",10, 0
+ db	$01, KERNEL_INFO, "hw: interrupt heartbeat=",KERNEL_CRYSTAL_HEART, "Hz",10, 0
  
 sysdef _reboot
 reboot:
@@ -223,7 +224,13 @@ printk:
 ; print time ?
 ; String is : $01, LEVEL, [time]
 ; defaut is KERNEL_WARNING 
-; write to the ring buffer
+; write to the ring buffer (and also the tty)
+	ld	a, (hl)
+	dec	a
+	ret	nz
+	inc	hl
+	inc	hl
+.nmi:
 	push	hl
 	ld	bc, 0
 	xor	a, a
@@ -234,9 +241,57 @@ printk:
 	sbc	hl, bc
 	ex	(sp), hl
 	pop	bc
+; hl = string, bc = size
+	push	hl
+	push	bc
+	call	dmesg.write
+	pop	bc
+	pop	hl
 	jp	tty.phy_write
 
 sysdef _dmesg
 dmesg:
-; ouput the whole formated kernel log to console (used in takeover)
+	ld	iy, dmesg_log
+.tty:
+; output the whole ring buffer to tty device
+; iy is the ring read, de is destination buffer, bc is size
+	ld	bc, (iy+RING_SIZE)
+	ld	a, c
+	or	a, b
+	ret	z
+.tty_loop:
+	push	bc
+	push	iy
+	ld	hl, (iy+FIFO_TAIL)
+	ld	bc, 1
+	call	tty.phy_write
+	pop	iy
+	pop	bc
+	ld	hl, (iy+FIFO_TAIL)
+	cpi
+	push	af
+	push	bc
+	ld	bc, (iy+RING_BOUND_UPP)
+	or	a, a
+	sbc	hl, bc
+	add	hl, bc
+	jr	nz, .tty_rewind
+	ld	hl, (iy+RING_BOUND_LOW)
+.tty_rewind:
+	ld	(iy+RING_TAIL), hl
+	pop	bc
+	pop	af
+; if po set, we have read all
+	jp	pe, .tty_loop
 	ret
+
+.write:
+	ex	de, hl
+	ld	iy, dmesg_log
+	jp	ring.write
+
+.init:
+; create a ring buffer
+	ld	iy, dmesg_log
+	ld	hl, dmesg_buffer
+	jp	ring.create

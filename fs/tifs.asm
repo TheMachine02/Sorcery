@@ -402,5 +402,5 @@ tifs:
 	jr	.do_data
 
 .tifs_root_message:
- db	"tifs: root partition found", 10, 0
+ db	$01, KERNEL_INFO, "tifs: root partition found", 10, 0
 

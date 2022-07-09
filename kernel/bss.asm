@@ -107,15 +107,11 @@ nmi_context:				; 64 bytes context, offset $40 within heap
  db	64	dup	KERNEL_HW_POISON
 nmi_console:				; 64 bytes console save
  db	64	dup	KERNEL_HW_POISON
-log_level:
- db	1	dup	KERNEL_DEBUG
-log_head:
- db	3	dup	KERNEL_HW_POISON
-log_buffer:
- db	256	dup	KERNEL_HW_POISON
-; still around 54 bytes free in the kernel heap
- db	54	dup	KERNEL_HW_POISON
-nmi_stack:				; interrupt stack. Anyway, if we were in a interrupt, we'll reboot
+; we have around 64 bytes free here
+ db	64	dup	KERNEL_HW_POISON
+; this is the interrupt stack & nmi stack
+ db	250	dup	KERNEL_HW_POISON
+nmi_stack:				; interrupt stack. Anyway, if we were in a interrupt, we'll reboot 
 kinterrupt_irq_boot_ctx:=$D177BA	; 1 byte, if nz, execute boot isr handler
 kinterrupt_irq_stack_isr: 		;  constant, head of stack
 kinterrupt_irq_ret_ctx: 		;  written in the init (return pointer to clean up function)
@@ -126,6 +122,9 @@ kthread_mqueue_active:			; offset $300, multilevel priority queue, 16 bytes (4x4
  db	16	dup	$FF
 kthread_queue_retire:			; retire queue
  db	4	dup	$FF
+kthread_queue_idle:
+ db	$FF
+ dl	kernel_idle
 ktimer_queue:				; timer queue
  db	4	dup	$FF
 kpower_interrupt_mask:			; temporary interrupt save register
@@ -138,7 +137,9 @@ kinterrupt_lru_page:
  db	KERNEL_HW_POISON		; vfs cache decay
 klru_pages:
  db	8	dup	KERNEL_HW_POISON
- db	22	dup	KERNEL_HW_POISON
+dmesg_log:
+ db	16	dup	KERNEL_HW_POISON
+ db	2	dup	KERNEL_HW_POISON
 kmem_cache_buffctl:			; 16 slub buffers, 7 defined, 9 user defined
 kmem_cache_s8:
  db	4	dup	$FF
@@ -212,9 +213,6 @@ kmm_ptlb_map:				; the kernel page alloctor process tlb at offset $500
  db	162	dup	KERNEL_MM_PAGE_FREE_MASK
  db	256	dup	$00
  db	256	dup	$00
-; $800 is 256 bytes reserved for flash routine if needed
-flash_program:
- db	256	dup	KERNEL_HW_POISON
 kvfs_root_dirent:
  dl	kvfs_root
  db	'.'
@@ -230,4 +228,8 @@ kvfs_root_dirent:
 ; tty device
 tty_dev:
  db	256	dup	0
- db	1280	dup	KERNEL_HW_POISON
+flash_program:
+ db	256	dup	KERNEL_HW_POISON
+dmesg_buffer:
+ db	256	dup	KERNEL_HW_POISON
+ db	1024	dup	KERNEL_HW_POISON
