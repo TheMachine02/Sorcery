@@ -332,24 +332,10 @@ kscheduler:
 	jp	z, nmi
 .dispatch_idle:
 ; schedule the idle thread
-	ld	de, kernel_idle
-if CONFIG_USE_DYNAMIC_CLOCK
-	xor	a,a
-	out0	(KERNEL_POWER_CPU_CLOCK),a
-	inc	a
-	ld	(KERNEL_FLASH_CTRL),a
-end if
-	jr	.dispatch_thread
+	add	hl, bc
 .dispatch_queue:
 	inc	hl
-if CONFIG_USE_DYNAMIC_CLOCK
-	ld	a, $03
-; restore flash wait state BEFORE restoring CPU clock
-	ld	(KERNEL_FLASH_CTRL),a
-	out0	(KERNEL_POWER_CPU_CLOCK),a
-end if
 	ld	de, (hl)
-.dispatch_thread:
 ; iy is previous thread, ix is the new thread, let's switch them
 ; are they the same ?
 	lea	hl, iy+0
