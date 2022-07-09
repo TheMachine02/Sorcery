@@ -1,11 +1,15 @@
-define	QUEUE_DATA		$00
-define	QUEUE_NEXT		$01
-define	QUEUE_PREVIOUS		$04
-; queue data ;
-define	QUEUE_SIZE		$04
-define	QUEUE_COUNT		$00		; marked as $FF = 0, you need to +1 if you want *physical* count
-define	QUEUE_CURRENT		$01		; pointer 24 bits
+virtual	at 0
+	QUEUE_DATA:	rb	1
+	QUEUE_NEXT:	rb	3
+	QUEUE_PREVIOUS:	rb	3
+end	virtual
 
+define	QUEUE_SIZE	4
+virtual	at 0
+	QUEUE_COUNT:	rb	1	; marked as $FF = 0, you need to +1 if you want *physical* count
+	QUEUE_POINTER:	rb	3	; pointer, 24 bits
+end	virtual
+ 
 kqueue:
 
 ; all register are preserved
