@@ -376,12 +376,18 @@ tty:
 	bit	CONSOLE_FLAGS_SILENT, (iy+CONSOLE_FLAGS)
 	ret	nz
 	push	bc
+	call	video.vsync_atomic
 	ld	de, (DRIVER_VIDEO_SCREEN)
 	ld	hl, 11*320
 	add	hl, de
 	ld	bc, 76800 - 11*320
 	ldir
 	ld	hl, $E40000+(11*320)
+	ld	b, h
+	ld	c, l
+	ldir
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	ld	hl, $E40000+(10*320)
 	ld	b, h
 	ld	c, l
 	ldir
@@ -394,6 +400,7 @@ tty:
 	jp	m, .phy_erase_cursor_end_screen
 	jr	z, .phy_erase_cursor_begin_screen
 .phy_erase_all_display:
+	call	video.vsync_atomic
 ; reset cursor xy and delete the screen
 	ld	hl, KERNEL_MM_NULL
 	ld	de, (DRIVER_VIDEO_SCREEN)
