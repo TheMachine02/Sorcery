@@ -127,7 +127,7 @@ sysdef _open
 	push	hl
 	push	de
 	push	bc
-	call	.inode_directory_lookup
+	call	.inode_dirent_lookup
 	pop	bc
 	pop	de
 	pop	hl

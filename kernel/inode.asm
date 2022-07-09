@@ -4,7 +4,7 @@ define	KERNEL_VFS_INODE_FLAGS			0	; 1 byte, inode flag
 define	KERNEL_VFS_INODE_ATOMIC_LOCK		1	; rw lock, 5 bytes
 define	KERNEL_VFS_INODE_REFERENCE		6	; 1 byte, number of reference to this inode
 ; TODO : WARNING : need to make sure reference never overflow, so put check everywhere
-define	KERNEL_VFS_INODE_SIZE			7	; 3 bytes, size of the inode
+define	KERNEL_VFS_INODE_SIZE			7	; 3 bytes, size of the inode (in case of directory, number of link)
 define	KERNEL_VFS_INODE_DEVICE			7	; 2 bytes, device number if applicable
 define	KERNEL_VFS_INODE_LINK			7	; 3 bytes, link if applicable
 define	KERNEL_VFS_INODE_PARENT			10	; 3 bytes, parent of the inode, NULL mean root
@@ -139,7 +139,7 @@ define	phy_stat		24
 	jp	c, user_error
 .inode_get_parse_path:
 ; find the entrie in the directory
-	call	.inode_directory_lookup
+	call	.inode_dirent_lookup
 	jr	c, .inode_atomic_read_error
 	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
 ; ix is the new inode, iy the old, hl is still our path
@@ -250,7 +250,7 @@ define	phy_stat		24
 .inode_directory_get_parse_path:
 ; find the entrie in the directory
 	push	de
-	call	.inode_directory_lookup
+	call	.inode_dirent_lookup
 	pop	de
 	jr	c, .inode_atomic_read_error
 	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
@@ -307,7 +307,7 @@ define	phy_stat		24
 	pop	hl
 	ret
 
-.inode_directory_lookup:
+.inode_dirent_lookup:
 ; return c if error with a = error (but NO ERRNO SET)
 ; return nc if found, ix is the dirent
 ; also can check partial path ('dev/toto' lookup dev)
@@ -324,7 +324,7 @@ define	phy_stat		24
 	push	iy
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
 	ld	b, 16
-.inode_directory_lookup_data:
+.inode_dirent_lookup_data:
 ; 16 times
 	ld	ix, (iy+0)
 ; check if ix is NULL, else, skip
@@ -336,24 +336,24 @@ define	phy_stat		24
 	pop	hl
 	jr	z, .inode_directory_data_null
 	call	.inode_directory_entry_cmp
-	jr	z, .inode_directory_lookup_match
+	jr	z, .inode_dirent_lookup_match
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	call	.inode_directory_entry_cmp
-	jr	z, .inode_directory_lookup_match
+	jr	z, .inode_dirent_lookup_match
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	call	.inode_directory_entry_cmp
-	jr	z, .inode_directory_lookup_match
+	jr	z, .inode_dirent_lookup_match
 	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	call	.inode_directory_entry_cmp
-	jr	z, .inode_directory_lookup_match
+	jr	z, .inode_dirent_lookup_match
 .inode_directory_data_null:
 	lea	iy, iy+3
-	djnz	.inode_directory_lookup_data
+	djnz	.inode_dirent_lookup_data
 	pop	iy
 	ld	a, ENOENT
 	scf
 	ret
-.inode_directory_lookup_match:
+.inode_dirent_lookup_match:
 	pop	iy
 	xor	a, a
 	ret
@@ -403,7 +403,7 @@ define	phy_stat		24
 ; we have several sanity check here
 	push	de
 	push	hl
-	call	.inode_directory_lookup
+	call	.inode_dirent_lookup
 	pop	hl
 	pop	de
 	ld	a, EEXIST
@@ -529,7 +529,9 @@ define	phy_stat		24
 	dec	(hl)
 ; copy parent methode inheriting filesystem and mount propriety
 	ld	hl, (iy+KERNEL_VFS_INODE_OP)
-	ld	(ix+KERNEL_VFS_INODE_OP), hl	
+	ld	(ix+KERNEL_VFS_INODE_OP), hl
+; increment link count of parent inode
+	inc	(iy+KERNEL_VFS_INODE_LINK)
 ; unlock parent inode
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_write
@@ -608,7 +610,7 @@ define	phy_stat		24
 	pop	iy
 ; iy is now the parent inode
 	ret
-	
+
 .inode_dup:
 	ret
 
@@ -627,6 +629,8 @@ sysdef _link
 	ex	de, hl
 	call	.inode_dirent
 	jr	c, .inode_link_error
+; increment parent link references
+	inc	(iy+KERNEL_VFS_INODE_LINK)
 ; de = name, ix = dirent, iy = parent inode
 ; we can lock the old path inode and increase it ref count
 	ex	(sp), iy
@@ -674,7 +678,7 @@ sysdef _unlink
 	call	.inode_directory_get_lock
 	ret	c
 ; iy = inode, hl = name
-	call	.inode_directory_lookup
+	call	.inode_dirent_lookup
 	jp	c, .inode_atomic_write_error
 ; ix = dirent, so delete it and deref the children inode
 	ld	hl, KERNEL_MM_NULL
@@ -686,6 +690,7 @@ sysdef _unlink
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	ld	a, EISDIR
 	jp	z, .inode_atomic_write_error
+	dec	(iy+KERNEL_VFS_INODE_LINK)
 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ldir
 ; ix = children inode to deref, iy is parent
@@ -843,18 +848,6 @@ sysdef _rename
 .rename:
 ; int rename(const char *oldpath, const char *newpath);
 ; hl is old path, bc is newpath
-; for this we need to find the file (grab inode and parent inode, lock the parent inode for write, remove reference for the file, introduce reference to the new path, etc). QUite some hard work actually
-; 	push	bc
-; 	call	.inode_find
-; 	pop	hl
-; ; well, we didn't found the first path, so abort
-; 	ret	c
-; 	push	iy
-; 	call	.inode_find_directory
-; 	pop	ix
-; ; well, the path of the directory for the new name couldn't been found
-; 	ret	c
-; ; now lock both, and pray
 ; TODO : implement
 	ret
 
@@ -877,33 +870,35 @@ sysdef _mkdir
 	ret
 
 sysdef _rmdir
-; TODO : implement
 .rmdir:
 .inode_rmdir:
 	ret
-; 	call	.inode_directory_get_lock
-; 	ret	c
-; ; iy = inode, hl = name
-; 	call	.inode_directory_lookup
-; 	jp	c, .inode_atomic_write_error
-; ; ix = dirent, so delete it and deref the children inode
-; 	ld	hl, KERNEL_MM_NULL
-; 	lea	de, ix+KERNEL_VFS_DIRECTORY_ENTRY
-; 	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
-; 	ld	a, (ix+KERNEL_VFS_INODE_FLAGS)
-; 	and	a, KERNEL_VFS_TYPE_MASK
-; 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
-; 	ld	a, ENOTDIR
-; 	jp	nz, .inode_atomic_write_error
-; ; now check the directory inode is empty (excepted . and ..)
-; 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
-; 	ldir
-; ; ix = children inode to deref, iy is parent
-; 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
-; 	lea	iy, ix+0
-; 	call	.inode_deref
-; 	pop	hl
-; 	call	atomic_rw.unlock_write
-; 	or	a, a
-; 	sbc	hl, hl
-; 	ret
+	call	.inode_directory_get_lock
+	ret	c
+; iy = inode, hl = name
+	call	.inode_dirent_lookup
+	jp	c, .inode_atomic_write_error
+; ix = dirent, so delete it and deref the children inode
+	ld	hl, KERNEL_MM_NULL
+	lea	de, ix+KERNEL_VFS_DIRECTORY_ENTRY
+	ld	ix, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	ld	a, (ix+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	ld	a, ENOTDIR
+	jp	nz, .inode_atomic_write_error
+; now check the directory inode is empty (excepted . and ..)
+	ld	a, (ix+KERNEL_VFS_INODE_SIZE)
+	or	a, a
+	jp	nz, .inode_atomic_write_error
+	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ldir
+; ix = children inode to deref, iy is parent
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	lea	iy, ix+0
+	call	.inode_deref
+	pop	hl
+	call	atomic_rw.unlock_write
+	or	a, a
+	sbc	hl, hl
+	ret
