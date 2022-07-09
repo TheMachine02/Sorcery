@@ -117,9 +117,9 @@ nmi:
 ; hl is exception string
 	push	hl
 	ld	hl, .CONTEXT_FRAME_SYSE
-	call	printk
+	call	printk.nmi
 	pop	hl
-	call	printk
+	call	printk.nmi
 	ld	hl, (ix+CONTEXT_FRAME_IR)
 	push	hl
 	ld	hl, (ix+CONTEXT_FRAME_PC)
@@ -147,7 +147,7 @@ nmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_line
-	call	printk
+	call	printk.nmi
 ; unwind stack frame
 	ld	ix, (ix+CONTEXT_FRAME_SP)
 	ld	b, 8
@@ -165,7 +165,7 @@ nmi:
 	add	hl, sp
 	ld	sp, hl
 	ld	hl, console_line
-	call	printk
+	call	printk.nmi
 	pop	ix
 	pop	bc
 	djnz	.exception_unwind

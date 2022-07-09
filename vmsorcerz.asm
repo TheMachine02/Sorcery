@@ -110,6 +110,7 @@ sysjump:
 	jp	_dma_blk
 	jp	_dma_release
 	jp	_void
+	jp	_dmesg
 ; NOTE : max 240 syscall, should be way more than enough
 align	1024
 sysinternal:
@@ -127,6 +128,7 @@ include	'kernel/fifo.asm'
 include	'kernel/oom.asm'
 include	'kernel/signal.asm'
 include	'kernel/restart.asm'
+include	'kernel/ring.asm'
 include	'kernel/syscall.asm'
 include	'kernel/timer.asm'
 include	'kernel/vfs.asm'

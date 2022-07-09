@@ -8,7 +8,7 @@ define	FIFO_ENDPOINT		$F
 define	FIFO_WRITE_OPEN		1
 define	FIFO_READ_OPEN		2
 define	FIFO_STRUCT_SIZE	16
-define	FIFO_MAX_SIZE		64	; TODO : make it variable size
+define	FIFO_MAX_SIZE		256
 
 fifo:
 
@@ -58,6 +58,7 @@ fifo:
 	inc	de
 	inc	hl
 	ld	bc, (iy+FIFO_BOUND_UPP)
+	or	a, a
 	sbc	hl, bc
 	add	hl, bc
 	jr	nz, .write_rewind
@@ -90,6 +91,7 @@ fifo:
 	push	af
 	push	bc
 	ld	bc, (iy+FIFO_BOUND_UPP)
+	or	a, a
 	sbc	hl, bc
 	add	hl, bc
 	jr	nz, .read_rewind
@@ -107,7 +109,7 @@ fifo:
 	pop	hl
 	sbc	hl, bc
 	ret
-	
+
 .flush:
 ; drain the fifo, make head = tail and set the value pointed to 0
 	ld	hl, (iy+FIFO_HEAD)
