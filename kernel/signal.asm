@@ -354,6 +354,7 @@ _sighandler_stop:
 	pop	ix
 	jp	task_yield
 
+ dl	0
 _sighandler_jump:
  dl	kthread.exit
  dl	kthread.exit
@@ -378,3 +379,26 @@ _sighandler_jump:
  dl	_sighandler_stop
  dl	_sighandler_stop
  dl	kthread.core
+
+signal.return:
+; trash the argument
+	pop	hl
+; unwind the stack frame
+	pop	af
+	pop	bc
+	pop	de
+	pop	hl
+	di
+	exx
+	ex	af, af'
+	ld	hl, i
+	inc	hl
+	ld	iy, (hl)
+; check for signal recalc
+	call	.chkset
+; and perform context restore to see if any more signal is *pending*
+	jp	kinterrupt.irq_context_restore
+
+.chkset:
+; from current thread iy, compute current signal
+	ret

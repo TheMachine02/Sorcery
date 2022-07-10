@@ -44,7 +44,7 @@ kinterrupt:
 	xor	a, a
 	ld	(kinterrupt_irq_boot_ctx), a
 	ld	(kinterrupt_lru_page), a
-	ld	hl, .irq_context_restore
+	ld	hl, .irq_context_return
 	ld	(kinterrupt_irq_ret_ctx), hl
 	ret
 
@@ -167,6 +167,41 @@ kinterrupt:
 	ei
 	ret
 
+.irq_do_signal:
+; here, we are just before context switch
+; shadow hold correct registers
+; stack have iy and ix, so actually we are already in a kernel stack frame
+; push down user stack the handler adress (and the sigreturn syscall)
+; after the signal is processed, we re-enter interrupt like state and do an irq_context_restore to check for *more* pending signal (every signal should be processed after that, also we can be preempted whenever we want)
+	pop	iy
+	pop	ix
+	exx
+	ex	af, af'
+	ei
+	ret
+; entry:
+	exx
+	ex	af, af'
+	push	hl
+	push	de
+	push	bc
+	push	af
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_MASK)	; in the futur, SIGNAL_PENDING
+; C param
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	push	hl
+	ld	hl, signal.return
+	push	hl
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK	; in the futur, SIGNAL_VECTOR
+	add	a, a
+	add	a, a
+	add	a, l
+	ld	l, a
+	ei
+	jp	(hl)					; directly jump into the vector table
+
 .irq_handler:
 	pop	hl
 ; read interrupt sources
@@ -179,13 +214,13 @@ kinterrupt:
 	ld	a, (hl)
 	ld	l, (KERNEL_INTERRUPT_ICR+1) and $FF
 	or	a, a
-	jr	nz, .irq_trampoline_generic
+	jr	nz, .irq_trampoline
 	ld	a, c
 	ccf
 	adc	a, a
 	add	a, a
 	dec	l
-.irq_trampoline_generic:
+.irq_trampoline:
 	ex	de, hl
 ; and now, for some black magic
 	ld	(kinterrupt_irq_stack_ctx), sp
@@ -195,7 +230,7 @@ kinterrupt:
 	ldi
 	ld	l, (hl)
 	jp	(hl)
-.irq_context_restore:
+.irq_context_return:
 ; restore context stack
 	pop	hl
 	ld	sp, hl
@@ -204,8 +239,13 @@ kinterrupt:
 	sla	(hl)
 	inc	hl
 	ld	iy, (hl)
-	jr	c, kscheduler.do_schedule
-.irq_context_restore_minimal:
+	jp	c, kscheduler.do_schedule
+.irq_context_restore:
+; check here for pending signal
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK	; in the futur, SIGNAL_PENDING
+	ld	a, (hl)
+	or	a, a
+	jr	nz, .irq_do_signal
 	pop	iy
 	pop	ix
 	exx
@@ -260,7 +300,7 @@ kscheduler:
 	inc	hl
 	inc	hl
 	dec	(hl)
-	jr	nz, kinterrupt.irq_context_restore_minimal
+	jr	nz, kinterrupt.irq_context_restore
 ; lower thread priority and move queue
 .schedule_unpromote:
 	dec	hl
@@ -340,9 +380,9 @@ kscheduler:
 ; are they the same ?
 	lea	hl, iy+0
 	sbc	hl, de
+	jp	z, kinterrupt.irq_context_restore
+.context_restore:
 	exx
-	jr	z, .context_restore_minimal
-; same one, just quit and restore fast
 ; save state of the current thread
 	ex	af,af'
 	push	hl
@@ -354,7 +394,6 @@ kscheduler:
 	adc	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
 	exx
-.context_restore:
 	ex	de, hl
 	ld	(kthread_current), hl
 	ld	c, KERNEL_THREAD_STACK_LIMIT
@@ -367,15 +406,17 @@ kscheduler:
 	pop	de
 	pop	bc
 	pop	hl
-	pop	iy
-	pop	ix
-; give back the execution
-	ei
-	ret
-.context_restore_minimal:
-	pop	iy
-	pop	ix
+	exx
 	ex	af, af'
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK	; in the futur, SIGNAL_PENDING
+	ld	a, (hl)
+	or	a, a
+	jp	nz, kinterrupt.irq_do_signal
+	pop	iy
+	pop	ix
+	exx
+	ex	af, af'
+; give back the execution
 	ei
 	ret
 
