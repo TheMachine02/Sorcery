@@ -5,6 +5,7 @@ keyboard stdin
 * program execution and library loading
  - rework LEAF format to be smaller / better optimized
 
+uadmin : acess to flash unlock
 
 * the thread gid & geid update
 * use thread group id share by a parent and all its children
