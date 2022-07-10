@@ -255,35 +255,36 @@ dmesg:
 .tty:
 ; output the whole ring buffer to tty device
 ; iy is the ring read, de is destination buffer, bc is size
+	ld	hl, (iy+RING_TAIL)
 	ld	bc, (iy+RING_SIZE)
-	ld	hl, (iy+FIFO_TAIL)
-	ld	a, c
-	or	a, b
-	ret	z
-.tty_loop:
-	push	bc
-	push	iy
-	push	hl
-	ld	bc, 1
-	call	tty.phy_write
-	pop	hl
-	pop	iy
-	pop	bc
-	cpi
-	push	af
-	push	bc
+; if tail + size > RING_BOUND_UPP, then we need to first output from tail to bound_up and then from bound_low to size
+	add	hl, bc
 	ld	bc, (iy+RING_BOUND_UPP)
 	or	a, a
 	sbc	hl, bc
-	add	hl, bc
-	jr	nz, .tty_rewind
-	ld	hl, (iy+RING_BOUND_LOW)
-.tty_rewind:
+	jp	p, .__tty_cut_output
+; we just need to output from tail for size
+	ld	hl, (iy+RING_TAIL)
+	ld	bc, (iy+RING_SIZE)
+	jp	tty.phy_write
+.__tty_cut_output:
+	ld	hl, (iy+RING_BOUND_UPP)
+	ld	bc, (iy+RING_TAIL)
+	or	a, a
+	sbc	hl, bc
+; this is size
+	ex	de, hl
+	ld	hl, (iy+RING_SIZE)
+	or	a, a
+	sbc	hl, de
+	push	hl
+	ld	b, d
+	ld	c, e
+	ld	hl, (iy+RING_TAIL)
+	call	tty.phy_write
 	pop	bc
-	pop	af
-; if po set, we have read all
-	jp	pe, .tty_loop
-	ret
+	ld	hl, (iy+RING_BOUND_LOW)
+	jp	tty.phy_write
 
 .write:
 	ex	de, hl
