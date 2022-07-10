@@ -228,7 +228,8 @@ kvfs_root_dirent:
 ; tty device
 tty_dev:
  db	256	dup	0
-flash_program:
+flash_microcode:
+flash_atomic:
  db	256	dup	KERNEL_HW_POISON
 dmesg_buffer:
  db	256	dup	KERNEL_HW_POISON

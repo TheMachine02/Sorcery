@@ -2,12 +2,16 @@ define	KERNEL_FLASH_MAPPING		$E00003
 define	KERNEL_FLASH_CTRL		$E00005
 define	KERNEL_FLASH_SIZE		$400000
 
+define	FLASH_MICROCODE_SIZE		256
+
 flash:
 .init:
-	ld	hl, .phy_program
-	ld	de, flash_program
-	ld	bc, .phy_program_size
+	ld	hl, .microcode
+	ld	de, flash_microcode
+	ld	bc, FLASH_MICROCODE_SIZE
 	ldir
+	ld	hl, flash_atomic
+	call	atomic_mutex.init
 	ld	hl, .FLASH_DEV
 	ld	c, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_BLOCK_DEVICE
 	ld	de, .phy_mem_ops
@@ -26,13 +30,15 @@ flash:
 ; 	dl	0
 ; 	ret
 
-.phy_program:
-
-if $ < $D00000
-	org	flash_program
-end if
+.microcode:
+ org	flash_microcode
+ rb	KERNEL_ATOMIC_MUTEX_SIZE
 
 .phy_erase:
+	push	hl
+	ld	hl, flash_atomic
+	call	atomic_mutex.lock
+	pop	hl
 ; erase sector hl
 	call	.unlock
 	ex	de, hl
@@ -59,7 +65,9 @@ end if
 	ld	a, (hl)
 	inc	a
 	jr	nz, .phy_erase_loop
-	ret
+	call	.lock
+	ld	hl, flash_atomic
+	jp	atomic_mutex.unlock
 
 .phy_suspend:
 	ld	a, $B0
@@ -97,6 +105,10 @@ end if
 	ret
 
 .phy_write:
+	push	hl
+	ld	hl, flash_atomic
+	call	atomic_mutex.lock
+	pop	hl
 ; write hl to flash de buffer for bc bytes
 	call	.unlock
 ; we will write hl to de address
@@ -133,7 +145,9 @@ end if
 	inc	de
 	cpi
 	jp	pe, .phy_write_loop
-	jp	.lock
+	call	.lock
+	ld	hl, flash_atomic
+	jp	atomic_mutex.unlock
 
 .phy_status_polling:
 	and	a, $80
@@ -154,5 +168,5 @@ end if
 	ld	($0), a
 	ret
 	
-.phy_program_size:=$-.phy_erase
-org	.phy_program + .phy_program_size
+ align	256
+ org	.microcode + FLASH_MICROCODE_SIZE
