@@ -306,7 +306,7 @@ define	phy_stat		24
 	call	.inode_raw_lock_write
 	pop	hl
 	ret
-
+	
 .inode_dirent_lookup:
 ; return c if error with a = error (but NO ERRNO SET)
 ; return nc if found, ix is the dirent
@@ -506,6 +506,7 @@ define	phy_stat		24
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	jr	nz, .inode_allocate_continue_init
 	pop	hl
+	ld	(ix+KERNEL_VFS_INODE_LINK), 0
 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ld	a, '.'
 	ld	(ix+KERNEL_VFS_INODE_DATA), hl
@@ -872,10 +873,10 @@ sysdef _mkdir
 sysdef _rmdir
 .rmdir:
 .inode_rmdir:
-	ret
+; hl is path
 	call	.inode_directory_get_lock
 	ret	c
-; iy = inode, hl = name
+; iy = inode, hl = name	
 	call	.inode_dirent_lookup
 	jp	c, .inode_atomic_write_error
 ; ix = dirent, so delete it and deref the children inode

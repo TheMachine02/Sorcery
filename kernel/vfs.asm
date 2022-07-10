@@ -1290,12 +1290,15 @@ sysdef	_getdirent
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
 	jp	nz, .inode_atomic_read_error
 ; we have a directory, let's copy the data
-; iy is the inode, de is output buffer, bc is count in structure (max 62, we have . and ..)
-	ld	a, c
-	cp	a, (iy+KERNEL_VFS_INODE_LINK)
-	jr	c, .__getdirent_clamp
+; iy is the inode, de is output buffer, bc is count in structure (max 64, we have . and ..)
+; adjust the link count with . and ..
 	ld	a, (iy+KERNEL_VFS_INODE_LINK)
+	add	a, 2
+	cp	a, c
+	jr	nc, .__getdirent_clamp
+	ld	c, a
 .__getdirent_clamp:
+	ld	a, c
 	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	lea	iy, iy+KERNEL_VFS_INODE_DATA
 	ld	b, 16
