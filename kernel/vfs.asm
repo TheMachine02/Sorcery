@@ -1221,6 +1221,7 @@ sysdef _access
 	jr	z, .stat_continue
 	jp	.inode_atomic_write_error
 
+; TODO : ref and deref the inode when using path
 sysdef _chdir
 .chdir:
 ;       int chdir(const char *path);
@@ -1266,3 +1267,86 @@ sysdef	_fsync
 	or	a, a
 	sbc	hl, hl
 	ret	
+
+sysdef	_getdirent
+; TODO : finish to implement, actually copy the dirent structure to the buffer for count structure
+; int fd, void *dirp, size_t count
+; hl, de, bc
+.getdirent:
+	push	de
+	push	bc
+	call	.fd_pointer_check
+	pop	bc
+	pop	de
+	ret	c
+	push	de
+	push	bc
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.lock_read
+	pop	bc
+	pop	de
+	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
+	and	a, KERNEL_VFS_TYPE_MASK
+	cp	a, KERNEL_VFS_TYPE_DIRECTORY
+	jp	nz, .inode_atomic_read_error
+; we have a directory, let's copy the data
+; iy is the inode, de is output buffer, bc is count in structure (max 62, we have . and ..)
+	ld	a, c
+	cp	a, (iy+KERNEL_VFS_INODE_LINK)
+	jr	c, .__getdirent_clamp
+	ld	a, (iy+KERNEL_VFS_INODE_LINK)
+.__getdirent_clamp:
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	lea	iy, iy+KERNEL_VFS_INODE_DATA
+	ld	b, 16
+.__getdirent_copy:
+	push	bc
+	ld	ix, (iy+0)
+	lea	hl, ix+0
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	jr	z, .__getdirent_null_de
+	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	call	nz, .__getdirent_write
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	call	nz, .__getdirent_write
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	call	nz, .__getdirent_write
+	lea	ix, ix+KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ld	hl, (ix+KERNEL_VFS_DIRECTORY_INODE)
+	add	hl, bc
+	or	a, a
+	sbc	hl, bc
+	call	nz, .__getdirent_write
+.__getdirent_null_de:
+	lea	iy, iy+3
+	pop	bc
+	djnz	.__getdirent_copy
+	or	a, a
+	sbc	hl, hl
+	ret
+
+.__getdirent_write:
+	or	a, a
+	jr	z, .__getdirent_error
+	lea	hl, ix+0
+	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
+	ldir
+	dec	a
+	ret
+.__getdirent_error:
+	pop	hl
+	ld	a, ENOSPC
+	jp	user_error

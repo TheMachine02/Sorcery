@@ -50,7 +50,7 @@ sysjump:
 	jp	_getppid
 	jp	_statfs
 	jp	_execve
-	jp	_enosys		; _getdirent
+	jp	_getdirent
 	jp	_time
 	jp	_stime
 	jp	_ioctl
@@ -102,8 +102,6 @@ sysjump:
 	jp	_shutdown
 	jp	_reboot
 	jp	_usleep
-	jp	_flash_lock
-	jp	_flash_unlock
 	jp	_printk
 	jp	_thread
 	jp	_dma_access
