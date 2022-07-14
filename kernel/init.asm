@@ -218,7 +218,6 @@ name:
 .name_architecture:
  db	"ez80", 0
  
-sysdef _printk
 printk:
 ; (start of header) $01, followed by info level at the start of the string is expected
 ; print time ?

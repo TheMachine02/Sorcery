@@ -7,7 +7,7 @@ include	'header/asm-boot.inc'
 include 'config'
 include	'header/asm-leaf.inc'
 
-LEAF.settings.flags:=LF_STATIC
+LEAF.settings.flags:=LF_STATIC or LF_PROTECTED
 
 entry sorcery
 
@@ -102,7 +102,6 @@ sysjump:
 	jp	_shutdown
 	jp	_reboot
 	jp	_usleep
-	jp	_printk
 	jp	_thread
 	jp	_dma_access
 	jp	_dma_blk

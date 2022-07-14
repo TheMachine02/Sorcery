@@ -6,7 +6,7 @@ leaf:
 .check_file:
 ; iy = file adress (static)
 	ld	a, (iy+LEAF_IDENT_MAG0)
-	cp	a, 0x7F
+	cp	a, $7F
 	ret	nz
 	ld	hl, (iy+LEAF_IDENT_MAG1)
 	ld	de, ('A'*65536)+('E'*256)+'L'
@@ -23,11 +23,11 @@ leaf:
 	ld	a, (iy+LEAF_HEADER_TYPE)
 	cp	a, LT_EXEC
 	ret	nz
-; execute the leaf file. It is static ?
-	;ld	a, LF_STATIC	; LF_STATIC=LT_EXEC=2
-	xor	a, (iy+LEAF_HEADER_FLAGS)
+	ld	a, (iy+LEAF_HEADER_FLAGS)
+	cpl
+	bit	LF_PROTECTED_BIT, a
 	ret
-	
+
 .exec_static:
 ; grab the entry point of the program and jump to it
 ; make section protected for the kernel ?
@@ -58,18 +58,15 @@ leaf:
 	pop	bc
 .alloc_next_section:
 	lea	ix, ix+16
-	djnz	.alloc_prog_loop	
-	call	.bound_static
-.priviligied_static:
-	ld	hl, leaf_bound_lower
-	ld	bc, $620
-	otimr
+	djnz    .alloc_prog_loop
+	bit	LF_PROTECTED_BIT, (iy+LEAF_HEADER_FLAGS)
+	call	nz, .protected_static
 ; load up entry
 ; and jump !
 	ld	hl, (iy+LEAF_HEADER_ENTRY)
 	jp	(hl)
 
-.bound_static:
+.protected_static:
 ; find execution bound for a static program
 	ld	hl, $D00000
 	ld	(leaf_bound_lower), hl
@@ -100,4 +97,7 @@ leaf:
 .bound_next_section:
 	lea	ix, ix+16
 	djnz	.bound_loop
+	ld	hl, leaf_bound_lower
+	ld	bc, $620
+	otimr
 	ret
