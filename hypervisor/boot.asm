@@ -25,7 +25,7 @@ leaf:
 	ret	nz
 	ld	a, (iy+LEAF_HEADER_FLAGS)
 	cpl
-	bit	LF_PROTECTED_BIT, a
+	bit	LF_STATIC_BIT, a
 	ret
 
 .exec_static:
