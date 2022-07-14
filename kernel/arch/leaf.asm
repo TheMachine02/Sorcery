@@ -138,8 +138,6 @@ sysdef _execve
 	ret	nz
 	ld	a, (ix+LEAF_IDENT_MAG4)
 	cp	a, 'F'
-	ret
-
 .leaf_check_supported:
 	ld	a, (ix+LEAF_HEADER_TYPE)
 	sub	a, LT_EXEC
