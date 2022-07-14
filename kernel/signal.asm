@@ -19,7 +19,7 @@ signal:
 	ld	l, (iy+KERNEL_THREAD_EV_SIG)
 	pop	iy
 	ret
-	
+
 ; change thread signal list ;
 ; mark signal (reg A) to be blocked
 .procmask_single:
@@ -380,6 +380,65 @@ _sighandler_jump:
  dl	_sighandler_stop
  dl	kthread.core
 
+signal.default_handler:
+ dl	kthread.core
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.core
+ db	0
+ dl	kthread.core
+ db	0
+ dl	kthread.core
+ db	0
+ dl	kthread.core
+ db	0
+ dl	.ignore
+ db	0
+ dl	kthread.core
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.core
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	kthread.exit
+ db	0
+ dl	.ignore
+ db	0
+ dl	.ignore
+ db	0
+ dl	.ignore		; sigcont
+ db	0
+ dl	.stop
+ db	0
+ dl	.stop
+ db	0
+ dl	.stop
+ db	0
+ dl	.stop
+ db	0
+ dl	kthread.core
+ db	0
+
+.ignore:
+	ret
+
+.stop:
+	di
+	call	task_switch_stopped
+	call	task_yield
+	ret
+
 signal.return:
 ; trash the argument
 	pop	hl
@@ -391,14 +450,48 @@ signal.return:
 	di
 	exx
 	ex	af, af'
+; check for signal recalc
+.chkset:
 	ld	hl, i
 	inc	hl
 	ld	iy, (hl)
-; check for signal recalc
-	call	.chkset
+; from current thread iy, compute current signal
+; and reset the current signal from the thread mask list
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_PENDING+2	; pending
+	lea	de, iy+KERNEL_THREAD_SIGNAL_MASK+2	; blocked
+	ld	c, 3
+.__chkset_mask_outer:
+	ld	a, (de)
+	and	a, (hl)
+	ld	b, 8
+.__chkset_mask:
+	rla
+	jr	c, .__chkset_from_bit
+	djnz	.__chkset_mask
+	dec	hl
+	dec	de
+	dec	c
+	jr	nz, .__chkset_mask_outer
+; no more signal
+	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
+	ret
+.__chkset_from_bit:
+	dec	c
+; we have the bit number (b) and the byte number (c)
+; reset from mask, set current
+	ld	a, c
+	add	a, a
+	add	a, a
+	add	a, a
+	add	a, b
+	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), a
+; generate mask from b
+	xor	a, a
+	scf
+	rla
+	djnz	$-1
+; reset the bit within pending
+	xor	a, (hl)
+	ld	(hl), a
 ; and perform context restore to see if any more signal is *pending*
 	jp	kinterrupt.irq_context_restore
-
-.chkset:
-; from current thread iy, compute current signal
-	ret

@@ -186,7 +186,8 @@ kinterrupt:
 	push	de
 	push	bc
 	push	af
-	ld	a, (iy+KERNEL_THREAD_SIGNAL_MASK)	; in the futur, SIGNAL_PENDING
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
+	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
 ; C param
 	or	a, a
 	sbc	hl, hl
@@ -194,13 +195,15 @@ kinterrupt:
 	push	hl
 	ld	hl, signal.return
 	push	hl
-	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK	; in the futur, SIGNAL_VECTOR
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+; we are in a slab 128 bytes aligned, so this is valid
 	add	a, a
 	add	a, a
 	add	a, l
 	ld	l, a
 	ei
-	jp	(hl)					; directly jump into the vector table
+; directly jump into the vector table
+	jp	(hl)
 
 .irq_handler:
 	pop	hl
@@ -242,7 +245,7 @@ kinterrupt:
 	jp	c, kscheduler.do_schedule
 .irq_context_restore:
 ; check here for pending signal
-	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK	; in the futur, SIGNAL_PENDING
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_CURRENT
 	ld	a, (hl)
 	or	a, a
 	jr	nz, .irq_do_signal
@@ -252,7 +255,7 @@ kinterrupt:
 	ex	af, af'
 	ei
 	ret
-	
+
 .irq_trampoline_crystal:
 ; this is the master clock IRQ handler
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
@@ -408,17 +411,7 @@ kscheduler:
 	pop	hl
 	exx
 	ex	af, af'
-	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK	; in the futur, SIGNAL_PENDING
-	ld	a, (hl)
-	or	a, a
-	jp	nz, kinterrupt.irq_do_signal
-	pop	iy
-	pop	ix
-	exx
-	ex	af, af'
-; give back the execution
-	ei
-	ret
+	jp	kinterrupt.irq_context_restore
 
 sysdef _schedule
 .schedule:

@@ -21,7 +21,10 @@ define	KERNEL_THREAD_HEAP			$12
 define	KERNEL_THREAD_TIME			$15
 ; some stuff ;
 define	KERNEL_THREAD_ERRNO			$18
-define  KERNEL_THREAD_SIGNAL_MASK		$19
+define	KERNEL_THREAD_SIGNAL_CURRENT		$19
+define	KERNEL_THREAD_SIGNAL_MASK		$1A	; 3 bytes
+define	KERNEL_THREAD_SIGNAL_PENDING		$1D	; 3 bytes
+define	KERNEL_THREAD_SIGNAL_VECTOR		$20	; 3 bytes pointer to slab, 24*4 bytes (128 bytes slab)
 ; timer ;
 define	KERNEL_THREAD_TIMER			$1D
 define	KERNEL_THREAD_TIMER_FLAGS		$1D
@@ -103,6 +106,11 @@ sysdef _thread
 	pop	af
 	ld	a, EAGAIN
 	jr	.create_error
+.create_no_mem_2:
+	pop	hl
+	pop	af
+	push	af
+	call	mm.unmap_user_pages
 .create_no_mem:
 	pop	af
 	pop	af
@@ -124,16 +132,31 @@ sysdef _thread
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	mm.map_user_pages
 	jr	c, .create_no_mem
+	push	hl
+	ld	hl, kmem_cache_s128
+	call	kmem.cache_alloc
+	jr	c, .create_no_mem_2
+; copy defaut vector table
+	push	hl
+	ex	de, hl
+	ld	hl, signal.default_handler
+	ld	bc, 24*4
+	ldir
+	pop	de
+	pop	hl
 	pop	af
 	push	iy
+	push	de
 ; hl is adress
 	ex	de, hl
 	ld	iy, 0
 	add	iy, de
 ; setup the default parameter
-	ld	bc, $100
+	ld	bc, KERNEL_THREAD_HEADER_SIZE
 	ld	hl, KERNEL_MM_NULL+1
 	ldir
+	pop	de
+	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), de
 	ld	(iy+KERNEL_THREAD_QUANTUM), l
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
@@ -141,6 +164,7 @@ sysdef _thread
 	ld	hl, kvfs_root
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
 ; TODO : inherit from parent
+; TODO : iref the inode (and deref when exiting the thread)
 	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
 ; increase reference count of directory
 	ld	c, KERNEL_VFS_INODE_REFERENCE
@@ -157,7 +181,7 @@ sysdef _thread
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
 ; the stack adress is iy + STACK_SIZE - 27
-	ld	bc, KERNEL_THREAD_STACK_SIZE-13-256-27
+	ld	bc, KERNEL_THREAD_STACK_SIZE-13-KERNEL_THREAD_HEADER_SIZE-27
 	add	hl, bc
 	ld	(iy+KERNEL_THREAD_STACK), hl
 ; map the thread to be transparent to the scheduler
@@ -227,10 +251,7 @@ sysdef _core
 .core:
 ; write whole process image to a "core" file in reallocated mode
 ; leaf file format
-
-
-
-	ret
+	jp	.exit
 
 sysdef _exit
 .exit:
