@@ -161,13 +161,10 @@ kmem:
 	ld	b, KERNEL_MM_GFP_KERNEL
 	call	mm.map_page
 	jr	c, .__cache_grow_error
+	dec	sp
 	push	hl
-	ld	bc, -$D00000
-	add	hl, bc
-	ex	(sp), hl
 	inc	sp
 	pop	bc
-	dec	sp
 	ld	a, c
 	srl	b
 	rra
@@ -216,14 +213,11 @@ kmem:
 	tsti
 	push	bc
 	push	de
+	dec	sp
 	push	hl
-	ld	bc, -$D00000
-	add	hl, bc
-	ex	(sp), hl
 	ex	de, hl
 	inc	sp
 	pop	hl
-	dec	sp
 	ld	a, l
 	srl	h
 	rra

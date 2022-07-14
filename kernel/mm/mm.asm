@@ -168,6 +168,10 @@ mm:
 	ld	(hl), e
 	inc	h
 	ld	(hl), d
+	inc	h
+	ld	a, (kinterrupt_lru_page)
+	ld	(hl), a
+	dec	h
 	dec	h
 	inc	hl
 	djnz	.__map_pages_write_flags
@@ -218,6 +222,9 @@ mm:
 	ld	(hl), e
 	inc	h
 	ld	(hl), d
+	inc	h
+	ld	a, (kinterrupt_lru_page)
+	ld	(hl), a
 	pop	af
 	jp	po, $+5
 	ei
@@ -354,6 +361,9 @@ mm:
 	ld	(hl), KERNEL_MM_PAGE_FREE_MASK
 	inc	h
 	ld	(hl), c
+	inc	h
+	ld	(hl), 0
+	dec	h
 	dec	h
 	pop	bc
 	ret
@@ -361,17 +371,16 @@ mm:
 .physical_to_ptlb:
 ; adress divided by page KERNEL_MM_PAGE_SIZE = 1024
 assert KERNEL_MM_PAGE_SIZE = 1024
+	dec	sp
 	push	hl
 	inc	sp
 	pop	hl
-	dec	sp
 	ld	a, l
 	srl	h
 	rra
 	srl	h
 	rra
-	ld	hl, kmm_ptlb_map
-	ld	l, a
+; return a = tlb page count
 	ret
 
 .is_anonymous:
