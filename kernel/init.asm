@@ -176,6 +176,7 @@ end if
 sysdef _reboot
 reboot:
 ; disable interruption and watchdog then rst 0 to the boot code firmware
+; it is expected to sync filesystem before reboot and that all thread are proprely shutdown
 	di
 	call	kwatchdog.disarm
 	ld	de, NULL

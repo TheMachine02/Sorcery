@@ -99,7 +99,6 @@ sysjump:
 	jp	_enosys		; _getsockaddrs
 	jp	_enosys		; _sendto
 	jp	_enosys		; _recvfrom
-	jp	_shutdown
 	jp	_reboot
 	jp	_usleep
 	jp	_thread

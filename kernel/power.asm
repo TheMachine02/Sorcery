@@ -35,9 +35,10 @@ kpower:
 	in0	a, (KERNEL_POWER_CHARGING)
 	bit	1, a
 	ret
-	
-sysdef _shutdown
+
+.halt:
 .cycle_off:
+; di effectively freeze userpace
 	di
 	call	kwatchdog.disarm
 	ld	hl, kmem_cache_s16
@@ -58,6 +59,10 @@ sysdef _shutdown
 	ld	hl, DRIVER_VIDEO_PALETTE
 	ld	bc, 512
 	ldir
+; send a last message
+	ld	hl, .cycle_message
+	call	printk
+; then turnoff hardware
 	call	_boot_TurnOffHardware
 ; 6Mhz speed
 	di
@@ -129,9 +134,7 @@ sysdef _shutdown
 	nop
 	ei
 	slp
-
 ; will fall back on cycle ON when ON will be pressed, after trigger ON interrupt within kernel
-
 .cycle_on:
 	di
 	ld	a, $0F
@@ -209,3 +212,6 @@ sysdef _shutdown
 	or	a, a
 	sbc	hl, hl
 	ret
+
+.cycle_message:
+ db	$01, KERNEL_INFO, "hw: entering halt state",10, 0
