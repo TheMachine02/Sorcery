@@ -278,11 +278,16 @@ dmesg:
 	or	a, a
 	sbc	hl, de
 	push	hl
+	inc.s	bc
 	ld	b, d
 	ld	c, e
 	ld	hl, (iy+RING_TAIL)
 	call	tty.phy_write
 	pop	bc
+	ld	a, b
+	or	a, c
+	ret	z
+	ld	iy, dmesg_log
 	ld	hl, (iy+RING_BOUND_LOW)
 	jp	tty.phy_write
 

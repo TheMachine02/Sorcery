@@ -72,6 +72,16 @@ ring:
 	pop	hl
 	ret
 .write_full:
+	ld	hl, (iy+RING_TAIL)
+	inc	hl
+	ld	bc, (iy+RING_BOUND_UPP)
+	or	a, a
+	sbc	hl, bc
+	add	hl, bc
+	jr	nz, .write_tail_rewind
+	ld	hl, (iy+RING_BOUND_LOW)
+.write_tail_rewind:
+	ld	(iy+RING_TAIL), hl
 	ld	hl, RING_MAX_SIZE
 	jr	.write_size
 
