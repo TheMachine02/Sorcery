@@ -891,6 +891,7 @@ sysdef _rmdir
 ; now check the directory inode is empty (excepted . and ..)
 	ld	a, (ix+KERNEL_VFS_INODE_SIZE)
 	or	a, a
+	ld	a, ENOTEMPTY
 	jp	nz, .inode_atomic_write_error
 	ld	bc, KERNEL_VFS_DIRECTORY_ENTRY_SIZE
 	ldir
