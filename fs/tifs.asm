@@ -61,11 +61,23 @@ tifs:
 	and	a, KERNEL_VFS_TYPE_MASK
 	cp	a, KERNEL_VFS_TYPE_FILE
 	ld	a, EIO
+	scf
 	ret	nz
-	ld	a, (iy+KERNEL_VFS_INODE_SIZE)
+	ld	hl, (iy+KERNEL_VFS_INODE_SIZE)
+	ld	bc, TIFS_WRITE_HEADER_SIZE
+	add	hl, bc
+; if this size is > 64K, we can't write
+	dec	sp
+	push	hl
+	inc	sp
+	pop	hl
+	ld	a, h
 	or	a, a
 	ld	a, ENOMEM
+	scf
 	ret	nz
+; delete the previous file on the flash filesystem
+	call	.__phy_mark_deleted
 ; goes each page and search for an empty spot
 	ld	b, TIFS_SECTOR_COUNT
 	ld	hl, TIFS_SECTOR_BASE
@@ -89,7 +101,7 @@ tifs:
 	ld	b, (hl)
 	inc	hl
 	cp	a, TIFS_FREE_FLAG
-	jr	nz, .phy_sync_parse_continue
+	jr	nz, .__phy_sync_parse_continue
 ; check for space
 	push	hl
 	ld	de, (iy+KERNEL_VFS_INODE_SIZE)
@@ -101,7 +113,7 @@ tifs:
 	pop	hl
 	jp	p, .__phy_sync_valid
 	jr	.__phy_sync_invalid_sector
-.phy_sync_parse_continue:
+.__phy_sync_parse_continue:
 	add	hl, bc
 	cp	a, TIFS_FILE_DELETED
 	jr	z, .__phy_sync_parse_sector
@@ -115,6 +127,8 @@ tifs:
 	ld	l, c
 	pop	bc
 	djnz	.__phy_sync_parse
+	ld	a, ENOMEM
+	scf
 	ret
 .__phy_sync_valid:
 ; actually write the file to flash
@@ -149,17 +163,17 @@ tifs:
 	ld	(ix+TIFS_FILE_NAME), '0'
 	pop	de
 	ld	bc, TIFS_WRITE_HEADER_SIZE
-	call	flash.phy_write
+	call	flash.write
 ; now, write data \o/
 	push	de
 	lea	hl, ix+0
 	call	kfree
 	pop	de
-; TODO : write data and mark page of the inode as 'non dirty'
-; get approx size for knowing how much we loop (lot of special case to handle...)
+; Only write 64K file at max
 	ld	ix, (iy+KERNEL_VFS_INODE_DATA)
 	ld	b, 4
 .__phy_sync_mark_page:
+	push	bc
 	ld	hl, (ix+0)
 	add	hl, de
 	or	a, a
@@ -169,13 +183,51 @@ tifs:
 ; 16 blocks, so write 16384 NULL bytes
 	ld	hl, KERNEL_MM_NULL
 	ld	bc, KERNEL_MM_PAGE_SIZE * 16
-	call	flash.phy_write
+	call	flash.write
+.__phy_sync_continue:
+	pop	bc
 	djnz	.__phy_sync_mark_page
+; sucess !
+	or	a, a
 	ret
 .__phy_sync_process_indirect:
-
-
-	ret
+; we have 16 entry in the indirect path
+	ld	b, 16
+; from hl
+.__phy_sync_indirect_entry:
+	push	bc
+	push	hl
+	ld	a, (hl)
+	or	a, a
+	jr	z, .__phy_sync_cache_miss
+; cache hit, get data from cache, and mark page as non dirty
+	ld	hl, kmm_ptlb_map
+	ld	l, a
+; NOTE : valid, since the inode is currently locked for write, so we are the only thread working on it
+; reclaim mechanism parse cache page and try to lock inode for read
+	res	KERNEL_MM_PAGE_DIRTY, (hl)
+	ld	hl, KERNEL_MM_PHY_RAM shr 2
+	ld	h, a
+	add	hl, hl
+	add	hl, hl
+	jr	.__phy_sync_cache_write
+.__phy_sync_cache_miss:
+	inc	hl
+	ld	hl, (hl)
+	or	a, a
+	add	hl, de
+	sbc	hl, de
+	jr	nz, .__phy_sync_cache_write
+	ld	hl, KERNEL_MM_NULL
+.__phy_sync_cache_write:
+	ld	bc, KERNEL_MM_PAGE_SIZE
+	call	flash.write
+	pop	hl
+	ld	bc, 4
+	add	hl, bc
+	pop	bc
+	djnz	.__phy_sync_indirect_entry
+	jr	.__phy_sync_continue
 
 .phy_destroy:
 ; marking the variable as removed in flash
@@ -184,6 +236,7 @@ tifs:
 	and	a, KERNEL_VFS_TYPE_MASK
 	cp	a, KERNEL_VFS_TYPE_FILE
 	ret	nz
+.__phy_mark_deleted:
 ; reading the first value of the first block is okay since tifs write file in-order
 	ld	ix, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	ix, (ix+KERNEL_VFS_INODE_DMA_POINTER)
@@ -191,7 +244,7 @@ tifs:
 ; back search the begin of the variable
 	lea	hl, ix-3
 	lea	de, ix-9
-.field_search:
+.__phy_field_search:
 ; search the TIFS_FILE_ADRESS field by checking if de = bc
 	ld	bc, (hl)
 	ex	de, hl
@@ -200,7 +253,7 @@ tifs:
 	add	hl, bc
 	dec	hl
 	dec	de
-	jr	nz, .field_search
+	jr	nz, .__phy_field_search
 ; hl is the TIFS_FILE_ADRESS, bc is the base adress
 ; so write $F0 to bc adress with flash routine
 	ld	de, .delete_byte
@@ -209,7 +262,7 @@ tifs:
 	add	hl, bc
 	ex	de, hl
 	ld	bc, 1
-	jp	flash.phy_write
+	jp	flash.write
 
 .delete_byte:
  db	$F0
