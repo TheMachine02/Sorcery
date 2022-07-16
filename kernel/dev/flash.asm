@@ -21,25 +21,34 @@ flash:
  db "/dev/flash", 0
 
 .phy_mem_ops:
-	jp	.phy_read
-	jp	.phy_write
-	jp	.phy_ioctl
+	jp	.read
+	jp	.write
+	jp	.ioctl
 ; 	ret
 ; 	dl	0
 ; 	ret
 ; 	dl	0
 ; 	ret
+
+.ioctl:
+	ret
+; no op
+.read:
+	or	a, a
+	sbc	hl, hl
+	ret
 
 .microcode:
  org	flash_microcode
  rb	KERNEL_ATOMIC_MUTEX_SIZE
 
-.phy_erase:
+.erase:
+; erase sector hl
 	push	hl
 	ld	hl, flash_atomic
 	call	atomic_mutex.lock
 	pop	hl
-; erase sector hl
+	di
 	call	.unlock
 	ex	de, hl
 ; first cycle
@@ -55,64 +64,32 @@ flash:
 	ld	(hl), l
 	ex	de, hl
 	ld	(hl), $30
+	ex	de, hl
 ; timeout 50µs
-	call	.phy_timeout
-.phy_erase_loop:
-	ld	de, (KERNEL_INTERRUPT_ISR)
-	ld	a, d
-	or	a, e
-	call	nz, .phy_suspend
-	ld	a, (hl)
+	call	.microcode_timeout
+.microcode_erase_busy_wait:
+	call	.microcode_irq_suspend
+	ld	a, (de)
 	inc	a
-	jr	nz, .phy_erase_loop
+	jr	nz, .microcode_erase_busy_wait
 	call	.lock
 	ld	hl, flash_atomic
 	jp	atomic_mutex.unlock
 
-.phy_suspend:
-	ld	a, $B0
-	ld	($0), a
-; check for DQ6 toggle
-.phy_suspend_busy_wait:
-	bit	6, (hl)
-	jr	z, .phy_suspend_busy_wait
-; perform interrupt
-	call	.lock
-	ei
-	halt
-	di
-; re unlock
-	call	.unlock
-	ld	a, $30
-	ld	($0), a
-	ret
-
-.phy_timeout:
-; wait a bit more than 50 µs
-	push	bc			; 	  10
-	ld	b, 181			; +	   8
-.phy_timeout_wait:
-	djnz	.phy_timeout_wait	; +	2348	(=180*13+1*8)
-	pop	bc			; +  	  16
-	ret				; +  	  21
-					; =	2403 ... 2403/48Mhz=50,0625 µs
-.phy_ioctl:
-	ret
-; no op
-.phy_read:
-	or	a, a
-	sbc	hl, hl
-	ret
-
-.phy_write:
+.write:
+	push	bc
+	push	de
 	push	hl
 	ld	hl, flash_atomic
 	call	atomic_mutex.lock
 	pop	hl
+	pop	de
+	pop	bc
 ; write hl to flash de buffer for bc bytes
+	di
 	call	.unlock
 ; we will write hl to de address
-.phy_write_loop:
+.microcode_write_buffer:
 	ld	a, (de)
 	and	a, (hl)
 	push	hl
@@ -126,47 +103,86 @@ flash:
 	ld	(de), a
 ; now we need to check for the write to complete
 ; 6 micro second typical, ~300 cycles wait
-	call	.phy_status_polling
+	call	.microcode_status_polling
 ; schedule if need for an interrupt
-	ld	hl, (KERNEL_INTERRUPT_ISR)
-	ld	a, h
-	or	a, l
-	jr	z, .phy_write_continue
-; perform interrupt
-; save all ?
-	call	.lock
-	ei
-	halt
-	di
-; re unlock
-	call	.unlock
-.phy_write_continue:
+	call	.microcode_irq
 	pop	hl
 	inc	de
 	cpi
-	jp	pe, .phy_write_loop
+	jp	pe, .microcode_write_buffer
 	call	.lock
+	push	de
 	ld	hl, flash_atomic
-	jp	atomic_mutex.unlock
+	call	atomic_mutex.unlock
+	pop	de
+	ret
 
-.phy_status_polling:
+.microcode_status_polling:
 	and	a, $80
 	ld	h, a
-.phy_busy_wait:
+.microcode_busy_wait:
 	ld	a, (de)
 	xor	a, h
 	add	a, a
 	ret	nc
-	jp	p, .phy_busy_wait
+	jp	p, .microcode_busy_wait
 	ld	a, (de)
 	xor	a, h
 	rlca
-	jr	nc, .phy_busy_wait
+	jr	nc, .microcode_busy_wait
 	
-.phy_abort:
+.microcode_abort:
 	ld	a, $F0
 	ld	($0), a
+; this is a fatal error, we had a flash failure
 	ret
+
+.microcode_timeout:
+; wait a bit more than 50 µs
+	push	bc			; 	  10
+	ld	b, 181			; +	   8
+.microcode_timeout_wait:
+	djnz	.microcode_timeout_wait	; +	2348	(=180*13+1*8)
+	pop	bc			; +  	  16
+	ret				; +  	  21
+					; =	2403 ... 2403/48Mhz=50,0625 µs		
+	
+.microcode_irq_suspend:
+	ld	hl, (KERNEL_INTERRUPT_ISR)
+	ld	a, h
+	or	a, l
+	ret	z
+	ld	a, $B0
+	ld	($0), a
+; check for DQ6 toggle
+.microcode_suspend_busy_wait:
+	bit	6, (hl)
+	jr	z, .microcode_suspend_busy_wait
+; perform interrupt
+	call	.lock
+	call	.microcode_irq_halt
+	ld	a, $30
+	ld	($0), a
+	ret
+
+.microcode_irq:
+	ld	hl, (KERNEL_INTERRUPT_ISR)
+	ld	a, h
+	or	a, l
+	ret	z
+; perform interrupt
+; relock flash, keep mutex locked, halt to trigger rst 38h
+; destroy a
+	call	.lock
+.microcode_irq_halt:
+	ei
+	halt
+	di
+	ld	hl, (KERNEL_INTERRUPT_ISR)
+	ld	a, h
+	or	a, l
+	jr	nz, .microcode_irq_halt
+	jp	.unlock
 	
  align	256
  org	.microcode + FLASH_MICROCODE_SIZE
