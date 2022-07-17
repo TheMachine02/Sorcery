@@ -173,6 +173,7 @@ kinterrupt:
 ; stack have iy and ix, so actually we are already in a kernel stack frame
 ; push down user stack the handler adress (and the sigreturn syscall)
 ; after the signal is processed, we re-enter interrupt like state and do an irq_context_restore to check for *more* pending signal (every signal should be processed after that, also we can be preempted whenever we want)
+; TODO : block currently processed signal
 	pop	iy
 	pop	ix
 	exx
@@ -182,10 +183,10 @@ kinterrupt:
 ; entry:
 	exx
 	ex	af, af'
-	push	hl
 	push	de
 	push	bc
 	push	af
+	push	hl
 	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
 	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
 ; C param
@@ -245,10 +246,18 @@ kinterrupt:
 	jp	c, kscheduler.do_schedule
 .irq_context_restore:
 ; check here for pending signal
+; NOTE : if we happen to be in kernel space (check for syscall mainly), then we don't process signal right now
+	ld	hl, 6
+	add	hl, sp
+	ld	hl, (hl)
+	ld	de, KERNEL_MM_GFP_RAM
+	sbc	hl, de
+	jr	c, .irq_frame
 	lea	hl, iy+KERNEL_THREAD_SIGNAL_CURRENT
 	ld	a, (hl)
 	or	a, a
 	jr	nz, .irq_do_signal
+.irq_frame:
 	pop	iy
 	pop	ix
 	exx

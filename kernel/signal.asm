@@ -438,6 +438,12 @@ signal.default_handler:
 	call	task_switch_stopped
 	jp	task_yield
 
+; NOTE : special sysdef right here, sigreturn can be called from within signal handler
+;_sigreturn:
+; trash return adress and call actual routine
+	pop	hl
+	ret
+
 signal.return:
 ; NOTE : interrupt happen in the space where interrupt happened
 ; trash the argument
