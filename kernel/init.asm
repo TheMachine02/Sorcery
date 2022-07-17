@@ -146,16 +146,15 @@ end if
 	call	leaf.execve
 	ld	hl, .arch_bin_error
 	call	printk
-; 	jp	init_conway
+	jp	init_conway
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	call	console.fb_takeover
 	ret	c
-	call	console.fb_init
 ; output kernel log to help user
 	call	dmesg
 	ei
 ; and open a virtual terminal
-	jp	console.vt_prompt
+	jp	console.vt_init
 
 .arch_dev_path:
  db	"/dev",0

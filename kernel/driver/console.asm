@@ -15,8 +15,11 @@ console:
 .nmi_takeover:
 	ld	iy, console_dev
 	ld	hl, nmi_console
-	call	.fb_takeover_force
-	jp	.fb_init
+	jp	.fb_takeover_force
+
+.__fb_takeover_error:
+	scf
+	ret
 
 .fb_takeover:
 	ld	iy, console_dev
@@ -57,16 +60,32 @@ console:
 	inc	hl
 	ld	a, (hl)
 	or	a, a
-	ret	z
+	jr	z, .fb_init
 	ld	(hl), 0
 	ld	c, a
 	ld	a, SIGSTOP
 	call	signal.kill
-	or	a, a
-	ret
 
-.__fb_takeover_error:
-	scf
+.fb_init:
+	ld	hl, DRIVER_VIDEO_IMSC
+	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
+	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
+	ld	(DRIVER_VIDEO_CTRL), hl
+	ld	hl, (DRIVER_VIDEO_BUFFER)
+	ld	(DRIVER_VIDEO_SCREEN), hl
+	ld	hl, .PALETTE
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	bc, 36
+	ldir
+	call	video.clear_screen
+	ld	hl, 4
+	ld	e, 7
+	ld	bc, .SPLASH
+	call	.blit
+	ld	c, 37
+	ld	hl, .SPLASH_NAME
+	call	tty.phy_write
+	or	a, a
 	ret
 
 .fb_restore:
@@ -106,26 +125,6 @@ console:
 	ld	c, a
 	ld	a, SIGCONT
 	jp	signal.kill
-
-.fb_init:
-	ld	hl, DRIVER_VIDEO_IMSC
-	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
-	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
-	ld	(DRIVER_VIDEO_CTRL), hl
-	ld	hl, (DRIVER_VIDEO_BUFFER)
-	ld	(DRIVER_VIDEO_SCREEN), hl
-	ld	hl, .PALETTE
-	ld	de, DRIVER_VIDEO_PALETTE
-	ld	bc, 36
-	ldir
-	call	video.clear_screen
-	ld	hl, 4
-	ld	e, 7
-	ld	bc, .SPLASH
-	call	.blit
-	ld	c, 37
-	ld	hl, .SPLASH_NAME
-	jp	tty.phy_write
 	
 .init:
 	di
@@ -151,14 +150,13 @@ console:
 ; it may be complex
 ; thread create irq will set reschedule byte, so we might be good
 ; however, signal is STILL broken
+; NOTE : the thread created run in *userspace* despite code being in kernel space
 	call	.fb_takeover
 	ret	c
 	ld	iy, .vt_init
 	jp	kthread.irq_create
 
 .vt_init:
-	call	.fb_init
-.vt_prompt:
 ; profiling exemple
 ; 	ld	hl, kmem_cache_s512
 ; 	call	kmem.cache_alloc

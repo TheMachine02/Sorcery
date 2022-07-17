@@ -216,7 +216,25 @@ nmi:
 
 _boot_sprintf_safe:
 ; the nice _boot_sprintf routine is bugged, and scrap need to be cleared to zero
+; also, it is NOT reentrant, so guard it
+	di
+	ld	hl, _boot_sprintf_return
+	ex	(sp), hl
+	ld	(_boot_sprintf_return+1), hl
+	ld	a, i
+	push	af
+	pop	hl
+	ld	(_boot_sprintf_irq+1), hl
 	or	a, a
 	sbc	hl, hl
 	ld	(kernel_heap+32), hl
 	jp	_boot_sprintf
+_boot_sprintf_return:
+	ld	hl, 0
+_boot_sprintf_irq:
+	ld	de, 0
+	push	de
+	pop	af
+	jp	po, $+5
+	ei
+	jp	(hl)
