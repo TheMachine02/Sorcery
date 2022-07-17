@@ -436,20 +436,25 @@ signal.default_handler:
 .stop:
 	di
 	call	task_switch_stopped
-	call	task_yield
-	ret
+	jp	task_yield
 
 signal.return:
+; NOTE : interrupt happen in the space where interrupt happened
 ; trash the argument
 	pop	hl
 ; unwind the stack frame
+	pop	hl
 	pop	af
+user_return_signal:=$
 	pop	bc
 	pop	de
-	pop	hl
 	di
 	exx
 	ex	af, af'
+	call	.chkset
+; and perform context restore to see if any more signal is *pending*
+	jp	kinterrupt.irq_context_restore
+
 ; check for signal recalc
 .chkset:
 	ld	hl, i
@@ -493,5 +498,4 @@ signal.return:
 ; reset the bit within pending
 	xor	a, (hl)
 	ld	(hl), a
-; and perform context restore to see if any more signal is *pending*
-	jp	kinterrupt.irq_context_restore
+	ret

@@ -11,11 +11,11 @@ macro sysdef label
 	label = $
 ; all register are paramaters (a,de,bc,hl,iy,ix)
 ; all register are preserved across syscall (except hl as return register)
-	push	af
 	push	ix
 	push	iy
 	push	de
 	push	bc
+	push	af
 	push	hl
 	ld	hl, user_return
 	ex	(sp), hl
@@ -65,20 +65,15 @@ assert KERNEL_THREAD_PID = 0
 	jr	user_error
 
 user_return:
-	ei
 ; end syscall here
-	pop	bc
-	pop	de
-	pop	iy
-	pop	ix
 	jr	c, .__user_return_error
 	pop	af
 	or	a, a
-	ret
+	jp	user_return_signal
 .__user_return_error:
 	pop	af
 	scf
-	ret
+	jp	user_return_signal
 
 sysdef _enosys
 user_enosys:
