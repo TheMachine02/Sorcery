@@ -224,8 +224,14 @@ kvfs_root_dirent:
  db	13	dup	$00
  dl	$000000
  db	13	dup	$00
- db	192	dup	KERNEL_HW_POISON
+exec_microcode:
+leaf_boundary_lower:
+ db	3	dup	KERNEL_HW_POISON
+leaf_boundary_upper:
+ db	3	dup	KERNEL_HW_POISON
+ db	186	dup	KERNEL_HW_POISON
 ; tty device
+assert	($ mod 256) = 0
 tty_dev:
  db	256	dup	0
 flash_microcode:

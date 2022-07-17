@@ -1,7 +1,7 @@
-define	leaf_bound_lower	$D000FA
-define	leaf_bound_upper	$D000FD
+define	EXEC_MICROCODE_SIZE	192
 
 ; execute kernel in place, provide hl = file path
+; as reboot, we expect filesystem to be sync and ready to reboot
 sysdef	_kexec
 kexec:
 	call	kvfs.inode_get_lock
@@ -14,7 +14,6 @@ kexec:
 	jp	nz, kvfs.inode_atomic_write_error
 	bit	KERNEL_VFS_PERMISSION_X_BIT, l
 	jp	z, kvfs.inode_atomic_write_error
-; check if inode is DMA, else allocate the header and make it point to ix
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, l
 	jp	z, kvfs.inode_atomic_write_error
 ; we have an DMA inode, so we may check both compat and XIP
@@ -33,8 +32,11 @@ kexec:
 	or	a, a
 	sbc	hl, de
 	jp	nz, kvfs.inode_atomic_write_error
-; TODO : freeze user space here and be ready to exec and reboot
-; TODO : locate leaf.exec static in protected area of the kernel
+; then trigger exec
+	ld	hl, leaf_k.microcode
+	ld	de, exec_microcode
+	ld	bc, EXEC_MICROCODE_SIZE
+	ldir	
 	jp	leaf_k.exec_static
 
 leaf_k:
@@ -58,6 +60,9 @@ leaf_k:
 	cp	a, LT_EXEC
 	ret
 
+.microcode:
+ org	exec_microcode	
+	
 .exec_static:
 ; only for static program (kernel)
 ; read section table and copy at correct location (for those needed)
@@ -98,8 +103,8 @@ leaf_k:
 .protected_static:
 ; find execution bound for a static program
 	ld	hl, $D00000
-	ld	(leaf_bound_lower), hl
-	ld	(leaf_bound_upper), hl
+	ld	(leaf_boundary_lower), hl
+	ld	(leaf_boundary_upper), hl
 	lea	bc, iy+0
 	ld	ix, (iy+LEAF_HEADER_SHOFF)
 	add	ix, bc
@@ -109,25 +114,28 @@ leaf_k:
 	bit	1, (ix+LEAF_SECTION_FLAGS)
 	jr	z, .protected_next_section
 	ld	de, (ix+LEAF_SECTION_ADDR)
-	ld	hl, (leaf_bound_lower)
+	ld	hl, (leaf_boundary_lower)
 	or	a, a
 	sbc	hl, de
 	jr	c, .protected_bound_upper
-	ld	(leaf_bound_lower), de
+	ld	(leaf_boundary_lower), de
 .protected_bound_upper:
 	ld	hl, (ix+LEAF_SECTION_SIZE)
 	add	hl, de
 	ex	de, hl
-	ld	hl, (leaf_bound_upper)
+	ld	hl, (leaf_boundary_upper)
 	or	a, a
 	sbc	hl, de
 	jr	nc, .protected_bound_lower
-	ld	(leaf_bound_upper), de
+	ld	(leaf_boundary_upper), de
 .protected_bound_lower:
 .protected_next_section:
 	lea	ix, ix+16
 	djnz	.protected_boundary
-	ld	hl, leaf_bound_lower
+	ld	hl, leaf_boundary_lower
 	ld	bc, $620
 	otimr
 	ret
+
+ align	256
+ org	.microcode + EXEC_MICROCODE_SIZE
