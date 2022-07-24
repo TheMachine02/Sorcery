@@ -95,17 +95,12 @@ define	phy_stat		24
 ; iy = inode
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
-	jr	nz, .inode_destroy_nf
-	call	mm.drop_cache_page
-.inode_destroy_nf:
-; TODO : we also need to drop slab pages (all indirect for both directory (up to 16 dirent and data page for normal inode)
+	call	z, .__inode_destroy_file
 	cp	a, KERNEL_VFS_TYPE_DIRECTORY
-	ret	z
+	call	z, .__inode_destroy_directory
 	cp	a, KERNEL_VFS_TYPE_FIFO
-	jr	nz, .inode_destroy_call
-	ld	hl, (iy+KERNEL_VFS_INODE_FIFO_DATA+FIFO_BOUND_LOW)
-	call	kfree
-.inode_destroy_call:
+	call	z, .__inode_destroy_fifo
+.__inode_destroy_call:
 ; char, block, fifo, symlink, socket, file
 	ld	ix, (iy+KERNEL_VFS_INODE_OP)
 	lea	hl, ix+phy_destroy_inode
@@ -114,6 +109,33 @@ define	phy_stat		24
 	pop	hl
 	jp	kfree
 
+.__inode_destroy_file:
+	call	mm.drop_cache_page
+.__inode_destroy_directory:
+; cleanup slab entries
+	ld	b, 16
+	push	iy
+.__inode_destroy_slab:
+	ld	hl, (iy+KERNEL_VFS_INODE_DATA)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	call	nz, kmem.cache_free
+	lea	iy, iy+3
+	djnz	.__inode_destroy_slab
+	pop	iy
+	pop	hl
+	jp	.__inode_destroy_call
+	
+.__inode_destroy_fifo:
+	ld	hl, (iy+KERNEL_VFS_INODE_FIFO_DATA+FIFO_BOUND_LOW)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	call	nz, kmem.cache_free
+	pop	hl
+	jp	.__inode_destroy_call
+	
 .inode_get_lock:
 ; hl is path
 ; return c = error, none lock
