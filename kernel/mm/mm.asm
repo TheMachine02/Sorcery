@@ -84,7 +84,7 @@ mm:
 	ld	de, kmm_ptlb_map
 	ld	e, b
 	ld	a, (de)
-	and	KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
+	and	a, KERNEL_MM_PAGE_FREE_MASK or KERNEL_MM_PAGE_CACHE_MASK
 	jr	nz, .__segfault_permission
 ; are we the owner ?
 	ld	hl, (kthread_current)
@@ -104,7 +104,7 @@ mm:
 	ld	hl, (kthread_current)
 	ld	c, (hl)
 	ld	a, SIGSEGV
-	call	signal.kill
+	call	signal.force
 ; well, clean up and try for better ?
 ; interrupts are enabled and wish for the best
 	scf
