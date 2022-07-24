@@ -61,8 +61,10 @@ leaf_k:
 	ret
 
 .microcode:
- org	exec_microcode	
-	
+ org	exec_microcode
+; for boundary
+ rb	6 
+ 
 .exec_static:
 ; only for static program (kernel)
 ; read section table and copy at correct location (for those needed)
