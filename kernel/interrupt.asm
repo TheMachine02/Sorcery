@@ -58,8 +58,8 @@ kinterrupt:
 
 .irq_request:
 ; TODO : check if handler is not already taken
+; TODO : check the interrupt routine is in *RAM*
 ; a = IRQ, hl = interrupt routine
-; check the interrupt routine is in *RAM*
 	call	.irq_extract_line
 	ld	(hl), de
 ; register the handler then enable the IRQ    
@@ -173,14 +173,6 @@ kinterrupt:
 ; stack have iy and ix, so actually we are already in a kernel stack frame
 ; push down user stack the handler adress (and the sigreturn syscall)
 ; after the signal is processed, we re-enter interrupt like state and do an irq_context_restore to check for *more* pending signal (every signal should be processed after that, also we can be preempted whenever we want)
-; TODO : block currently processed signal
-	pop	iy
-	pop	ix
-	exx
-	ex	af, af'
-	ei
-	ret
-; entry:
 	exx
 	ex	af, af'
 	push	de
@@ -197,7 +189,7 @@ kinterrupt:
 	ld	hl, signal.return
 	push	hl
 	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
-; we are in a slab 128 bytes aligned, so this is valid
+; we are in a slab 128/256 bytes aligned, so this is valid
 	add	a, a
 	add	a, a
 	add	a, l

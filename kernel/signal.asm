@@ -88,6 +88,7 @@ signal:
 	pop	hl
 
 sysdef _kill
+.force:
 .kill:
 ; Send signal to an other thread
 ; REGSAFE and ERRNO compliant
@@ -442,8 +443,7 @@ signal.default_handler:
 ;_sigreturn:
 ; trash return adress and call actual routine
 	pop	hl
-	ret
-
+	pop	hl
 signal.return:
 ; NOTE : interrupt happen in the space where interrupt happened
 ; trash the argument
@@ -466,6 +466,9 @@ user_return_signal:=$
 	ld	hl, i
 	inc	hl
 	ld	iy, (hl)
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
+	or	a, a
+	ret	nz
 ; from current thread iy, compute current signal
 ; and reset the current signal from the thread mask list
 	lea	hl, iy+KERNEL_THREAD_SIGNAL_PENDING+2	; pending
@@ -504,4 +507,22 @@ user_return_signal:=$
 ; reset the bit within pending
 	xor	a, (hl)
 	ld	(hl), a
+	ret
+
+signal.mask_operation:
+; from signal a, for thread iy, output both signal mask in a and signal byte in hl
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK
+	bit	3, a
+	jr	z, $+3
+	inc	hl
+	bit	4, a
+	jr	z, $+3
+	inc	hl
+	and	a, 7
+	ld	b, a
+	inc	b
+	xor	a, a
+	scf
+	rla
+	djnz	$-1
 	ret
