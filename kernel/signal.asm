@@ -448,6 +448,9 @@ signal.return:
 ; NOTE : interrupt happen in the space where interrupt happened
 ; trash the argument
 	pop	hl
+	call	signal.mask_operation
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_SAVE)
+	ld	(hl), a
 ; unwind the stack frame
 	pop	hl
 	pop	af

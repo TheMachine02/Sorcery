@@ -186,6 +186,11 @@ kinterrupt:
 	sbc	hl, hl
 	ld	l, a
 	push	hl
+	call	signal.mask_operation
+	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
+	cpl
+	and	a, (hl)
+	ld	(hl), a
 	ld	hl, signal.return
 	push	hl
 	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
@@ -271,7 +276,7 @@ kinterrupt:
 	inc	b
 	jr	z, .irq_crystal_resume
 	inc	hl
-; this is first thread with a timer
+; this is first timer
 	ld	iy, (hl)
 .irq_crystal_timers:
 	dec	(iy+TIMER_COUNT)
