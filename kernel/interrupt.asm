@@ -187,8 +187,13 @@ kinterrupt:
 	ld	l, a
 	push	hl
 	call	signal.mask_operation
+; save the signal status (0 is blocked, 1 is unblocked)
+	ld	c, a
+	and	a, (hl)
 	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
+	ld	a, c
 	cpl
+; block current signal
 	and	a, (hl)
 	ld	(hl), a
 	ld	hl, signal.return
@@ -244,6 +249,7 @@ kinterrupt:
 .irq_context_restore:
 ; check here for pending signal
 ; NOTE : if we happen to be in kernel space (check for syscall mainly), then we don't process signal right now
+; the signal processing will happen at the syscall end (however, if the thread was interruptible, it is proprely waked up and syscall need to take this into account)
 	ld	hl, 6
 	add	hl, sp
 	ld	hl, (hl)

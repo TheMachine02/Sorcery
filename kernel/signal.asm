@@ -448,10 +448,16 @@ signal.return:
 ; NOTE : interrupt happen in the space where interrupt happened
 ; trash the argument
 	pop	hl
+; unwind the stack frame
+; reset the signal mask
+	di
+	ld	a, l
+	ld	iy, (kthread_current)
 	call	signal.mask_operation
 	ld	a, (iy+KERNEL_THREAD_SIGNAL_SAVE)
+	or	a, (hl)
 	ld	(hl), a
-; unwind the stack frame
+; the pop the stack
 	pop	hl
 	pop	af
 user_return_signal:=$
