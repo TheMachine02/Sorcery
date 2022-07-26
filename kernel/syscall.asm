@@ -71,6 +71,9 @@ user_return:
 	or	a, a
 	jp	user_return_signal
 .__user_return_error:
+; make hl be the error code and pass through carry flag
+	sbc	hl, hl
+	ld	l, a
 	pop	af
 	scf
 	jp	user_return_signal
