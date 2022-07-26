@@ -15,7 +15,7 @@ console:
 .nmi_takeover:
 	ld	iy, console_dev
 	ld	hl, nmi_console
-	jp	.fb_takeover_force
+	jp	.__fb_takeover_force
 
 .__fb_takeover_error:
 	scf
@@ -36,7 +36,7 @@ console:
 	ld	hl, kmem_cache_s64
 	call	kmem.cache_alloc
 	jr	c, .__fb_takeover_error
-.fb_takeover_force:
+.__fb_takeover_force:
 	ld	(iy+CONSOLE_TAKEOVER), hl
 	ex	de, hl
 ; save LCD state
@@ -146,11 +146,9 @@ console:
 
 .irq_switch:
 ; NOTE : we will need to SIGSTOP the thread owning the mutex (wich may or may be not the thread running)
-; if it is the currently running thread, due to the fact that fb_takeover is running in interrupt span
-; it may be complex
+; if it is the currently running thread, due to the fact that fb_takeover is running in interrupt span, it may be complex
 ; thread create irq will set reschedule byte, so we might be good
-; however, signal is STILL broken
-; NOTE : the thread created run in *userspace* despite code being in kernel space
+; if current thread is highest priority, we will "see" the signal in interrupt return anyway
 	call	.fb_takeover
 	ret	c
 	ld	iy, .vt_init

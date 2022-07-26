@@ -59,7 +59,6 @@ sysjump:
 	jp	_enosys		; _vfork
 	jp	_enosys		; _mount
 	jp	_enosys		; _umount
-	jp	_enosys		; _signal
 	jp	_pause
 	jp	_alarm
 	jp	_kill
@@ -80,7 +79,8 @@ sysjump:
 	jp	_profil
 	jp	_uadmin
 	jp	_nice
-	jp	_enosys		; _sigdisp
+	jp	_signal
+	jp	_sigreturn
 	jp	_enosys		; _flock
 	jp	_yield
 	jp	_schedule

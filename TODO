@@ -2,6 +2,8 @@ FAT 12 flash
 memory management
 keyboard stdin
 
+Cleanup read / write / cache page acess due to ATOMICTY of read / write page operation needed
+
 * program execution and library loading
  - rework LEAF format to be smaller / better optimized
 
@@ -13,6 +15,8 @@ uadmin : acess to flash unlock
 
 * thread cleanup :
 - clean the timer fixed data inside the thread and instead create a timer framework detached from thread TLS. Function like alarm() or sleep() just use a 'simplified' timer attached to thread TLS, we don't need sigevent for exemple, but just following >>> this is the "interval" timer
+
+* TODO : move TLS to slab memory
 
 define	KERNEL_THREAD_TIMER			0
 define	KERNEL_THREAD_TIMER_FLAGS		0
@@ -35,22 +39,10 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
  >
  >
 
-* signal cleanup
-
-- right now : signal queueing in stack
-- use pending signal & relevant signal block > block make signal pending instead of full ignore
-
 * timer cleanup
 - allocate memory for timer data
 - push those data correclty into the queue
 - better function / correct function
-
-* memory management changes
-- 3 type of page : slab page, cache page (GFP_KERNEL), and user memory (GFP_USER)
-- cleanup bit, code, and allocation
-
-* vfs
-- TODO : mmap()
 
 * leaf
 change the first $7F to 'rst 0'

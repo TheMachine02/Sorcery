@@ -206,6 +206,7 @@ kinterrupt:
 	ld	l, a
 	ei
 ; directly jump into the vector table
+; NOTE : we leak register and kernel adresses here
 	jp	(hl)
 
 .irq_handler:
@@ -256,8 +257,7 @@ kinterrupt:
 	ld	de, KERNEL_MM_GFP_RAM
 	sbc	hl, de
 	jr	c, .irq_frame
-	lea	hl, iy+KERNEL_THREAD_SIGNAL_CURRENT
-	ld	a, (hl)
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
 	or	a, a
 	jr	nz, .irq_do_signal
 .irq_frame:
@@ -397,6 +397,7 @@ kscheduler:
 	sbc	hl, de
 	jp	z, kinterrupt.irq_context_restore
 .context_restore:
+; put the new thread in iy
 	exx
 ; save state of the current thread
 	ex	af,af'
@@ -423,6 +424,7 @@ kscheduler:
 	pop	hl
 	exx
 	ex	af, af'
+	ld	iy, (kthread_current)
 	jp	kinterrupt.irq_context_restore
 
 sysdef _schedule

@@ -25,6 +25,7 @@ define	KERNEL_THREAD_SIGNAL_CURRENT		$19
 define	KERNEL_THREAD_SIGNAL_MASK		$1A	; 3 bytes
 define	KERNEL_THREAD_SIGNAL_PENDING		$1D	; 3 bytes
 define	KERNEL_THREAD_SIGNAL_VECTOR		$20	; 3 bytes pointer to slab, 24*4 bytes (128 bytes slab)
+define	KERNEL_THREAD_SIGNAL_SAVE		$23	; 1 byte for temporary maskset save when masking signal in handler
 ; timer ;
 define	KERNEL_THREAD_TIMER			$1D
 define	KERNEL_THREAD_TIMER_FLAGS		$1D
@@ -54,7 +55,7 @@ define	KERNEL_THREAD_PROFIL_STRUCTURE		$3D
 define	KERNEL_THREAD_WORKING_DIRECTORY		$40	; pointer to the directory inode
 define	KERNEL_THREAD_ROOT_DIRECTORY		$43	; pointer to the root directory
 define	KERNEL_THREAD_TIME_CHILD		$46
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$49	; file descriptor table, TODO : move it to allocated kmem_cache
+define	KERNEL_THREAD_FILE_DESCRIPTOR		$49	; file descriptor table, TODO : move it to allocated kmem_cache (256 bytes slab for 32 FD)
 ; up to $100, table is 189 bytes or 23 descriptor, 3 reserved as stdin, stdout, stderr ;
 ; 21 descriptors usables ;
 
@@ -157,6 +158,9 @@ sysdef _thread
 	ldir
 	pop	de
 	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), de
+	ld	de, $FFFFFF
+	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
+	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
 	ld	(iy+KERNEL_THREAD_QUANTUM), l
 	ld	(iy+KERNEL_THREAD_PID), a
 	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
@@ -467,7 +471,7 @@ sysdef _exit
 	ei
 	ret
 
-; suspend, wait, resume destroy hl, iy and a	
+; suspend, wait, resume destroy hl, iy and a
 	
 .suspend:
 	xor	a, a

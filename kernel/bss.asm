@@ -98,8 +98,9 @@ kernel_stack_pointer:			; Stack pointer within idle thread
  dl	kernel_heap			; Boot/kernel  heap
  dl	$000000				; Time, NOTE : we finish at offset $A8, end of stack
  db	$00				; errno (if we need to set it)
+ db	$00				; current signal
 kernel_stack_limit:
- db	86	dup	KERNEL_HW_POISON
+ db	85	dup	KERNEL_HW_POISON
 kernel_stack:				; kernel stack head (HW stack)
   db	KERNEL_HW_POISON		; scrap
 kernel_heap:				; kernel heap bottom (HW heap), also 512 bytes scrap, used for lot of things
