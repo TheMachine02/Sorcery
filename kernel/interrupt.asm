@@ -186,6 +186,7 @@ kinterrupt:
 	sbc	hl, hl
 	ld	l, a
 	push	hl
+	ld	b, a
 	call	signal.mask_operation
 ; save the signal status (0 is blocked, 1 is unblocked)
 	ld	c, a
@@ -198,6 +199,7 @@ kinterrupt:
 	ld	(hl), a
 	ld	hl, signal.return
 	push	hl
+	ld	a, b
 	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
 ; we are in a slab 128/256 bytes aligned, so this is valid
 	add	a, a

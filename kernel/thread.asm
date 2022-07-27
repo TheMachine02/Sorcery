@@ -319,8 +319,6 @@ sysdef _exit
 	ld	sp, (kernel_stack_pointer)
 	ld	a, (iy+KERNEL_THREAD_PID)
 	call	.free_pid
-; need to free IRQ locked and mutex locked to thread
-; TODO ;
 ; remove from active
 	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
@@ -330,8 +328,14 @@ sysdef _exit
 ; unmap the memory of the thread
 ; this also unmap the stack
 	ld	a, (iy+KERNEL_THREAD_PID)
+; that will reset the stack belonging to the thread
 	call	mm.drop_user_pages
-; that will reset everything belonging to the thread
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
+	call	kmem.cache_free
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	call	kmem.cache_free
+	lea	hl, iy+0
+	call	kmem.cache_free	
 	ld	bc, QUEUE_SIZE
 	ld	a, $FF
 	ld	hl, kthread_mqueue_active
