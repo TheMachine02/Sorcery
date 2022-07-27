@@ -43,7 +43,7 @@ virtual	at 0
 	KERNEL_THREAD_FILE_DESCRIPTOR:		rb	3	; pointer to file descriptor table
 ; compat for now
 	define	THREAD_COMPAT			1
-	KERNEL_THREAD_ERRNO:			rb	1
+; 	KERNEL_THREAD_ERRNO:			rb	1
 ; timer ;
 	KERNEL_THREAD_TIMER:
 	KERNEL_THREAD_TIMER_FLAGS:		rb	1

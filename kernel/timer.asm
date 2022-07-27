@@ -112,11 +112,8 @@ ktimer:
 	sbc	hl, hl
 	ret
 .create_failed:
-	ei
-	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
-	scf
-	sbc	hl, hl
-	ret
+	ld	a, EINVAL
+	jp	user_error
 	
 .itreset:
 ; delete (or disarm) the current timer of the thread
@@ -137,7 +134,7 @@ ktimer:
 	ret
 .reset_errno:
 	ei
-	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
+; 	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
 	dec	hl
 	ret
 
