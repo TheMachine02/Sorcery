@@ -29,7 +29,8 @@ virtual	at 0
 	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
 ; more attribute
 	KERNEL_THREAD_NICE:			rb	1	; nice value (used for priority boosting)
-	KERNEL_THREAD_ATTRIBUTE:		rb	1	; some flags
+	KERNEL_THREAD_EXIT_STATUS:		rb	1
+	KERNEL_THREAD_ATTRIBUTE:		rb	1	; some flags value
 ; thread waiting ;
 	KERNEL_THREAD_IO:
 	KERNEL_THREAD_IO_DATA:			rb	1
@@ -43,7 +44,6 @@ virtual	at 0
 	KERNEL_THREAD_FILE_DESCRIPTOR:		rb	3	; pointer to file descriptor table
 ; compat for now
 	define	THREAD_COMPAT			1
-; 	KERNEL_THREAD_ERRNO:			rb	1
 ; timer ;
 	KERNEL_THREAD_TIMER:
 	KERNEL_THREAD_TIMER_FLAGS:		rb	1
@@ -200,16 +200,17 @@ sysdef _thread
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
 	ld	hl, (ix+KERNEL_THREAD_ROOT_DIRECTORY)
 	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
-	jr	.__create_copy_signal
+	jr	.__create_directory_reference
 .__create_directory_root:
 	ld	hl, kvfs_root
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
 	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
+.__create_directory_reference:
 ; increase reference count of both directory
-; TODO : iref the inode (and deref when exiting the thread)
-; 	ld	c, KERNEL_VFS_INODE_REFERENCE
-; 	add	hl, bc
-; 	inc	(hl)
+	ld	ix, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+	ld	ix, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
 .__create_copy_signal:
 ; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
@@ -273,95 +274,71 @@ sysdef _core
 
 sysdef _exit
 .exit:
-; signal parent thread of the end of the child thread
-; also send HL as exit code
-	di
 	ld	iy, (kthread_current)
-; 	bit	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
-; 	jr	z, .exit_clean
-; ; if we have a thread * currently * watching, wake it up
-; 	push	hl
-; 	ld	a, (iy+KERNEL_THREAD_JOINED)
-; 	add	a, a
-; 	jr	z, .exit_make_zombie_bunny
-; 	add	a, a
-; 	ld	hl, kthread_pid_map
-; 	ld	l, a
-; 	ld	a, (hl)
-; ; sanity check ;
-; 	or	a, a
-; 	jr	z, .exit_make_zombie_bunny
-; 	push	iy
-; 	inc	hl
-; 	ld	iy, (hl)
-; ; should be sleeping if joined, but anyway, extra check	
-; 	ld	a, (iy+KERNEL_THREAD_STATUS)
-; 	cp	a, TASK_INTERRUPTIBLE
-; 	call	z, task_switch_running
-; 	pop	iy
-; .exit_make_zombie_bunny:
-; 	call	task_switch_zombie
-; 	pop	hl
-; 	call	task_yield
-.exit_clean:
+	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
+; close all fd
+	ld	ix, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
+	ld	b, KERNEL_THREAD_FILE_DESCRIPTOR_MAX
+.__exit_close_fd:
+	push	bc
+	pea	ix+KERNEL_VFS_FILE_DESCRIPTOR_SIZE
+	ld	hl, (ix+0)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	call	nz, kvfs.close
+	pop	ix
+	pop	bc
+	djnz	.__exit_close_fd
+; deref both root and cwd inode
+	ld	iy, (kthread_current)
+	push	iy
+	ld	iy, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
+	call	kvfs.inode_deref
+	pop	iy
+	push	iy
+	ld	iy, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
+	call	kvfs.inode_deref
+	pop	iy
+; now, zombifie and kill everything
+	di
+; first, switch to zombie
+	call	task_switch_zombie
+; send signal
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	signal.kill
-; interrupts should be definitely stopped here !
-	di
-; first disable stack protector (load the kernel_stack stack protector)
-	ld	a, $A8
-	out0	($3A), a
-	xor	a, a
-	out0	($3B), a
-	ld	a, $D0
-	out0	($3C), a
+; now disable stack protector (load the kernel_stack stack protector)
+; and also drop the stack of the thread
 	ld	sp, (kernel_stack_pointer)
-	ld	a, (iy+KERNEL_THREAD_PID)
-	call	.free_pid
-; remove from active
-	ld	hl, kthread_mqueue_active
-	ld	l, (iy+KERNEL_THREAD_PRIORITY)
-	call	kqueue.remove
-; find next to schedule
-; ie dispatch method from schedule
-; unmap the memory of the thread
-; this also unmap the stack
-	ld	a, (iy+KERNEL_THREAD_PID)
+	or	a, a
+	sbc	hl, hl
+	add	hl, sp
+	ld	(iy+KERNEL_THREAD_STACK), hl
+	ld	hl, kernel_stack_limit
+	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
+	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
+	ld	bc, $00033A
+	otimr
 ; that will reset the stack belonging to the thread
+	ld	a, (iy+KERNEL_THREAD_PID)
 	call	mm.drop_user_pages
+; now cleanup slab space, just keep 128 bytes TLS
 	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
 	call	kmem.cache_free
 	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
 	call	kmem.cache_free
-	lea	hl, iy+0
-	call	kmem.cache_free	
-	ld	bc, QUEUE_SIZE
-	ld	a, $FF
-	ld	hl, kthread_mqueue_active
-	cp	a, (hl)
-	jr	nz, .exit_dispatch_thread
-	add	hl, bc
-	cp	a, (hl)
-	jr	nz, .exit_dispatch_thread
-	add	hl, bc
-	cp	a, (hl)
-	jr	nz, .exit_dispatch_thread
-	add	hl, bc
-	cp	a, (hl)
-	jr	nz, .exit_dispatch_thread
-	add	hl, bc
-	cp	a, (hl)
-	jp	z, nmi
-; schedule the idle thread
-	ld	de, kernel_idle
-	jp	kscheduler.context_restore
-.exit_dispatch_thread:
-	inc	hl
-	ld	de, (hl)
-; go into the thread directly, without schedule (pop all stack and discard current context)
-	jp	kscheduler.context_restore
-	
+; NOTE : we will correctly update TIME value and proprely switch off
+; we need to cleanup the idle stack just before calling though (as if we switch from idle, since the stack will be used from idle)
+	pop	af
+	pop	de
+	pop	bc
+	pop	hl
+; we still have both ix and iy pushed
+	exx
+	ex	af, af'
+	jp	kscheduler.do_schedule
+
 .sleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
 ; carry is set if we haven't sleep enough time
