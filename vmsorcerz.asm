@@ -105,7 +105,6 @@ sysjump:
 	jp	_dma_access
 	jp	_dma_blk
 	jp	_dma_release
-	jp	_void
 	jp	_dmesg
 ; NOTE : max 240 syscall, should be way more than enough
 align	1024

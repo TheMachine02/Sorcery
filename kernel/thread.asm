@@ -3,70 +3,75 @@
 ; Atomic is UTERLY important while writing to it
 ; you can read pid, ppid, irq (but it will not be a *safe value, meaning it can change the next instruction
 ; for safety dont touch anything here except PID and PPID ;
-define	KERNEL_THREAD_HEADER			$00
-define	KERNEL_THREAD_PID			$00
-define	KERNEL_THREAD_NEXT			$01
-define	KERNEL_THREAD_PREVIOUS			$04
-define	KERNEL_THREAD_PPID			$07
-define	KERNEL_THREAD_IRQ			$08
-define	KERNEL_THREAD_STATUS			$09
-define	KERNEL_THREAD_PRIORITY			$0A
-define	KERNEL_THREAD_QUANTUM			$0B
+virtual	at 0
+	KERNEL_THREAD_HEADER:
+	KERNEL_THREAD_PID:			rb	1
+	KERNEL_THREAD_NEXT:			rb	3
+	KERNEL_THREAD_PREVIOUS:			rb	3
+	KERNEL_THREAD_PPID:			rb	1
+	KERNEL_THREAD_IRQ:			rb	1
+	KERNEL_THREAD_STATUS:			rb	1
+	KERNEL_THREAD_PRIORITY:			rb	1
+	KERNEL_THREAD_QUANTUM:			rb	1
 ; static thread data that can be manipulated freely ;
 ; within it's own thread ... don't manipulate other thread memory, it's not nice ;
-define	KERNEL_THREAD_STACK_LIMIT		$0C
-define	KERNEL_THREAD_BREAK			$0C
-define	KERNEL_THREAD_STACK			$0F
-define	KERNEL_THREAD_HEAP			$12
-define	KERNEL_THREAD_TIME			$15
-; some stuff ;
-define	KERNEL_THREAD_ERRNO			$18
-define	KERNEL_THREAD_SIGNAL_CURRENT		$19
-define	KERNEL_THREAD_SIGNAL_MASK		$1A	; 3 bytes
-define	KERNEL_THREAD_SIGNAL_PENDING		$1D	; 3 bytes
-define	KERNEL_THREAD_SIGNAL_VECTOR		$20	; 3 bytes pointer to slab, 24*4 bytes (128 bytes slab)
-define	KERNEL_THREAD_SIGNAL_SAVE		$23	; 1 byte for temporary maskset save when masking signal in handler
-; timer ;
-define	KERNEL_THREAD_TIMER			$1D
-define	KERNEL_THREAD_TIMER_FLAGS		$1D
-define	KERNEL_THREAD_TIMER_NEXT		$1E
-define	KERNEL_THREAD_TIMER_PREVIOUS		$21
-define	KERNEL_THREAD_TIMER_COUNT		$24
-define	KERNEL_THREAD_TIMER_SIGEVENT		$27
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	$27
-define	KERNEL_THREAD_TIMER_EV_SIGNO		$28
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	$29
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	$2C
-define	KERNEL_THREAD_TIMER_EV_VALUE		$2F
-; union with thread sigval ;
-define	KERNEL_THREAD_SIGNAL			$2F
-define	KERNEL_THREAD_EV_SIG			$2F
-define	KERNEL_THREAD_EV_SIG_POINTER		$30
-; other ;
-define	KERNEL_THREAD_NICE			$33
-define	KERNEL_THREAD_ATTRIBUTE			$34
-define	KERNEL_THREAD_JOINED			$35	; joined thread waiting for exit()
+	KERNEL_THREAD_STACK_LIMIT:
+	KERNEL_THREAD_BREAK:			rb	3
+	KERNEL_THREAD_STACK:			rb	3
+	KERNEL_THREAD_HEAP:			rb	3
+	KERNEL_THREAD_TIME:			rb	3
+	KERNEL_THREAD_TIME_CHILD:		rb	3
+; signal stuff ;
+	KERNEL_THREAD_SIGNAL_CURRENT:		rb	1
+	KERNEL_THREAD_SIGNAL_MASK:		rb	3
+	KERNEL_THREAD_SIGNAL_PENDING:		rb	3
+	KERNEL_THREAD_SIGNAL_VECTOR:		rb	3	; pointer to slab block
+	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
+; more attribute
+	KERNEL_THREAD_NICE:			rb	1	; nice value (used for priority boosting)
+	KERNEL_THREAD_ATTRIBUTE:		rb	1	; some flags
 ; thread waiting ;
-define	KERNEL_THREAD_IO			$36
-define	KERNEL_THREAD_LIST_DATA			$36
-define	KERNEL_THREAD_LIST_NEXT			$37
-define	KERNEL_THREAD_LIST_PREVIOUS		$3A
-define	KERNEL_THREAD_PROFIL_STRUCTURE		$3D
-define	KERNEL_THREAD_WORKING_DIRECTORY		$40	; pointer to the directory inode
-define	KERNEL_THREAD_ROOT_DIRECTORY		$43	; pointer to the root directory
-define	KERNEL_THREAD_TIME_CHILD		$46
-define	KERNEL_THREAD_FILE_DESCRIPTOR		$49	; file descriptor table, TODO : move it to allocated kmem_cache (256 bytes slab for 32 FD)
-; up to $100, table is 189 bytes or 23 descriptor, 3 reserved as stdin, stdout, stderr ;
-; 21 descriptors usables ;
+	KERNEL_THREAD_IO:
+	KERNEL_THREAD_IO_DATA:			rb	1
+	KERNEL_THREAD_IO_NEXT:			rb	3
+	KERNEL_THREAD_IO_PREVIOUS:		rb	3
+; profiling
+	KERNEL_THREAD_PROFIL_STRUCTURE:		rb	3	; pointer to profil structure
+; directory
+	KERNEL_THREAD_WORKING_DIRECTORY:	rb	3	; pointer to the directory inode
+	KERNEL_THREAD_ROOT_DIRECTORY:		rb	3	; pointer to the root directory
+	KERNEL_THREAD_FILE_DESCRIPTOR:		rb	3	; pointer to file descriptor table
+; compat for now
+	define	THREAD_COMPAT			1
+	KERNEL_THREAD_ERRNO:			rb	1
+; timer ;
+	KERNEL_THREAD_TIMER:
+	KERNEL_THREAD_TIMER_FLAGS:		rb	1
+	KERNEL_THREAD_TIMER_NEXT:		rb	3
+	KERNEL_THREAD_TIMER_PREVIOUS:		rb	3
+	KERNEL_THREAD_TIMER_COUNT:		rb	3
+	KERNEL_THREAD_TIMER_SIGEVENT:
+	KERNEL_THREAD_TIMER_EV_SIGNOTIFY:	rb	1
+	KERNEL_THREAD_TIMER_EV_SIGNO:		rb	1
+	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION:	rb	3
+	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD:	rb	3
+	KERNEL_THREAD_TIMER_EV_VALUE:
+; union with thread sigval ;
+	KERNEL_THREAD_SIGNAL:
+	KERNEL_THREAD_EV_SIG:			rb	1
+	KERNEL_THREAD_EV_SIG_POINTER:		rb	3
+assert $ < KERNEL_THREAD_TLS_SIZE
+end	virtual
 
-define	KERNEL_THREAD_HEADER_SIZE		$100
-define	KERNEL_THREAD_STACK_SIZE		8192	; 3964 bytes usable
-define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	21
+define	KERNEL_THREAD_STACK_SIZE		8192	; all of it usable
+define	KERNEL_THREAD_SIGNAL_VECTOR_SIZE	128	; 24*4 bytes
+define	KERNEL_THREAD_TLS_SIZE			128	; header
+define	KERNEL_THREAD_FILE_DESCRIPTOR_SIZE	256	; 8*32 bytes FD
+define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	32
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
-define	THREAD_JOIGNABLE			0
-define	THREAD_PROFIL				1
+define	THREAD_PROFIL				0
 
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
@@ -95,99 +100,125 @@ sysdef _thread
 ; Create a thread
 ; int thread_create(void* thread_entry, void* thread_arg)
 ; register IY is entry, register HL is send to the stack for void* thread_arg
-; error -1 and c set, 0 and nc otherwise, errno set
-; HL, BC, DE copied from current context to the new thread
 ; NOTE: for syscall wrapper : need to grab the pid of the thread and ouptput it to a *thread_t id
 ; NOTE: you can't call create thread in a interrupt disabled context, use irq_create for that
 	call	.irq_create
 	jp	c, user_error
 	jp	task_schedule
 
-.create_no_pid:
-	pop	af
-	ld	a, EAGAIN
-	jr	.create_error
-.create_no_mem_2:
+.__create_no_mem:
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	call	kmem.cache_free
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
+	call	kmem.cache_free
+	lea	hl, iy+0
+	call	kmem.cache_free
+	pop	iy
+	jr	.__create_no_tls
+.__create_no_fd:
 	pop	hl
-	pop	af
-	push	af
-	call	mm.unmap_user_pages
-.create_no_mem:
-	pop	af
+	call	kmem.cache_free
+.__create_no_signal:
+	pop	hl
+	call	kmem.cache_free
+.__create_no_tls:
 	pop	af
 	ld	a, ENOMEM
-.create_error:
+	jr	.__create_error
+.__create_no_pid:
+	ld	a, EAGAIN
+.__create_error:
 ; restore register and cleanup
 	exx
+	rsti
 	scf
 	ret
 	
 .irq_create:
-	di
-	push	af
+	tsti
 ; save hl, de, bc registers
 	exx
 	call	.reserve_pid
-	jr	c, .create_no_pid
+	jr	c, .__create_no_pid
+; a is the allocated PID, save it for latter
 	push	af
-	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
-	call	mm.map_user_pages
-	jr	c, .create_no_mem
+; allocate the TLS
+	ld	hl, kmem_cache_s128
+	call	kmem.cache_alloc
+	jr	c, .__create_no_tls
 	push	hl
 	ld	hl, kmem_cache_s128
 	call	kmem.cache_alloc
-	jr	c, .create_no_mem_2
-; copy defaut vector table
+	jr	c, .__create_no_signal
 	push	hl
-	ex	de, hl
-	ld	hl, signal.default_handler
-	ld	bc, 24*4
-	ldir
+	ld	hl, kmem_cache_s256
+	call	kmem.cache_alloc
+	jr	c, .__create_no_fd
+	pop	bc
 	pop	de
-	pop	hl
+; hl = fd, de = tls, bc = signal
 	pop	af
+	push	af
 	push	iy
-	push	de
-; hl is adress
-	ex	de, hl
 	ld	iy, 0
 	add	iy, de
-; setup the default parameter
-	ld	bc, KERNEL_THREAD_HEADER_SIZE
-	ld	hl, KERNEL_MM_NULL+1
-	ldir
-	pop	de
-	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), de
+	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), bc
+	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR), hl
+; now we need to allocate the cache
+	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
+	call	mm.map_user_pages
+	jr	c, .__create_no_mem
+	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
+	ld	(iy+KERNEL_THREAD_HEAP), hl
+	ld	de, KERNEL_THREAD_STACK_SIZE - 27
+	add	hl, de
+	ld	(iy+KERNEL_THREAD_STACK), hl
+; setup the stack, all other register are cleared
+	ex	de, hl
+	ld	ix, 0
+	add	ix, de
+	exx
+	ld	(ix+24), hl
+	exx
+	ld	hl, .exit
+	ld	(ix+21), hl
+	pop	hl
+	ld	(ix+18), hl
+; setup default parameter
 	ld	de, $FFFFFF
 	ld	(iy+KERNEL_THREAD_SIGNAL_MASK), de
 	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
-	ld	(iy+KERNEL_THREAD_QUANTUM), l
-	ld	(iy+KERNEL_THREAD_PID), a
-	ld	(iy+KERNEL_THREAD_PRIORITY), c	; SCHED_PRIO_MAX = 0
-	ld	(iy+KERNEL_THREAD_STATUS), c	; TASK_READY = 0
+	ld	(iy+KERNEL_THREAD_QUANTUM), 1
+	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+; directory settings
+	ld	ix, (kthread_current)
+	ld	a, TASK_IDLE
+	cp	a, (ix+KERNEL_THREAD_STATUS)
+	jr	z, .__create_directory_root
+	ld	hl, (ix+KERNEL_THREAD_WORKING_DIRECTORY)
+	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
+	ld	hl, (ix+KERNEL_THREAD_ROOT_DIRECTORY)
+	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
+	jr	.__create_copy_signal
+.__create_directory_root:
 	ld	hl, kvfs_root
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
-; TODO : inherit from parent
-; TODO : iref the inode (and deref when exiting the thread)
 	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
-; increase reference count of directory
-	ld	c, KERNEL_VFS_INODE_REFERENCE
-	add	hl, bc
-	inc	(hl)
+; increase reference count of both directory
+; TODO : iref the inode (and deref when exiting the thread)
+; 	ld	c, KERNEL_VFS_INODE_REFERENCE
+; 	add	hl, bc
+; 	inc	(hl)
+.__create_copy_signal:
 ; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
-; we are memory aligned
-; please note write affect memory, so do a iy + 256 + 13 stack limit to be safe, boot code need some stack left
-; note : we have TLS : Heap : Break = Stack limit : Stack
-	lea	hl, iy + 13
-	inc	h
-; also brk
-	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
-	ld	(iy+KERNEL_THREAD_HEAP), hl
-; the stack adress is iy + STACK_SIZE - 27
-	ld	bc, KERNEL_THREAD_STACK_SIZE-13-KERNEL_THREAD_HEADER_SIZE-27
-	add	hl, bc
-	ld	(iy+KERNEL_THREAD_STACK), hl
+	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	ld	hl, signal.default_handler
+	ld	bc, 24*4
+	ldir
+	pop	af
+	ld	(iy+KERNEL_THREAD_PID), a
 ; map the thread to be transparent to the scheduler
 ; iy is thread adress, a is still PID    
 ; map the pid
@@ -199,7 +230,7 @@ sysdef _thread
 	inc	hl
 	ld	(hl), iy
 ; write parent pid    
-	ld	hl, kthread_current
+	ld	hl, (kthread_current)
 	lea	de, iy+KERNEL_THREAD_PPID
 	ldi
 ; setup the queue
@@ -207,33 +238,16 @@ sysdef _thread
 	ld	h, ( kthread_mqueue_active and $00FF00 ) shr 8
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call   kqueue.insert_head
-; setup the stack \o/
-	ld	de, KERNEL_THREAD_STACK_SIZE
-	add	iy, de
-	ld	hl, .exit
-	ld	(iy-6), hl
-	pop	hl
-	ld	(iy-9), hl
-	ld	d, e			; ld	de, NULL
-	ld	(iy-12), de		; ix [NULL] > int argc, char *argv[] : in the stack
-	ld	(iy-15), de		; iy [NULL] > in the future
-	ld	(iy-27), de		; af [NULL] > TODO
-	exx
-; this can be grab with call __frameset0 \ ld hl, (ix+6) \ pop ix
-	ld	(iy-3), hl
-; note, we don't care for ASM thread at all, we have hl, bc, de already
-	ld	(iy-18), hl
-	ld	(iy-21), bc
-	ld	(iy-24), de
-; return iy = new thread
-	ld	de, -KERNEL_THREAD_STACK_SIZE
-	add	iy, de
 ; set reschedule value
 	ld	hl, i
 	ld	(hl), $80
-	pop	af
+	exx
 	or	a, a
 	sbc	hl, hl
+	ld	l, a
+	rsti
+; return hl = pid, iy = new thread handle
+	or	a, a
 	ret
 	
 sysdef _waitpid
@@ -263,32 +277,32 @@ sysdef _exit
 ; also send HL as exit code
 	di
 	ld	iy, (kthread_current)
-	bit	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
-	jr	z, .exit_clean
-; if we have a thread * currently * watching, wake it up
-	push	hl
-	ld	a, (iy+KERNEL_THREAD_JOINED)
-	add	a, a
-	jr	z, .exit_make_zombie_bunny
-	add	a, a
-	ld	hl, kthread_pid_map
-	ld	l, a
-	ld	a, (hl)
-; sanity check ;
-	or	a, a
-	jr	z, .exit_make_zombie_bunny
-	push	iy
-	inc	hl
-	ld	iy, (hl)
-; should be sleeping if joined, but anyway, extra check	
-	ld	a, (iy+KERNEL_THREAD_STATUS)
-	cp	a, TASK_INTERRUPTIBLE
-	call	z, task_switch_running
-	pop	iy
-.exit_make_zombie_bunny:
-	call	task_switch_zombie
-	pop	hl
-	call	task_yield
+; 	bit	THREAD_JOIGNABLE, (iy+KERNEL_THREAD_ATTRIBUTE)
+; 	jr	z, .exit_clean
+; ; if we have a thread * currently * watching, wake it up
+; 	push	hl
+; 	ld	a, (iy+KERNEL_THREAD_JOINED)
+; 	add	a, a
+; 	jr	z, .exit_make_zombie_bunny
+; 	add	a, a
+; 	ld	hl, kthread_pid_map
+; 	ld	l, a
+; 	ld	a, (hl)
+; ; sanity check ;
+; 	or	a, a
+; 	jr	z, .exit_make_zombie_bunny
+; 	push	iy
+; 	inc	hl
+; 	ld	iy, (hl)
+; ; should be sleeping if joined, but anyway, extra check	
+; 	ld	a, (iy+KERNEL_THREAD_STATUS)
+; 	cp	a, TASK_INTERRUPTIBLE
+; 	call	z, task_switch_running
+; 	pop	iy
+; .exit_make_zombie_bunny:
+; 	call	task_switch_zombie
+; 	pop	hl
+; 	call	task_yield
 .exit_clean:
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD

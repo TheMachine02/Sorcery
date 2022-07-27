@@ -97,7 +97,7 @@ kvfs:
 	add	hl, hl
 	add	hl, hl
 	ld	ix, (kthread_current)
-	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR
+	ld	ix, (ix+KERNEL_THREAD_FILE_DESCRIPTOR)
 	ex	de, hl
 	add	ix, de
 	ex	de, hl
@@ -176,7 +176,8 @@ sysdef _open
 ; now find free file descriptor
 ; we can drop b from flags, it is useless now
 	ld	ix, (kthread_current)
-	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR + 24
+	ld	ix, (ix+KERNEL_THREAD_FILE_DESCRIPTOR)
+	lea	ix, ix + 3 * 8
 	ld	b, KERNEL_THREAD_FILE_DESCRIPTOR_MAX - 3
 	ld	de, 8
 .open_descriptor:
@@ -221,16 +222,14 @@ sysdef _open
 ; on tifs for example, this will delete the file on the support, and it will be sync later correctly since sync inode is not a valid operation on tifs
 .extract_fd:
 ; get our file descriptor
-	lea	hl, ix - KERNEL_THREAD_FILE_DESCRIPTOR
-	ld	de, (kthread_current)
+; since FD table are 256 bytes aligned, simply get l / 8
 	or	a, a
-	sbc	hl, de
-	srl	h
-	rr	l
-	srl	h
-	rr	l
-	srl	h
-	rr	l
+	ld	a, l
+	sbc	hl, hl
+	srl	a
+	srl	a
+	srl	a
+	ld	l, a
 	ret
 
 sysdef _close

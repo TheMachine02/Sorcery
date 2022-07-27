@@ -105,10 +105,10 @@ atomic_rw:
 	inc	hl
 ; add ourselves to lock structure
 	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_LIST_DATA), a
-	lea	iy, iy+KERNEL_THREAD_LIST_DATA
+	ld	(iy+KERNEL_THREAD_IO_DATA), a
+	lea	iy, iy+KERNEL_THREAD_IO_DATA
 	call	kqueue.insert_tail
-	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	lea	iy, iy-KERNEL_THREAD_IO_DATA
 ; and switch to uninterruptible
 	call	task_switch_uninterruptible
 	pop	hl
@@ -132,14 +132,14 @@ atomic_rw:
 	ld	iy, (hl)
 	dec	hl
 	call	kqueue.remove_head
-	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	lea	iy, iy-KERNEL_THREAD_IO_DATA
 	push	hl
 	xor	a, a
 	call	kthread.irq_resume
 	pop	hl
 ; stop if the thread waked is a writer
 ; TODO, optimize so we don't wake a writer if readers as been awake ?
-	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
+	ld	a, (iy+KERNEL_THREAD_IO_DATA)
 	or	a, a
 	jr	nz, .__wake_done
 	djnz	.__wake_waiter
@@ -188,7 +188,7 @@ atomic_mutex:
 	ld	(hl), a
 	dec	hl
 	ld	a, (iy+KERNEL_THREAD_NICE)
-	ld	(iy+KERNEL_THREAD_LIST_DATA), a
+	ld	(iy+KERNEL_THREAD_IO_DATA), a
 	ei
 	pop	af
 	pop	iy
@@ -202,7 +202,7 @@ atomic_mutex:
 .__wait_again:
 	push	hl
 	inc	hl
-	lea	iy, iy+KERNEL_THREAD_LIST_DATA
+	lea	iy, iy+KERNEL_THREAD_IO_DATA
 ; we delayed the critical section at our best
 ; get the owner
 	ld	a, (hl)
@@ -212,10 +212,10 @@ atomic_mutex:
 	ld	ix, kthread_pid_map
 	ld	ixl, a
 	di
-	ld	a, (iy+KERNEL_THREAD_PRIORITY-KERNEL_THREAD_LIST_DATA)
+	ld	a, (iy+KERNEL_THREAD_PRIORITY-KERNEL_THREAD_IO_DATA)
 ; insert the node at the correct priority
 	call	kqueue.insert_priority
-	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	lea	iy, iy-KERNEL_THREAD_IO_DATA
 ; right here we should compare the arriving thread priority with the owner priority to alleviate priority inversion issue
 ; load priority of the current thread
 	ld	a, (iy+KERNEL_THREAD_PRIORITY)
@@ -266,7 +266,7 @@ atomic_mutex:
 	push	af
 	ld	iy, (kthread_current)
 ; restore priority of owning thread (only if there is actual waiter, so only if we are here)
-	ld	a, (iy+KERNEL_THREAD_LIST_DATA)
+	ld	a, (iy+KERNEL_THREAD_IO_DATA)
 	ld	(iy+KERNEL_THREAD_NICE), a
 	pop	af
 	inc	hl
@@ -274,7 +274,7 @@ atomic_mutex:
 	dec	hl
 	call	kqueue.remove_head
 	ei
-	lea	iy, iy-KERNEL_THREAD_LIST_DATA
+	lea	iy, iy-KERNEL_THREAD_IO_DATA
 	push	hl
 	call	kthread.resume
 	pop	hl

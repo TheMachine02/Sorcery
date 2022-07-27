@@ -84,12 +84,9 @@ user_enosys:
 
 user_error:
 	ei
-	push	ix
-	ld	ix, (kthread_current)
-	ld	(ix+KERNEL_THREAD_ERRNO), a
-	pop	ix
 	scf
 	sbc	hl, hl
+	ld	l, a
 	ret
 
 sysdef	_kmalloc
@@ -380,11 +377,4 @@ profil:
 	pop	hl
 	pop	iy
 	pop	af
-	ret
-	
-sysdef _void
-void:
-	ex	de, hl
-	ld	hl, $E40000
-	ldir
 	ret

@@ -70,9 +70,9 @@ KERNEL_INTERRUPT_ISR_DATA_USB:
 KERNEL_INTERRUPT_ISR_DATA_RTC:
  db	6	dup	KERNEL_HW_POISON
 KERNEL_INTERRUPT_ISR_DATA_KEYBOARD:
- db	6	dup	KERNEL_HW_POISON
+ db	8	dup	KERNEL_HW_POISON
 KERNEL_INTERRUPT_ISR_DATA_HRTIMER1:
- db	4	dup	KERNEL_HW_POISON
+ db	2	dup	KERNEL_HW_POISON
 KERNEL_HYPERVISOR_DATA:
  dl	sorcery_hypervisor
 KERNEL_HYPERVISOR_SETTINGS:			; should be placed at offset $79
@@ -97,10 +97,9 @@ kernel_stack_pointer:			; Stack pointer within idle thread
  dl	kernel_stack			; Stack will be writed at first unschedule
  dl	kernel_heap			; Boot/kernel  heap
  dl	$000000				; Time, NOTE : we finish at offset $A8, end of stack
- db	$00				; errno (if we need to set it)
  db	$00				; current signal
 kernel_stack_limit:
- db	85	dup	KERNEL_HW_POISON
+ db	86	dup	KERNEL_HW_POISON
 kernel_stack:				; kernel stack head (HW stack)
   db	KERNEL_HW_POISON		; scrap
 kernel_heap:				; kernel heap bottom (HW heap), also 512 bytes scrap, used for lot of things

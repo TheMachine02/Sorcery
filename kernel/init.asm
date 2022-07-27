@@ -2,7 +2,7 @@ define	BOOT_DIRTY_MEMORY0		$D0009B		; 1 byte ]
 define	BOOT_DIRTY_MEMORY1		$D000AC		; 1 byte ] on interrupt
 define	BOOT_DIRTY_MEMORY2		$D000FF		; 3 bytes
 define	BOOT_DIRTY_MEMORY3		$D00108		; 9 bytes
-define	KERNEL_STACK_SIZE		87		; size of the stack
+define	KERNEL_STACK_SIZE		86		; size of the stack
 define	KERNEL_CRYSTAL_CTLR		$00		; port 00 is master control
 define	KERNEL_CRYSTAL_DIVISOR		CONFIG_CRYSTAL_DIVISOR
 define	KERNEL_CRYSTAL_HEART		CONFIG_CRYSTAL_HEART
@@ -134,6 +134,8 @@ file	'initramfs'
 	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
+	ld	hl, .arch_welcome
+	call	printk
 ; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
 if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs
@@ -158,19 +160,17 @@ end if
 
 .arch_dev_path:
  db	"/dev",0
- 
 .arch_bin_path:
  db	"/bin/init",0
-
 .arch_bin_argv:
 .arch_bin_envp:
  dl	NULL
-
 .arch_bin_error:
  db	$01, KERNEL_ERR, "init: failed to execute /bin/init",10,"init: running emergency shell",10,0
-
 .arch_heart:
  db	$01, KERNEL_INFO, "hw: interrupt heartbeat=",KERNEL_CRYSTAL_HEART, "Hz",10, 0
+.arch_welcome:
+ db	$01, KERNEL_INFO, "welcome to sorcery !", 10, 0
  
 sysdef _reboot
 reboot:
@@ -207,6 +207,7 @@ name:
 	dl	.name_release		; Operating system release (e.g., "1.0.0")
 	dl	.name_version		; Operating system version
 	dl	.name_architecture	; Hardware identifier
+
 .name_system:
  db	CONFIG_KERNEL_NAME, 0
 .name_node:
