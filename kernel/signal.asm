@@ -21,6 +21,8 @@ sysdef _kill
 	ld	a, c
 	add	a, a
 	add	a, a
+; can't send signal to PID 0
+	jr	z, .__kill_no_thread
 	ld	hl, kthread_pid_map
 	ld	l, a
 	ld	a, (hl)
@@ -34,22 +36,18 @@ sysdef _kill
 ; so now, we may send the signal
 ; special signal : sigstop and sigcont
 	ld	a, b
+	cp	a, SIGMAX
+	jr	nc, .__kill_no_signal
 	cp	a, SIGSTOP
 	jr	z, .__kill_send_stop
 	cp	a, SIGCONT
 	jr	z, .__kill_send_cont
 ; generic
 	call	.mask_operation
-; is the signal is blocked ?
-; save the mask
-	ld	b, a
-	and	a, (hl)
-	jr	z, .__kill_no_signal
 ; we can mark it pending
 	inc	hl
 	inc	hl
 	inc	hl
-	ld	a, b
 	or	a, (hl)
 	ld	(hl), a
 ; it is pending right now
