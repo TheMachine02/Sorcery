@@ -16,6 +16,7 @@ sysdef _kill
 ; kill set the signal in the pending mask
 ; TODO : check permission
 ; TODO : implement force
+	push	iy
 	ld	b, a
 	tsti
 	ld	a, c
@@ -59,6 +60,7 @@ sysdef _kill
 ; recompute signal if needed
 	call	.chkset
 	rsti
+	pop	iy
 	ret
 
 .__kill_no_thread:
@@ -71,6 +73,7 @@ sysdef _kill
 	ld	a, EINVAL
 .__kill_errno:
 	rsti
+	pop	iy
 	scf
 	ret
 
@@ -81,7 +84,8 @@ sysdef _kill
 	inc	hl
 	inc	hl
 	or	a, (hl)
-	and	a, not (1 shl (SIGCONT mod 8))
+assert	SIGCONT = 18
+	and	a, not (1 shl 1)
 	ld	(hl), a
 	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
 	cp	a, SIGCONT
@@ -96,6 +100,7 @@ sysdef _kill
 ; recompute signal if needed
 	call	.chkset
 	rsti
+	pop	iy
 	ret
 
 .__kill_send_cont:
@@ -105,7 +110,8 @@ sysdef _kill
 	inc	hl
 	inc	hl
 	or	a, (hl)
-	and	a, not (1 shl (SIGSTOP mod 8))
+assert	SIGSTOP = 19
+	and	a, not (1 shl 2)
 	ld	(hl), a
 	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
 	cp	a, SIGSTOP
@@ -118,6 +124,7 @@ sysdef _kill
 	call	c, task_switch_running
 	call	.chkset
 	rsti
+	pop	iy
 	ret
 
 sysdef	_sigprocmask
@@ -135,73 +142,45 @@ sysdef	_sigprocmask
 	inc	de
 	ld	a, (de)
 	xor	a, (hl)
-assert	SIGKILL > 8
-assert	SIGKILL < 16
-	or	a, 1 shl (SIGKILL mod 8)
+assert	SIGKILL = 9
+	or	a, 1 shl 0
 	ld	(de), a
 	inc	hl
 	inc	de
 	ld	a, (de)
 	xor	a, (hl)
-assert	SIGCONT > 16
-assert	SIGSTOP > 16
-	or	a, (1 shl (SIGCONT mod 8)) or (1 shl (SIGSTOP mod 8))
+assert	SIGCONT = 18
+assert	SIGSTOP = 19
+	or	a, (1 shl 1) or (1 shl 2)
 	ld	(de), a
 	ret
 
 .default_handler:
- dl	kthread.core
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.core
- db	0
- dl	kthread.core
- db	0
- dl	kthread.core
- db	0
- dl	kthread.core
- db	0
- dl	.ignore
- db	0
- dl	kthread.core
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.core
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.exit
- db	0
- dl	kthread.exit
- db	0
- dl	.ignore
- db	0
- dl	.ignore
- db	0
- dl	.ignore		; sigcont
- db	0
- dl	.stop
- db	0
- dl	.stop
- db	0
- dl	.stop
- db	0
- dl	.stop
- db	0
- dl	kthread.core
- db	0
-
-.ignore:
-	ret
-
+	jp	$00
+	jp	kthread.exit
+	jp	kthread.exit
+	jp	kthread.core
+	jp	kthread.core
+	jp	kthread.core
+	jp	kthread.core
+	jp	$00		; signal 7
+	jp	kthread.core
+	jp	kthread.exit	; signal 9 kill
+	jp	kthread.exit
+	jp	kthread.core
+	jp	kthread.exit
+	jp	kthread.exit
+	jp	kthread.exit
+	jp	kthread.exit
+	jp	$00		; signal 16
+	jp	.ignore		; sigchld
+	jp	.ignore		; sigcont
+	jp	.stop
+	jp	.stop
+	jp	.stop		; sigcont
+	jp	.stop
+	jp	kthread.core
+	
 .stop:
 	di
 	call	task_switch_stopped
@@ -234,15 +213,15 @@ user_return_signal:=$
 	di
 	exx
 	ex	af, af'
+	ld	hl, i
+	inc	hl
+	ld	iy, (hl)
 	call	.chkset
 ; and perform context restore to see if any more signal is *pending*
 	jp	kinterrupt.irq_context_restore
 
-; check for signal recalc
+; check for signal recalc for thread iy
 .chkset:
-	ld	hl, i
-	inc	hl
-	ld	iy, (hl)
 	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
 	or	a, a
 	ret	nz
@@ -284,16 +263,21 @@ user_return_signal:=$
 ; reset the bit within pending
 	xor	a, (hl)
 	ld	(hl), a
+.ignore:
 	ret
 
 .mask_operation:
 ; from signal a, for thread iy, output both signal mask in a and signal byte in hl
+; 0 -> 7 byte 0
+; 8 -> 15 byte 1
+; 16 -> 23 byte 2
 	lea	hl, iy+KERNEL_THREAD_SIGNAL_MASK
-	bit	3, a
-	jr	z, $+3
+	dec	a
+	cp	a, 8
+	jr	c, $+3
 	inc	hl
-	bit	4, a
-	jr	z, $+3
+	cp	a, 16
+	jr	c, $+3
 	inc	hl
 	and	a, 7
 	ld	b, a
