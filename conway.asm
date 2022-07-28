@@ -289,6 +289,10 @@ D1AB7F:
 	push	hl
 	ei
 	call	video.vsync
+	ld	hl, 2
+	ld	bc, 0
+	ld	de, WNOHANG
+	call	_waitpid
 	di
 	pop	hl
 	ld	($E30B07), sp

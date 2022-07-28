@@ -72,7 +72,10 @@ nmi:
 .core_trampoline:
 	call	.exception_write
 ; we should be able to recover here ;
-	jp	kthread.core
+	ld	l, SIGSEGV
+	push	hl
+	push	hl
+	jp	signal.core
 
 .memory_protection:
 	ld	hl, .MEMORY_EXCEPTION

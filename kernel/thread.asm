@@ -29,6 +29,7 @@ virtual	at 0
 	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
 ; more attribute
 	KERNEL_THREAD_NICE:			rb	1	; nice value (used for priority boosting)
+	KERNEL_THREAD_EXIT_FLAGS:		rb	1
 	KERNEL_THREAD_EXIT_STATUS:		rb	1
 	KERNEL_THREAD_ATTRIBUTE:		rb	1	; some flags value
 ; thread waiting ;
@@ -89,9 +90,12 @@ define	ROOT_USER				$FF	; maximal permission, bit 7 is ROOT bit
 define	PERMISSION_USER				$01	; minimal permission
 define	SUPER_USER_BIT				7
 
-define	WNOHANG					1
-define	WUNTRACED				2
-define	WCONTINUED				4
+define	WNOHANG					1 shl 0
+
+; exit flags
+define	EXITED					1 shl 0
+define	SIGNALED				1 shl 1
+define	COREDUMP				1 shl 2
 
 kthread:
 
@@ -258,23 +262,94 @@ sysdef _waitpid
 ; -1 	meaning wait for any child process.
 ; NOT IMPLEMENTED : 0 	meaning wait for any child process whose process group ID is equal to that of the calling process.
 ; > 0 	meaning wait for the child whose process ID is equal to the value of pid. 
-; ECHILD; (for wait()) The calling process does not have any unwaited-for children.
-; ECHILD; (for waitpid() or waitid()) The process specified by pid (waitpid()) or idtype and id (waitid()) does not exist or is not a child of the calling process. (This can happen for one's own child if the action for SIGCHLD is set to SIG_IGN. See also the Linux Notes section about threads.)
-; EINTR ; WNOHANG was not set and an unblocked signal or a SIGCHLD was caught; see signal(7).
-; EINVAL ; The options argument was invalid. 
-; waitpid(): on success, returns the process ID of the child whose state has changed; if WNOHANG was specified and one or more child(ren) specified by pid exist, but have not yet changed state, then 0 is returned. On error, -1 is returned. 
+; if status is not zero, then status is filled with information
+; options can be WNOHANG
+; hl, bc, de
+; 	dbg	open
+	bit	7, h
+	jr	z, .__waitpid_watch_schild
+.__waitpid_error:
+	ld	a, ECHILD
+	jp	user_error
+.__waitpid_watch_schild:
+; watch a specific child given by hl
+	ld	a, l
+	ld	hl, kthread_pid_map
+	add	a, a
+	add	a, a
+	ld	l, a
+	inc	hl
+	ld	iy, (hl)
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .__waitpid_error
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	cp	a, (iy+KERNEL_THREAD_PPID)
+; if not zero, we are not the parent of the thread
+	jr	nz, .__waitpid_error
+; we are the parent
+; thread status ?
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_ZOMBIE
+	jr	z, .__waitpid_watch_zombie
+	ld	a, e
+	and	a, WNOHANG
+	jr	nz, .__waitpid_watch_schild_hang
+.__waitpid_watch_schild_loop:
+; wait for child signal and check if this is the one we were waiting for
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	cp	a, TASK_ZOMBIE
+	jr	z, .__waitpid_watch_zombie
+	push	iy
+	push	bc
+	call	.suspend
+	pop	bc
+	pop	iy
+	jr	.__waitpid_watch_schild_loop
+.__waitpid_watch_schild_hang:
+; we return 0 since the PID exist and we are the parent of it
+	or	a, a
+	sbc	hl, hl
 	ret
-
-sysdef _core
-.core:
-; write whole process image to a "core" file in reallocated mode
-; leaf file format
-	jp	.exit
-
+.__waitpid_watch_zombie:
+; the thread (iy) we were waiting for is a zombie
+; fill bc with status
+; and proprely free the thread
+; enter atomic state
+	di
+; check status buffer
+	or	a, a
+	sbc	hl, hl
+	adc	hl, bc
+	jr	z, .__waitpid_watch_reap
+	ex	de, hl
+	lea	hl, iy+KERNEL_THREAD_EXIT_FLAGS
+	ldi
+	ldi
+.__waitpid_watch_reap:
+; we need to : free the PID and kmem_cache free the tls
+	ld	a, (iy+KERNEL_THREAD_PID)
+	call	.free_pid
+	ei
+	push	af
+	lea	hl, iy+KERNEL_THREAD_HEADER
+	call	kmem.cache_free
+; all good
+	pop	af
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	ret
+	
 sysdef _exit
 .exit:
 	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), EXITED
 	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
+.do_exit:
 ; close all fd
 	ld	ix, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
 	ld	b, KERNEL_THREAD_FILE_DESCRIPTOR_MAX
@@ -438,6 +513,12 @@ sysdef _exit
 	ld	hl, kthread_pid_map
 	ld	l, a
 	xor	a, a
+	ld	(hl), a
+	inc	hl
+	ld	(hl), a
+	inc	hl
+	ld	(hl), a
+	inc	hl
 	ld	(hl), a
 	ret
 

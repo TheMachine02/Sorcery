@@ -156,30 +156,51 @@ assert	SIGSTOP = 19
 	ret
 
 .default_handler:
-	jp	$00
-	jp	kthread.exit
-	jp	kthread.exit
-	jp	kthread.core
-	jp	kthread.core
-	jp	kthread.core
-	jp	kthread.core
-	jp	$00		; signal 7
-	jp	kthread.core
-	jp	kthread.exit	; signal 9 kill
-	jp	kthread.exit
-	jp	kthread.core
-	jp	kthread.exit
-	jp	kthread.exit
-	jp	kthread.exit
-	jp	kthread.exit
-	jp	$00		; signal 16
+	jp	.core		; signal 0, undef
+	jp	.exit
+	jp	.exit
+	jp	.core
+	jp	.core
+	jp	.core
+	jp	.core
+	jp	.core		; signal 7, undef
+	jp	.core
+	jp	.exit		; signal 9 kill
+	jp	.exit
+	jp	.core
+	jp	.exit
+	jp	.exit
+	jp	.exit
+	jp	.exit
+	jp	.core		; signal 16, undef
 	jp	.ignore		; sigchld
 	jp	.ignore		; sigcont
 	jp	.stop
 	jp	.stop
 	jp	.stop		; sigcont
 	jp	.stop
-	jp	kthread.core
+	jp	.core
+
+.exit:
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED
+; we are in signal handler actually, we are able to grab the signal in the stack
+; return adress (_sigreturn)
+	pop	hl
+; signal code	
+	pop	hl
+	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
+	jp	kthread.do_exit
+
+.core:
+; write whole process image to a "core" file in reallocated mode
+; leaf file format
+	ld	iy, (kthread_current)
+	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED or COREDUMP
+	pop	hl
+	pop	hl
+	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
+	jp	kthread.do_exit
 	
 .stop:
 	di
