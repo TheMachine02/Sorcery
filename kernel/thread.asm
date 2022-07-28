@@ -396,7 +396,8 @@ sysdef _waitpid
 	ld	l, a
 	ret
 
-sysdef _exit
+; NOTE : we don't need syscall wrapper around here since we will never come back from kernelspace
+_exit=$
 .exit:
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), EXITED
