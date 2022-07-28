@@ -78,28 +78,6 @@ end macro
 if CONFIG_DEBUG
 
 DEBUG_THREAD:
-	dbg	open
-; ; hl is path, bc is flags, de is mode
-	ld	hl, DEBUG_PATH
-	ld	bc, KERNEL_VFS_O_RW or (KERNEL_VFS_O_CREAT *256)
-	call	_open
-
-	push	hl
-	ld	de, $D01000
-	ld	bc, 32768
-	call	_write
-	pop	ix
-; ; hl adress, de length, bc flag, ix fd, iy offset
-	ld	hl, $D30000
-	ld	de, 32768
-	ld	bc, MAP_PRIVATE
-	ld	iy, 0
-	call	_mmap
-	
-	
 	ret
-
-DEBUG_PATH:
- db "/shmfile", 0
  
  end if

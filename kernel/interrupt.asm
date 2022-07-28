@@ -394,7 +394,7 @@ kscheduler:
 .dispatch_queue:
 	inc	hl
 	ld	de, (hl)
-; iy is previous thread, ix is the new thread, let's switch them
+; iy is previous thread, de is the new thread, let's switch them
 ; are they the same ?
 	lea	hl, iy+0
 	sbc	hl, de

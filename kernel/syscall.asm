@@ -35,11 +35,6 @@ macro	hypercall x
 	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
-sysdef _pause
-	call	kthread.suspend
-	ld	a, EINTR
-	jr	user_error
-
 user_perm:
 ; NOTE : expect to return to the trampoline at the current code level (so, first routine to be called in the routine, and will exit the routine itself)
 ; check for the thread permission currently executing this code span
@@ -136,26 +131,6 @@ sysdef _sbrk
 ; all good, return the old break value
 	ld	(iy+KERNEL_THREAD_BREAK), bc
 	ex	de, hl
-	ret
-	
-sysdef _usleep
-usleep:
-; hl = time in ms, return 0 if sleept entirely or -1 with errno set if not
-; EINTR, or EINVAL
-	ld	iy, (kthread_current)
-	di
-	call	task_switch_sleep_ms
-	call	task_yield
-; we are back with interrupt
-; this one is risky with interrupts, so disable them the time to do it
-	di
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
-	ld	a, l
-	or	a, h
-	ld	a, EINTR
-	jp	nz, user_error
-	ei
-	sbc	hl, hl
 	ret
 
 sysdef _getpid

@@ -174,7 +174,7 @@ console:
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	ld	(hl), 2
 	ld	hl, 10
-	call	kthread.sleep	; sleep around 10 ms
+	call	kthread.usleep	; sleep around 10 ms
 ; keyboard should be okay now
 	ld	hl, DRIVER_KEYBOARD_CTRL
 	xor	a, a
@@ -326,6 +326,9 @@ console:
 	ld	hl, .DMESG
 	call	.check_builtin
 	jp	z, .dmesg
+	ld	hl, .TOP
+	call	.check_builtin
+	jp	z, .top
 ; try to exec the program in /bin/xxxx
 ; bc = string size
 	ld	hl, console_line
@@ -834,6 +837,8 @@ console:
  db 5, "free",0
 .DMESG:
  db 6, "dmesg",0
+.TOP:
+ db 4, "top",0
  
 .BINARY_PATH:
  db "/bin/",0
@@ -923,3 +928,127 @@ include	'logo.inc'
  db $02, $1E, $0A, $0F, $14, $19, $FD, $FD
  db $FE, $06, $0B, $10, $15, $1A, $FC, $FD
  db $FB, $FA, $F9, $F8, $FD, $FD, $FD, $FD
+
+ 
+ 
+ 
+ 
+.TOP_STR:
+ db $1B,"[47m", $1B, "[30m" 
+ db " PID  %cpu" ,10, $1B, "[39m", $1B, "[49m"
+
+.top:
+	call	rtc.irq_lock
+	ld	b, 18
+	ld	hl, kthread_pid_map+4
+	ld	de, 0
+.top_init_time_loop:
+	ld	a, (hl)
+	or	a, a
+	jr	z, .top_init_skip
+	inc	hl
+	ld	iy, (hl)
+	ld	(iy+KERNEL_THREAD_TIME), de
+	inc	hl
+	inc	hl
+	inc	hl
+.top_init_skip:
+	djnz	.top_init_time_loop
+.top_loop:
+; clear all console
+	di
+	call	video.vsync_atomic
+	ld	hl, $E40000
+	ld	de, (DRIVER_VIDEO_SCREEN)
+	ld	bc, 76800
+	ldir
+	ld	(console_cursor_xy), bc
+; display the str
+	ld	hl, (DRIVER_RTC_COUNTER_SECOND)
+	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_MINUTE)
+	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_HOUR)
+	push	hl
+	ld	hl, (DRIVER_RTC_COUNTER_DAY)
+	push	hl
+	ld	hl, .UPTIME_STR
+	push	hl
+	ld	hl, console_line
+	push	hl
+	call	_boot_sprintf_safe
+	ld	hl, 18
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, console_line
+	ld	bc, 34
+	call	tty.phy_write
+
+	ld	hl, .TOP_STR
+	ld	bc, 31
+	call	tty.phy_write
+
+	ld	b, 18
+	ld	hl, kthread_pid_map+4
+.top_data_loop:
+
+	push	bc
+	ld	a, (hl)
+	or	a, a
+	jr	z, .top_skip
+	inc	hl
+	ld	iy, (hl)
+	dec	hl
+	ld	de, (iy+KERNEL_THREAD_TIME)
+	push	hl
+	ld	a, l
+	sbc	hl, hl
+	rra
+	sra	a
+; display a
+	ld	(iy+KERNEL_THREAD_TIME), hl
+	ld	l, a
+	push	hl
+; de / 32768 * 100
+	ex	de, hl
+	ld	l, 200
+	mlt	hl
+	ld	l, h
+	ld	h, 0
+	ex	(sp), hl
+	push	hl
+	ld	hl, .TOP_LINE_STR
+	push	hl
+	ld	hl, console_line
+	push	hl
+	call	_boot_sprintf_safe
+	ld	hl, 12
+	add	hl, sp
+	ld	sp, hl
+	ld	hl, console_line
+	ld	bc, 10
+	call	tty.phy_write
+	pop	hl
+.top_skip:
+	inc	hl
+	inc	hl
+	inc	hl
+	inc	hl
+	pop	bc
+	djnz	.top_data_loop
+; check for clear
+	call	rtc.wait_second
+	ld	hl, DRIVER_KEYBOARD_CTRL
+	ld	(hl), 2
+	xor	a, a
+.top_wait_busy:
+	cp	a, (hl)
+	jr	nz, .top_wait_busy
+	ld	a, ($F5001C)
+	bit	6, a
+	jp	z, .top_loop
+	call	rtc.irq_unlock
+	jp	.prompt
+
+.TOP_LINE_STR:
+ db " %3d  %3d", 10, 0

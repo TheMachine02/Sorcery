@@ -1,9 +1,11 @@
 define	CLOCKS_PER_SEC	32768
 
-define	TMS_UTIME	0
-define	TMS_STIME	3
-define	TMS_CUTIME	6
-define	TMS_CSTIME	9
+virtual	at 0
+	TMS_UTIME:	rb	3
+	TMS_STIME:	rb	3
+	TMS_CUTIME:	rb	3
+	TMS_CSTIME:	rb	3
+end	virtual
 
 sysdef _clock
 clock:

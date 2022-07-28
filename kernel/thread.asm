@@ -69,11 +69,13 @@ define	KERNEL_THREAD_SIGNAL_VECTOR_SIZE	128	; 24*4 bytes
 define	KERNEL_THREAD_TLS_SIZE			128	; header
 define	KERNEL_THREAD_FILE_DESCRIPTOR_SIZE	256	; 8*32 bytes FD
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	32
+
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
-
+; thread attribute
 define	THREAD_PROFIL				0
 
+; task status
 define	TASK_READY				0
 define	TASK_INTERRUPTIBLE			1	; can be waked up by signal
 define	TASK_UNINTERRUPTIBLE			2
@@ -81,16 +83,21 @@ define	TASK_STOPPED				3	; can be waked by signal only SIGCONT, state of SIGSTOP
 define	TASK_ZOMBIE				4
 define	TASK_IDLE				255	; special for the scheduler
 
+; priority
 define	SCHED_PRIO_MAX				0
 define	SCHED_PRIO_MIN				12
 define	NICE_PRIO_MIN				19
 define	NICE_PRIO_MAX				-20
 
+; user
 define	ROOT_USER				$FF	; maximal permission, bit 7 is ROOT bit
 define	PERMISSION_USER				$01	; minimal permission
 define	SUPER_USER_BIT				7
 
+; wait pid option parameter
 define	WNOHANG					1 shl 0
+define	WUNTRACED				1 shl 1
+define	WCONTINUED				1 shl 2
 
 ; exit flags
 define	EXITED					1 shl 0
@@ -379,6 +386,12 @@ sysdef _waitpid
 	ldi
 	ldi
 .__waitpid_reap_null:
+; increment child time
+	ld	hl, (iy+KERNEL_THREAD_TIME)
+	ld	ix, (kthread_current)
+	ld	de, (ix+KERNEL_THREAD_TIME_CHILD)
+	add	hl, de
+	ld	(ix+KERNEL_THREAD_TIME_CHILD), hl
 ; remove thread from zombie queue (node iy, queue zombie)
 	ld	hl, kthread_queue_zombie
 	call	kqueue.remove
@@ -475,13 +488,11 @@ _exit=$
 	ex	af, af'
 	jp	kscheduler.do_schedule
 
-.sleep:
+sysdef	_usleep
+.usleep:
 ; hl = time in ms, return 0 is sleept entirely, or approximate time to sleep left
 ; carry is set if we haven't sleep enough time
 ; note that the kernel will wake you always *after* this time elapsed, or if a not blocked signal reached you
-	push	iy
-	push	de
-	push	af
 	ld	iy, (kthread_current)
 	di
 	call	task_switch_sleep_ms
@@ -492,14 +503,8 @@ _exit=$
 	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
 	ld	a, l
 	or	a, h
-	jr	nz, .sleep_intr
-	ei
-	sbc	hl, hl
-	pop	af
-	pop	de
-	pop	iy
-	ret
-.sleep_intr:
+	ret	z
+.__usleep_eintr:
 ; we were interrupted by signal
 ; hl is out pseudo 16 bits counter
 ; unwind it
@@ -535,11 +540,15 @@ _exit=$
 	add	hl, hl
 	add	hl, hl
 	add	hl, de
-	pop	af
-	pop	de
-	pop	iy
 	scf
 	ret
+
+sysdef	_pause
+.pause:
+; generic suspend, will be waked by a signal
+	call	.suspend
+	ld	a, EINTR
+	jp	user_error
 
 ; DANGEROUS AREA, helper function ;	
 
@@ -638,7 +647,7 @@ _exit=$
 	ret
 
 ; suspend, wait, resume destroy hl, iy and a
-	
+
 .suspend:
 	xor	a, a
 .wait:
