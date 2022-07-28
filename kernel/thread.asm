@@ -548,7 +548,7 @@ task_switch_zombie:
 	ld	hl, kthread_mqueue_active
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
-	ld	l, kthread_queue_retire and $FF
+	ld	l, kthread_queue_zombie and $FF
 	jr	kqueue.insert_head
 
 ; from TASK_READY to TASK_STOPPED

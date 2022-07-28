@@ -126,6 +126,8 @@ kthread_queue_retire:			; retire queue
 kthread_queue_idle:
  db	$FF
  dl	kernel_idle
+kthread_queue_zombie:
+ db	4	dup	$FF 
 ktimer_queue:				; timer queue
  db	4	dup	$FF
 kpower_interrupt_mask:			; temporary interrupt save register
@@ -136,17 +138,10 @@ kpower_lcd_param:
  db	3	dup	KERNEL_HW_POISON
 kinterrupt_lru_page:
  db	KERNEL_HW_POISON		; vfs cache decay
-klru_pages:
- db	8	dup	KERNEL_HW_POISON
 dmesg_log:
  db	16	dup	KERNEL_HW_POISON
- db	2	dup	KERNEL_HW_POISON
-kmem_cache_buffctl:			; 16 slub buffers, 7 defined, 9 user defined
-kmem_cache_s8:
- db	4	dup	$FF
- dw	8
- db	128
- db	0
+ db	6	dup	KERNEL_HW_POISON
+kmem_cache_buffctl:			; 16 slub buffers, 6 defined, 10 user defined
 kmem_cache_s16:
  db	4	dup	$FF
  dw	16
@@ -178,7 +173,7 @@ kmem_cache_s512:
  db	2
  db	0
 kmem_cache_user:
- db	72	dup	$00		; null is reference to not allocated
+ db	80	dup	$00		; null is reference to not allocated
 kvfs_root:				; 64 bytes inode, the root of all root
  db	15				; directory (8), RWX permission
  db	$00,$FF				; atomic lock
