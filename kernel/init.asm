@@ -134,21 +134,22 @@ file	'initramfs'
 	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
-	ld	hl, .arch_welcome
-	call	printk
 ; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
 if CONFIG_MOUNT_ROOT_TIFS
 ; mount tifs & symlink it to binary, config_tifs
 	call	tifs.mount_root
 end if
+	ld	hl, .arch_welcome
+	call	printk
+; now launch init
 ; if no bin/init found, error out and do a console takeover
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-	call	leaf.execve
+;	call	leaf.execve
+	jp	init_conway
 	ld	hl, .arch_bin_error
 	call	printk
-	jp	init_conway
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
 	call	console.fb_takeover
 	ret	c
