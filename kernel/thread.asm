@@ -105,8 +105,8 @@ sysdef _thread
 ; int thread_create(void* thread_entry, void* thread_arg)
 ; register IY is entry, register HL is send to the stack for void* thread_arg
 ; NOTE: for syscall wrapper : need to grab the pid of the thread and ouptput it to a *thread_t id
-; NOTE: you can't call create thread in a interrupt disabled context, use irq_create for that
-	call	.irq_create
+; NOTE: you can't call create thread in a interrupt disabled context (IRQ), use irq_create for that
+	call	.do_create
 	jp	c, user_error
 	jp	task_schedule
 
@@ -138,7 +138,7 @@ sysdef _thread
 	scf
 	ret
 	
-.irq_create:
+.do_create:
 	tsti
 ; save hl, de, bc registers
 	exx
@@ -242,9 +242,6 @@ sysdef _thread
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_active
 	call   kqueue.insert_head
-; set reschedule value
-	ld	hl, i
-	ld	(hl), $80
 	exx
 	or	a, a
 	sbc	hl, hl
@@ -252,6 +249,18 @@ sysdef _thread
 	rsti
 ; return hl = pid, iy = new thread handle
 	or	a, a
+	ret
+	
+.irq_create:
+; can be called in a interrupt disabled state
+; span an irq thread which are all own by PID 1
+	di
+	call	.do_create
+	ret	c
+	ld	(iy+KERNEL_THREAD_PPID), 1
+; set reschedule value
+	ld	hl, i
+	ld	(hl), $80
 	ret
 	
 sysdef _waitpid

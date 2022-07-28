@@ -31,7 +31,7 @@ __D1A8BA:
 	di 
 	push ix
 	push iy
-	ld ($E30B07),sp
+	ld ($E30B17),sp
 	ld sp,$D5C80D
 	or a,a
 	sbc hl,hl
@@ -285,7 +285,7 @@ D1AB7F:
 	or	a, a
 	sbc	hl, hl
 	add	hl, sp
-	ld	sp, ($E30B07)
+	ld	sp, ($E30B17)
 	push	hl
 	ei
 	call	video.vsync
@@ -295,7 +295,7 @@ D1AB7F:
 	call	_waitpid
 	di
 	pop	hl
-	ld	($E30B07), sp
+	ld	($E30B17), sp
 	ld	sp, hl
 	
 	ld	hl,$F5001C
