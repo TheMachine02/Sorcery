@@ -236,8 +236,7 @@ sysdef _thread
 	ldi
 ; setup the queue
 ; insert the thread to the ready queue
-	ld	h, ( kthread_mqueue_active and $00FF00 ) shr 8
-	ld	l, (iy+KERNEL_THREAD_PRIORITY)
+	ld	hl, kthread_mqueue_active
 	call   kqueue.insert_head
 ; set reschedule value
 	ld	hl, i
