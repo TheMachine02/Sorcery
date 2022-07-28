@@ -213,6 +213,7 @@ kmem:
 	tsti
 	push	bc
 	push	de
+	push	iy
 	dec	sp
 	push	hl
 	ex	de, hl
@@ -223,15 +224,15 @@ kmem:
 	rra
 	srl	h
 	rra
-	ld	hl, KERNEL_MM_PHY_RAM shr 2
-	ld	h, a
-	add	hl, hl
-	add	hl, hl
-	push	hl
-	ex	(sp), iy
+; find the slab associated with this adress
 	ld	bc, kmm_ptlb_map
 	ld	c, a
 	ld	a, (bc)
+; sanitize input
+	tst	a, KERNEL_MM_PAGE_CACHE_MASK
+	jr	z, .__cache_free_error
+	tst	a, KERNEL_MM_PAGE_UNEVICTABLE_MASK
+	jr	z, .__cache_free_error
 	and	a, KERNEL_MM_PAGE_USER_MASK
 	ld	hl, kmem_cache_buffctl shr 3
 	or	a, l
@@ -242,33 +243,30 @@ kmem:
 	push	hl
 	ex	(sp), ix
 	inc	b
-; de is pointer, hl is our slab, bc is ptlb
-; iy is our *base* page adress
-; de is pointer, hl is our slab, bc is ptlb
+; de is pointer, ix/hl is our slab, bc is ptlb adress, a is ptlb
 	ld	a, (bc)
-; count = 0, create the header block and add slab to the structure queue
-; count = 1, create the free pointer and made it point itself
-; count > 1, update the free pointer
 	inc	a
 	ld	(bc), a
 	dec	b
+; check count
+; if count was previously zero, create the link
 	dec	a
 	jr	z, .__cache_free_link
-	dec	a
-	jr	z, .__cache_free_ptr
-	inc	a
 	inc	a
 	cp	a, (ix+KERNEL_SLAB_CACHE_DATA_COUNT)
 	jr	z, .__cache_shrink
-; default pointer updating
-; grab page base adress	(mask 1024)
-; hl = our free pointer
+; else just update the free pointer
+; find the header block adress
+	call	.__cache_free_find_header
+; iy is the header block
+; de = our free pointer
 	ex	de, hl
 	ld	bc, (iy+KERNEL_SLAB_PAGE_POINTER)
 	ld	(hl), bc
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), hl
 .__cache_free_restore:
 	pop	ix
+.__cache_free_error:
 	pop	iy
 	pop	de
 	pop	bc
@@ -278,21 +276,38 @@ kmem:
 	sbc	hl, hl
 	ret
 
-.__cache_free_ptr:
+.__cache_free_find_header:
+; c is the pltb we search for
+	ld	a, c
+	ld	b, (ix+KERNEL_SLAB_CACHE_COUNT)
+	inc	b
+	ld	iy, (ix+KERNEL_SLAB_CACHE_QUEUE)
+.__cache_free_find_loop:
+	cp	a, (iy+KERNEL_SLAB_PAGE_PTLB)
+	ret	z
+	ld	iy, (iy+KERNEL_SLAB_PAGE_NEXT)
+	djnz	.__cache_free_find_loop
+; should be impossible to reach this spot
+	scf
+	ret
+
+.__cache_free_link:
+; make the block be the header
+	ld	iy, 0
+	add	iy, de
+	lea	hl, ix+KERNEL_SLAB_CACHE
+	call	kqueue.insert_head
+	ld	(iy+KERNEL_SLAB_PAGE_PTLB), c
 	ld	(iy+KERNEL_SLAB_PAGE_POINTER), de
 	jr	.__cache_free_restore
 
-.__cache_free_link:
-	lea	hl, ix+KERNEL_SLAB_CACHE
-	call	kqueue.insert_head
-	ld	(iy+KERNEL_SLAB_PAGE_PTLB), b
-	jr	.__cache_free_restore
-
 .__cache_shrink:
+; find the header block
+	call	.__cache_free_find_header
 	lea	hl, ix+KERNEL_SLAB_CACHE
 	call	kqueue.remove
-	sbc	hl, hl
-	adc	hl, bc
+	ld	hl, kmm_ptlb_map
+	ld	l, a
 	call	mm.flush_page
 	jr	.__cache_free_restore
 

@@ -19,3 +19,5 @@ define	SIGTSTP		20          ; Stop typed at term     ; STOP
 define	SIGTTIN		21          ; Terminal input         ; STOP
 define	SIGTTOU		22          ; Terminal output        ; STOP
 define	SIGSYS		23          ; Bad syscall            ; CORE
+
+define	SIGMAX		24
