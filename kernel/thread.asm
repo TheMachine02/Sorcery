@@ -274,12 +274,38 @@ sysdef _waitpid
 ; if status is not zero, then status is filled with information
 ; options can be WNOHANG
 ; hl, bc, de
-; 	dbg	open
 	bit	7, h
 	jr	z, .__waitpid_watch_schild
+.__waitpid_watch_child:
+; wait for any child to come up with a excuse
+	di
+	call	.check_child
+	jr	c, .__waitpid_error
+; we have at least one child zombie or alive
+; check the zombie queue for terminated thread
+	ld	hl, kthread_queue_zombie
+	ld	a, (hl)
+	or	a, a
+	jp	p, .__waitpid_check_zombie
+	ld	a, e
+	and	a, WNOHANG
+	jr	nz, .__waitpid_hang
+.__waitpid_watch_child_loop:
+	di
+	ld	hl, kthread_queue_zombie
+	ld	a, (hl)
+	or	a, a
+	jp	p, .__waitpid_check_zombie
+	call	.suspend
+	jr	.__waitpid_watch_child_loop
 .__waitpid_error:
 	ld	a, ECHILD
 	jp	user_error
+.__waitpid_hang:
+; we return 0 since the PID exist and we are the parent of it
+	or	a, a
+	sbc	hl, hl
+	ret
 .__waitpid_watch_schild:
 ; watch a specific child given by hl
 	ld	a, l
@@ -300,50 +326,67 @@ sysdef _waitpid
 ; if not zero, we are not the parent of the thread
 	jr	nz, .__waitpid_error
 ; we are the parent
-; thread status ?
+; enter atomic state for next step (I don't want status to change between read)
+	di
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
-	jr	z, .__waitpid_watch_zombie
+	jr	z, .__waitpid_reap_zombie
 	ld	a, e
 	and	a, WNOHANG
-	jr	nz, .__waitpid_watch_schild_hang
+	jr	nz, .__waitpid_hang
 .__waitpid_watch_schild_loop:
 ; wait for child signal and check if this is the one we were waiting for
+	di
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
-	jr	z, .__waitpid_watch_zombie
+	jr	z, .__waitpid_reap_zombie
 	push	iy
-	push	bc
 	call	.suspend
-	pop	bc
 	pop	iy
 	jr	.__waitpid_watch_schild_loop
-.__waitpid_watch_schild_hang:
-; we return 0 since the PID exist and we are the parent of it
-	or	a, a
-	sbc	hl, hl
-	ret
-.__waitpid_watch_zombie:
+.__waitpid_check_zombie:
+; we should be atomic when entering here
+; better be safe
+	di
+; parse the list for zombie owned by ourselve
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	ld	hl, kthread_queue_zombie
+	ld	e, (hl)
+	inc	hl
+	ld	iy, (hl)
+	inc	e
+.__waitpid_check_zombie_ppid:
+	cp	a, (iy+KERNEL_THREAD_PPID)
+	jr	z, .__waitpid_reap_zombie
+	ld	iy, (iy+KERNEL_THREAD_NEXT)
+	dec	e
+	jr	nz, .__waitpid_check_zombie_ppid
+; we should never reach here
+	jr	.__waitpid_error
+; iy is a thread owned by us that need to be reaped !
+.__waitpid_reap_zombie:
 ; the thread (iy) we were waiting for is a zombie
 ; fill bc with status
 ; and proprely free the thread
-; enter atomic state
-	di
 ; check status buffer
 	or	a, a
 	sbc	hl, hl
 	adc	hl, bc
-	jr	z, .__waitpid_watch_reap
+	jr	z, .__waitpid_reap_null
 	ex	de, hl
 	lea	hl, iy+KERNEL_THREAD_EXIT_FLAGS
 	ldi
 	ldi
-.__waitpid_watch_reap:
+.__waitpid_reap_null:
+; remove thread from zombie queue (node iy, queue zombie)
+	ld	hl, kthread_queue_zombie
+	call	kqueue.remove
 ; we need to : free the PID and kmem_cache free the tls
 	ld	a, (iy+KERNEL_THREAD_PID)
+	push	af
 	call	.free_pid
 	ei
-	push	af
 	lea	hl, iy+KERNEL_THREAD_HEADER
 	call	kmem.cache_free
 ; all good
@@ -352,7 +395,7 @@ sysdef _waitpid
 	sbc	hl, hl
 	ld	l, a
 	ret
-	
+
 sysdef _exit
 .exit:
 	ld	iy, (kthread_current)
@@ -391,6 +434,15 @@ sysdef _exit
 	ld	c, (iy+KERNEL_THREAD_PPID)
 	ld	a, SIGCHLD
 	call	signal.kill
+	push	iy
+; now, make PID 1 adopt all the children
+.__exit_adopt:
+	call	.check_child
+	jr	c, .__exit_stack
+	ld	(iy+KERNEL_THREAD_PPID), 1
+	jr	.__exit_adopt
+.__exit_stack:
+	pop	iy
 ; now disable stack protector (load the kernel_stack stack protector)
 ; and also drop the stack of the thread
 	ld	sp, (kernel_stack_pointer)
@@ -489,14 +541,43 @@ sysdef _exit
 	ret
 
 ; DANGEROUS AREA, helper function ;	
-	
+
+.check_child:
+; check all pid map table for children
+; we need to be ATOMIC here
+; destroy hl
+; return iy = children found if carry is nc, else invalid value and no children found
+	push	de
+	push	bc
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	ld	hl, kthread_pid_map + 5
+	ld	de, 4
+	ld	b, 63
+.check_child_parse_map:
+	ld	iy, (hl)
+	cp	a, (iy+KERNEL_THREAD_PPID)
+	jr	z, .check_child_found
+	add	hl, de
+	djnz	.check_child_parse_map
+	pop	bc
+	pop	de
+	ld	iy, -1
+	scf
+	ret
+.check_child_found:
+	pop	bc
+	pop	de
+	or	a, a
+	ret
+
 .reserve_pid:
 ; find a free pid
 ; this should be called in an atomic / critical code section to be sure it will still be free when used
 ; kinda reserved to ASM
-	ld	hl, kthread_pid_map
+	ld	hl, kthread_pid_map + 4
 	ld	de, 4
-	ld	b, 64
+	ld	b, 63
 	xor	a, a
 .reserve_parse_map:
 	cp	a, (hl)

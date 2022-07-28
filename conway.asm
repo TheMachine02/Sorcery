@@ -289,7 +289,8 @@ D1AB7F:
 	push	hl
 	ei
 	call	video.vsync
-	ld	hl, 2
+; we are pid 1, wait on all children to be reaped
+	ld	hl, -1
 	ld	bc, 0
 	ld	de, WNOHANG
 	call	_waitpid
