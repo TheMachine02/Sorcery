@@ -2,7 +2,7 @@
 rm -rf bin
 mkdir bin
 #generate config
-version=${1:-0.3.0rc1}
+version=${1:-0.3.0}
 str=$(git rev-parse --short HEAD)
 echo "; auto generated file" > config
 echo "define CONFIG_KERNEL_VERSION \""$version"-slp-"$str"\"" >> config
