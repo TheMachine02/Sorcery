@@ -75,7 +75,7 @@ sysjump:
 	jp	_mknod
 	jp	_mkfifo
 	jp	_uname
-	jp	_enosys		; _waitpid
+	jp	_waitpid
 	jp	_profil
 	jp	_uadmin
 	jp	_nice
@@ -102,9 +102,9 @@ sysjump:
 	jp	_reboot
 	jp	_usleep
 	jp	_thread
-	jp	_dma_access
-	jp	_dma_blk
-	jp	_dma_release
+	jp	_shmctl
+	jp	_shmget
+	jp	_shmfree
 	jp	_dmesg
 ; NOTE : max 240 syscall, should be way more than enough
 align	1024
@@ -127,7 +127,6 @@ include	'kernel/ring.asm'
 include	'kernel/syscall.asm'
 include	'kernel/timer.asm'
 include	'kernel/vfs.asm'
-include	'kernel/dma.asm'
 include	'kernel/inode.asm'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/exec.asm'
@@ -135,6 +134,7 @@ include	'kernel/arch/leaf.asm'
 include	'kernel/arch/fpu.asm'
 include	'kernel/arch/debug.asm'
 include	'kernel/mm/mm.asm'
+include	'kernel/mm/shm.asm'
 include	'kernel/mm/mmap.asm'
 include	'kernel/mm/cache.asm'
 include	'kernel/mm/slab.asm'

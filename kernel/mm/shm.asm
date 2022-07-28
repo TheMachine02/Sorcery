@@ -1,7 +1,7 @@
-sysdef _dma_access
-.dma_access:
+sysdef _shmctl
+.shmctl:
 ; fd hl, return hl = first block pointer that can be read/write (please note that the pointer is valid for the first 1024 bytes only)
-	call	.fd_pointer_check
+	call	kvfs.fd_pointer_check
 	ret	c
 ; check we have permission
 	ld	a, (ix+KERNEL_VFS_FILE_FLAGS)
@@ -19,23 +19,22 @@ sysdef _dma_access
 	ld	hl, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	a, (hl)
 	or	a, a
-	jr	nz, .dma_cache_hit
+	jr	nz, .__shm_cache_hit
 	inc	hl
 	ld	hl, (hl)
 	ret
-	
-.dma_cache_hit:
+.__shm_cache_hit:
 	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, a
 	add	hl, hl
 	add	hl, hl
 	ret
 	
-sysdef _dma_blk
-.dma_blk:
+sysdef _shmget
+.shmget:
 ; fd hl, block de
 ; assume we have dma_acess
-	call	.fd_pointer_check
+	call	kvfs.fd_pointer_check
 	ret	c
 	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (iy+KERNEL_VFS_INODE_FLAGS)
 	ld	a, EACCES
@@ -62,15 +61,15 @@ sysdef _dma_blk
 	ld	l, a
 	ld	a, (hl)
 	or	a, a
-	jr	nz, .dma_cache_hit
+	jr	nz, .__shm_cache_hit
 	inc	hl
 	ld	hl, (hl)
 	ret
 	
-sysdef _dma_release
-.dma_release:
+sysdef _shmfree
+.shmfree:
 ; fd is hl, free the file of sub-block DMA read
-	call	.fd_pointer_check
+	call	kvfs.fd_pointer_check
 	ret	c
 	lea	hl, iy+KERNEL_VFS_INODE_FLAGS
 	bit	KERNEL_VFS_CAPABILITY_ACCESS_BIT, (hl)
