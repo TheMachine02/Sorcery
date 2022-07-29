@@ -3,15 +3,15 @@ mem:
 	ld	hl, random.RAND_DEV
 	ld	bc, KERNEL_VFS_PERMISSION_R or KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	ld	de, random.phy_mem_ops
-	call	_mknod
+	call	kvfs.mknod
 	ld	hl, null.NULL_DEV
 	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	ld	de, null.phy_mem_ops
-	call	_mknod
+	call	kvfs.mknod
 	ld	hl, zero.ZERO_DEV
 	ld	bc, KERNEL_VFS_PERMISSION_RW or KERNEL_VFS_TYPE_CHARACTER_DEVICE
 	ld	de, zero.phy_mem_ops
-	jp	_mknod
+	jp	kvfs.mknod
 
 null:
 
