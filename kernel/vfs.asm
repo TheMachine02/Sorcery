@@ -1268,7 +1268,7 @@ sysdef	_fsync
 	ret	
 
 sysdef	_getdirent
-; TODO : finish to implement, actually copy the dirent structure to the buffer for count structure
+; actually copy the dirent structure to the buffer for count structure
 ; int fd, void *dirp, size_t count
 ; hl, de, bc
 .getdirent:

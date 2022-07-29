@@ -80,7 +80,6 @@ sysjump:
 	jp	_uadmin
 	jp	_nice
 	jp	_signal
-	jp	_sigreturn
 	jp	_enosys		; _flock
 	jp	_yield
 	jp	_schedule
@@ -102,6 +101,7 @@ sysjump:
 	jp	_reboot
 	jp	_usleep
 	jp	_thread
+	jp	_sigreturn
 	jp	_shmctl
 	jp	_shmget
 	jp	_shmfree

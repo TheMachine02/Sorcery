@@ -1,5 +1,3 @@
-define	VM_HYPERVISOR_ADRESS	$0BF000
-
 virtual at 0
 	PROFIL_BUFFSIZE:	rb 3
 	PROFIL_BUFF:		rb 3
@@ -7,10 +5,25 @@ virtual at 0
 	PROFIL_SCALE:		rb 3
 end virtual
 
+; hypervisor call
+define	VM_HYPERVISOR_ADRESS	$0BF000
+
+macro	hyperjump x
+	jp	x*4+VM_HYPERVISOR_ADRESS
+end macro
+
+macro	hypercall x
+	call	x*4+VM_HYPERVISOR_ADRESS
+end macro
+
 macro sysdef label
 	label = $
-; all register are paramaters (a,de,bc,hl,iy,ix)
-; all register are preserved across syscall (except hl as return register)
+; ABI specification :
+; all 24 bits registers are paramaters, in order :
+; hl, de, bc, ix, iy
+; more than 5 parameters need to pass other parameters in stack
+; all register are preserved across syscall except for the return register hl
+; flags are preserved across syscall
 	push	ix
 	push	iy
 	push	de
@@ -22,17 +35,9 @@ macro sysdef label
 end macro
 
 macro syscall label
-; for the kernel, syscall are simply calling the label
-; for external libc, it is calling the *JUMP TABLE*
+; for the kernel, syscall are simply calling the label (without preserving register, if possible)
+; for external libc, it is calling the kernel jump table, which will jump to the preserving registers & specific return function
 	call	label
-end macro
-
-macro	hyperjump x
-	jp	x*4+VM_HYPERVISOR_ADRESS
-end macro
-
-macro	hypercall x
-	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
 user_perm:
