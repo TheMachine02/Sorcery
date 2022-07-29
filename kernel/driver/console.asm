@@ -62,8 +62,8 @@ console:
 	or	a, a
 	jr	z, .fb_init
 	ld	(hl), 0
-	ld	c, a
-	ld	a, SIGSTOP
+	ld	l, a
+	ld	e, SIGSTOP
 	call	signal.kill
 
 .fb_init:
@@ -122,8 +122,8 @@ console:
 	ld	a, (hl)
 	or	a, a
 	ret	z
-	ld	c, a
-	ld	a, SIGCONT
+	ld	l, a
+	ld	e, SIGCONT
 	jp	signal.kill
 	
 .init:

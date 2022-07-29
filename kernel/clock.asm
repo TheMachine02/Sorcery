@@ -11,7 +11,6 @@ sysdef _clock
 clock:
 	ld	iy, (kthread_current)
 	ld	hl, (iy+KERNEL_THREAD_TIME)
-	or	a, a
 	ret
 
 sysdef _times
@@ -26,8 +25,7 @@ times:
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	ld	a, EFAULT
-	jp	z, user_error
+	jr	z, .__times_error
 	ld	bc, NULL
 	ld	iy, (kthread_current)
 	ld	de, (iy+KERNEL_THREAD_TIME)
@@ -49,7 +47,9 @@ times:
 	inc	hl
 	ld	(hl), bc
 	pop	hl
-	or	a, a
+	ret
+.__times_error:
+	ld	hl, -EFAULT
 	ret
 	
 sysdef _time

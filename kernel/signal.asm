@@ -11,34 +11,38 @@ sysdef _kill
 .force:
 ; Send signal to an other thread
 ; int kill(pid_t pid, int sig)
-; register A is signal
-; register C is pid
+; register hl is signal
+; register de is pid
 ; kill set the signal in the pending mask
 ; TODO : check permission
 ; TODO : implement force
-	push	iy
-	ld	b, a
-	tsti
-	ld	a, c
+	ld	c, l
+	ld	a, e
 	add	a, a
 	add	a, a
 ; can't send signal to PID 0
-	jr	z, .__kill_no_thread
-	ld	hl, kthread_pid_map
-	ld	l, a
-	ld	a, (hl)
+	ld	hl, -ESRCH
+	ret	z
+	ld	de, kthread_pid_map
+	ld	e, a
+	tsti
+	push	iy
+	ld	a, (de)
 	or	a, a
-	jr	z, .__kill_no_thread
+	jr	z, .__kill_error
+	ex	de, hl
 	inc	hl
 	ld	iy, (hl)
+	ex	de, hl
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
-	jr	z, .__kill_no_thread
+	jr	z, .__kill_error
 ; so now, we may send the signal
 ; special signal : sigstop and sigcont
-	ld	a, b
+	ld	hl, -EINVAL
+	ld	a, c
 	cp	a, SIGMAX
-	jr	nc, .__kill_no_signal
+	jr	nc, .__kill_error
 	cp	a, SIGSTOP
 	jr	z, .__kill_send_stop
 	cp	a, SIGCONT
@@ -56,25 +60,13 @@ sysdef _kill
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_INTERRUPTIBLE
 	call	z, task_switch_running
+.__kill_recompute:
 ; we are done
 ; recompute signal if needed
 	call	.chkset
-	rsti
+.__kill_error:
 	pop	iy
-	ret
-
-.__kill_no_thread:
-	ld	a, ESRCH
-	jr	.__kill_errno
-.__kill_no_permission:
-	ld	a, EPERM
-	jr	.__kill_errno
-.__kill_no_signal:
-	ld	a, EINVAL
-.__kill_errno:
 	rsti
-	pop	iy
-	scf
 	ret
 
 .__kill_send_stop:
@@ -98,10 +90,7 @@ assert	SIGCONT = 18
 	call	z, task_switch_running
 ; we are done
 ; recompute signal if needed
-	call	.chkset
-	rsti
-	pop	iy
-	ret
+	jp	.__kill_recompute
 
 .__kill_send_cont:
 ; reset sigstop currently pending
@@ -122,38 +111,35 @@ assert	SIGSTOP = 19
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	rra
 	call	c, task_switch_running
-	call	.chkset
-	rsti
-	pop	iy
-	ret
+	jp	.__kill_recompute
 
-sysdef	_sigprocmask
-.procmask:
-; hl is a 3 bytes sigset structure, with signal set to be either reset or set
-; do a XOR with signal mask
-; there is no need for critical section as long as the thread is the only one to manipulate its mask
-; ignore kill, cont and stop (can't be blocked)
-	ld	iy, (kthread_current)
-	lea	de, iy+KERNEL_THREAD_SIGNAL_MASK
-	ld	a, (de)
-	xor	a, (hl)
-	ld	(de), a
-	inc	hl
-	inc	de
-	ld	a, (de)
-	xor	a, (hl)
-assert	SIGKILL = 9
-	or	a, 1 shl 0
-	ld	(de), a
-	inc	hl
-	inc	de
-	ld	a, (de)
-	xor	a, (hl)
-assert	SIGCONT = 18
-assert	SIGSTOP = 19
-	or	a, (1 shl 1) or (1 shl 2)
-	ld	(de), a
-	ret
+; sysdef	_sigprocmask
+; .procmask:
+; ; hl is a 3 bytes sigset structure, with signal set to be either reset or set
+; ; do a XOR with signal mask
+; ; there is no need for critical section as long as the thread is the only one to manipulate its mask
+; ; ignore kill, cont and stop (can't be blocked)
+; 	ld	iy, (kthread_current)
+; 	lea	de, iy+KERNEL_THREAD_SIGNAL_MASK
+; 	ld	a, (de)
+; 	xor	a, (hl)
+; 	ld	(de), a
+; 	inc	hl
+; 	inc	de
+; 	ld	a, (de)
+; 	xor	a, (hl)
+; assert	SIGKILL = 9
+; 	or	a, 1 shl 0
+; 	ld	(de), a
+; 	inc	hl
+; 	inc	de
+; 	ld	a, (de)
+; 	xor	a, (hl)
+; assert	SIGCONT = 18
+; assert	SIGSTOP = 19
+; 	or	a, (1 shl 1) or (1 shl 2)
+; 	ld	(de), a
+; 	ret
 
 .default_handler:
 	jp	.core		; signal 0, undef
@@ -227,8 +213,8 @@ _sigreturn=$
 	ld	(hl), a
 ; the pop the stack
 	pop	hl
+user_return:=$
 	pop	af
-user_return_signal:=$
 	pop	bc
 	pop	de
 	di

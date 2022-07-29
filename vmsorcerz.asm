@@ -105,7 +105,6 @@ sysjump:
 	jp	_shmctl
 	jp	_shmget
 	jp	_shmfree
-	jp	_dmesg
 ; NOTE : max 240 syscall, should be way more than enough
 align	1024
 sysinternal:

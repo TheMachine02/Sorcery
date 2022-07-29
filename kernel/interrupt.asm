@@ -404,10 +404,10 @@ kscheduler:
 	exx
 ; save state of the current thread
 	ex	af,af'
-	push	hl
-	push	bc
 	push	de
+	push	bc
 	push	af
+	push	hl
 ; change thread
 	sbc	hl, hl
 	adc	hl, sp
@@ -421,10 +421,10 @@ kscheduler:
 	otimr
 	ld	hl, (hl)
 	ld	sp, hl
-	pop	af
-	pop	de
-	pop	bc
 	pop	hl
+	pop	af
+	pop	bc
+	pop	de
 	exx
 	ex	af, af'
 	ld	iy, (kthread_current)

@@ -102,8 +102,8 @@ mm:
 	ei
 .segfault:
 	ld	hl, (kthread_current)
-	ld	c, (hl)
-	ld	a, SIGSEGV
+	ld	l, (hl)
+	ld	e, SIGSEGV
 	call	signal.force
 ; well, clean up and try for better ?
 ; interrupts are enabled and wish for the best

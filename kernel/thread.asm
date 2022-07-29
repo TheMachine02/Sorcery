@@ -114,7 +114,7 @@ sysdef _thread
 ; NOTE: for syscall wrapper : need to grab the pid of the thread and ouptput it to a *thread_t id
 ; NOTE: you can't call create thread in a interrupt disabled context (IRQ), use irq_create for that
 	call	.do_create
-	jp	c, user_error
+	ret	c
 	jp	task_schedule
 
 .__create_no_mem:
@@ -134,13 +134,12 @@ sysdef _thread
 	call	kmem.cache_free
 .__create_no_tls:
 	pop	af
-	ld	a, ENOMEM
+	ld	hl, -ENOMEM
 	jr	.__create_error
 .__create_no_pid:
-	ld	a, EAGAIN
+	ld	hl, -EAGAIN
 .__create_error:
 ; restore register and cleanup
-	exx
 	rsti
 	scf
 	ret
@@ -232,7 +231,7 @@ sysdef _thread
 	pop	af
 	ld	(iy+KERNEL_THREAD_PID), a
 ; map the thread to be transparent to the scheduler
-; iy is thread adress, a is still PID    
+; iy is thread adress, a is still PID
 ; map the pid
 	add	a, a
 	add	a, a
@@ -249,7 +248,6 @@ sysdef _thread
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_active
 	call   kqueue.insert_head
-	exx
 	or	a, a
 	sbc	hl, hl
 	ld	l, a
@@ -257,19 +255,7 @@ sysdef _thread
 ; return hl = pid, iy = new thread handle
 	or	a, a
 	ret
-	
-.irq_create:
-; can be called in a interrupt disabled state
-; span an irq thread which are all own by PID 1
-	di
-	call	.do_create
-	ret	c
-	ld	(iy+KERNEL_THREAD_PPID), 1
-; set reschedule value
-	ld	hl, i
-	ld	(hl), $80
-	ret
-	
+
 sysdef _waitpid
 .waitpid:
 ; Ssed to wait for state changes in a child of the calling process, and obtain information about the child whose state has changed. A state change is considered to be: the child terminated; the child was stopped by a signal; or the child was resumed by a signal. In the case of a terminated child, performing a wait allows the system to release the resources associated with the child; if a wait is not performed, then the terminated child remains in a "zombie" state
@@ -306,8 +292,8 @@ sysdef _waitpid
 	call	.suspend
 	jr	.__waitpid_watch_child_loop
 .__waitpid_error:
-	ld	a, ECHILD
-	jp	user_error
+	ld	hl, -ECHILD
+	ret
 .__waitpid_hang:
 ; we return 0 since the PID exist and we are the parent of it
 	or	a, a
@@ -445,8 +431,8 @@ _exit=$
 ; first, switch to zombie
 	call	task_switch_zombie
 ; send signal
-	ld	c, (iy+KERNEL_THREAD_PPID)
-	ld	a, SIGCHLD
+	ld	l, (iy+KERNEL_THREAD_PPID)
+	ld	e, SIGCHLD
 	call	signal.kill
 	push	iy
 ; now, make PID 1 adopt all the children
@@ -547,8 +533,8 @@ sysdef	_pause
 .pause:
 ; generic suspend, will be waked by a signal
 	call	.suspend
-	ld	a, EINTR
-	jp	user_error
+	ld	hl, -EINTR
+	ret
 
 ; DANGEROUS AREA, helper function ;	
 
@@ -664,6 +650,18 @@ sysdef	_pause
 	call	task_switch_paused
 ; switch away from current thread to a new active thread
 	jp	task_yield
+
+.irq_create:
+; can be called in a interrupt disabled state
+; span an irq thread which are all own by PID 1
+	di
+	call	.do_create
+	ret	c
+	ld	(iy+KERNEL_THREAD_PPID), 1
+; set reschedule value
+	ld	hl, i
+	ld	(hl), $80
+	ret
 
 .irq_suspend:
 	xor	a, a

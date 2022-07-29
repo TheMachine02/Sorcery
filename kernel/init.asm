@@ -194,12 +194,15 @@ name:
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	ld	a, EFAULT
-	jp	z, user_error
-; copy data
 	ex	de, hl
+	ld	hl, -EFAULT
+	ret	z
+; copy data
+	ld	hl, .name_table
 	ld	bc, 15
 	ldir
+	or	a, a
+	sbc	hl, hl
 	ret
 ; TODO, put this in certificate ?
 .name_table:
@@ -250,7 +253,6 @@ printk:
 	pop	hl
 	jp	tty.phy_write
 
-sysdef _dmesg
 dmesg:
 	ld	iy, dmesg_log
 .tty:

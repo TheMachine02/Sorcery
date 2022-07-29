@@ -56,29 +56,15 @@ assert KERNEL_THREAD_PID = 0
 .permission_failed:
 	pop	af
 	pop	af	; throw away the return adress
-	ld	a, EPERM
-	jr	user_error
-
-user_return:
-; end syscall here
-	jr	c, .__user_return_error
-	pop	af
-	or	a, a
-	jp	user_return_signal
-.__user_return_error:
-; make hl be the error code and pass through carry flag
-	sbc	hl, hl
-	ld	l, a
-	pop	af
-	scf
-	jp	user_return_signal
+	ld	hl, -EPERM
+	ret
 
 sysdef _enosys
 user_enosys:
 	ld	a, ENOSYS
 
 user_error:
-	ei
+	neg
 	scf
 	sbc	hl, hl
 	ld	l, a
@@ -90,14 +76,14 @@ sysdef	_kmalloc
 ; may destroy a if there is an error (please note kernel routine should call kmalloc directly and handle error themselves)
 	call	kmalloc
 	ret	nc
-	ld	a, ENOMEM
-	jr	user_error
+	ld	hl, -ENOMEM
+	ret
 
 sysdef	_kfree
 	call	kfree
 	ret	nc
-	ld	a, EFAULT
-	jr	user_error
+	ld	hl, -EFAULT
+	ret
 
 ; those actually set the stack limit
 ; TODO : actualize those to be actually * correct *
@@ -254,16 +240,15 @@ profil:
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .reset
+	jr	z, .__profil_reset
 ; also reset if there was already profiling
 	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
-	jr	nz, .reset
+	jr	nz, .__profil_reset
 	push	hl
-	ld	hl, 12
-	call	kmalloc
-	ld	a, ENOMEM
+	ld	hl, kmem_cache_s16
+	call	kmem.cache_alloc
 	ld	(iy+KERNEL_THREAD_PROFIL_STRUCTURE), hl
-	jr	c, .error
+	jr	c, .__profil_error
 ; fill in the structure
 	ld	(hl), de
 	inc	hl
@@ -293,7 +278,7 @@ profil:
 	set	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
 	sbc	hl, hl
 	ret
-.reset:
+.__profil_reset:
 	res	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
 	ld	hl, (iy+KERNEL_THREAD_PROFIL_STRUCTURE)
 	call	kfree
@@ -301,9 +286,10 @@ profil:
 	sbc	hl, hl
 	ld	(iy+KERNEL_THREAD_PROFIL_STRUCTURE), hl
 	ret
-.error:
+.__profil_error:
 	pop	hl
-	jp	user_error
+	ld	hl, -ENOMEM
+	ret
 
 .scheduler:
 ; Preserve af and iy and hl++++, also, pc is push on the stack at a very precise adress
@@ -336,7 +322,7 @@ profil:
 	or	a, a
 	sbc	hl, de
 ; nc : not taken in account
-	jr	nc, .restore
+	jr	nc, .__scheduler_restore
 ; else increment the entrie in buffsize
 	add	hl, de
 	add	hl, hl
@@ -348,7 +334,7 @@ profil:
 	ld	(hl), e
 	inc	hl
 	ld	(hl), d
-.restore:
+.__scheduler_restore:
 	pop	hl
 	pop	iy
 	pop	af
