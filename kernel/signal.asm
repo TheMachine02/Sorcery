@@ -2,8 +2,8 @@ define		KERNEL_SIGNAL_MAX	32
 define		SIG_BLOCK		0
 define		SIG_UNBLOCK		1
 define		SIG_SET			2
-define		SIG_DFL			3	; from default handler
-define		SIG_IGN			4	; actually set "rst $38" ($FF) within jump table, specifically checked by kill & exit as ignored & also safety checked by interrupt handler
+define		SIG_DFL			$FFFFFF	; from default handler
+define		SIG_IGN			$7FFFFF	; actually set "rst $38" ($FF) within jump table, specifically checked by kill & exit as ignored & also safety checked by interrupt handler
 
 signal:
 
@@ -11,7 +11,64 @@ sysdef	_signal
 ; sighandler_t signal(int signum, sighandler_t handler);
 ; hl, de
 ; NOTE : settings SIG_IGN to SIGCHLD should make _exit automatically reap the thread
+; signal implementation is following BSD 4 semantic
 .signal:
+	ld	a, l
+	cp	a, SIGMAX
+	ld	hl, -EINVAL
+	ret	nc
+	cp	a, SIGKILL
+	ret	z
+	cp	a, SIGSTOP
+	ret	z	
+	add	a, a
+	ret	z
+	ld	iy, (kthread_current)
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	add	a, a
+	ld	c, a
+	add	a, l
+	ld	l, a
+	push	de
+	ex	de, hl
+	add	hl, hl
+	jr	c, .__signal_dfl
+	add	hl, hl
+	jr	c, .__signal_ign
+	ex	de, hl
+	pop	bc
+	di
+	ld	(hl), $C3
+	inc	hl
+	ld	de, (hl)
+	ld	(hl), bc 
+	ex	de, hl
+	ret
+.__signal_ign:
+	ex	de, hl
+	pop	de
+	di
+	ld	(hl), $FF
+	inc	hl
+	ld	hl, (hl)
+	ret
+.__signal_dfl:
+	pop	hl
+	ld	hl, .default_handler
+	ld	a, c
+	add	a, l
+	ld	l, a
+	di
+; copy hl to de
+	ldi
+	ex	de, hl
+	ld	bc, (hl)
+	ex	de, hl
+	ldi
+	ldi
+	ldi
+	ld	hl, 3
+	add	hl, bc
 	ret
 
 sysdef _kill
@@ -152,6 +209,7 @@ assert	SIGSTOP = 19
 ; 	ld	(de), a
 ; 	ret
 
+ align	128
 .default_handler:
 	jp	.core		; signal 0, undef
 	jp	.exit

@@ -499,6 +499,7 @@ _exit=$
 ; NOTE : we will correctly update TIME value and proprely switch off
 ; we need to cleanup the idle stack just before calling though (as if we switch from idle, since the stack will be used from idle)
 ; NOTE : in case of ignored signal, time will be updated for the idle thread and all info are lost
+; NOTE : we need to set kthtread_current if we killed TLS since for scheduler we are idle thread. It is not needed in case of valid TLS since we want to switch away (using idle stack though)
 	pop	hl
 	pop	af
 	pop	bc
