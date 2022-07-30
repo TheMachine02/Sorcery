@@ -463,12 +463,46 @@ _exit=$
 	call	kmem.cache_free
 	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
 	call	kmem.cache_free
+; is the SIGCHLD signal is ignored from parent thread ?
+; if so, we need to reap exiting thread now and blow it
+	ld	a, (iy+KERNEL_THREAD_PPID)
+	add	a, a
+	add	a, a
+	jr	z, .__exit_context_switch
+	ld	hl, kthread_pid_map
+	ld	l, a
+	inc	hl
+	ld	ix, (hl)
+	ld	hl, (ix+KERNEL_THREAD_SIGNAL_VECTOR)
+	ld	a, SIGCHLD shl 2
+	add	a, l
+	ld	l, a
+	ld	a, (hl)
+	inc	a
+	jr	nz, .__exit_context_switch
+; proprely destroy the thread
+	ld	hl, (iy+KERNEL_THREAD_TIME)
+	ld	de, (ix+KERNEL_THREAD_TIME_CHILD)
+	add	hl, de
+	ld	(ix+KERNEL_THREAD_TIME_CHILD), hl
+; remove thread from zombie queue (node iy, queue zombie)
+	ld	hl, kthread_queue_zombie
+	call	kqueue.remove
+; we need to : free the PID and kmem_cache free the tls
+	ld	a, (iy+KERNEL_THREAD_PID)
+	call	.free_pid
+	lea	hl, iy+KERNEL_THREAD_HEADER
+	call	kmem.cache_free
+	ld	iy, kernel_idle
+	ld	(kthread_current), iy
+.__exit_context_switch:
 ; NOTE : we will correctly update TIME value and proprely switch off
 ; we need to cleanup the idle stack just before calling though (as if we switch from idle, since the stack will be used from idle)
-	pop	af
-	pop	de
-	pop	bc
+; NOTE : in case of ignored signal, time will be updated for the idle thread and all info are lost
 	pop	hl
+	pop	af
+	pop	bc
+	pop	de
 ; we still have both ix and iy pushed
 	exx
 	ex	af, af'

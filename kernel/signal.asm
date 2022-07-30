@@ -19,13 +19,13 @@ sysdef _kill
 .force:
 ; Send signal to an other thread
 ; int kill(pid_t pid, int sig)
-; register hl is signal
-; register de is pid
+; register hl is pid
+; register de is signal
 ; kill set the signal in the pending mask
 ; TODO : check permission
 ; TODO : implement force
-	ld	c, l
-	ld	a, e
+	ld	c, e
+	ld	a, l
 	add	a, a
 	add	a, a
 ; can't send signal to PID 0
@@ -181,7 +181,7 @@ assert	SIGSTOP = 19
 	jp	.core
 
 .exit:
-	ld	iy, (kthread_current)
+	di
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED
 ; we are in signal handler actually, we are able to grab the signal in the stack
 ; return adress (_sigreturn)
@@ -194,7 +194,7 @@ assert	SIGSTOP = 19
 .core:
 ; write whole process image to a "core" file in reallocated mode
 ; leaf file format
-	ld	iy, (kthread_current)
+	di
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED or COREDUMP
 	pop	hl
 	pop	hl

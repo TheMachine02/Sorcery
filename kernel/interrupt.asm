@@ -213,6 +213,7 @@ kinterrupt:
 	ret	z
 ; directly jump into the vector table
 ; NOTE : we leak register and kernel adresses here
+; however, pass down iy as current thread for ease of mind
 	jp	(hl)
 
 .irq_handler:
@@ -416,6 +417,8 @@ kscheduler:
 	adc	hl, sp
 	ld	(iy+KERNEL_THREAD_STACK), hl
 	exx
+	ld	iy, 0
+	add	iy, de
 	ex	de, hl
 	ld	(kthread_current), hl
 	ld	c, KERNEL_THREAD_STACK_LIMIT
@@ -430,7 +433,6 @@ kscheduler:
 	pop	de
 	exx
 	ex	af, af'
-	ld	iy, (kthread_current)
 	jp	kinterrupt.irq_context_restore
 
 sysdef _schedule
