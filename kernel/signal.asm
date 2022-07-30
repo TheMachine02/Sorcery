@@ -1,8 +1,16 @@
 define		KERNEL_SIGNAL_MAX	32
+define		SIG_BLOCK		0
+define		SIG_UNBLOCK		1
+define		SIG_SET			2
+define		SIG_DFL			3	; from default handler
+define		SIG_IGN			4	; actually set "rst $38" ($FF) within jump table, specifically checked by kill & exit as ignored & also safety checked by interrupt handler
 
 signal:
 
 sysdef	_signal
+; sighandler_t signal(int signum, sighandler_t handler);
+; hl, de
+; NOTE : settings SIG_IGN to SIGCHLD should make _exit automatically reap the thread
 .signal:
 	ret
 
@@ -43,6 +51,8 @@ sysdef _kill
 	ld	a, c
 	cp	a, SIGMAX
 	jr	nc, .__kill_error
+	or	a, a
+	jr	z, .__kill_error
 	cp	a, SIGSTOP
 	jr	z, .__kill_send_stop
 	cp	a, SIGCONT
@@ -114,6 +124,7 @@ assert	SIGSTOP = 19
 	jp	.__kill_recompute
 
 ; sysdef	_sigprocmask
+; sigprocmask(int how, const kernel_sigset_t *set, kernel_sigset_t *oldset);
 ; .procmask:
 ; ; hl is a 3 bytes sigset structure, with signal set to be either reset or set
 ; ; do a XOR with signal mask
@@ -159,8 +170,10 @@ assert	SIGSTOP = 19
 	jp	.exit
 	jp	.exit
 	jp	.core		; signal 16, undef
-	jp	.ignore		; sigchld
-	jp	.ignore		; sigcont
+	ret			; sigchld
+	db	3	dup	$00
+	ret			; sigcont
+	db	3	dup	$00
 	jp	.stop
 	jp	.stop
 	jp	.stop		; sigcont
@@ -173,7 +186,7 @@ assert	SIGSTOP = 19
 ; we are in signal handler actually, we are able to grab the signal in the stack
 ; return adress (_sigreturn)
 	pop	hl
-; signal code	
+; signal code
 	pop	hl
 	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
 	jp	kthread.do_exit
@@ -270,7 +283,6 @@ user_return:=$
 ; reset the bit within pending
 	xor	a, (hl)
 	ld	(hl), a
-.ignore:
 	ret
 
 .mask_operation:

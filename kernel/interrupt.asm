@@ -208,6 +208,9 @@ kinterrupt:
 	add	a, l
 	ld	l, a
 	ei
+	ld	a, (hl)
+	inc	a
+	ret	z
 ; directly jump into the vector table
 ; NOTE : we leak register and kernel adresses here
 	jp	(hl)
