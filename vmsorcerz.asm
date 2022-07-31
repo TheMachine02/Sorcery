@@ -56,7 +56,7 @@ sysjump:
 	jp	_ioctl
 	jp	_brk
 	jp	_sbrk
-	jp	_enosys		; _vfork
+	jp	_vfork
 	jp	_enosys		; _mount
 	jp	_enosys		; _umount
 	jp	_pause

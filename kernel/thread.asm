@@ -72,8 +72,10 @@ define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	32
 
 define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
-; thread attribute
+
+; thread attribute (bit)
 define	THREAD_PROFIL				0
+define	THREAD_VFORK				1
 
 ; task status
 define	TASK_READY				0
@@ -125,6 +127,7 @@ sysdef _thread
 	lea	hl, iy+0
 	call	kmem.cache_free
 	pop	iy
+	pop	af
 	jr	.__create_no_tls
 .__create_no_fd:
 	pop	hl
@@ -133,7 +136,6 @@ sysdef _thread
 	pop	hl
 	call	kmem.cache_free
 .__create_no_tls:
-	pop	af
 	ld	hl, -ENOMEM
 	jr	.__create_error
 .__create_no_pid:
@@ -151,7 +153,6 @@ sysdef _thread
 	call	.reserve_pid
 	jr	c, .__create_no_pid
 ; a is the allocated PID, save it for latter
-	push	af
 ; allocate the TLS
 	ld	hl, kmem_cache_s128
 	call	kmem.cache_alloc
@@ -166,8 +167,7 @@ sysdef _thread
 	jr	c, .__create_no_fd
 	pop	bc
 	pop	de
-; hl = fd, de = tls, bc = signal
-	pop	af
+; hl = fd, de = tls, bc = signal, a = pid
 	push	af
 	push	iy
 	ld	iy, 0
@@ -250,12 +250,146 @@ sysdef _thread
 	call   kqueue.insert_head
 	or	a, a
 	sbc	hl, hl
+	rra
+	rra
 	ld	l, a
 	rsti
 ; return hl = pid, iy = new thread handle
 	or	a, a
 	ret
 
+.__vfork_no_fd:
+; need to unallocate signal & tls
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	call	kmem.cache_free
+.__vfork_no_signal:
+; need to unallocate tls
+	lea	hl, iy+0
+	call	kmem.cache_free
+	ld	hl, -ENOMEM
+	ret
+
+sysdef	_vfork
+.vfork:
+; disable interrupt when not called from syscall context
+	di
+	call	.reserve_pid
+	ld	hl, -EAGAIN
+	ret	c
+; a is the allocated PID
+; allocate the TLS
+	ld	hl, kmem_cache_s128
+	call	kmem.cache_alloc
+; copy the tls, iy is valid past this point
+	ex	de, hl
+	ld	hl, -ENOMEM
+	ret	c
+	ld	iy, 0
+	add	iy, de
+	ld	ix, (kthread_current)
+	lea	hl, ix+0
+	ld	bc, 128
+	ldir
+	ld	hl, kmem_cache_s128
+	call	kmem.cache_alloc
+	jr	c, .__vfork_no_signal
+; copy signal and set it anew in the forked thread
+	ex	de, hl
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), de
+	ld	bc, 128
+	ldir
+	ld	hl, kmem_cache_s256
+	call	kmem.cache_alloc
+	jr	c, .__vfork_no_fd
+	ex	de, hl
+	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
+	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR), de
+	ld	bc, 256
+	ldir
+; iy is thread adress (tls), a is still PID
+	ld	(iy+KERNEL_THREAD_PID), a
+; map the thread to be transparent to the scheduler
+	add	a, a
+	add	a, a
+	ld	hl, kthread_pid_map
+	ld	l, a
+	ld	(hl), PERMISSION_USER
+	inc	hl
+	ld	(hl), iy
+; setup default parameter
+	ld	de, $000000
+	ld	(iy+KERNEL_THREAD_SIGNAL_PENDING), de
+	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
+	ld	(iy+KERNEL_THREAD_QUANTUM), 1
+	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
+	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+; move current thread to uninterruptible sleep
+	push	iy
+	set	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
+	lea	iy, ix+0
+	call	task_switch_uninterruptible
+	pop	iy
+; and set the stack pointer to a very specific spot
+; we generate a new kernel stack frame and make return adress shenanigans
+; so we will have : syscall frame / return trampoline / interrupt stack / syscall frame (duplicate)
+; child will return with duplicate syscall frame
+; parent will use the interrupt stack & return trampoline at syscall return
+	or	a, a
+	sbc	hl, hl
+	rra
+	rra
+	ld	l, a
+	push	hl
+	ld	hl, .__vfork_return
+	push	hl
+; then push a kernel interrupt stack since we will hard switch to child thread
+	push	ix
+	push	iy
+	push	de
+	push	bc
+	push	af
+	push	hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, sp
+	ld	(ix+KERNEL_THREAD_STACK), hl
+; duplicate the kernel frame (from sp+24 for 21 bytes, to sp-21)
+	ex	de, hl
+	ld	hl, -21
+	add	hl, de
+	ld	sp, hl
+	ex	de, hl
+	ld	bc, 24
+	add	hl, bc
+	ld	c, 21
+	ldir
+; write parent pid    
+	ld	a, (ix+KERNEL_THREAD_PID)
+	ld	(iy+KERNEL_THREAD_PPID), a
+.__vfork_directory_reference:
+; increase reference count of both directory
+	ld	ix, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+	ld	ix, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+; sig parameter mask ;
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
+; setup the queue
+; insert the thread to the ready queue
+	ld	hl, kthread_mqueue_active
+	call   kqueue.insert_head
+; NOTE : hard switch to vforked thread
+; actually valid since a reschedule would change pretty much nothing appart from running the new thread (stack space & userspace are the same)
+	ld	(kthread_current), iy
+; return 0 since we return to the child
+	or	a, a
+	sbc	hl, hl
+	ret
+.__vfork_return:
+	pop	hl
+	ret
+	
 sysdef _waitpid
 .waitpid:
 ; Ssed to wait for state changes in a child of the calling process, and obtain information about the child whose state has changed. A state change is considered to be: the child terminated; the child was stopped by a signal; or the child was resumed by a signal. In the case of a terminated child, performing a wait allows the system to release the resources associated with the child; if a wait is not performed, then the terminated child remains in a "zombie" state
@@ -473,6 +607,15 @@ _exit=$
 	ld	l, a
 	inc	hl
 	ld	ix, (hl)
+; check if parent thread have forked
+; if so, we are within a valid kernel frame, and we can switch off the child thread without issue
+; scheduler will get us to the correct location in the parent
+	push	iy
+	lea	iy, ix+0
+	bit	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
+	call	nz, task_switch_running
+	res	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
+	pop	iy
 	ld	hl, (ix+KERNEL_THREAD_SIGNAL_VECTOR)
 	ld	a, SIGCHLD shl 2
 	add	a, l

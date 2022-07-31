@@ -16,14 +16,14 @@ macro	hypercall x
 	call	x*4+VM_HYPERVISOR_ADRESS
 end macro
 
-macro sysdef label
-	label = $
 ; ABI specification :
 ; all 24 bits registers are paramaters, in order :
 ; hl, de, bc, ix, iy
 ; more than 5 parameters need to pass other parameters in stack
 ; all register are preserved across syscall except for the return register hl
 ; flags are preserved across syscall
+macro sysdef label
+	label = $
 	push	ix
 	push	iy
 	push	de
@@ -34,9 +34,9 @@ macro sysdef label
 	ex	(sp), hl
 end macro
 
-macro syscall label
 ; for the kernel, syscall are simply calling the label (without preserving register, if possible)
 ; for external libc, it is calling the kernel jump table, which will jump to the preserving registers & specific return function
+macro syscall label
 	call	label
 end macro
 
