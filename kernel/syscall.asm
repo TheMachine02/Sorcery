@@ -40,30 +40,6 @@ macro syscall label
 	call	label
 end macro
 
-user_perm:
-; NOTE : expect to return to the trampoline at the current code level (so, first routine to be called in the routine, and will exit the routine itself)
-; check for the thread permission currently executing this code span
-; is it superuser or not ?
-	push	af
-	push	hl
-	ld	hl, (kthread_current)
-assert KERNEL_THREAD_PID = 0
-	ld	a, (hl)
-	add	a, a
-	add	a, a
-	ld	hl, kthread_pid_map
-	ld	l, a
-	bit	SUPER_USER_BIT, (hl)
-	pop	hl
-	jr	z, .permission_failed
-	pop	af
-	ret
-.permission_failed:
-	pop	af
-	pop	af	; throw away the return adress
-	ld	hl, -EPERM
-	ret
-
 sysdef _enosys
 user_enosys:
 	ld	a, ENOSYS
@@ -122,43 +98,6 @@ sysdef _sbrk
 ; all good, return the old break value
 	ld	(iy+KERNEL_THREAD_BREAK), bc
 	ex	de, hl
-	ret
-
-sysdef _getpid
-; pid_t getpid()
-; return value is register hl
-getpid:
-	ld	hl, (kthread_current)
-	ld	l, (hl)
-	ld	h, 1
-	mlt	hl
-	ret
-  
-sysdef _getppid
-; pid_t getppid()
-; return value is register hl
-getppid:
-	ld	hl, (kthread_current)
-	ld	de, KERNEL_THREAD_PPID
-	add	hl, de
-	ld	e, (hl)
-	ex	de, hl
-	ret
-
-sysdef _getuid
-; uid_t getuid()
-; return value is register hl, -1 if super user, 0 is normal user
-getuid:
-	ld	hl, (kthread_current)
-	ld	a, (hl)
-	ld	hl, kthread_pid_map
-	add	a, a
-	add	a, a
-	ld	l, a
-	ld	a, (hl)
-assert SUPER_USER_BIT = 7
-	rla
-	sbc	hl, hl
 	ret
 	
 sysdef _uadmin

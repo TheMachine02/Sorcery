@@ -365,10 +365,20 @@ tifs:
 ; copy file name to our temporary buffer
 	lea	de, iy+6
 	inc	hl
-	ldir
+;	ldir
+	ld	b, c
+	ld	c, a
+.__mount_copy_name:
+	ld	a, (hl)
+	add	a, 32
+	ld	(de), a
+	inc	de
+	inc	hl
+	djnz	.__mount_copy_name
+	ld	a, c
 ; blit a zero to be a null terminated string \*/
 	ex	de, hl
-	ld	(hl), c
+	ld	(hl), $00
 	ex	de, hl
 ; iy is our file name, let's create inode
 ; a = file type, hl = data

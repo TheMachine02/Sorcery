@@ -28,6 +28,7 @@ virtual	at 0
 	KERNEL_THREAD_SIGNAL_VECTOR:		rb	3	; pointer to slab block
 	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
 ; more attribute
+	KERNEL_THREAD_SID:			rb	1
 	KERNEL_THREAD_NICE:			rb	1	; nice value (used for priority boosting)
 	KERNEL_THREAD_EXIT_FLAGS:		rb	1
 	KERNEL_THREAD_EXIT_STATUS:		rb	1
@@ -64,6 +65,13 @@ virtual	at 0
 assert $ < KERNEL_THREAD_TLS_SIZE
 end	virtual
 
+; pid mapping structure
+virtual	at 0
+	KERNEL_THREAD_UID:			rb	1
+	KERNEL_THREAD_TLS:			rb	3
+end	virtual
+
+define	KERNEL_THREAD_MAP_SIZE			4
 define	KERNEL_THREAD_STACK_SIZE		8192	; all of it usable
 define	KERNEL_THREAD_SIGNAL_VECTOR_SIZE	128	; 24*4 bytes
 define	KERNEL_THREAD_TLS_SIZE			128	; header
@@ -90,11 +98,6 @@ define	SCHED_PRIO_MAX				0
 define	SCHED_PRIO_MIN				12
 define	NICE_PRIO_MIN				19
 define	NICE_PRIO_MAX				-20
-
-; user
-define	ROOT_USER				$FF	; maximal permission, bit 7 is ROOT bit
-define	PERMISSION_USER				$01	; minimal permission
-define	SUPER_USER_BIT				7
 
 ; wait pid option parameter
 define	WNOHANG					1 shl 0
@@ -237,7 +240,7 @@ sysdef _thread
 	add	a, a
 	ld	hl, kthread_pid_map
 	ld	l, a
-	ld	(hl), PERMISSION_USER
+	ld	(hl), SUPER_USER
 	inc	hl
 	ld	(hl), iy
 ; write parent pid    
@@ -269,8 +272,9 @@ sysdef _thread
 	ld	hl, -ENOMEM
 	ret
 
-sysdef	_vfork
+; NOTE : to have the .vfork outside of sysdef is wanted since we might call it from kernel space and we still need to syscall framestack in all case
 .vfork:
+sysdef	_vfork
 ; disable interrupt when not called from syscall context
 	di
 	call	.reserve_pid
@@ -314,7 +318,7 @@ sysdef	_vfork
 	add	a, a
 	ld	hl, kthread_pid_map
 	ld	l, a
-	ld	(hl), PERMISSION_USER
+	ld	(hl), SUPER_USER
 	inc	hl
 	ld	(hl), iy
 ; setup default parameter

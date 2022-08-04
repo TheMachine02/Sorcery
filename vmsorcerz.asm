@@ -88,8 +88,8 @@ sysjump:
 	jp	_enosys		; _select
 	jp	_enosys		; _getrlimit
 	jp	_enosys		; _setrlimit
-	jp	_enosys		; _setsid
-	jp	_enosys		; _getsid
+	jp	_setsid
+	jp	_getsid
 	jp	_enosys		; _socket
 	jp	_enosys		; _listen
 	jp	_enosys		; _bind
@@ -98,6 +98,8 @@ sysjump:
 	jp	_enosys		; _getsockaddrs
 	jp	_enosys		; _sendto
 	jp	_enosys		; _recvfrom
+	jp	_setuid
+	jp	_getuid
 	jp	_reboot
 	jp	_usleep
 	jp	_thread
@@ -124,6 +126,7 @@ include	'kernel/signal.asm'
 include	'kernel/restart.asm'
 include	'kernel/ring.asm'
 include	'kernel/syscall.asm'
+include	'kernel/credential.asm'
 include	'kernel/timer.asm'
 include	'kernel/vfs.asm'
 include	'kernel/inode.asm'
