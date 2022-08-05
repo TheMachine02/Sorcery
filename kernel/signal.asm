@@ -238,22 +238,20 @@ assert	SIGSTOP = 19
 	jp	.stop
 	jp	.core
 
-.exit:
-	di
-	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED
-; we are in signal handler actually, we are able to grab the signal in the stack
-; return adress (_sigreturn)
-	pop	hl
-; signal code
-	pop	hl
-	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
-	jp	kthread.do_exit
-
 .core:
 ; write whole process image to a "core" file in reallocated mode
 ; leaf file format
 	di
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED or COREDUMP
+;	call	leaf.coredump
+	jr	.__exit_return
+	
+.exit:
+	di
+	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED
+; we are in signal handler actually, we are able to grab the signal in the stack
+; return adress (_sigreturn)
+.__exit_return:
 	pop	hl
 	pop	hl
 	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
@@ -311,11 +309,14 @@ user_return:=$
 .__chkset_mask_outer:
 	ld	a, (de)
 	and	a, (hl)
+; if the and is zero, no signal can be processed, so skip the bit
+	jr	z, .__chkset_next
 	ld	b, 8
 .__chkset_mask:
 	rla
 	jr	c, .__chkset_from_bit
 	djnz	.__chkset_mask
+.__chkset_next:
 	dec	hl
 	dec	de
 	dec	c

@@ -869,6 +869,11 @@ sysdef	_pause
 ; either the thread wait for an IRQ (status TASK_UNINTERRUPTIBLE + IRQ set)
 ; or the thread is generic paused, so wake it up
 	di
+	lea	hl, iy+0
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	ret	z
 	lea	hl, iy+KERNEL_THREAD_IRQ
 	cp	a, (hl)
 	ret	nz

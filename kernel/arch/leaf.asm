@@ -130,7 +130,7 @@ sysdef _execve
 .leaf_check_file:
 ; iy = file adress (static for now, we'll need read syscall)
 	ld	a, (ix+LEAF_IDENT_MAG0)
-	cp	a, $7F
+	cp	a, $C9
 	ret	nz
 	ld	hl, (ix+LEAF_IDENT_MAG1)
 	ld	de, 'L'+('E'*256)+('A'*65536)

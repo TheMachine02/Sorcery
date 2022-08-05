@@ -6,7 +6,7 @@ leaf:
 .check_file:
 ; iy = file adress (static)
 	ld	a, (iy+LEAF_IDENT_MAG0)
-	cp	a, $7F
+	cp	a, $C9
 	ret	nz
 	ld	hl, (iy+LEAF_IDENT_MAG1)
 	ld	de, ('A'*65536)+('E'*256)+'L'
