@@ -66,7 +66,7 @@ namespace LEAF
 	
 	Header:
 
-	e_ident 	db 0x7F,'LEAF'
+	e_ident 	db $C9,'LEAF'
 	e_type		db TYPE
 	e_machine	db MACHINE
 	e_flags		db FLAGS

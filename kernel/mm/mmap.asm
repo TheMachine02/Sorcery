@@ -32,7 +32,7 @@ sysdef _mmap
 	add	hl, hl
 	add	hl, hl
 	ld	ix, (kthread_current)
-	lea	ix, ix+KERNEL_THREAD_FILE_DESCRIPTOR
+	ld	ix, (ix+KERNEL_THREAD_FILE_DESCRIPTOR)
 	ex	de, hl
 	add	ix, de
 	ex	de, hl
