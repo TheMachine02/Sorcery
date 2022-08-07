@@ -6,23 +6,20 @@ define	SUPER_USER			$01	; almost maximal permission
 user_perm:
 ; NOTE : expect to return to the trampoline at the current code level (so, first routine to be called in the routine, and will exit the routine itself)
 ; check for the thread permission currently executing this code span
-; is it superuser or not ?
-	push	af
+; is it superuser or root ?
+; destroy register a
 	push	hl
 	ld	hl, (kthread_current)
-assert KERNEL_THREAD_PID = 0
 	ld	a, (hl)
 	add	a, a
 	add	a, a
 	ld	hl, kthread_pid_map
 	ld	l, a
-	and	a, 11111110b
+	ld	a, (hl)
 	pop	hl
-	jr	nz, .permission_failed
-	pop	af
-	ret
+	and	a, 11111110b
+	ret	z
 .permission_failed:
-	pop	af
 	pop	af	; throw away the return adress
 	ld	hl, -EPERM
 	ret
