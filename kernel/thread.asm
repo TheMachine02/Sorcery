@@ -1,7 +1,7 @@
 ; this header reside in thread memory
 ; DONT TOUCH ANYTHING YOU DONT WANT TO BREAK IN THIS HEADER
 ; Atomic is UTERLY important while writing to it
-; you can read pid, ppid, irq (but it will not be a *safe value, meaning it can change the next instruction
+; you can read pid, ppid, irq (but it will not be a *safe* value, meaning it can change the next instruction
 ; for safety dont touch anything here except PID and PPID ;
 virtual	at 0
 	KERNEL_THREAD_HEADER:

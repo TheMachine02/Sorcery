@@ -323,7 +323,7 @@ kscheduler:
 	inc	hl
 	dec	(hl)
 	jr	nz, kinterrupt.irq_context_restore
-; lower thread priority and move queue
+; lower thread priority and move queue since we reached our quantum
 .schedule_unpromote:
 	dec	hl
 	ld	de, kthread_mqueue_active
@@ -403,7 +403,7 @@ kscheduler:
 	lea	hl, iy+0
 	sbc	hl, de
 	jp	z, kinterrupt.irq_context_restore
-.context_restore:
+.context_switch:
 ; put the new thread in iy
 	exx
 ; save state of the current thread
@@ -447,21 +447,18 @@ sysdef _schedule
 
 sysdef _yield
 .yield:
+; NOTE : yield boost priority of I/O bound thread, so boost priority if status is not TASK_READY
 	di
 	ex	af, af'
 	exx
 	push	ix
 	push	iy
 	ld	iy, (kthread_current)
-; KERNEL_THREAD_STATUS
-	lea	hl, iy+KERNEL_THREAD_PRIORITY
-; NOTE : yield even if the thread is active should boost priority in theory ?
-; ; hl = status
-; 	ld	a, (hl)
-; 	or	a, a
-; 	jp	z, .do_schedule
-; 	inc	hl
-; hl = priority
+	lea	hl, iy+KERNEL_THREAD_STATUS
+	ld	a, (hl)
+	or	a, a
+	jp	z, .do_schedule
+	inc	hl
 	ld	a, (iy+KERNEL_THREAD_NICE)
 	sra	a
 	sub	a, QUEUE_SIZE

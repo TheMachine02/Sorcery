@@ -26,9 +26,6 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	11
 define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
 (total 17 bytes, remove 5 bytes)
 
-- exit should make all thread zombie and thread need to be reaped by wait()
-- also update time
-
 - execve cleanup fd & clean all memory allocated to the thread (except stack which is reset)
 - clone & fork : 
  > fork is a "virtual fork" duplicate the thread stack & copy data in it, but do NOT duplicate data. Make the previous thread (who called fork) paused until an execve()
@@ -39,6 +36,3 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
 - allocate memory for timer data
 - push those data correclty into the queue
 - better function / correct function
-
-* leaf
-change the first $7F to 'rst 0'
