@@ -102,7 +102,6 @@ sysjump:
 	jp	_getuid
 	jp	_reboot
 	jp	_usleep
-	jp	_thread
 	jp	_sigreturn
 	jp	_shmctl
 	jp	_shmget
@@ -130,6 +129,7 @@ include	'kernel/credential.asm'
 include	'kernel/timer.asm'
 include	'kernel/vfs.asm'
 include	'kernel/inode.asm'
+include	'kernel/mount.asm'
 include	'kernel/arch/atomic.asm'
 include	'kernel/arch/exec.asm'
 include	'kernel/arch/leaf.asm'
@@ -160,6 +160,7 @@ include 'kernel/dev/random.asm'
 ; filesystem
 include	'fs/romfs.asm'
 include	'fs/tifs.asm'
+include	'fs/tmpfs.asm'
 
 init_conway:
 include	'conway.asm'

@@ -79,7 +79,7 @@ init:
 	ld	l, KERNEL_FLASH_MAPPING and $FF
 	ld	(hl), $06
 ; small init for the vfs
-	ld	hl, kvfs.phy_none
+	ld	hl, tmpfs.memops
 	ld	(kvfs_root+KERNEL_VFS_INODE_OP), hl
 ; power, timer and interrupt
 	call	kinterrupt.init

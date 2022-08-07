@@ -79,6 +79,29 @@ define	R_OK					1
 define	W_OK					2
 define	X_OK					4
 
+virtual	at 0
+	KERNEL_VFS_SUPER_MOUNT:		rb	3
+	KERNEL_VFS_SUPER_UMOUNT:	rb	3
+	KERNEL_VFS_SUPER_MEMOPS:	rb	3
+	KERNEL_VFS_SUPER_IDENTIFIER:
+end	virtual
+
+; block device & char device operation ;
+; files operations, take special entries ;
+; expect call with inode lock held ... ;
+virtual	at 0
+	phy_read:		rb	4	; phy_read (physical read page from backing device)
+	phy_write:		rb	4	; phy_write (physical write page to backing device)
+	phy_sync:
+	phy_ioctl:		rb	4	; phy_sync (physical sync file to backing device) OR phy_ioctl
+; inode operation, take inode ;
+	phy_read_inode:		rb	4	; phy_read_inode (from backing device) : happen at mount time for supported filesystem
+	phy_sync_inode:		rb	4	; phy_sync_inode (sync the inode to the backing device and create it if it doesn't exist), mostly happen at umount time
+	phy_destroy_inode:	rb	4	; phy_destroy_inode
+; filesystem operation ;
+	phy_stat:		rb	4
+end	virtual
+
 kvfs:
 
 .phy_indirect_call:

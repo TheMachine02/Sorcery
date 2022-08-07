@@ -33,40 +33,6 @@ define	KERNEL_VFS_INODE_NODE_SIZE_SYMLINK	16	; symlink inode size
 define	KERNEL_VFS_DIRECTORY_ENTRY_SIZE		16	; 16 bytes per entries, or 4 entries per slab entries
 define	KERNEL_VFS_DIRECTORY_NAME_SIZE		12	; max size of a name within directory
 
-; block device & char device operation ;
-; files operations, take special entries ;
-; expect call with inode lock held ... ;
-define	phy_read		0
-define	phy_write		4
-define	phy_sync		8
-define	phy_ioctl		8
-; inode operation, take inode ;
-define	phy_read_inode		12
-define	phy_sync_inode		16
-define	phy_destroy_inode	20
-; filesystem operation ;
-define	phy_stat		24
-
-; jump table for physical operation
-.phy_none:
-	ret		; phy_read (physical read page from backing device)
-	dl	$0
-	ret		; phy_write (physical write page to backing device)
-	dl	$0
-	ret		; phy_sync (physical sync file to backing device) OR phy_ioctl
-	dl	$0
-	ret		; phy_read_inode (from backing device) : happen at mount time for supported filesystem
-	dl	$0
-	ret		; phy_sync_inode (sync the inode to the backing device and create it if it doesn't exist), mostly happen at umount time
-	dl	$00
-	ret		; phy_destroy_inode
-	dl	$0
-; exactly 4 bytes, convenient !
-.phy_none_statfs:
-	ld	a, ENOSYS
-	scf
-	ret
-
 ; about locking : you should always lock the PARENT first when you need to write both parent & inode to prevent deadlock
 ; inode searching can sleep with parent inode lock waiting for child inode to be free'd for read
 ; best is always locking only ONE inode

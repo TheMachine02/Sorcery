@@ -111,7 +111,6 @@ define	COREDUMP				1 shl 2
 
 kthread:
 
-sysdef _thread
 .create:
 ; Create a thread
 ; int thread_create(void* thread_entry, void* thread_arg)
@@ -148,7 +147,7 @@ sysdef _thread
 	rsti
 	scf
 	ret
-	
+
 .do_create:
 	tsti
 ; save hl, de, bc registers
