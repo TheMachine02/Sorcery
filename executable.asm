@@ -7,7 +7,7 @@ include	'header/asm-leaf.inc'
 
 entry trap
 
-section '.code' executable
+section '.text' executable
 trap:
     ld  de, 0
     ld  b, 4

@@ -53,7 +53,7 @@ atomic_rw:
 .__lock_fail_write:
 	scf
 	ei
-	ret	
+	ret
 	
 .lock_read:
 	di
@@ -211,6 +211,7 @@ atomic_mutex:
 	add	a, a
 	ld	ix, kthread_pid_map
 	ld	ixl, a
+	ld	ix, (ix+KERNEL_THREAD_TLS)
 	di
 	ld	a, (iy+KERNEL_THREAD_PRIORITY-KERNEL_THREAD_IO_DATA)
 ; insert the node at the correct priority
