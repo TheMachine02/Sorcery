@@ -24,9 +24,9 @@ user_perm:
 	ld	hl, -EPERM
 	ret
 	
-sysdef _getuid
+sysdef _geteuid
 ; uid_t getuid()
-getuid:
+geteuid:
 	ld	hl, (kthread_current)
 	ld	a, (hl)
 	ld	hl, kthread_pid_map
@@ -37,6 +37,23 @@ getuid:
 	sbc	hl, hl
 	ld	l, a
 	ret	
+
+sysdef	_getuid
+getuid:
+	ld	iy, (kthread_current)
+	or	a, a
+	sbc	hl, hl
+	ld	l, (iy+KERNEL_THREAD_RUID)
+	ret
+	
+sysdef	_setreuid
+; int setreuid(uid_t ruid, uid_t euid); 
+setreuid:
+; if the process is not privileged, can only set euid to either euid, ruid ou suid
+; else, it's free
+; TODO : implement
+	ld	hl, -EPERM
+	ret
 
 sysdef	_setuid
 setuid:

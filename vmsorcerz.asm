@@ -57,6 +57,7 @@ sysjump:
 	jp	_brk
 	jp	_sbrk
 	jp	_vfork
+	jp	_clone
 	jp	_enosys		; _mount
 	jp	_enosys		; _umount
 	jp	_pause
@@ -100,6 +101,8 @@ sysjump:
 	jp	_enosys		; _recvfrom
 	jp	_setuid
 	jp	_getuid
+	jp	_setreuid
+	jp	_geteuid
 	jp	_reboot
 	jp	_usleep
 	jp	_sigreturn

@@ -28,6 +28,8 @@ virtual	at 0
 	KERNEL_THREAD_SIGNAL_VECTOR:		rb	3	; pointer to slab block
 	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
 ; more attribute
+	KERNEL_THREAD_SUID:			rb	1
+	KERNEL_THREAD_RUID:			rb	1
 	KERNEL_THREAD_SID:			rb	1
 	KERNEL_THREAD_NICE:			rb	1	; nice value (used for priority boosting)
 	KERNEL_THREAD_EXIT_FLAGS:		rb	1
@@ -67,8 +69,24 @@ end	virtual
 
 ; pid mapping structure
 virtual	at 0
-	KERNEL_THREAD_UID:			rb	1
+	KERNEL_THREAD_EUID:			rb	1
 	KERNEL_THREAD_TLS:			rb	3
+end	virtual
+
+; clone structure
+virtual	at 0
+	FLAGS:					rb	1
+;     u64 pidfd;        /* Where to store PID file descriptor
+;                          (int *) */
+;     u64 child_tid;    /* Where to store child TID,
+;                          in child's memory (pid_t *) */
+;     u64 parent_tid;   /* Where to store child TID,
+;                          in parent's memory (pid_t *) */
+;     u64 exit_signal;  /* Signal to deliver to parent on
+;                          child termination */
+;     u64 stack;        /* Pointer to lowest byte of stack */
+;     u64 stack_size;   /* Size of stack */
+;     u64 tls;          /* Location of new TLS */	
 end	virtual
 
 define	KERNEL_THREAD_MAP_SIZE			4
@@ -242,10 +260,12 @@ kthread:
 	ld	(hl), SUPER_USER
 	inc	hl
 	ld	(hl), iy
-; write parent pid    
+; write parent pid
 	ld	hl, (kthread_current)
 	lea	de, iy+KERNEL_THREAD_PPID
 	ldi
+	ld	(iy+KERNEL_THREAD_EUID), SUPER_USER
+	ld	(iy+KERNEL_THREAD_RUID), SUPER_USER
 ; setup the queue
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_active
@@ -271,6 +291,11 @@ kthread:
 	ld	hl, -ENOMEM
 	ret
 
+sysdef	_clone
+.clone3:
+; structure is hl, de is size
+	ret
+	
 ; NOTE : to have the .vfork outside of sysdef is wanted since we might call it from kernel space and we still need to syscall framestack in all case
 .vfork:
 sysdef	_vfork
