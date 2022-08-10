@@ -34,6 +34,7 @@ virtual	at 0
 	KERNEL_THREAD_NICE:			rb	1	; nice value (used for priority boosting)
 	KERNEL_THREAD_EXIT_FLAGS:		rb	1
 	KERNEL_THREAD_EXIT_STATUS:		rb	1
+	KERNEL_THREAD_EXIT_SIGNAL:		rb	1
 	KERNEL_THREAD_ATTRIBUTE:		rb	1	; some flags value
 ; thread waiting ;
 	KERNEL_THREAD_IO:
@@ -75,19 +76,20 @@ end	virtual
 
 ; clone structure
 virtual	at 0
-	FLAGS:					rb	1
-;     u64 pidfd;        /* Where to store PID file descriptor
-;                          (int *) */
-;     u64 child_tid;    /* Where to store child TID,
-;                          in child's memory (pid_t *) */
-;     u64 parent_tid;   /* Where to store child TID,
-;                          in parent's memory (pid_t *) */
-;     u64 exit_signal;  /* Signal to deliver to parent on
-;                          child termination */
-;     u64 stack;        /* Pointer to lowest byte of stack */
-;     u64 stack_size;   /* Size of stack */
-;     u64 tls;          /* Location of new TLS */	
+	CLONE_FLAGS:				rb	1
+	CLONE_CHILD_PID:			rb	3	; pointer to store child tid in child memory
+	CLONE_PARENT_PID:			rb	3	; pointer to store child tid in parent memory
+	CLONE_EXIT_SIGNAL:			rb	1	; signal to deliver to parent
+	CLONE_STACK:				rb	3	; stack adress (pointer to lowest)
+	CLONE_STACK_SIZE:			rb	3	; stack size
+	CLONE_TLS:				rb	3	; location of tls
 end	virtual
+
+define	CLONE_PARENT				1 shl 0		; make the parent of the new child be the same of the calling thread
+define	CLONE_SETTLS				1 shl 1		; set tls with tls structure
+define	CLONE_CHILD_SETTID			1 shl 2		; set pid within the adress provided
+define	CLONE_SIGHAND				1 shl 3		; use signal handler of the parent
+define	CLONE_VFORK				1 shl 4		; set vfork in parent thread & pause it
 
 define	KERNEL_THREAD_MAP_SIZE			4
 define	KERNEL_THREAD_STACK_SIZE		8192	; all of it usable
@@ -266,6 +268,7 @@ kthread:
 	ldi
 	ld	(iy+KERNEL_THREAD_EUID), SUPER_USER
 	ld	(iy+KERNEL_THREAD_RUID), SUPER_USER
+	ld	(iy+KERNEL_THREAD_EXIT_SIGNAL), SIGCHLD
 ; setup the queue
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_active
@@ -352,6 +355,14 @@ sysdef	_vfork
 	ld	(iy+KERNEL_THREAD_QUANTUM), 1
 	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
+.__vfork_directory_reference:
+; increase reference count of both directory
+	ld	ix, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+	ld	ix, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
+	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+; sig parameter mask ;
+	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; move current thread to uninterruptible sleep
 	push	iy
 	set	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
@@ -392,17 +403,9 @@ sysdef	_vfork
 	add	hl, bc
 	ld	c, 21
 	ldir
-; write parent pid    
+; write parent pid
 	ld	a, (ix+KERNEL_THREAD_PID)
 	ld	(iy+KERNEL_THREAD_PPID), a
-.__vfork_directory_reference:
-; increase reference count of both directory
-	ld	ix, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
-	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
-	ld	ix, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
-	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
-; sig parameter mask ;
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; setup the queue
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_active
@@ -594,7 +597,7 @@ _exit=$
 	call	task_switch_zombie
 ; send signal
 	ld	l, (iy+KERNEL_THREAD_PPID)
-	ld	e, SIGCHLD
+	ld	e, (iy+KERNEL_THREAD_EXIT_SIGNAL)
 	call	signal.kill
 	push	iy
 ; now, make PID 1 adopt all the children
