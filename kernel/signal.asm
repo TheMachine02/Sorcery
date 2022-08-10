@@ -211,7 +211,7 @@ assert	SIGSTOP = 19
 
  align	128
 .default_handler:
-	jp	.core		; signal 0, undef
+	db	1, 0, 0, 0	; first value is refcount
 	jp	.exit
 	jp	.exit
 	jp	.core
