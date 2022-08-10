@@ -90,8 +90,8 @@ define	CLONE_SETTLS				1 shl 1		; set tls with tls structure
 define	CLONE_CHILD_SETTID			1 shl 2		; set pid within the adress provided
 define	CLONE_SIGHAND				1 shl 3		; use signal handler of the parent
 define	CLONE_VFORK				1 shl 4		; set vfork in parent thread & pause it
-define	CLONE_VM				1 slh 5		; use same memory space (stack) for this thread, (use with VFORK only)
-define	CLONE_CLEAR_SIGHAND			1 slh 6		; reset sig handler to all default (incompatible with SIGHAND)
+define	CLONE_VM				1 shl 5		; use same memory space (stack) for this thread, (use with VFORK only)
+define	CLONE_CLEAR_SIGHAND			1 shl 6		; reset sig handler to all default (incompatible with SIGHAND)
 
 define	CLONE_PARENT_BIT			0		; make the parent of the new child be the same of the calling thread
 define	CLONE_SETTLS_BIT			1		; set tls with tls structure
@@ -276,7 +276,7 @@ kthread:
 	ld	hl, (kthread_current)
 	lea	de, iy+KERNEL_THREAD_PPID
 	ldi
-	ld	(iy+KERNEL_THREAD_EUID), SUPER_USER
+	ld	(iy+KERNEL_THREAD_SUID), SUPER_USER
 	ld	(iy+KERNEL_THREAD_RUID), SUPER_USER
 	ld	(iy+KERNEL_THREAD_EXIT_SIGNAL), SIGCHLD
 ; setup the queue
@@ -319,6 +319,7 @@ _clone:=$
 	push	hl
 	ld	hl, user_return
 	ex	(sp), hl
+.__clone3_do:
 ; structure is hl, de is size
 	di
 	ld	ix, 0
@@ -349,7 +350,7 @@ _clone:=$
 ; ix is the clone structure
 	bit	CLONE_SETTLS_BIT, (ix+CLONE_FLAGS)
 	ld	de, (ix+CLONE_TLS)
-	jr	z, .__clone3_no_tls
+	jr	nz, .__clone3_no_tls
 	ld	hl, kmem_cache_s128
 	call	kmem.cache_alloc
 ; copy the tls, iy is valid past this point
@@ -363,7 +364,7 @@ _clone:=$
 	ld	bc, KERNEL_THREAD_TLS_SIZE
 	ldir
 	bit	CLONE_SIGHAND, (ix+CLONE_FLAGS)
-	jr	z, .__clone3_duplicate_sighand
+	jr	nz, .__clone3_duplicate_sighand
 	ld	hl, kmem_cache_s128
 	call	kmem.cache_alloc
 	jr	c, .__clone3_no_signal
@@ -410,10 +411,13 @@ _clone:=$
 	ld	a, (hl)
 	or	a, a
 	jr	z, .__clone3_create_directory_root
+	push	ix
+	ld	ix, (kthread_current)
 	ld	hl, (ix+KERNEL_THREAD_WORKING_DIRECTORY)
 	ld	(iy+KERNEL_THREAD_WORKING_DIRECTORY), hl
 	ld	hl, (ix+KERNEL_THREAD_ROOT_DIRECTORY)
 	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
+	pop	ix
 	jr	.__clone3_directory_reference
 .__clone3_create_directory_root:
 	ld	hl, kvfs_root
@@ -421,12 +425,14 @@ _clone:=$
 	ld	(iy+KERNEL_THREAD_ROOT_DIRECTORY), hl
 .__clone3_directory_reference:
 ; increase reference count of both directory
+	push	ix
 	ld	ix, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
 	ld	ix, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
+	pop	ix
 ; uid
-	ld	(iy+KERNEL_THREAD_EUID), SUPER_USER
+	ld	(iy+KERNEL_THREAD_SUID), SUPER_USER
 	ld	(iy+KERNEL_THREAD_RUID), SUPER_USER
 ; sig parameter mask ;
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
@@ -460,7 +466,7 @@ _clone:=$
 ; that mean we use the stack space of the calling thread
 	bit	CLONE_VM_BIT, (ix+CLONE_FLAGS)
 	ld	a, (iy+KERNEL_THREAD_PID)
-	jr	z, .__clone3_virtual_framestack
+	jr	nz, .__clone3_virtual_framestack
 ; now, default situation is to create a new stack
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	mm.map_user_pages
@@ -493,23 +499,24 @@ _clone:=$
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_STACK), hl
 ; so the return stack is all good
-	jr	z, .__clone3_virtual_sp
+	jr	nz, .__clone3_virtual_sp
 ; now, setup stack of the new thread
 	ld	hl, (iy+KERNEL_THREAD_STACK)
 	ld	sp, hl
 .__clone3_virtual_sp:
-	ld	hl, _exit
-	push	hl	
-; duplicate the kernel frame (from sp+27 for 21 bytes, to sp-21)
+; duplicate the kernel frame (from sp+24 for 21 bytes, to sp-24)
 	ex	de, hl
-	ld	hl, -21
+	ld	hl, -24
 	add	hl, de
 	ld	sp, hl
 	ex	de, hl
-	ld	bc, 27
+	ld	bc, 24
 	add	hl, bc
 	ld	c, 21
 	ldir
+	ex	de, hl
+	ld	de, _exit
+	ld	(hl), de
 ; setup the queue
 ; insert the thread to the ready queue
 	ld	hl, kthread_mqueue_active
@@ -525,19 +532,13 @@ _clone:=$
 	pop	hl
 	ret
 
-.__vfork_no_fd:
-; need to unallocate signal & tls
-	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
-	dec	(hl)
-	call	z, kmem.cache_free
-.__vfork_no_signal:
-; need to unallocate tls
-	lea	hl, iy+0
-	call	kmem.cache_free
-	ld	hl, -ENOMEM
-	ret
-
-; NOTE : to have the .vfork outside of sysdef is wanted since we might call it from kernel space and we still need to syscall framestack in all case
+.vfork_structure:
+	db	CLONE_VM or CLONE_VFORK
+	dl	$0
+	dl	$0
+	db	SIGCHLD
+	dl	$0
+	
 _vfork:=$
 .vfork:
 	push	ix
@@ -548,131 +549,8 @@ _vfork:=$
 	push	hl
 	ld	hl, user_return
 	ex	(sp), hl
-; disable interrupt when not called from syscall context
-	di
-	call	.reserve_pid
-	ld	hl, -EAGAIN
-	ret	c
-; a is the allocated PID
-; allocate the TLS
-	ld	hl, kmem_cache_s128
-	call	kmem.cache_alloc
-; copy the tls, iy is valid past this point
-	ex	de, hl
-	ld	hl, -ENOMEM
-	ret	c
-	ld	iy, 0
-	add	iy, de
-	ld	ix, (kthread_current)
-	lea	hl, ix+0
-	ld	bc, 128
-	ldir
-	ld	hl, kmem_cache_s128
-	call	kmem.cache_alloc
-	jr	c, .__vfork_no_signal
-; copy signal and set it anew in the forked thread
-	ex	de, hl
-	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
-	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), de
-; refcount of signal handler slab
-	ex	de, hl
-	ld	(hl), 1
-	ex	de, hl
-	ld	bc, 128
-	ldir
-	ld	hl, kmem_cache_s256
-	call	kmem.cache_alloc
-	jr	c, .__vfork_no_fd
-	ex	de, hl
-	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
-	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR), de
-	ld	bc, 256
-	ldir
-; iy is thread adress (tls), a is still PID
-	ld	(iy+KERNEL_THREAD_PID), a
-; map the thread to be transparent to the scheduler
-	add	a, a
-	add	a, a
-	ld	hl, kthread_pid_map
-	ld	l, a
-	ld	(hl), SUPER_USER
-	inc	hl
-	ld	(hl), iy
-; setup default parameter
-	ld	de, $000000
-	ld	(iy+KERNEL_THREAD_SIGNAL_PENDING), de
-	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
-	ld	(iy+KERNEL_THREAD_QUANTUM), 1
-	ld	(iy+KERNEL_THREAD_PRIORITY), SCHED_PRIO_MAX
-	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
-.__vfork_directory_reference:
-; increase reference count of both directory
-	ld	ix, (iy+KERNEL_THREAD_ROOT_DIRECTORY)
-	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
-	ld	ix, (iy+KERNEL_THREAD_WORKING_DIRECTORY)
-	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
-; sig parameter mask ;
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
-; move current thread to uninterruptible sleep
-	push	iy
-	set	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
-	lea	iy, ix+0
-	call	task_switch_uninterruptible
-	pop	iy
-; write parent pid
-	ld	c, (ix+KERNEL_THREAD_PID)
-	ld	(iy+KERNEL_THREAD_PPID), c
-.__virtual_framestack:
-; and set the stack pointer to a very specific spot
-; we generate a new kernel stack frame and make return adress shenanigans
-; so we will have : syscall frame / return trampoline / interrupt stack / exit / syscall frame (duplicate)
-; child will return with duplicate syscall frame
-; parent will use the interrupt stack & return trampoline at syscall return
-	or	a, a
-	sbc	hl, hl
-	rra
-	rra
-	ld	l, a
-	push	hl
-	ld	hl, .__vfork_return
-	push	hl
-; then push a kernel interrupt stack since we will hard switch to child thread
-	push	ix
-	push	iy
-	push	de
-	push	bc
-	push	af
-	push	hl
-	or	a, a
-	sbc	hl, hl
-	add	hl, sp
-	ld	(ix+KERNEL_THREAD_STACK), hl
-	ld	hl, _exit
-	push	hl	
-; duplicate the kernel frame (from sp+27 for 21 bytes, to sp-21)
-	ex	de, hl
-	ld	hl, -21
-	add	hl, de
-	ld	sp, hl
-	ex	de, hl
-	ld	bc, 27
-	add	hl, bc
-	ld	c, 21
-	ldir
-; setup the queue
-; insert the thread to the ready queue
-	ld	hl, kthread_mqueue_active
-	call   kqueue.insert_head
-; NOTE : hard switch to vforked thread
-; actually valid since a reschedule would change pretty much nothing appart from running the new thread (stack space & userspace are the same)
-	ld	(kthread_current), iy
-; return 0 since we return to the child
-	or	a, a
-	sbc	hl, hl
-	ret
-.__vfork_return:
-	pop	hl
-	ret
+	ld	hl, .vfork_structure
+	jp	.__clone3_do
 
 sysdef _waitpid
 .waitpid:
