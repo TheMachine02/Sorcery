@@ -363,7 +363,7 @@ _clone:=$
 	ld	hl, (kthread_current)
 	ld	bc, KERNEL_THREAD_TLS_SIZE
 	ldir
-	bit	CLONE_SIGHAND, (ix+CLONE_FLAGS)
+	bit	CLONE_SIGHAND_BIT, (ix+CLONE_FLAGS)
 	jr	nz, .__clone3_duplicate_sighand
 	ld	hl, kmem_cache_s128
 	call	kmem.cache_alloc
@@ -447,12 +447,12 @@ _clone:=$
 	ldir
 .__clone3_clear_sighand:
 	bit	CLONE_PARENT_BIT, (ix+CLONE_FLAGS)
-	jr	z, .__clone3_duplicate_ppid
+	jr	nz, .__clone3_duplicate_ppid
 	ld	hl, (kthread_current)
 	ld	a, (hl)
 	ld	(iy+KERNEL_THREAD_PPID), a
 .__clone3_duplicate_ppid:
-	bit	CLONE_VFORK, (ix+CLONE_FLAGS)
+	bit	CLONE_VFORK_BIT, (ix+CLONE_FLAGS)
 	jr	z, .__clone3_vfork_thread
 	push	iy
 	push	ix
@@ -495,6 +495,10 @@ _clone:=$
 	or	a, a
 	sbc	hl, hl
 	add	hl, sp
+	ex	de, hl
+	or	a, a
+	sbc	hl, hl
+	add	hl, de
 	bit	CLONE_VM_BIT, (ix+CLONE_FLAGS)
 	ld	ix, (kthread_current)
 	ld	(ix+KERNEL_THREAD_STACK), hl
@@ -505,9 +509,8 @@ _clone:=$
 	ld	sp, hl
 .__clone3_virtual_sp:
 ; duplicate the kernel frame (from sp+24 for 21 bytes, to sp-24)
-	ex	de, hl
-	ld	hl, -24
-	add	hl, de
+	ld	bc, -24
+	add	hl, bc
 	ld	sp, hl
 	ex	de, hl
 	ld	bc, 24
@@ -695,6 +698,10 @@ sysdef _waitpid
 _exit=$
 .exit:
 	ld	iy, (kthread_current)
+; if PID 1 exit,make the system reset
+	ld	a, (iy+KERNEL_THREAD_STATUS)
+	dec	a
+	jp	z, nmi
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), EXITED
 	ld	(iy+KERNEL_THREAD_EXIT_STATUS), l
 .do_exit:
