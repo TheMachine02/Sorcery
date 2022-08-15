@@ -123,6 +123,9 @@ file	'initramfs'
 ; NOTE : here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
 ; interrupt will be disabled by most of device in it, but that's okay to maintain them in a unknown state anyway
 ; just don't trigger watchdog please
+; first mount filesystem with /dev/flash (specially understood by the kernel)
+	call	kvfs.mount_root
+; hardware device init
 	ld	bc, KERNEL_VFS_PERMISSION_RW
 	ld	hl, .arch_dev_path
 	call	kvfs.mkdir
@@ -134,11 +137,6 @@ file	'initramfs'
 	call	mem.init
 ; mtd block driver ;
 ;	call	mtd.init
-; mount the root filesystem. TODO : maybe /bin/init should take care of that ? - just testing for now
-if CONFIG_MOUNT_ROOT_TIFS
-; mount tifs & symlink it to binary, config_tifs
-	call	tifs.mount_root
-end if
 	ld	hl, .arch_welcome
 	call	printk
 ; now launch init
