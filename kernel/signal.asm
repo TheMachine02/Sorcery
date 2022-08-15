@@ -157,7 +157,7 @@ assert	SIGCONT = 18
 	call	z, task_switch_running
 ; we are done
 ; recompute signal if needed
-	jp	.__kill_recompute
+	jr	.__kill_recompute
 
 .__kill_send_cont:
 ; reset sigstop currently pending
@@ -178,7 +178,7 @@ assert	SIGSTOP = 19
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	rra
 	call	c, task_switch_running
-	jp	.__kill_recompute
+	jr	.__kill_recompute
 
 ; sysdef	_sigprocmask
 ; sigprocmask(int how, const kernel_sigset_t *set, kernel_sigset_t *oldset);

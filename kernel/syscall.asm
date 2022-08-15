@@ -186,7 +186,7 @@ profil:
 	sbc	hl, de
 	jr	z, .__profil_reset
 ; also reset if there was already profiling
-	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	bit	THREAD_PROFIL_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	jr	nz, .__profil_reset
 	push	hl
 	ld	hl, kmem_cache_s16
@@ -219,11 +219,11 @@ profil:
 	xor	a, a
 	ld	(hl), a
 ; set the profiler
-	set	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	set	THREAD_PROFIL_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	sbc	hl, hl
 	ret
 .__profil_reset:
-	res	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	res	THREAD_PROFIL_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	ld	hl, (iy+KERNEL_THREAD_PROFIL_STRUCTURE)
 	call	kfree
 	or	a, a

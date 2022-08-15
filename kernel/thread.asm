@@ -92,6 +92,7 @@ define	CLONE_SIGHAND				1 shl 3		; use signal handler of the parent
 define	CLONE_VFORK				1 shl 4		; set vfork in parent thread & pause it
 define	CLONE_VM				1 shl 5		; use same memory space (stack) for this thread, (use with VFORK only)
 define	CLONE_CLEAR_SIGHAND			1 shl 6		; reset sig handler to all default (incompatible with SIGHAND)
+define	CLONE_FILES				1 shl 7		; share fd table
 
 define	CLONE_PARENT_BIT			0		; make the parent of the new child be the same of the calling thread
 define	CLONE_SETTLS_BIT			1		; set tls with tls structure
@@ -100,6 +101,7 @@ define	CLONE_SIGHAND_BIT			3		; use signal handler of the parent
 define	CLONE_VFORK_BIT				4		; set vfork in parent thread & pause it
 define	CLONE_VM_BIT				5		; use same memory space (stack) for this thread, (use with VFORK only)
 define	CLONE_CLEAR_SIGHAND_BIT			6		; reset sig handler to all default (incompatible with SIGHAND)
+define	CLONE_FILES_BIT				7		; share the fd table
 
 define	KERNEL_THREAD_MAP_SIZE			4
 define	KERNEL_THREAD_STACK_SIZE		8192	; all of it usable
@@ -112,8 +114,8 @@ define	KERNEL_THREAD_MQUEUE_COUNT		5
 define	KERNEL_THREAD_MQUEUE_SIZE		20
 
 ; thread attribute (bit)
-define	THREAD_PROFIL				0
-define	THREAD_VFORK				1
+define	THREAD_PROFIL_BIT			0
+define	THREAD_VFORK_BIT			1
 
 ; task status
 define	TASK_READY				0
@@ -443,7 +445,7 @@ _clone:=$
 	jr	z, .__clone3_clear_sighand
 	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
 	ld	hl, signal.default_handler
-	ld	bc, 24*4
+	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
 	ldir
 .__clone3_clear_sighand:
 	bit	CLONE_PARENT_BIT, (ix+CLONE_FLAGS)
@@ -457,7 +459,7 @@ _clone:=$
 	push	iy
 	push	ix
 	ld	iy, (kthread_current)
-	set	THREAD_VFORK, (iy+KERNEL_THREAD_ATTRIBUTE)
+	set	THREAD_VFORK_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	call	task_switch_uninterruptible
 	pop	ix
 	pop	iy
@@ -525,7 +527,7 @@ _clone:=$
 	ld	hl, kthread_mqueue_active
 	call   kqueue.insert_head
 ; NOTE : hard switch to vforked thread
-; actually valid since a reschedule would change pretty much nothing appart from running the new thread (stack space & userspace are the same)
+; actually valid since a reschedule would change pretty much nothing appart from running the new thread (stack space & userspace are already set)
 	ld	(kthread_current), iy
 ; return 0 since we return to the child
 	or	a, a
@@ -783,9 +785,9 @@ _exit=$
 ; scheduler will get us to the correct location in the parent
 	push	iy
 	lea	iy, ix+0
-	bit	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
+	bit	THREAD_VFORK_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	call	nz, task_switch_running
-	res	THREAD_VFORK, (ix+KERNEL_THREAD_ATTRIBUTE)
+	res	THREAD_VFORK_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	pop	iy
 	ld	hl, (ix+KERNEL_THREAD_SIGNAL_VECTOR)
 	ld	a, SIGCHLD shl 2
@@ -794,7 +796,7 @@ _exit=$
 	ld	a, (hl)
 	inc	a
 	jr	nz, .__exit_context_switch
-; proprely destroy the thread
+; proprely destroy the thread since sigchld is ignored
 	ld	hl, (iy+KERNEL_THREAD_TIME)
 	ld	de, (ix+KERNEL_THREAD_TIME_CHILD)
 	add	hl, de

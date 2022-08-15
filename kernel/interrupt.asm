@@ -315,7 +315,7 @@ kscheduler:
 ; this is idle, just schedule
 	jr	z, .do_schedule
 ; perform the thread profiling
-	bit	THREAD_PROFIL, (iy+KERNEL_THREAD_ATTRIBUTE)
+	bit	THREAD_PROFIL_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	call	nz, profil.scheduler
 ; we still have carry from that sla (hl), so if carry is set, we need to reschedule
 	jr	c, .do_schedule
