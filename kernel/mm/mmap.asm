@@ -167,7 +167,7 @@ sysdef _mmap
 	srl	h
 	rra
 	ld	b, a
-	call	.map_user_pages
+	call	vmmu.map_pages
 	ret	nc
 	jp	user_error
 

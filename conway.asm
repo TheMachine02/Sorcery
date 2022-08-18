@@ -1,3 +1,12 @@
+	dbg	open
+	ld	hl, clone_arg
+	call	_clone
+	ld	a, h
+	or	a, l
+	jp	nz, conway_init
+spin:
+	jr	spin
+conway_init:
 	call	video.irq_lock
 	ld hl,$E40000
 	ld de,$D40000
@@ -325,3 +334,10 @@ D1ABA3:
 	pop ix
 	ei
 	ret
+
+clone_arg:
+	db	CLONE_SIGHAND
+	dl	$0
+	dl	$0
+	db	SIGCHLD
+	dl	$0

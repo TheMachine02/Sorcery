@@ -36,6 +36,8 @@ virtual	at 0
 	KERNEL_THREAD_EXIT_STATUS:		rb	1
 	KERNEL_THREAD_EXIT_SIGNAL:		rb	1
 	KERNEL_THREAD_ATTRIBUTE:		rb	1	; some flags value
+; vmmu context ;
+	KERNEL_THREAD_VMMU_CONTEXT:		rb	28	; bitmap to RAM memory, allowing thread to indicate which memory page they own. On anonymous page, we have reference count, since they might be shared
 ; thread waiting ;
 	KERNEL_THREAD_IO:
 	KERNEL_THREAD_IO_DATA:			rb	1
@@ -210,7 +212,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_FILE_DESCRIPTOR), hl
 ; now we need to allocate the cache
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
-	call	mm.map_user_pages
+	call	vmmu.map_pages
 	jr	c, .__create_no_mem
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
@@ -441,6 +443,8 @@ _clone:=$
 ; set exit signal
 	ld	c, (ix+CLONE_EXIT_SIGNAL)
 	ld	(iy+KERNEL_THREAD_EXIT_SIGNAL), c
+; duplicate vmmu context (NOTE : also reference original stack, but that's okay, maybe FIXME)
+	call	vmmu.dup_context
 	bit	CLONE_CLEAR_SIGHAND_BIT, (ix+CLONE_FLAGS)
 	jr	z, .__clone3_clear_sighand
 	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
@@ -471,7 +475,7 @@ _clone:=$
 	jr	nz, .__clone3_virtual_framestack
 ; now, default situation is to create a new stack
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
-	call	mm.map_user_pages
+	call	vmmu.map_pages
 	jp	c, .__clone3_no_stack
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
@@ -701,7 +705,7 @@ _exit=$
 .exit:
 	ld	iy, (kthread_current)
 ; if PID 1 exit,make the system reset
-	ld	a, (iy+KERNEL_THREAD_STATUS)
+	ld	a, (iy+KERNEL_THREAD_PID)
 	dec	a
 	jp	z, nmi
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), EXITED
@@ -762,7 +766,7 @@ _exit=$
 	otimr
 ; that will reset the stack belonging to the thread
 	ld	a, (iy+KERNEL_THREAD_PID)
-	call	mm.drop_user_pages
+	call	vmmu.drop_context
 ; now cleanup slab space, just keep 128 bytes TLS
 	ld	hl, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
 	call	kmem.cache_free

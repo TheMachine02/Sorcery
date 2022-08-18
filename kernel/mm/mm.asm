@@ -112,10 +112,10 @@ mm:
 ; Say, I WISH YOU THE BEST
 	ret
 
-.map_user_pages:
-; map pages to a thread with pid = a
-	ld	d, a
-	ld	e, 0
+; .map_user_pages:
+; ; map pages to a thread with pid = a
+; 	ld	d, a
+; 	ld	e, 0
 	
 .map_pages:
 ; register b is page index wanted, return hl = adress or -1 if error
@@ -180,6 +180,7 @@ mm:
 	ei
 	ld	hl, KERNEL_MM_PHY_RAM shr 2
 	ld	h, c
+	ld	a, h
 	add	hl, hl
 	add	hl, hl
 	ret
@@ -189,11 +190,11 @@ mm:
 	jr	z, .__map_pages_write_tlb
 	jp	.__map_page_full
 
-.map_user_page:
-; map a single page to an user thread
-; a = pid
-	ld	d, a
-	ld	e, 0
+; .map_user_page:
+; ; map a single page to an user thread
+; ; a = pid
+; 	ld	d, a
+; 	ld	e, 0
 
 .map_page:
 ; register b is page index wanted, return hl = adress and a = page or -1 if error with a=error and c set
@@ -245,40 +246,40 @@ mm:
 	ei
 	ret
 
-.drop_user_pages:
-; unmap all the pages belonging to an thread
-; a = pid
-; sanity check guard, call by kernel
-; of course, it is easy to bypass, but at least it is here
-; mainly, what happen if you unmap yourself ? > CRASH
-	pop	hl
-	push	hl
-	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE
-	or	a, a
-	sbc	hl, bc
-	jp	nc, .segfault
-	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL + KERNEL_MM_PAGE_MAX
-	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
-	jr	.__drop_user_pages_parse
-.__drop_user_pages_flush:
-	dec	hl
-	dec	h
-	bit	KERNEL_MM_PAGE_CACHE, (hl)
-	call	z, .flush_page
-	inc	h
-	inc	hl
-.__drop_user_pages_parse:
-	cpir
-	jp	pe, .__drop_user_pages_flush
-	ret
+; .drop_user_pages:
+; ; unmap all the pages belonging to an thread
+; ; a = pid
+; ; sanity check guard, call by kernel
+; ; of course, it is easy to bypass, but at least it is here
+; ; mainly, what happen if you unmap yourself ? > CRASH
+; 	pop	hl
+; 	push	hl
+; 	ld	bc, KERNEL_MM_PHY_RAM + KERNEL_MM_PROTECTED_SIZE
+; 	or	a, a
+; 	sbc	hl, bc
+; 	jp	nc, .segfault
+; 	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL + KERNEL_MM_PAGE_MAX
+; 	ld	bc, KERNEL_MM_PAGE_MAX - KERNEL_MM_GFP_KERNEL
+; 	jr	.__drop_user_pages_parse
+; .__drop_user_pages_flush:
+; 	dec	hl
+; 	dec	h
+; 	bit	KERNEL_MM_PAGE_CACHE, (hl)
+; 	call	z, .flush_page
+; 	inc	h
+; 	inc	hl
+; .__drop_user_pages_parse:
+; 	cpir
+; 	jp	pe, .__drop_user_pages_flush
+; 	ret
 
-.unmap_user_pages:
-; ; register b is page index wanted
-; ; register c is page count wanted to clean
-; ; destroy hl, bc, a
-; a is pid
-	ld	d, a
-	ld	e, 0
+; .unmap_user_pages:
+; ; ; register b is page index wanted
+; ; ; register c is page count wanted to clean
+; ; ; destroy hl, bc, a
+; ; a is pid
+; 	ld	d, a
+; 	ld	e, 0
 .unmap_pages:
 ; de is full tlb flag
 	dec	c
@@ -312,13 +313,13 @@ mm:
 	djnz	.__unmap_pages_loop
 	ret
 
-.unmap_user_page:
-; register b is page index wanted
-; destroy a, destroy hl, destroy bc, destroy de
-; page_perm_rwox
-; a = pid
-	ld	d, a
-	ld	e, 0
+; .unmap_user_page:
+; ; register b is page index wanted
+; ; destroy a, destroy hl, destroy bc, destroy de
+; ; page_perm_rwox
+; ; a = pid
+; 	ld	d, a
+; 	ld	e, 0
 
 .unmap_page:
 ; de is full flags
@@ -332,7 +333,6 @@ mm:
 ; b > base kernel memory
 	cp	a, KERNEL_MM_GFP_KERNEL
 	jp	c, .segfault
-; are we the owner ?
 	inc	h
 	ld	a, (hl)
 	cp	a, d
@@ -342,6 +342,7 @@ mm:
 ; rst $0 : trap execute, illegal instruction
 .flush_page:
 ; hl as the ptlb adress
+	push	de
 	push	bc
 	push	hl
 	ld	c, l
@@ -366,6 +367,7 @@ mm:
 	dec	h
 	dec	h
 	pop	bc
+	pop	de
 	ret
 
 .physical_to_ptlb:
@@ -389,5 +391,5 @@ assert KERNEL_MM_PAGE_SIZE = 1024
 	ld	hl, kmm_ptlb_map
 	ld	l, a
 	ld	a, (hl)
-	or	a, a
+	and	a, not KERNEL_MM_PAGE_USER_MASK
 	ret

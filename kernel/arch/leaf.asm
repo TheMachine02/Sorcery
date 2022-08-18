@@ -72,7 +72,7 @@ sysdef _execve
 	push	bc
 	ld	hl, (kthread_current)
 	ld	a, (hl)
-	call	mm.map_user_pages
+; 	call	mm.map_user_pages
 	pop	bc
 	jp	c, kvfs.inode_atomic_write_error
 ; check if hl = correct adress
@@ -116,7 +116,7 @@ sysdef _execve
 .execve_compat_nomem:
 	ld	hl, (kthread_current)
 	ld	a, (hl)
-	call	mm.unmap_user_pages
+; 	call	mm.unmap_user_pages
 	ld	a, ENOMEM
 	jp	kvfs.inode_atomic_write_error
 
