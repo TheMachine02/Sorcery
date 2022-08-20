@@ -312,9 +312,9 @@ kmem:
 	jr	.__cache_free_restore
 
 .cache_create:
-	tsti
 	push	iy
 	push	bc
+	tsti
 	ld	iy, kmem_cache_user
 ; 9 users defined cache are possible
 	ld	b, 9

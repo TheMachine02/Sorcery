@@ -167,7 +167,7 @@ file	'initramfs'
 .arch_bin_error:
  db	$01, KERNEL_ERR, "init: failed to execute /bin/init",10,"init: running emergency shell",10,0
 .arch_heart:
- db	$01, KERNEL_INFO, "hw: interrupt heartbeat=",KERNEL_CRYSTAL_HEART, "Hz",10, 0
+ db	$01, KERNEL_INFO, "hw: interrupt heartbeat=", KERNEL_CRYSTAL_HEART, "Hz",10, 0
 .arch_welcome:
  db	$01, KERNEL_INFO, "welcome to sorcery !", 10, 0
  
@@ -202,7 +202,6 @@ name:
 	or	a, a
 	sbc	hl, hl
 	ret
-; TODO, put this in certificate ?
 .name_table:
 	dl	.name_system		; Operating system name (e.g., "Sorcery")
 	dl	.name_node		; network name ?

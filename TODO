@@ -27,10 +27,6 @@ define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
 (total 17 bytes, remove 5 bytes)
 
 - execve cleanup fd & clean all memory allocated to the thread (except stack which is reset)
-- clone & fork : 
- > fork is a "virtual fork" duplicate the thread stack & copy data in it, but do NOT duplicate data. Make the previous thread (who called fork) paused until an execve()
- >
- >
 
 * timer cleanup
 - allocate memory for timer data
