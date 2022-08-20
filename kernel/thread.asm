@@ -216,6 +216,7 @@ kthread:
 	jr	c, .__create_no_mem
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
+	ld	(iy+KERNEL_THREAD_BREAK), hl
 	ld	de, KERNEL_THREAD_STACK_SIZE - 27
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
@@ -479,6 +480,7 @@ _clone:=$
 	jp	c, .__clone3_no_stack
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
+	ld	(iy+KERNEL_THREAD_BREAK), hl
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl

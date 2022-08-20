@@ -1,4 +1,7 @@
 ; virtual mmu context for anonymous page of thread
+define	KERNEL_VMMU_PERMISSION_R	1 shl 0
+define	KERNEL_VMMU_PERMISSION_W	1 shl 1
+define	KERNEL_VMMU_PERMISSION_X	1 shl 2
 
 vmmu:
 

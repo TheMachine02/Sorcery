@@ -66,39 +66,29 @@ sysdef	_kfree
 	ld	hl, -EFAULT
 	ret
 
-; those actually set the stack limit
-; TODO : actualize those to be actually * correct *
-	
 sysdef _brk
 	ld	iy, (kthread_current)
-	jr	.brk_check
-	
-sysdef _sbrk
-; increment as hl
-	ld	iy, (kthread_current)
-	ld	de, (iy+KERNEL_THREAD_BREAK)
-	add	hl, de
-.brk_check:
-	ld	a, ENOMEM
-; now check : that sp - 512 > hl and that hl > iy + 256+13
-	lea	bc, iy+13
-	inc	d
-	or	a, a
-	sbc	hl, bc
-	jr	c, user_error
-	add	hl, bc
-; now check with sp
+.brk_extend:
+; now check : that sp - 512 > hl
 	push	hl
 	ld	hl, -512
 	add	hl, sp
 	pop	bc
 	or	a, a
 	sbc	hl, bc
-	jp	c, user_error
+	ld	hl, -ENOMEM
+	ret	c
 ; all good, return the old break value
+	ld	hl, (iy+KERNEL_THREAD_BREAK)
 	ld	(iy+KERNEL_THREAD_BREAK), bc
-	ex	de, hl
 	ret
+
+sysdef _sbrk
+; increment as hl
+	ld	iy, (kthread_current)
+	ld	de, (iy+KERNEL_THREAD_BREAK)
+	add	hl, de
+	jr	.brk_extend
 	
 sysdef _uadmin
 ; TODO : implement
