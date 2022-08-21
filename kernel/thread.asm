@@ -82,8 +82,8 @@ virtual	at 0
 	CLONE_CHILD_PID:			rb	3	; pointer to store child tid in child memory
 	CLONE_PARENT_PID:			rb	3	; pointer to store child tid in parent memory
 	CLONE_EXIT_SIGNAL:			rb	1	; signal to deliver to parent
-; 	CLONE_STACK:				rb	3	; stack adress (pointer to lowest)
-; 	CLONE_STACK_SIZE:			rb	3	; stack size (hard to use since the stack will be always not allocated with proper pid,)
+	CLONE_STACK:				rb	3	; stack adress (pointer to lowest)
+	CLONE_STACK_SIZE:			rb	3	; stack size (hard to use since the stack will be always not allocated with proper pid)
 	CLONE_TLS:				rb	3	; location of tls
 end	virtual
 
@@ -216,7 +216,6 @@ kthread:
 	jr	c, .__create_no_mem
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
-	ld	(iy+KERNEL_THREAD_BREAK), hl
 	ld	de, KERNEL_THREAD_STACK_SIZE - 27
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl
@@ -474,13 +473,32 @@ _clone:=$
 	bit	CLONE_VM_BIT, (ix+CLONE_FLAGS)
 	ld	a, (iy+KERNEL_THREAD_PID)
 	jr	nz, .__clone3_virtual_framestack
+	ld	hl, (ix+CLONE_STACK)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .__clone3_allocate_stack
+	ex	de, hl
+	ld	hl, (ix+CLONE_STACK_SIZE)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .__clone3_allocate_stack
+; we have a stack, start de size hl
+	ex	de, hl
+	call	vmmu.add_context
+	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
+	ld	(iy+KERNEL_THREAD_HEAP), hl
+	add	hl, de
+	ld	(iy+KERNEL_THREAD_STACK), hl
+	jr	.__clone3_virtual_framestack
+.__clone3_allocate_stack:
 ; now, default situation is to create a new stack
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	vmmu.map_pages
 	jp	c, .__clone3_no_stack
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
 	ld	(iy+KERNEL_THREAD_HEAP), hl
-	ld	(iy+KERNEL_THREAD_BREAK), hl
 	ld	de, KERNEL_THREAD_STACK_SIZE
 	add	hl, de
 	ld	(iy+KERNEL_THREAD_STACK), hl

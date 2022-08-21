@@ -45,6 +45,7 @@ vmmu:
 	pop	bc
 ; a is ptlb, hl physical adress
 	ret	c
+.__raw_or_context:
 	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
 	sub	a, 32
 	ld	b, a
@@ -83,6 +84,36 @@ vmmu:
 	or	a, a
 	ret
 	
+.add_context:
+; from adress hl, size de, add page to the current context
+	ld	a, i
+	push	af
+	di
+	push	de
+	push	hl
+	call	mm.physical_to_ptlb
+	ld	hl, kmm_ptlb_map + KERNEL_MM_PAGE_MAX
+	ld	l, a
+	ex	de, hl
+	call	mm.physical_to_ptlb
+	ex	de, hl
+	inc	a
+	ld	b, a
+	ld	c, a
+	ld	a, l
+.__add_context_reference:
+	inc	(hl)
+	inc	l
+	djnz	.__add_context_reference
+; we have c = count, a = pltb
+	call	.__raw_or_context
+	pop	hl
+	pop	de
+	pop	af
+	ret	po
+	ei
+	ret
+
 .dup_context:
 ; duplicate the context
 ; copy the vmmu of the tls
