@@ -363,7 +363,7 @@ mm:
 	inc	h
 	ld	(hl), c
 	inc	h
-	ld	(hl), 0
+	ld	(hl), c
 	dec	h
 	dec	h
 	pop	bc

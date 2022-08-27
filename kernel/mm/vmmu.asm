@@ -188,7 +188,6 @@ vmmu:
 	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
 .__drop_context_reference:
 	ld	a, (de)
-	inc	de
 	or	a, a
 	jr	z, .__drop_context_null
 	rra
@@ -263,6 +262,9 @@ vmmu:
 	inc	h
 .__drop_bit_7:
 	inc	l
+	xor	a, a
+	ld	(de), a
+	inc	de
 	djnz	.__drop_context_reference
 	pop	af
 	ret	po
@@ -272,6 +274,7 @@ vmmu:
 	ld	a, 8
 	add	a, l
 	ld	l, a
+	inc	de
 	djnz	.__drop_context_reference
 	pop	af
 	ret	po
