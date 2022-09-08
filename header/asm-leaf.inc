@@ -232,7 +232,7 @@ macro section? declaration*
 		section
 
 		DEFINED_SECTION = 1
-		SECTION_FLAGS = SHF_ALLOC
+		SECTION_FLAGS = 0
 		SECTION_OFFSET = $%
 		SECTION_ALIGN = 1
 
@@ -263,9 +263,9 @@ macro section? declaration*
 			end while
 			irpv attribute, list
 				match =writeable?, attribute
-					SECTION_FLAGS = SECTION_FLAGS or SHF_WRITE
+					SECTION_FLAGS = SECTION_FLAGS or SHF_WRITE or SHF_ALLOC
 				else match =executable?, attribute
-					SECTION_FLAGS = SECTION_FLAGS or SHF_EXECINSTR
+					SECTION_FLAGS = SECTION_FLAGS or SHF_EXECINSTR or SHF_ALLOC
 				else match =readable?, attribute
 					SECTION_FLAGS = SHF_ALLOC
 				else

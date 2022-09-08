@@ -46,6 +46,7 @@ leaf:
 	ld	hl, -ENOMEM
 	ret	c
 .__exec_realloc:
+	push	ix
 ; de  = symbol table, ix = section table, iy = file header
 	ld	b, (iy+LEAF_HEADER_SHNUM)
 ; we shouldn't need iy anymore
@@ -55,6 +56,7 @@ leaf:
 	call	z, .__exec_realloc_section
 	lea	ix, ix+16
 	djnz	.__exec_realloc_section_loop
+	pop	ix
 ; program is "loaded"
 ; find entry
 	ld	hl, (iy+LEAF_HEADER_ENTRY)
@@ -207,14 +209,20 @@ leaf:
 ; else, find section index, grab it's address and push
 	inc	hl
 ; offset within section
+	push	ix
+	ld	b, 16
+	ld	c, a
+	mlt	bc
+	add	ix, bc
+; offset within section
 	ld	bc, (hl)
-	ld	h, a
-	ld	l, 8
-	mlt	hl
+; grab symbol of the section
+	ld	hl, (ix+LEAF_SECTION_ADDR)
 	add	hl, de
 	inc	hl
 	ld	hl, (hl)
 	add	hl, bc
+	pop	ix
 ; hl is symbol true value
 	ret
 .__exec_realloc_sym_absolute:
