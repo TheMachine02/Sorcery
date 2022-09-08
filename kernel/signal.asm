@@ -2,8 +2,8 @@ define		KERNEL_SIGNAL_MAX	32
 define		SIG_BLOCK		0
 define		SIG_UNBLOCK		1
 define		SIG_SET			2
-define		SIG_DFL			$FFFFFF	; from default handler
-define		SIG_IGN			$7FFFFF	; actually set "rst $38" ($FF) within jump table, specifically checked by kill & exit as ignored & also safety checked by interrupt handler
+define		SIG_DFL			0	; from default handler
+define		SIG_IGN			1	; actually set "rst $38" ($FF) within jump table, specifically checked by kill & exit as ignored & also safety checked by interrupt handler
 
 signal:
 
@@ -31,17 +31,22 @@ sysdef	_signal
 	ld	l, a
 	push	de
 	ex	de, hl
-	add	hl, hl
-	jr	c, .__signal_dfl
-	add	hl, hl
-	jr	c, .__signal_ign
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .__signal_dfl
+	add	hl, de
+	scf
+	sbc	hl, de
+	jr	z, .__signal_ign
+	inc	hl
 	ex	de, hl
 	pop	bc
 	di
 	ld	(hl), $C3
 	inc	hl
 	ld	de, (hl)
-	ld	(hl), bc 
+	ld	(hl), bc
 	ex	de, hl
 	ret
 .__signal_ign:
