@@ -1,7 +1,4 @@
 conway_init:
-	dbg	open
-	ld	hl, prog
-	call	__EXEC
 	call	video.irq_lock
 	ld hl,$E40000
 	ld de,$D40000
@@ -329,13 +326,3 @@ D1ABA3:
 	pop ix
 	ei
 	ret
-
-clone_arg:
-	db	CLONE_SIGHAND
-	dl	$0
-	dl	$0
-	db	SIGCHLD
-	dl	$0
-
-prog:
- db	"/bin/crc", 0

@@ -159,7 +159,7 @@ file	'initramfs'
 .arch_dev_path:
  db	"/dev",0
 .arch_bin_path:
- db	"/bin/crc",0
+ db	"/bin/init",0
 .arch_bin_argv:
 .arch_bin_envp:
  dl	NULL

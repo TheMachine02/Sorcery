@@ -27,6 +27,8 @@ end macro
 ; more than 5 parameters need to pass other parameters in stack
 ; all register are preserved across syscall except for the return register hl
 ; flags are preserved across syscall
+; for the kernel, syscall are simply calling the label (without preserving register, if possible)
+; for external libc, it is calling the kernel jump table, which will jump to the preserving registers & specific return function
 macro sysdef label
 	label = $
 	push	ix
@@ -37,12 +39,6 @@ macro sysdef label
 	push	hl
 	ld	hl, user_return
 	ex	(sp), hl
-end macro
-
-; for the kernel, syscall are simply calling the label (without preserving register, if possible)
-; for external libc, it is calling the kernel jump table, which will jump to the preserving registers & specific return function
-macro syscall label
-	call	label
 end macro
 
 sysdef _enosys
