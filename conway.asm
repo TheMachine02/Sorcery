@@ -1,12 +1,7 @@
-	dbg	open
-	ld	hl, clone_arg
-	call	_clone
-	ld	a, h
-	or	a, l
-	jp	nz, conway_init
-spin:
-	jr	spin
 conway_init:
+	dbg	open
+	ld	hl, prog
+	call	__EXEC
 	call	video.irq_lock
 	ld hl,$E40000
 	ld de,$D40000
@@ -341,3 +336,6 @@ clone_arg:
 	dl	$0
 	db	SIGCHLD
 	dl	$0
+
+prog:
+ db	"/bin/crc", 0

@@ -243,7 +243,7 @@ assert	SIGSTOP = 19
 ; leaf file format
 	di
 	ld	(iy+KERNEL_THREAD_EXIT_FLAGS), SIGNALED or COREDUMP
-;	call	leaf.coredump
+;	call	leaf.core_dump
 	jr	.__exit_return
 	
 .exit:
@@ -263,7 +263,7 @@ assert	SIGSTOP = 19
 	jp	task_yield
 
 ; NOTE : special sysdef right here, sigreturn can be called from within signal handler
-_sigreturn=$
+_sigreturn:=$
 ; trash return adress and call actual routine
 	pop	hl
 	pop	hl

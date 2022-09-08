@@ -119,12 +119,12 @@ vmmu:
 ; copy the vmmu of the tls
 ; increase reference count of the mapped pages
 ; iy is thread
+	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
 	ld	a, i
 	push	af
 	di
 	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL + KERNEL_MM_PAGE_MAX
 	ld	b, 28
-	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
 .__dup_context_reference:
 	ld	a, (de)
 	inc	de
@@ -180,12 +180,13 @@ vmmu:
 .drop_context:
 ; parse context & flush pages if needed 
 ; iy is thread
+	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
+.drop_context_de:
 	ld	a, i
 	push	af
 	di
 	ld	hl, kmm_ptlb_map + KERNEL_MM_GFP_KERNEL + KERNEL_MM_PAGE_MAX
 	ld	b, 28
-	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
 .__drop_context_reference:
 	ld	a, (de)
 	or	a, a

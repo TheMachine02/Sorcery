@@ -144,8 +144,7 @@ file	'initramfs'
 	ld	hl, .arch_bin_path
 	ld	de, .arch_bin_envp
 	ld	bc, .arch_bin_argv
-;	call	leaf.execve
-	jp	init_conway
+	call	execve
 	ld	hl, .arch_bin_error
 	call	printk
 ; right now, we just do the console takeover directly (if this carry : system error, deadlock, since NO thread is left)
@@ -160,7 +159,7 @@ file	'initramfs'
 .arch_dev_path:
  db	"/dev",0
 .arch_bin_path:
- db	"/bin/init",0
+ db	"/bin/crc",0
 .arch_bin_argv:
 .arch_bin_envp:
  dl	NULL

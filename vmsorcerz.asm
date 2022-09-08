@@ -166,8 +166,8 @@ include	'fs/romfs.asm'
 include	'fs/tifs.asm'
 include	'fs/tmpfs.asm'
 
-init_conway:
-include	'conway.asm'
+; init_conway:
+; include	'conway.asm'
 
 assert $ < $D08000
 

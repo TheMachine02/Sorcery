@@ -5,6 +5,11 @@ virtual at 0
 	PROFIL_SCALE:		rb 3
 end virtual
 
+define	A_SHUTDOWN		1 shl 0
+define	A_REBOOT		1 shl 1
+define	A_DUMP			1 shl 2
+define	A_FLASH_ACESS		1 shl 3
+
 ; hypervisor call
 define	VM_HYPERVISOR_ADRESS	$0BF000
 
@@ -89,12 +94,19 @@ sysdef _sbrk
 	ld	de, (iy+KERNEL_THREAD_BREAK)
 	add	hl, de
 	jr	.brk_extend
-	
+
 sysdef _uadmin
 ; TODO : implement
 ; cmd, fn, mdep
 uadmin:
 	call	user_perm
+; hl is the cmd
+	ld	a, l
+	rra
+	call	c, kpower.halt
+	rra
+	call	c, reboot
+	ld	hl, -EINVAL
 	ret
 
 ; priority

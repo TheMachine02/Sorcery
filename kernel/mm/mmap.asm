@@ -18,7 +18,30 @@ sysdef _mmap
 ; TODO: MAP_SHARED
 	ld	a, c
 	and	a, MAP_TYPE_MASK
-	jp	z, .mmap_anonymous
+	jp	z, .__mmap_anonymous
+	cp	a, MAP_PRIVATE
+	jr	z, .__mmap_private
+.__mmap_shared:
+; 	ld	de, KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_UNEVICTABLE_MASK
+; if shared, we need to allocate memory and then start pushing it down the inode data and cleaning dangling pages
+; ; for inode, we need to extract the 12 bits of information and merge it with the tlb
+; ; (inode are 64 aligned, 2 bits in lower, 2 bits in upper, 8 bits for high)
+; 	add	iy, iy
+; 	add	iy, iy
+; 	ld	d, iyh
+; 	push	iy
+; 	dec	sp
+; 	pop	bc
+; 	inc	sp
+; 	ld	c, a
+; 	ld	a, b
+; 	and	a, KERNEL_MM_PAGE_USER_MASK
+; 	or	a, e
+; 	ld	e, a
+;	call	.map_pages
+	ld	a, EINVAL
+	jp	user_error
+.__mmap_private:
 	push	hl
 	push	de
 	push	iy
@@ -27,7 +50,7 @@ sysdef _mmap
 	ld	a, l
 	cp	a, KERNEL_THREAD_FILE_DESCRIPTOR_MAX
 	ld	a, EBADF
-	jp	nc, .mmap_error
+	jp	nc, .__mmap_error
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -43,16 +66,16 @@ sysdef _mmap
 	add	hl, de
 	or	a, a
 	sbc	hl, de
-	jr	z, .mmap_error
+	jr	z, .__mmap_error
 ; check inode is a file
 	ld	a, (iy+KERNEL_VFS_INODE_FLAGS)
 	and	a, KERNEL_VFS_TYPE_MASK
 	cp	a, KERNEL_VFS_TYPE_FILE
 	ld	a, EACCES
-	jr	nz, .mmap_error
+	jr	nz, .__mmap_error
 	ld	a, EACCES
 	bit	KERNEL_VFS_PERMISSION_R_BIT, (ix+KERNEL_VFS_FILE_FLAGS)
-	jr	z, .mmap_error	
+	jr	z, .__mmap_error
 	pop	hl
 ; writed the offset
 	ld	(ix+KERNEL_VFS_FILE_OFFSET), hl
@@ -64,7 +87,6 @@ sysdef _mmap
 	pop	hl
 ; iy is the inode, locked for write, we can start to do *stuff*
 ; if the flag is MAP_PRIVATE, just allocate and start copying data from the file
-; if shared, we need to allocate memory and then start pushing it down the inode data and cleaning dangling pages
 ; in all case, allocate
 	pop	de
 ; hl is offset, de is lenght. First check if lenght+offset < inode_size
@@ -74,101 +96,55 @@ sysdef _mmap
 	or	a, a
 	sbc	hl, bc
 	pop	bc
-	ld	a, EINVAL
-	jp	m, .mmap_error_size
+	jp	m, .__mmap_error_size
 ; ok we can start to allocate at adress hl, size de, keep fd and inode in ix and iy
 ; allocate unevicatable cache page
 	pop	hl
 	push	de
 	push	iy
-.__mmap_file_size_tlb:
-	push	de
-	inc	sp
-	pop	de
-	dec	sp
-	ld	a, e
-	srl	d
-	rra
-	srl	d
-	rra
+	ex	de, hl
+	call	mm.physical_to_ptlb
+	ex	de, hl
 	ld	e, a
-.__mmap_file_adress_tlb:
-	push	hl
-	inc	sp
-	pop	hl
-	dec	sp
-	ld	a, l
-	srl	h
-	rra
-	srl	h
-	rra
+	call	mm.physical_to_ptlb
 	ld	h, a
 	ld	l, e
-	ld	de, KERNEL_MM_PAGE_CACHE_MASK or KERNEL_MM_PAGE_UNEVICTABLE_MASK
-; for inode, we need to extract the 12 bits of information and merge it with the tlb
-; (inode are 64 aligned, 2 bits in lower, 2 bits in upper, 8 bits for high)
-	add	iy, iy
-	add	iy, iy
-	ld	d, iyh
-	push	iy
-	dec	sp
-	pop	bc
-	inc	sp
-	ld	c, a
-	ld	a, b
-	and	a, KERNEL_MM_PAGE_USER_MASK
-	or	a, e
-	ld	e, a
 	ld	b, h
 	ld	c, l
 	push	ix
-	call	.map_pages
+	call	vmmu.map_pages
 	pop	ix
 	pop	iy
 	pop	bc
-	jr	c, .mmap_error_size
+	jr	c, .__mmap_error_size
 ; hl = memory mapped page, size is bc
 ; keep offset and inode in ix and iy
 ; so now, read the file from offset and copy it to the memory area
 	ex	de, hl
 	jp	kvfs.read_file
-.mmap_error:
+
+.__mmap_anonymous:
+	ex	de, hl
+	call	mm.physical_to_ptlb
+	ex	de, hl
+	ld	c, a
+	call	mm.physical_to_ptlb
+	ld	b, a
+	call	vmmu.map_pages
+	ret	nc
+	jp	user_error
+
+.__mmap_error:
 	pop	iy
 	pop	de
 	pop	hl
 	jp	user_error
-.mmap_error_size:
+
+.__mmap_error_size:
 	pop	hl
 	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
 	call	atomic_rw.unlock_read
 	ld	a, EINVAL
-	jp	user_error
-	
-.mmap_anonymous:
-.__mmap_anon_size_tlb:
-	push	de
-	inc	sp
-	pop	de
-	dec	sp
-	ld	a, e
-	srl	d
-	rra
-	srl	d
-	rra
-	ld	c, a
-.__mmap_anon_adress_tlb:
-	push	hl
-	inc	sp
-	pop	hl
-	dec	sp
-	ld	a, l
-	srl	h
-	rra
-	srl	h
-	rra
-	ld	b, a
-	call	vmmu.map_pages
-	ret	nc
 	jp	user_error
 
 sysdef _munmap
