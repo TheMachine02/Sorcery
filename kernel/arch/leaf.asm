@@ -249,13 +249,3 @@ leaf:
 	pop	de
 	pop	bc
 	ret
-	
-.__exec_realloc_section_index:
-; section symbol are always first in symbol table to ease computation
-	ld	h, a
-	ld	l, 8
-	mlt	hl
-	add	hl, de
-	inc	hl
-	ld	hl, (hl)
-	ret
