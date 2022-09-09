@@ -1,0 +1,3 @@
+[submodule "Incant"]
+	path = init/Incant
+	url = https://github.com/TheMachine02/Incant.git
