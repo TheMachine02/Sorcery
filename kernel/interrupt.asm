@@ -39,8 +39,8 @@ kinterrupt:
 	ld	e, KERNEL_INTERRUPT_ON or KERNEL_INTERRUPT_TIMER_OS
 	ld	(hl), de
 ; also reset handler table
-	ld	hl, KERNEL_INTERRUPT_IPT
-	ld	i, hl
+; 	ld	hl, KERNEL_INTERRUPT_IPT
+; 	ld	i, hl
 	xor	a, a
 	ld	(kinterrupt_irq_boot_ctx), a
 	ld	(kinterrupt_lru_page), a
@@ -239,7 +239,7 @@ kinterrupt:
 ; and now, for some black magic
 	ld	(kinterrupt_irq_stack_ctx), sp
 	ld	sp, kinterrupt_irq_stack_isr
-	ld	hl, i
+	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	l, a
 	ldi
 	ld	l, (hl)
@@ -249,7 +249,7 @@ kinterrupt:
 	pop	hl
 	ld	sp, hl
 ; check if we need to reschedule for fast response
-	ld	hl, i
+	ld	hl, KERNEL_INTERRUPT_IPT
 	sla	(hl)
 	inc	hl
 	ld	iy, (hl)
@@ -304,7 +304,7 @@ kinterrupt:
 kscheduler:
 .schedule_check_quanta:
 ; load current thread
-	ld	hl, i
+	ld	hl, KERNEL_INTERRUPT_IPT
 	sla	(hl)
 	inc	hl
 	ld	iy, (hl)

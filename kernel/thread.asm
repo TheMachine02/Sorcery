@@ -1034,7 +1034,7 @@ sysdef	_pause
 	ret	c
 	ld	(iy+KERNEL_THREAD_PPID), 1
 ; set reschedule value
-	ld	hl, i
+	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	(hl), $80
 	ret
 
@@ -1044,7 +1044,7 @@ sysdef	_pause
 ; suspend the current thread, safe from within IRQ
 ; if a = 0, suspend generic, else suspend waiting the IRQ set by a
 	di
-	ld	hl, i
+	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	(hl), $80
 	inc	hl
 	ld	iy, (hl)
@@ -1078,7 +1078,7 @@ sysdef	_pause
 	ret	nc
 	dec	hl
 	ld	(hl), $00
-	ld	hl, i
+	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	(hl), $80
 	jr	task_switch_running
 

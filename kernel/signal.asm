@@ -294,9 +294,7 @@ user_return:=$
 	di
 	exx
 	ex	af, af'
-	ld	hl, i
-	inc	hl
-	ld	iy, (hl)
+	ld	iy, (kthread_current)
 	call	.chkset
 ; and perform context restore to see if any more signal is *pending*
 	jp	kinterrupt.irq_context_restore
