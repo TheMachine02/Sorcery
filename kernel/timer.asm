@@ -2,50 +2,35 @@ define	SIGEV_NONE			0
 define 	SIGEV_SIGNAL			1
 define	SIGEV_THREAD			2
 
-define	SIGEVENT_SIZE			12
-define	SIGEVENT			$0
-define	SIGEV_SIGNOTIFY			$0
-define	SIGEV_SIGNO			$1
-define	SIGEV_NOTIFY_FUNCTION		$2
-define	SIGEV_NOTIFY_THREAD		$5
-define	SIGEV_VALUE			$8
-; uint8_t + prt
+define	SIGEV_SIZE			14
+virtual	at 0
+	SIGEV_SIGNOTIFY:	rb	1
+	SIGEV_SIGNO:		rb	1
+	SIGEV_VALUE:		rb	3	; actually a sigval
+	SIGEV_NOTIFY_FUNCTION:	rb	3
+	SIGEV_NOTIFY_ATTRIBUTE:	rb	3
+	SIGEV_NOTIFY_THREAD:	rb	3	; pid, 1 byte
+; padding, 2 bytes
+	SIGEV_PADDING:		rb	2
+end	virtual
 
-define	TIMER				$0
-define	TIMER_FLAGS			$0
-define	TIMER_NEXT			$1
-define	TIMER_PREVIOUS			$4
-define	TIMER_COUNT			$7
-define	TIMER_SIGEVENT			$A
-define	TIMER_EV_SIGNOTIFY		$A
-define	TIMER_EV_SIGNO			$B
-define	TIMER_EV_NOTIFY_FUNCTION	$C
-define	TIMER_EV_NOTIFY_THREAD		$F
-define	TIMER_EV_VALUE			$12
-; uint8_t + prt
 define	TIMER_SIZE			22
-
-; (div/32768)*1000*16
-; (32768/div)/1000*256
-
-if CONFIG_CRYSTAL_DIVISOR = 3
-	define	TIME_JIFFIES_TO_MS		153
-	define	TIME_MS_TO_JIFFIES		27
-	define	TIME_S_TO_JIFFIES		104
-else if CONFIG_CRYSTAL_DIVISOR = 2
-	define	TIME_JIFFIES_TO_MS		106
-	define	TIME_MS_TO_JIFFIES		38
-	define	TIME_S_TO_JIFFIES		150
-else if CONFIG_CRYSTAL_DIVISOR = 1
-	define	TIME_JIFFIES_TO_MS		75
-	define	TIME_MS_TO_JIFFIES		54
-	define	TIME_S_TO_JIFFIES		213
-else if CONFIG_CRYSTAL_DIVISOR = 0
-	define	TIME_JIFFIES_TO_MS		36
-	define	TIME_MS_TO_JIFFIES		113
-	define	TIME_S_TO_JIFFIES		222
-end if
- 
+virtual	at 0
+	TIMER:
+	TIMER_FLAGS:		rb	1
+	TIMER_NEXT:		rb	3
+	TIMER_PREVIOUS:		rb	3
+	TIMER_COUNT:		rb	3
+; here we have a pointer to a sigevent
+	TIMER_SIGEV:
+	TIMER_EV_SIGNOTIFY:	rb	1
+	TIMER_EV_SIGNO:		rb	1
+	TIMER_EV_VALUE:		rb	3	; actually a sigval
+	TIMER_EV_NOTIFY_FUNCTION:	rb	3
+	TIMER_EV_NOTIFY_ATTRIBUTE:	rb	3
+	TIMER_EV_NOTIFY_THREAD:	rb	1	; pid, 1 byte
+end	virtual
+	
 ktimer:
 ; TODO : use mem_cache for timer structure (
 
@@ -95,8 +80,8 @@ ktimer:
 	or	a, a
 	sbc	hl, de
 	jr	z, .create_default
-	lea	de, iy+TIMER_SIGEVENT
-	ld	bc, SIGEVENT_SIZE
+	lea	de, iy+TIMER_SIGEV
+	ld	bc, SIGEV_SIZE
 	ldir
 	jr	.create_arm
 .create_default:

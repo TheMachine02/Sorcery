@@ -7,6 +7,27 @@ virtual	at 0
 	TMS_CSTIME:	rb	3
 end	virtual
 
+; (div/32768)*1000*16
+; (32768/div)/1000*256
+
+if CONFIG_CRYSTAL_DIVISOR = 3
+	define	TIME_JIFFIES_TO_MS		153
+	define	TIME_MS_TO_JIFFIES		27
+	define	TIME_S_TO_JIFFIES		104
+else if CONFIG_CRYSTAL_DIVISOR = 2
+	define	TIME_JIFFIES_TO_MS		106
+	define	TIME_MS_TO_JIFFIES		38
+	define	TIME_S_TO_JIFFIES		150
+else if CONFIG_CRYSTAL_DIVISOR = 1
+	define	TIME_JIFFIES_TO_MS		75
+	define	TIME_MS_TO_JIFFIES		54
+	define	TIME_S_TO_JIFFIES		213
+else if CONFIG_CRYSTAL_DIVISOR = 0
+	define	TIME_JIFFIES_TO_MS		36
+	define	TIME_MS_TO_JIFFIES		113
+	define	TIME_S_TO_JIFFIES		222
+end if
+
 sysdef _clock
 clock:
 	ld	iy, (kthread_current)

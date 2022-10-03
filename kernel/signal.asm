@@ -299,6 +299,22 @@ user_return:=$
 ; and perform context restore to see if any more signal is *pending*
 	jp	kinterrupt.irq_context_restore
 
+.chksig:
+; check if a signal is pending with the kernel thread iy (for in kernel use, to see if the routine received an async signal, since there are blocked within kernel space)
+; return nz if a signal is pending
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
+	or	a, a
+	ret	nz
+	lea	hl, iy+KERNEL_THREAD_SIGNAL_PENDING	; pending
+	or	a, (hl)
+	ret	nz
+	inc	hl
+	or	a, (hl)
+	ret	nz
+	inc	hl
+	or	a, (hl)
+	ret
+	
 ; check for signal recalc for thread iy
 .chkset:
 	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
