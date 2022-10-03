@@ -20,12 +20,15 @@ leaf:
 
 .exec_dma:
 ; iy is pointer to start of the file (either through mmap or direct flash reading)
+; NOTE : return carry set if an error occured
 	call	.check_file
+	scf
 	ld	hl, -ENOEXEC
 	ret	nz
 ; execute the leaf file
 	ld	a, (iy+LEAF_HEADER_FLAGS)
 	and	a, LF_REALLOC
+	scf
 	ret	z
 ; we need to reallocate here
 ; read section table and allocate all section, including symbol section (will hold address of reallocated)
@@ -61,8 +64,47 @@ leaf:
 ; find entry
 	ld	hl, (iy+LEAF_HEADER_ENTRY)
 	add	hl, de
-	jp	.__exec_realloc_sym
 
+; realloc a symbol (hl is symbol adress in symtab)
+.__exec_realloc_sym:
+; hl is symbol
+	ld	a, (hl)
+	cp	a, SHN_ABS
+	jr	z, .__exec_realloc_sym_absolute
+	cp	a, SHN_UNDEF
+	jr	z, .__exec_realloc_sym_external
+; else, find section index, grab it's address and push
+	inc	hl
+; offset within section
+	push	ix
+	ld	b, 16
+	ld	c, a
+	mlt	bc
+	add	ix, bc
+; offset within section
+	ld	bc, (hl)
+; grab symbol of the section
+	ld	hl, (ix+LEAF_SECTION_ADDR)
+	add	hl, de
+	inc	hl
+	ld	hl, (hl)
+	add	hl, bc
+	pop	ix
+; hl is symbol true value
+	or	a, a
+	ret
+.__exec_realloc_sym_absolute:
+	inc	hl
+	ld	hl, (hl)
+	or	a, a
+	ret
+.__exec_realloc_sym_external:
+; not implemented yet
+	scf
+	sbc	hl, hl
+	ret	
+	
+; allocate the symtab found in the exec file
 .__exec_alloc_symtab:
 	push	ix
 	ld	b, (iy+LEAF_HEADER_SHNUM)
@@ -93,7 +135,8 @@ leaf:
 ; de = symtab, we'll need to keep it safe
 	or	a, a
 	ret
-	
+
+; allocate all the needed section in RAM
 .__exec_alloc_section:
 ; ix = section headers, iy = file headers
 	push	ix
@@ -140,6 +183,7 @@ leaf:
 	pop	de
 	jr	.__exec_alloc_section_next
 
+; apply realloc section data
 .__exec_realloc_section:
 ; ix is a realloc section
 ; retrieve the reallocation data
@@ -177,7 +221,7 @@ leaf:
 ; first type
 	ld	a, (ix+LEAF_SYMBOL_SHNDX)
 	cp	a, SHN_ABS
-	jr	nz, .__exec_realloc_sym_external
+	jr	nz, .__exec_realloc_sym_lib
 	ld	ix, (ix+LEAF_SYMBOL_VALUE)
 	ld	bc, (hl)
 	add	ix, bc
@@ -194,41 +238,9 @@ leaf:
 	pop	iy
 	pop	bc
 	ret
-
-.__exec_realloc_sym_external:
-; not implemented yet
+.__exec_realloc_sym_lib:
+	call	.__exec_realloc_sym_external
 	jr	.__exec_realloc_sym_next
-
-.__exec_realloc_sym:
-; hl is symbol
-	ld	a, (hl)
-	cp	a, SHN_ABS
-	jr	z, .__exec_realloc_sym_absolute
-	cp	a, SHN_UNDEF
-	jr	z, .__exec_realloc_sym_external
-; else, find section index, grab it's address and push
-	inc	hl
-; offset within section
-	push	ix
-	ld	b, 16
-	ld	c, a
-	mlt	bc
-	add	ix, bc
-; offset within section
-	ld	bc, (hl)
-; grab symbol of the section
-	ld	hl, (ix+LEAF_SECTION_ADDR)
-	add	hl, de
-	inc	hl
-	ld	hl, (hl)
-	add	hl, bc
-	pop	ix
-; hl is symbol true value
-	ret
-.__exec_realloc_sym_absolute:
-	inc	hl
-	ld	hl, (hl)
-	ret
 
 .__vmalloc:
 	push	bc
@@ -249,3 +261,111 @@ leaf:
 	pop	de
 	pop	bc
 	ret
+
+.exec_dma_static:
+	ld	hl, .microcode
+	ld	de, exec_microcode
+	ld	bc, EXEC_MICROCODE_SIZE
+	ldir
+	jp	.exec_load
+	
+.microcode:
+ org	exec_microcode
+; for boundary
+ rb	6
+ 
+.exec_load:
+; only for static program (kernel)
+; read section table and copy at correct location (for those needed)
+; NOTE : this is for kernel execution
+; TODO : also support non kernel program (we must allocate when copying at exact location)
+	call	.check_file
+	ld	hl, -ENOEXEC
+	scf
+	ret	nz
+; execute the leaf file
+	ld	a, (iy+LEAF_HEADER_FLAGS)
+	and	a, LF_REALLOC
+	scf
+	ret	z
+	bit	LF_STATIC_BIT, (iy+LEAF_HEADER_FLAGS)
+	ret	z
+; do we truly have a kernel ? ENTRY POINT must be equal to $D01000
+	ld	hl, (iy+LEAF_HEADER_ENTRY)
+	ld	de, $D01000
+	or	a, a
+	sbc	hl, de
+	ld	hl, -ENOEXEC
+	scf
+	ret	nz
+	lea	bc, iy+0
+	ld	ix, (iy+LEAF_HEADER_SHOFF)
+	add	ix, bc
+; read section now
+	ld	b, (iy+LEAF_HEADER_SHNUM)
+.alloc_prog_section:
+	bit	1, (ix+LEAF_SECTION_FLAGS)
+	jr	z, .alloc_next_section
+	push	bc
+	ld	hl, $E40000+SHT_NOBITS
+	ld	a, (ix+LEAF_SECTION_TYPE)
+	cp	a, l
+	jr	z, .alloc_nobits
+	ld	hl, (ix+LEAF_SECTION_OFFSET)
+	lea	bc, iy+0
+	add	hl, bc
+.alloc_nobits:
+	ld	bc, (ix+LEAF_SECTION_SIZE)
+; we are a static file, the addr is RAM adress
+	ld	de, (ix+LEAF_SECTION_ADDR)
+	ldir
+	pop	bc
+.alloc_next_section:
+	lea	ix, ix+16
+	djnz    .alloc_prog_section
+	bit	LF_PROTECTED_BIT, (iy+LEAF_HEADER_FLAGS)
+	call	nz, .protected_static
+; load up entry
+; and jump !
+	ld	hl, (iy+LEAF_HEADER_ENTRY)
+	jp	(hl)
+
+.protected_static:
+; find execution bound for a static program
+	ld	hl, $D00000
+	ld	(leaf_boundary_lower), hl
+	ld	(leaf_boundary_upper), hl
+	lea	bc, iy+0
+	ld	ix, (iy+LEAF_HEADER_SHOFF)
+	add	ix, bc
+; read section now
+	ld	b, (iy+LEAF_HEADER_SHNUM)
+.protected_boundary:
+	bit	1, (ix+LEAF_SECTION_FLAGS)
+	jr	z, .protected_next_section
+	ld	de, (ix+LEAF_SECTION_ADDR)
+	ld	hl, (leaf_boundary_lower)
+	or	a, a
+	sbc	hl, de
+	jr	c, .protected_bound_upper
+	ld	(leaf_boundary_lower), de
+.protected_bound_upper:
+	ld	hl, (ix+LEAF_SECTION_SIZE)
+	add	hl, de
+	ex	de, hl
+	ld	hl, (leaf_boundary_upper)
+	or	a, a
+	sbc	hl, de
+	jr	nc, .protected_bound_lower
+	ld	(leaf_boundary_upper), de
+.protected_bound_lower:
+.protected_next_section:
+	lea	ix, ix+16
+	djnz	.protected_boundary
+	ld	hl, leaf_boundary_lower
+	ld	bc, $620
+	otimr
+	ret
+
+ align	256
+ org	.microcode + EXEC_MICROCODE_SIZE

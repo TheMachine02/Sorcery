@@ -261,7 +261,7 @@ atomic_mutex:
 	dec	hl
 	dec	hl
 	ret
-	
+
 .__wake:
 	push	iy
 	push	af
