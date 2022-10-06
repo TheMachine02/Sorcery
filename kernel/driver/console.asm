@@ -355,27 +355,34 @@ console:
 	ld	c, 5
 	ldir
 	pop	bc
-	ld	hl, console_line
 	ld	de, .BIN_ENVP
 ; please note argv is a pointer to a raw string, it will be cut and pushed into program stack frame by the program exec call
-; TODO : find a better way than leaf.program
-; create thread with execve as thread is a good idea, however, the thread creation will always be correct
-; then I need to retrieve error code of execve and then utimately error code of exit thread
-; 	dbg	open
-; 	call	leaf.execve
-	jr	.unknown_command
-; ; right here, we should wait for sigchild
-; .exclusive_wait_command:
-; 	call	signal.wait
-; 	ld	a, l
-; 	cp	a, SIGCHLD
-; 	jr	nz, .exclusive_wait_command
-.clean_command:
-	jp	.prompt
+; vfork then execve in the vforked thread, then the waiting thread will wait for a sigchild on the pid_t
+	call	kthread.vfork
+; if output = 0, execve
+	or	a, a
+	add	hl, de
+	sbc	hl, de
+	jr	nz, .wait_for_pid
+	ld	hl, console_line
+	call	execve
+; unknown then return and exit thread
 .unknown_command:
 	ld	hl, .UNKNOW_INSTR
 	ld	bc, 18
-	call	tty.phy_write
+	jp	tty.phy_write
+.wait_for_pid:
+; hl is already the pid
+	ld	bc, console_line
+	ld	de, 0	; hang the program
+	call	kthread.waitpid
+; and there, we output the exit code if it is non zero
+	ld	hl, console_line+1
+	ld	a, (hl)
+	or	a, a
+	jr	z, .clean_command
+; TODO : signal error / exit code
+.clean_command:
 	jp	.prompt
 	
 .check_builtin:
