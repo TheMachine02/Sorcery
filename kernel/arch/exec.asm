@@ -19,7 +19,6 @@ execve:
 	jp	z, kvfs.inode_atomic_write_error
 	bit	KERNEL_VFS_CAPABILITY_DMA_BIT, l
 	jp	z, kvfs.inode_atomic_write_error
-	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
 ; we have an DMA inode
 ; save the vmmu context of the current thread
 	ld	hl, kmem_cache_s32
@@ -40,13 +39,20 @@ execve:
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	vmmu.map_pages
 	push	hl
+	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	iy, (iy+KERNEL_VFS_INODE_DMA_POINTER)
 	call	leaf.exec_dma
 ; TODO : check for error here
 ; hl is the adress we need to jump to
 ; * cleanup *
+	pop	iy
 	ex	(sp), hl
+; past this point, inode is not needed anymore, we can free it
+	push	hl
+	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	call	atomic_rw.unlock_write
+	pop	hl
 	di
 	ld	iy, (kthread_current)
 	ld	(iy+KERNEL_THREAD_STACK_LIMIT), hl
