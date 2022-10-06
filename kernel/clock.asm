@@ -1,4 +1,9 @@
-define	CLOCKS_PER_SEC	32768
+define	CLOCKS_PER_SEC		32768
+define	CLOCK_REALTIME		0
+define	CLOCK_MONOTONIC		1		; only working clock right now ;
+define	CLOCK_BOOTTIME		2
+define	CLOCK_REALTIME_ALARM	3
+define	CLOCK_BOOTTIME_ALARM	4
 
 virtual	at 0
 	TMS_UTIME:	rb	3
