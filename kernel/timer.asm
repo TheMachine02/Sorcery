@@ -4,33 +4,33 @@ define	SIGEV_THREAD			2
 
 define	SIGEV_SIZE			14
 virtual	at 0
-	SIGEV_SIGNOTIFY:	rb	1
-	SIGEV_SIGNO:		rb	1
-	SIGEV_VALUE:		rb	3	; actually a sigval
-	SIGEV_NOTIFY_FUNCTION:	rb	3
-	SIGEV_NOTIFY_ATTRIBUTE:	rb	3
-	SIGEV_NOTIFY_THREAD:	rb	3	; pid, 1 byte
+	SIGEV_SIGNOTIFY:		rb	1
+	SIGEV_SIGNO:			rb	1
+	SIGEV_VALUE:			rb	3	; actually a sigval (3 bytes)
+	SIGEV_NOTIFY_FUNCTION:		rb	3
+	SIGEV_NOTIFY_ATTRIBUTE:		rb	3
+	SIGEV_NOTIFY_THREAD:		rb	3	; pid, 1 byte
 ; padding, 2 bytes
-	SIGEV_PADDING:		rb	2
+	SIGEV_PADDING:			rb	2
 end	virtual
 
 define	TIMER_SIZE			22
 virtual	at 0
 	TIMER:
-	TIMER_FLAGS:		rb	1
-	TIMER_NEXT:		rb	3
-	TIMER_PREVIOUS:		rb	3
-	TIMER_COUNT:		rb	3
+	TIMER_FLAGS:			rb	1
+	TIMER_NEXT:			rb	3
+	TIMER_PREVIOUS:			rb	3
+	TIMER_COUNT:			rb	3
 ; here we have a pointer to a sigevent
 	TIMER_SIGEV:
-	TIMER_EV_SIGNOTIFY:	rb	1
-	TIMER_EV_SIGNO:		rb	1
-	TIMER_EV_VALUE:		rb	3	; actually a sigval
+	TIMER_EV_SIGNOTIFY:		rb	1
+	TIMER_EV_SIGNO:			rb	1
+	TIMER_EV_VALUE:			rb	3	; actually a sigval
 	TIMER_EV_NOTIFY_FUNCTION:	rb	3
 	TIMER_EV_NOTIFY_ATTRIBUTE:	rb	3
-	TIMER_EV_NOTIFY_THREAD:	rb	1	; pid, 1 byte
+	TIMER_EV_NOTIFY_THREAD:		rb	3	; pid, 1 byte
 end	virtual
-	
+
 ktimer:
 ; TODO : use mem_cache for timer structure (
 
@@ -221,3 +221,70 @@ end if
 ;           expiration.
 ; 
 ;        *  timer_delete(2): Disarm and delete a timer.
+
+
+; sysdef	_timer_create
+; 
+; .create_x:
+; ; int timer_create(clockid_t clockid, struct sigevent *restrict sevp, timer_t *restrict timerid)
+; ; we have hl as the clockid wanted, de is sigevent pointer, and timerid is the buffer were we will store id
+; 	push	hl
+; 	push	de
+; 	push	bc
+; 	ld	hl, kmem_cache_s16
+; 	call	kmem.cache_alloc
+; 	pop	de
+; 	pop	bc
+; 	ex	(sp), hl
+; 	pop	iy
+; ; iy is now the memory structure, hl is still clock id
+; 	ld	a, l
+; 	ld	hl, -ENOMEM
+; 	ret	c
+; 	ld	hl, -ENOTSUP
+; 	cp	a, CLOCK_MONOTONIC
+; 	ret	nz
+; 	ex	de, hl
+; 	ld	(hl), iy
+; 	ld	(iy+TIMER_SIGEV), bc
+; 	
+; .__create_error:
+; 	
+; 
+; .sanitize_sigev:
+; ; check sigev_notify, sigev_signo and sigev_notify_thread_id
+; 	ld	a, (de)
+; 	cp	a, 
+; 
+; 
+; 
+; ; iy = timer structure
+; 	di
+; 	ld	hl, (iy+TIMER_COUNT)
+; 	ld	a, h
+; 	or	a, l
+; 	jr	nz, .create_failed
+; 	ld	(iy+TIMER_COUNT), de
+; 	add	hl, de
+; 	or	a, a
+; 	sbc	hl, de
+; 	jr	z, .create_default
+; 	lea	de, iy+TIMER_SIGEV
+; 	ld	bc, SIGEV_SIZE
+; 	ldir
+; 	jr	.create_arm
+; .create_default:
+; ; direct thread waking is the *faster* method than a costly SIGCONT
+; 	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_THREAD
+; 	ld	hl, .notify_default
+; 	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
+; .create_arm:
+; 	ld	hl, ktimer_queue
+; 	call	kqueue.insert_head
+; ; will meet "or a, a" (line 23), so carry is null
+; 	ei
+; 	sbc	hl, hl
+; 	ret
+; .create_failed:
+; 	ld	a, EINVAL
+; 	jp	user_error

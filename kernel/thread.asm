@@ -60,13 +60,10 @@ virtual	at 0
 	KERNEL_THREAD_TIMER_SIGEVENT:
 	KERNEL_THREAD_TIMER_EV_SIGNOTIFY:	rb	1
 	KERNEL_THREAD_TIMER_EV_SIGNO:		rb	1
+	KERNEL_THREAD_TIMER_EV_VALUE:		rb	3
 	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION:	rb	3
+	KERNEL_THREAD_TIMER_EV_NOTIFY_ATTRIBUTE:rb	3
 	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD:	rb	3
-	KERNEL_THREAD_TIMER_EV_VALUE:
-; union with thread sigval ;
-	KERNEL_THREAD_SIGNAL:
-	KERNEL_THREAD_EV_SIG:			rb	1
-	KERNEL_THREAD_EV_SIG_POINTER:		rb	3
 assert $ < KERNEL_THREAD_TLS_SIZE
 end	virtual
 
@@ -347,7 +344,7 @@ _clone:=$
 	jr	z, .__clone3_no_sig
 	scf
 	ret
-.__clone3_no_sig:	
+.__clone3_no_sig:
 	call	.reserve_pid
 	ld	hl, -EAGAIN
 	ret	c
