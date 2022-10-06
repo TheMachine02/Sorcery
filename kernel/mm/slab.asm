@@ -161,15 +161,9 @@ kmem:
 	ld	b, KERNEL_MM_GFP_KERNEL
 	call	mm.map_page
 	jr	c, .__cache_grow_error
-	dec	sp
-	push	hl
-	inc	sp
-	pop	bc
-	ld	a, c
-	srl	b
-	rra
-	srl	b
-	rra
+; sanity check the slab doesn't goes into user space adress
+	cp	a, KERNEL_MM_GFP_USER
+	call	nc, .cache_warning
 ; a is tlb, hl is page, ix is our cache structure
 ; write KERNEL_SLAB_PAGE_PTLB
 	ld	(hl), a
@@ -206,6 +200,18 @@ kmem:
 	pop	ix
 	or	a, a
 	ret
+.cache_warning:
+	push	ix
+	push	hl
+	push	af
+	ld	hl, .cache_overflow_warning
+	call	printk
+	pop	af
+	pop	hl
+	pop	ix
+	ret
+.cache_overflow_warning:
+ db	$01, KERNEL_WARNING, "warning: slab cache outgrew 32KB reserved memory",10,0
 
 .cache_free:
 ; hl is free data adress
