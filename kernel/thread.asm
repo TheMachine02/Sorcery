@@ -259,7 +259,7 @@ kthread:
 	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
 	ld	hl, signal.default_handler
-	ld	bc, 24*4
+	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
 	ldir
 	pop	af
 	ld	(iy+KERNEL_THREAD_PID), a

@@ -6,7 +6,6 @@ execve:
 ; .BINARY_PATH:	hl
 ; .BIN_ENVP:	de
 ; .BIN_ARGV:	bc
-; TODO : correct error path
 	call	kvfs.inode_get_lock
 	ret	c
 ; check if the inode is executable
@@ -38,12 +37,13 @@ execve:
 ; allocate a new stack
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	vmmu.map_pages
+	jp	c, .__execve_invalid_stack
 	push	hl
 	push	iy
 	ld	iy, (iy+KERNEL_VFS_INODE_DMA_DATA)
 	ld	iy, (iy+KERNEL_VFS_INODE_DMA_POINTER)
 	call	leaf.exec_dma
-; TODO : check for error here
+	jp	c, .__execve_invalid_program
 ; hl is the adress we need to jump to
 ; * cleanup *
 	pop	iy
@@ -65,6 +65,33 @@ execve:
 	lea	hl, iy+KERNEL_THREAD_STACK_LIMIT
 	ld	bc, $00033A
 	otimr
+; various thread reset
+; various close on exec etc
+	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	ld	hl, signal.default_handler
+	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
+	ldir
+; reset attached timers
+;	call	ktimer.drop
+; check for fd with close on exec flags and close them
+; close all fd
+	ld	ix, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
+	ld	b, KERNEL_THREAD_FILE_DESCRIPTOR_MAX
+.__execve_close_fd:
+	push	bc
+	pea	ix+KERNEL_VFS_FILE_DESCRIPTOR_SIZE
+	ld	hl, (ix+0)
+	add	hl, de
+	or	a, a
+	sbc	hl, de
+	jr	z, .__execve_skip_fd
+	ld	a, (ix+KERNEL_VFS_FILE_FLAGS)
+	and	a, KERNEL_VFS_O_CLOEXEC
+	call	nz, kvfs.close
+.__execve_skip_fd:
+	pop	ix
+	pop	bc
+	djnz	.__execve_close_fd
 ; check if the parent thread have vforked, is so, resume it
 	ld	a, (iy+KERNEL_THREAD_PPID)
 	add	a, a
@@ -84,8 +111,6 @@ execve:
 	res	THREAD_VFORK_BIT, (iy+KERNEL_THREAD_ATTRIBUTE)
 	pop	iy
 .__execve_invalid_ppid:
-; various close on exec etc
-; TODO
 ; directly return to new program
 	pop	hl
 	ex	(sp), hl
@@ -101,6 +126,26 @@ execve:
 	call	vmmu.drop_context_de
 	pop	hl
 	jp	kmem.cache_free
+.__execve_invalid_program:
+	pop	de
+	pop	de
+	push	hl
+	call	vmmu.drop_context
+	call	.__execve_invalid_stack
+	pop	hl
+	ret
+.__execve_invalid_stack:
+	pop	hl
+	ld	iy, (kthread_current)
+	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
+	ld	bc, 28
+	ldir
+	ld	bc, -28
+	add	hl, bc
+	call	kmem.cache_free
+	ld	hl, -ENOMEM
+	scf
+	ret
 	
 ; execute kernel in place, provide hl = file path
 ; as reboot, we expect filesystem to be sync and ready to reboot
