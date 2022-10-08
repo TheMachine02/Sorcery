@@ -373,8 +373,8 @@ console:
 	jp	tty.phy_write
 .wait_for_pid:
 ; hl is already the pid
-	ld	bc, console_line
-	ld	de, 0	; hang the program
+	ld	de, console_line
+	ld	bc, 0	; hang the program
 	call	kthread.waitpid
 ; and there, we output the exit code if it is non zero
 	ld	hl, console_line+1

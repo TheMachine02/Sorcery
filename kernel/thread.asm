@@ -579,16 +579,15 @@ _vfork:=$
 	jp	.__clone3_do
 
 sysdef _waitpid
+; NOTE : technically, can also be used as wait4 but with last argument ignored 
 .waitpid:
-; Ssed to wait for state changes in a child of the calling process, and obtain information about the child whose state has changed. A state change is considered to be: the child terminated; the child was stopped by a signal; or the child was resumed by a signal. In the case of a terminated child, performing a wait allows the system to release the resources associated with the child; if a wait is not performed, then the terminated child remains in a "zombie" state
 ; pid_t waitpid(pid_t pid, int *status, int options);
 ; NOT IMPLEMENTED :  < -1 	meaning wait for any child process whose process group ID is equal to the absolute value of pid.
 ; -1 	meaning wait for any child process.
 ; NOT IMPLEMENTED : 0 	meaning wait for any child process whose process group ID is equal to that of the calling process.
 ; > 0 	meaning wait for the child whose process ID is equal to the value of pid. 
 ; if status is not zero, then status is filled with information
-; options can be WNOHANG
-; hl, bc, de
+; options can be WNOHANG (option is bc)
 	bit	7, h
 	jr	z, .__waitpid_watch_schild
 .__waitpid_watch_child:
@@ -602,7 +601,7 @@ sysdef _waitpid
 	ld	a, (hl)
 	or	a, a
 	jp	p, .__waitpid_check_zombie
-	ld	a, e
+	ld	a, c
 	and	a, WNOHANG
 	jr	nz, .__waitpid_hang
 .__waitpid_watch_child_loop:
@@ -614,6 +613,7 @@ sysdef _waitpid
 	call	.suspend
 	jr	.__waitpid_watch_child_loop
 .__waitpid_error:
+	scf
 	ld	hl, -ECHILD
 	ret
 .__waitpid_hang:
@@ -646,7 +646,7 @@ sysdef _waitpid
 	ld	a, (iy+KERNEL_THREAD_STATUS)
 	cp	a, TASK_ZOMBIE
 	jr	z, .__waitpid_reap_zombie
-	ld	a, e
+	ld	a, c
 	and	a, WNOHANG
 	jr	nz, .__waitpid_hang
 .__waitpid_watch_schild_loop:
@@ -667,29 +667,27 @@ sysdef _waitpid
 	ld	hl, (kthread_current)
 	ld	a, (hl)
 	ld	hl, kthread_queue_zombie
-	ld	e, (hl)
+	ld	b, (hl)
 	inc	hl
 	ld	iy, (hl)
-	inc	e
+	inc	b
 .__waitpid_check_zombie_ppid:
 	cp	a, (iy+KERNEL_THREAD_PPID)
 	jr	z, .__waitpid_reap_zombie
 	ld	iy, (iy+KERNEL_THREAD_NEXT)
-	dec	e
-	jr	nz, .__waitpid_check_zombie_ppid
+	djnz	.__waitpid_check_zombie_ppid
 ; we should never reach here
 	jr	.__waitpid_error
 ; iy is a thread owned by us that need to be reaped !
 .__waitpid_reap_zombie:
 ; the thread (iy) we were waiting for is a zombie
-; fill bc with status
+; fill de with status
 ; and proprely free the thread
 ; check status buffer
 	or	a, a
 	sbc	hl, hl
-	adc	hl, bc
+	adc	hl, de
 	jr	z, .__waitpid_reap_null
-	ex	de, hl
 	lea	hl, iy+KERNEL_THREAD_EXIT_FLAGS
 	ldi
 	ldi
