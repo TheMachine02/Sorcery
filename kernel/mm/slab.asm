@@ -133,8 +133,8 @@ kmem:
 	ret
 	
 .__cache_grow_error:
-	pop	ix
 	pop	hl
+	lea	hl, ix+0
 	scf
 	ret
 
@@ -145,10 +145,7 @@ kmem:
 	push	hl
 	ex	(sp), ix
 ; ix = cache structure
-	ld	a, (ix+KERNEL_SLAB_CACHE_DATA_PAGE)
-	inc	a
-	jp	m, .__cache_grow_error
-	ld	(ix+KERNEL_SLAB_CACHE_DATA_PAGE), a
+	inc	(ix+KERNEL_SLAB_CACHE_DATA_PAGE)
 	ld	a, l
 	rra
 	rra

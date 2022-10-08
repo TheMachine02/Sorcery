@@ -117,7 +117,7 @@ file	'initramfs'
 	ld	(hl), KERNEL_HW_POISON
 	ldir
 	ei
-	ret 
+	ret
  
 .arch_init:
 ; NOTE : here, spawn the thread .init who will mount filesystem, init all driver and device, and then execv into /bin/init
@@ -185,7 +185,7 @@ reboot:
 	rst	$00
 
 sysdef _uname
-name:
+uname:
 ; hl is structure buf
 ; copy it
 	add	hl, de
@@ -195,13 +195,13 @@ name:
 	ld	hl, -EFAULT
 	ret	z
 ; copy data
-	ld	hl, .name_table
+	ld	hl, .__uname_table
 	ld	bc, 15
 	ldir
 	or	a, a
 	sbc	hl, hl
 	ret
-.name_table:
+.__uname_table:
 	dl	.name_system		; Operating system name (e.g., "Sorcery")
 	dl	.name_node		; network name ?
 	dl	.name_release		; Operating system release (e.g., "1.0.0")
