@@ -323,27 +323,27 @@ _clone:=$
 .__clone3_do:
 ; structure is hl, de is size
 	di
-	ld	ix, 0
-	ex	de, hl
-	add	ix, de
+	push	hl
+	pop	ix
 .__clone3_sanitize_input:
+	or	a, a
+	add	hl, de
+	sbc	hl, de
 	ld	hl, -EINVAL
+	scf
+	ret	z
 ; CLONE_CLEAR_SIGHAND and CLONE_SIGHAND are incompatible
 ; CLONE_VM need CLONE_VFORK also set
 	ld	a, (ix+CLONE_FLAGS)
 	bit	CLONE_VM_BIT, a
 	jr	z, .__clone3_no_vm
 	bit	CLONE_VFORK_BIT, a
-	jr	nz, .__clone3_no_vm
-	scf
-	ret
+	ret	z
 .__clone3_no_vm:
 	bit	CLONE_SIGHAND_BIT, a
 	jr	z, .__clone3_no_sig
 	bit	CLONE_CLEAR_SIGHAND_BIT, a
-	jr	z, .__clone3_no_sig
-	scf
-	ret
+	ret	nz
 .__clone3_no_sig:
 	call	.reserve_pid
 	ld	hl, -EAGAIN
