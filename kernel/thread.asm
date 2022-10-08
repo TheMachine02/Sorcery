@@ -564,7 +564,7 @@ _clone:=$
 	dl	$0
 	db	SIGCHLD
 	dl	$0
-	
+
 _vfork:=$
 .vfork:
 	push	ix

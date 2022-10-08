@@ -138,7 +138,10 @@ kinterrupt_lru_page:
  db	KERNEL_HW_POISON		; vfs cache decay
 dmesg_log:
  db	16	dup	KERNEL_HW_POISON
- db	6	dup	KERNEL_HW_POISON
+perf_context_switch:
+ db	3	dup	$00
+perf_interrupt:
+ db	3	dup	$00
 kmem_cache_buffctl:			; 16 slub buffers, 6 defined, 10 user defined
 kmem_cache_s16:
  db	4	dup	$FF

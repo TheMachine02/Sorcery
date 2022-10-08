@@ -220,11 +220,11 @@ nmi:
 _boot_sprintf_safe:
 ; the nice _boot_sprintf routine is bugged, and scrap need to be cleared to zero
 ; also, it is NOT reentrant, so guard it
+	ld	a, i
 	di
 	ld	hl, _boot_sprintf_return
 	ex	(sp), hl
 	ld	(_boot_sprintf_return+1), hl
-	ld	a, i
 	push	af
 	pop	hl
 	ld	(_boot_sprintf_irq+1), hl

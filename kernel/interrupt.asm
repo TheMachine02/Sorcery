@@ -167,57 +167,13 @@ kinterrupt:
 	ei
 	ret
 
-.irq_do_signal:
-; here, we are just before context switch
-; shadow hold correct registers
-; stack have iy and ix, so actually we are already in a kernel stack frame
-; push down user stack the handler adress (and the sigreturn syscall)
-; after the signal is processed, we re-enter interrupt like state and do an irq_context_restore to check for *more* pending signal (every signal should be processed after that, also we can be preempted whenever we want)
-	exx
-	ex	af, af'
-	push	de
-	push	bc
-	push	af
-	push	hl
-	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
-	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
-; C param
-	or	a, a
-	sbc	hl, hl
-	ld	l, a
-	push	hl
-	ld	c, a
-; mask operation destroy b but not c
-	call	signal.mask_operation
-; save the signal status (0 is blocked, 1 is unblocked)
-	ld	b, a
-	and	a, (hl)
-	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
-	ld	a, b
-	cpl
-; block current signal
-	and	a, (hl)
-	ld	(hl), a
-	ld	hl, signal.return
-	push	hl
-	ld	a, c
-	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
-; we are in a slab 128/256 bytes aligned, so this is valid
-	add	a, a
-	add	a, a
-	add	a, l
-	ld	l, a
-	ei
-	ld	a, (hl)
-	inc	a
-	ret	z
-; directly jump into the vector table
-; NOTE : we leak register and kernel adresses here
-; however, pass down iy as current thread for ease of mind
-	jp	(hl)
-
 .irq_handler:
 	pop	hl
+if	CONFIG_PERF_COUNTER	
+	ld	hl, (perf_interrupt)
+	inc	hl
+	ld	(perf_interrupt), hl
+end	if
 ; read interrupt sources
 	ld	hl, KERNEL_INTERRUPT_ISR
 ; IRQ 0 master
@@ -275,6 +231,55 @@ kinterrupt:
 	ei
 	ret
 
+.irq_do_signal:
+; here, we are just before context switch
+; shadow hold correct registers
+; stack have iy and ix, so actually we are already in a kernel stack frame
+; push down user stack the handler adress (and the sigreturn syscall)
+; after the signal is processed, we re-enter interrupt like state and do an irq_context_restore to check for *more* pending signal (every signal should be processed after that, also we can be preempted whenever we want)
+	exx
+	ex	af, af'
+	push	de
+	push	bc
+	push	af
+	push	hl
+	ld	a, (iy+KERNEL_THREAD_SIGNAL_CURRENT)
+	ld	(iy+KERNEL_THREAD_SIGNAL_CURRENT), 0
+; C param
+	or	a, a
+	sbc	hl, hl
+	ld	l, a
+	push	hl
+	ld	c, a
+; mask operation destroy b but not c
+	call	signal.mask_operation
+; save the signal status (0 is blocked, 1 is unblocked)
+	ld	b, a
+	and	a, (hl)
+	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
+	ld	a, b
+	cpl
+; block current signal
+	and	a, (hl)
+	ld	(hl), a
+	ld	hl, signal.return
+	push	hl
+	ld	a, c
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+; we are in a slab 128/256 bytes aligned, so this is valid
+	add	a, a
+	add	a, a
+	add	a, l
+	ld	l, a
+	ei
+	ld	a, (hl)
+	inc	a
+	ret	z
+; directly jump into the vector table
+; NOTE : we leak register and kernel adresses here
+; however, pass down iy as current thread for ease of mind
+	jp	(hl)
+
 .irq_trampoline_crystal:
 ; this is the master clock IRQ handler
 	ld	l, KERNEL_INTERRUPT_ICR and $FF
@@ -322,7 +327,7 @@ kscheduler:
 	inc	hl
 	inc	hl
 	dec	(hl)
-	jr	nz, kinterrupt.irq_context_restore
+	jp	nz, kinterrupt.irq_context_restore
 ; lower thread priority and move queue since we reached our quantum
 .schedule_unpromote:
 	dec	hl
@@ -412,6 +417,11 @@ kscheduler:
 	push	bc
 	push	af
 	push	hl
+if	CONFIG_PERF_COUNTER	
+	ld	hl, (perf_context_switch)
+	inc	hl
+	ld	(perf_context_switch), hl
+end	if	
 ; change thread
 	sbc	hl, hl
 	adc	hl, sp
