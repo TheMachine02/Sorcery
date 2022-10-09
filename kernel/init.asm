@@ -168,7 +168,7 @@ file	'initramfs'
 .arch_heart:
  db	$01, KERNEL_INFO, "hw: interrupt heartbeat=", KERNEL_CRYSTAL_HEART, "Hz",10, 0
 .arch_welcome:
- db	$01, KERNEL_INFO, "welcome to sorcery !", 10, 0
+ db	$01, KERNEL_INFO, "welcome to sorcery !", 10, "hic sunt dracones",10, 0
  
 sysdef _reboot
 reboot:

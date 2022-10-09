@@ -572,9 +572,8 @@ _vfork:=$
 	push	de
 	push	bc
 	push	af
-	push	hl
 	ld	hl, user_return
-	ex	(sp), hl
+	push	hl
 	ld	hl, .vfork_structure
 	jp	.__clone3_do
 
