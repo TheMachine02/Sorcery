@@ -383,6 +383,16 @@ console:
 	jr	z, .clean_command
 ; TODO : signal error / exit code
 .clean_command:
+	ld	hl, DRIVER_VIDEO_IMSC
+	ld	(hl), DRIVER_VIDEO_IMSC_DEFAULT
+	ld	hl, DRIVER_VIDEO_CTRL_DEFAULT
+	ld	(DRIVER_VIDEO_CTRL), hl
+	ld	hl, (DRIVER_VIDEO_BUFFER)
+	ld	(DRIVER_VIDEO_SCREEN), hl
+	ld	hl, .PALETTE
+	ld	de, DRIVER_VIDEO_PALETTE
+	ld	bc, 36
+	ldir
 	jp	.prompt
 	
 .check_builtin:

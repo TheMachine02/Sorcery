@@ -243,6 +243,7 @@ leaf:
 	jr	.__exec_realloc_sym_next
 
 .__vmalloc:
+	push	iy
 	push	bc
 	push	de
 	push	hl
@@ -257,9 +258,11 @@ leaf:
 	ld	c, a
 	inc	c
 	ld	b, KERNEL_MM_GFP_USER
+	ld	iy, (kthread_current)
 	call	vmmu.map_pages
 	pop	de
 	pop	bc
+	pop	iy
 	ret
 
 .exec_dma_static:

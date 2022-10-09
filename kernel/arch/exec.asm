@@ -35,8 +35,11 @@ execve:
 	ld	c, 28
 	ldir
 ; allocate a new stack
+	push	iy
+	ld	iy, (kthread_current)
 	ld	bc, (KERNEL_THREAD_STACK_SIZE/KERNEL_MM_PAGE_SIZE) or (KERNEL_MM_GFP_USER shl 8)
 	call	vmmu.map_pages
+	pop	iy
 	jp	c, .__execve_invalid_stack
 	push	hl
 	push	iy
