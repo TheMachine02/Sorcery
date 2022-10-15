@@ -47,6 +47,23 @@ execve:
 	ld	iy, (iy+KERNEL_VFS_INODE_DMA_POINTER)
 	call	leaf.exec_dma
 	jp	c, .__execve_invalid_program
+	push	hl
+	ld	hl, kmem_cache_s128
+	call	kmem.cache_alloc
+	jp	c, .__execve_invalid_sighand
+	ex	de, hl
+	di
+; drop the signal handler table and allocate a new one
+	ld	iy, (kthread_current)
+	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
+	ld	(iy+KERNEL_THREAD_SIGNAL_VECTOR), de
+; if signal refcount is zero, we can cleanup
+	dec	(hl)
+	call	z, kmem.cache_free
+	ld	hl, signal.default_handler
+	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
+	ldir
+	pop	hl
 ; hl is the adress we need to jump to
 ; * cleanup *
 	pop	iy
@@ -70,10 +87,6 @@ execve:
 	otimr
 ; various thread reset
 ; various close on exec etc
-	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
-	ld	hl, signal.default_handler
-	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
-	ldir
 ; reset attached timers
 ;	call	ktimer.drop
 ; check for fd with close on exec flags and close them
@@ -129,16 +142,16 @@ execve:
 	call	vmmu.drop_context_de
 	pop	hl
 	jp	kmem.cache_free
-.__execve_invalid_program:
+.__execve_invalid_sighand:
 	pop	de
+.__execve_invalid_program:
+	pop	iy
 	pop	de
 	push	hl
 	call	vmmu.drop_context
-	call	.__execve_invalid_stack
 	pop	hl
-	ret
-.__execve_invalid_stack:
-	pop	hl
+.__execve_invalid_stack_entry:
+	ex	(sp), hl
 	ld	iy, (kthread_current)
 	lea	de, iy+KERNEL_THREAD_VMMU_CONTEXT
 	ld	bc, 28
@@ -146,9 +159,12 @@ execve:
 	ld	bc, -28
 	add	hl, bc
 	call	kmem.cache_free
-	ld	hl, -ENOMEM
+	pop	hl
 	scf
 	ret
+.__execve_invalid_stack:
+	ld	hl, -ENOMEM
+	jr	.__execve_invalid_stack_entry
 	
 ; execute kernel in place, provide hl = file path
 ; as reboot, we expect filesystem to be sync and ready to reboot

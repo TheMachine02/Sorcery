@@ -376,7 +376,9 @@ _clone:=$
 	ex	de, hl
 	ld	(hl), 0
 	ex	de, hl
-	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
+	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE-1
+	inc	de
+	inc	hl
 	ldir
 .__clone3_duplicate_sighand:
 	ld	hl, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
