@@ -1243,7 +1243,6 @@ sysdef _access
 	jr	z, .stat_continue
 	jp	.inode_atomic_write_error
 
-; TODO : ref and deref the inode when using path
 sysdef _chdir
 .chdir:
 ;       int chdir(const char *path);
@@ -1258,8 +1257,14 @@ sysdef _chdir
 	jp	nz, .inode_atomic_write_error
 ; iy is valid
 	ld	ix, (kthread_current)
-	ld	(ix+KERNEL_THREAD_WORKING_DIRECTORY), ix
-	lea	hl, iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	ld	hl, (ix+KERNEL_THREAD_WORKING_DIRECTORY)
+	inc	(iy+KERNEL_VFS_INODE_REFERENCE)
+	ld	(ix+KERNEL_THREAD_WORKING_DIRECTORY), iy
+	pea	iy+KERNEL_VFS_INODE_ATOMIC_LOCK
+	push	hl
+	pop	iy
+	call	kvfs.inode_deref
+	pop	hl
 	call	atomic_rw.unlock_write
 	or	a, a
 	sbc	hl, hl
