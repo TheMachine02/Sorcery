@@ -169,7 +169,7 @@ kinterrupt:
 
 .irq_handler:
 	pop	hl
-if	CONFIG_PERF_COUNTER	
+if	CONFIG_PERF_COUNTER
 	ld	hl, (perf_interrupt)
 	inc	hl
 	ld	(perf_interrupt), hl
@@ -253,11 +253,11 @@ end	if
 	ld	c, a
 ; mask operation destroy b but not c
 	call	signal.mask_operation
-; save the signal status (0 is blocked, 1 is unblocked)
-	ld	b, a
-	and	a, (hl)
-	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
-	ld	a, b
+; ; save the signal status (0 is blocked, 1 is unblocked)
+; 	ld	b, a
+; 	and	a, (hl)
+; 	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
+; 	ld	a, b
 	cpl
 ; block current signal
 	and	a, (hl)
@@ -421,7 +421,7 @@ if	CONFIG_PERF_COUNTER
 	ld	hl, (perf_context_switch)
 	inc	hl
 	ld	(perf_context_switch), hl
-end	if	
+end	if
 ; change thread
 	sbc	hl, hl
 	adc	hl, sp

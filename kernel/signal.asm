@@ -282,7 +282,6 @@ _sigreturn:=$
 	ld	a, l
 	ld	iy, (kthread_current)
 	call	.mask_operation
-	ld	a, (iy+KERNEL_THREAD_SIGNAL_SAVE)
 	or	a, (hl)
 	ld	(hl), a
 ; the pop the stack

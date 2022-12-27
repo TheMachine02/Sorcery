@@ -26,7 +26,7 @@ virtual	at 0
 	KERNEL_THREAD_SIGNAL_MASK:		rb	3
 	KERNEL_THREAD_SIGNAL_PENDING:		rb	3
 	KERNEL_THREAD_SIGNAL_VECTOR:		rb	3	; pointer to slab block
-	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
+; 	KERNEL_THREAD_SIGNAL_SAVE:		rb	1	; 1 byte for temporary maskset save when masking signal in handler
 ; more attribute
 	KERNEL_THREAD_SUID:			rb	1
 	KERNEL_THREAD_RUID:			rb	1
@@ -104,7 +104,7 @@ define	CLONE_FILES_BIT				7		; share the fd table
 
 define	KERNEL_THREAD_MAP_SIZE			4
 define	KERNEL_THREAD_STACK_SIZE		8192	; all of it usable
-define	KERNEL_THREAD_SIGNAL_VECTOR_SIZE	128	; 24*4 bytes
+define	KERNEL_THREAD_SIGNAL_VECTOR_SIZE	96	; 24*4 bytes
 define	KERNEL_THREAD_TLS_SIZE			128	; header
 define	KERNEL_THREAD_FILE_DESCRIPTOR_SIZE	256	; 8*32 bytes FD
 define	KERNEL_THREAD_FILE_DESCRIPTOR_MAX	32
