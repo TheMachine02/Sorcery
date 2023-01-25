@@ -134,7 +134,7 @@ include	'kernel/fifo.asm'
 include	'kernel/signal.asm'
 include	'kernel/restart.asm'
 include	'kernel/syscall.asm'
-include	'kernel/timer.asm'
+include	'kernel/timer_posix.asm'
 ; be sure we are in the correct spot for NMI
  assert $ < $0220A8
  rb $0220A8-$

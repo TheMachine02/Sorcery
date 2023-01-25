@@ -106,9 +106,8 @@ sysjump:
 	jp	_reboot
 	jp	_usleep
 	jp	_sigreturn
-	jp	_shmctl
-	jp	_shmget
-	jp	_shmfree
+	jp	_setitimer
+	jp	_getitimer
 ; NOTE : max 240 syscall, should be way more than enough
 align	1024
 sysinternal:
@@ -130,6 +129,7 @@ include	'kernel/ring.asm'
 include	'kernel/syscall.asm'
 include	'kernel/credential.asm'
 include	'kernel/timer.asm'
+include	'kernel/timer_posix.asm'
 include	'kernel/vfs.asm'
 include	'kernel/inode.asm'
 include	'kernel/mount.asm'

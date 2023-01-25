@@ -2,137 +2,160 @@ define	SIGEV_NONE			0
 define 	SIGEV_SIGNAL			1
 define	SIGEV_THREAD			2
 
-define	SIGEV_SIZE			14
+define	SIGEV_SIZE			16
 virtual	at 0
 	SIGEV_SIGNOTIFY:		rb	1
 	SIGEV_SIGNO:			rb	1
 	SIGEV_VALUE:			rb	3	; actually a sigval (3 bytes)
 	SIGEV_NOTIFY_FUNCTION:		rb	3
 	SIGEV_NOTIFY_ATTRIBUTE:		rb	3
-	SIGEV_NOTIFY_THREAD:		rb	3	; pid, 1 byte
+	SIGEV_NOTIFY_THREAD:		rb	3	;
 ; padding, 2 bytes
 	SIGEV_PADDING:			rb	2
 end	virtual
 
-define	TIMER_SIZE			22
+define	TIMER_SIZE			16
+define	TIMER_REDZONE			$CF
 virtual	at 0
 	TIMER:
-	TIMER_FLAGS:			rb	1
+	TIMER_HASH:			rb	1
 	TIMER_NEXT:			rb	3
 	TIMER_PREVIOUS:			rb	3
-	TIMER_COUNT:			rb	3
-; here we have a pointer to a sigevent
-	TIMER_SIGEV:
-	TIMER_EV_SIGNOTIFY:		rb	1
-	TIMER_EV_SIGNO:			rb	1
-	TIMER_EV_VALUE:			rb	3	; actually a sigval
-	TIMER_EV_NOTIFY_FUNCTION:	rb	3
-	TIMER_EV_NOTIFY_ATTRIBUTE:	rb	3
-	TIMER_EV_NOTIFY_THREAD:		rb	3	; pid, 1 byte
+	TIMER_INTERVAL:			rb	3
+	TIMER_COUNT:			rb	2
+	TIMER_INTERNAL_THREAD:		rb	1	; owner of the timer, pid
+; here we have a pointer to a sigevent structure
+	TIMER_SIGEV:			rb	3
 end	virtual
 
+define	ITIMER_REAL	0
+define	ITIMER_VIRTUAL	1
+define	ITIMER_PROF	2
+
+
+; struct itimerval {
+;   struct timeval it_interval; /* valeur suivante */
+;   struct timeval it_value;    /* valeur actuelle */
+; };
+; 
+; struct timeval {
+;   long tv_sec;                /* secondes        */
+;   long tv_usec;               /* micro secondes  */
+; };
+
 ktimer:
-; TODO : use mem_cache for timer structure (
 
-; please note, timer_next is still valid per timer queue
-.notify_default = kthread.irq_resume
+.itimer_sys:
+ db	SIGEV_SIGNAL
+ db	SIGALRM
+ dl	0
+ dl	0
+ dl	0
+ dl	0
+ 
+.itimer_sleep:
+ db	SIGEV_SIGNAL
+ db	SIGCONT
+ dl	0
+ dl	0
+ dl	0
+ dl	0
 
-.set_time:
+; TODO : convert ticks from direct timer value to actual itimerval structure
+sysdef	_setitimer
+; setitimer(int which, const struct itimerval *restrict new_value, struct itimerval *restrict old_value);
+.setitimer:
 	ld	a, l
-	dec	hl
-	inc	h
-	ld	l, a
-	ld	iy, (kthread_current)
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	ret
-
-.get_time:
-	ld	iy, (kthread_current)
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
-	ld	a, l
-	inc	hl
-	dec	h
-	ld	l, a
-	ret
-	
-; it timer attached to thread, used by sleep() and alarm() ;
-.itset:
-; create a timer attached to the current thread
-; hl as a seig_ev structure (
-; EV_SIGNOTIFY		$0
-; EV_SIGNO		$1
-; EV_NOTIFY_FUNCTION	$2
-; EV_VALUE		$5
-; pass NULL for default callback, ie resume thread
-; de is timer count
-; bc is ev value
-	ld	iy, (kthread_current)
-	lea	iy, iy+KERNEL_THREAD_TIMER
-.create:
-; iy = timer structure
-	di
-	ld	hl, (iy+TIMER_COUNT)
-	ld	a, h
-	or	a, l
-	jr	nz, .create_failed
-	ld	(iy+TIMER_COUNT), de
-	add	hl, de
 	or	a, a
-	sbc	hl, de
-	jr	z, .create_default
-	lea	de, iy+TIMER_SIGEV
-	ld	bc, SIGEV_SIZE
+	ld	hl, -EINVAL
+	scf
+	ret	nz
+	ld	iy, (kthread_current)
+	lea	iy, iy+KERNEL_THREAD_ITIMER
+; check if de or bc is null
+	sbc	hl, hl
+	adc	hl, de
+	ld	hl, -EFAULT
+	scf
+	ret	z
+	sbc	hl, hl
+	adc	hl, bc
+	ld	hl, -EFAULT
+	scf
+	ret	z
+; check if new value is null, if so disarm the timer
+	ex	de, hl
+	ld	a, (hl)
+	inc	hl
+	or	a, (hl)
+	dec	hl
+	ex	de, hl
+	jr	z, .__setitimer_disarm
+; arm the timer, enter critical interrupt space since we might modify the *thread timer*
+	di
+	ld	hl, .itimer_sys
+	ld	(iy+TIMER_SIGEV), hl
+; use de as new value buffer and bc as copy of old values
+	push	de
+	push	bc
+	pop	de
+	lea	hl, iy+TIMER_INTERVAL
+	ld	bc, 5
 	ldir
-	jr	.create_arm
-.create_default:
-; direct thread waking is the *faster* method than a costly SIGCONT
-	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_THREAD
-	ld	hl, .notify_default
-	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
-.create_arm:
+	pop	de
+	lea	hl, iy+TIMER_INTERVAL
+	ex	de, hl
+	ld	c, 5
+	ldir
+	ld	a, (iy-KERNEL_THREAD_ITIMER+KERNEL_THREAD_PID)
+	ld	(iy+TIMER_INTERNAL_THREAD), a
 	ld	hl, ktimer_queue
 	call	kqueue.insert_head
-; will meet "or a, a" (line 23), so carry is null
-	ei
+	or	a, a
 	sbc	hl, hl
 	ret
-.create_failed:
-	ld	a, EINVAL
-	jp	user_error
-	
-.itreset:
-; delete (or disarm) the current timer of the thread
-	ld	iy, (kthread_current)
-	lea	iy, iy+KERNEL_THREAD_TIMER
-.delete:
+.__setitimer_disarm:
 	di
-	ld	hl, (iy+TIMER_COUNT)
-	ld	a, l
-	or	a, h
-	jr	z, .reset_errno
 	ld	hl, ktimer_queue
 	call	kqueue.remove_head
-; won't modify Carry
+	or	a, a
 	sbc	hl, hl
-	ld	(iy+TIMER_COUNT), hl
-	ei
-	ret
-.reset_errno:
-	ei
-; 	ld	(iy+KERNEL_THREAD_ERRNO), EINVAL
-	dec	hl
+	ld	(iy+TIMER_COUNT), l
+	ld	(iy+TIMER_COUNT+1), h
+	ld	(iy+TIMER_INTERVAL), hl
+	ret 
+
+; TODO : convert ticks from direct timer value to actual itimerval structure
+sysdef	_getitimer
+; int getitimer(int which, struct itimerval *curr_value);	
+.getitimer:
+	ld	a, l
+	or	a, a
+	ld	hl, -EINVAL
+	scf
+	ret	nz
+	ld	iy, (kthread_current)
+; check if de is null
+	sbc	hl, hl
+	adc	hl, de
+	ld	hl, -EFAULT
+	ret	z
+; to keep a consistant reading, disable interrupts
+	di
+	lea	hl, iy+TIMER_INTERVAL + KERNEL_THREAD_ITIMER
+	ld	bc, 5
+	ldir
+	or	a, a
+	sbc	hl, hl
 	ret
 
 sysdef _alarm
-; TODO verify correct * invocation *
 .alarm:
 	ld	iy, (kthread_current)
-	lea	iy, iy+KERNEL_THREAD_TIMER
-	tsti
-	ld	de, (iy+TIMER_COUNT)
-	ld	a, e
-	or	a, d
-	jr	nz, .alarm_disarm
+	lea	iy, iy+KERNEL_THREAD_ITIMER
+	ld	a, l
+	or	a, h
+	jr	nz, .__setitimer_disarm
 ; convert second to jiffies
 	ld	e, TIME_S_TO_JIFFIES
 	ld	d, l
@@ -157,134 +180,16 @@ end if
 	dec	hl
 	inc	h
 	ld	l, e
-	ld	(iy+TIMER_COUNT), hl
-	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_SIGNAL
-	ld	(iy+TIMER_EV_SIGNO), SIGALRM
-	ld	hl, ktimer_queue
-	call	kqueue.insert_head
-	pop	af
-	ret	po
-	ei
-	ret
-.alarm_disarm:
-	ld	hl, ktimer_queue
-	call	kqueue.remove_head
-; carry wasn't modified
+; write timer
+	di
+	ld	(iy+TIMER_COUNT), l
+	ld	(iy+TIMER_COUNT+1), h
+	or	a, a
 	sbc	hl, hl
-	ld	(iy+TIMER_COUNT), hl
-	pop	af
-	ret	po
-	ei
-	ret
-
-.trigger:
-; remove the timer from the queue
+	ld	(iy+TIMER_INTERVAL), hl
+	ld	hl, .itimer_sys
+	ld	(iy+TIMER_SIGEV), hl
+	ld	a, (iy-KERNEL_THREAD_ITIMER+KERNEL_THREAD_PID)
+	ld	(iy+TIMER_INTERNAL_THREAD), a
 	ld	hl, ktimer_queue
-	call	kqueue.remove_head
-; switch based on what we should do
-	ld	a, (iy+TIMER_EV_SIGNOTIFY)
-	dec	a
-	ret	m
-	jr	nz, .crystal_thread
-.crystal_signal:
-	ld	hl, (iy+TIMER_EV_NOTIFY_THREAD)
-	ld	c, (hl)
-	ld	a, (iy+TIMER_EV_SIGNO)
-	jp	signal.kill
-.crystal_thread:
-; callback
-	push	iy
-	push	bc
-	pea	iy+TIMER_EV_VALUE
-	call	.crystal_call
-	pop	hl
-	pop	bc
-	pop	iy
-	ret
-.crystal_call:
-	ld	hl, (iy+TIMER_EV_NOTIFY_FUNCTION)
-	ld	iy, (iy+TIMER_EV_NOTIFY_THREAD)
-	xor	a, a
-	jp	(hl)
-
-
-	
-;        *  timer_create(): Create a timer.
-; 
-;        *  timer_settime(2): Arm (start) or disarm (stop) a timer.
-; 
-;        *  timer_gettime(2): Fetch the time remaining until the next
-;           expiration of a timer, along with the interval setting of the
-;           timer.
-; 
-;        *  timer_getoverrun(2): Return the overrun count for the last timer
-;           expiration.
-; 
-;        *  timer_delete(2): Disarm and delete a timer.
-
-
-; sysdef	_timer_create
-; 
-; .create_x:
-; ; int timer_create(clockid_t clockid, struct sigevent *restrict sevp, timer_t *restrict timerid)
-; ; we have hl as the clockid wanted, de is sigevent pointer, and timerid is the buffer were we will store id
-; 	push	hl
-; 	push	de
-; 	push	bc
-; 	ld	hl, kmem_cache_s16
-; 	call	kmem.cache_alloc
-; 	pop	de
-; 	pop	bc
-; 	ex	(sp), hl
-; 	pop	iy
-; ; iy is now the memory structure, hl is still clock id
-; 	ld	a, l
-; 	ld	hl, -ENOMEM
-; 	ret	c
-; 	ld	hl, -ENOTSUP
-; 	cp	a, CLOCK_MONOTONIC
-; 	ret	nz
-; 	ex	de, hl
-; 	ld	(hl), iy
-; 	ld	(iy+TIMER_SIGEV), bc
-; 	
-; .__create_error:
-; 	
-; 
-; .sanitize_sigev:
-; ; check sigev_notify, sigev_signo and sigev_notify_thread_id
-; 	ld	a, (de)
-; 	cp	a, 
-; 
-; 
-; 
-; ; iy = timer structure
-; 	di
-; 	ld	hl, (iy+TIMER_COUNT)
-; 	ld	a, h
-; 	or	a, l
-; 	jr	nz, .create_failed
-; 	ld	(iy+TIMER_COUNT), de
-; 	add	hl, de
-; 	or	a, a
-; 	sbc	hl, de
-; 	jr	z, .create_default
-; 	lea	de, iy+TIMER_SIGEV
-; 	ld	bc, SIGEV_SIZE
-; 	ldir
-; 	jr	.create_arm
-; .create_default:
-; ; direct thread waking is the *faster* method than a costly SIGCONT
-; 	ld	(iy+TIMER_EV_SIGNOTIFY), SIGEV_THREAD
-; 	ld	hl, .notify_default
-; 	ld	(iy+TIMER_EV_NOTIFY_FUNCTION), hl
-; .create_arm:
-; 	ld	hl, ktimer_queue
-; 	call	kqueue.insert_head
-; ; will meet "or a, a" (line 23), so carry is null
-; 	ei
-; 	sbc	hl, hl
-; 	ret
-; .create_failed:
-; 	ld	a, EINVAL
-; 	jp	user_error
+	jp	kqueue.insert_head

@@ -167,6 +167,50 @@ kinterrupt:
 	ei
 	ret
 
+.irq_do_timer:
+; if interval is not zero, reload the count value with interval value
+	ld	hl, (iy+TIMER_INTERVAL)
+	ld	a, l
+	or	a, h
+	jr	nz, .irq_process_timer
+; remove the timer from the queue
+	ld	hl, ktimer_queue
+	call	kqueue.remove_head
+	or	a, a
+	sbc	hl, hl
+.irq_process_timer:
+	ld	(iy+TIMER_COUNT), l
+	ld	(iy+TIMER_COUNT+1), h
+; now we will read the sigev and switch based on it
+	ld	ix, (iy+TIMER_SIGEV)
+	ld	a, (ix+SIGEV_SIGNOTIFY)
+	dec	a
+	ret	m
+	jr	nz, .irq_timer_thread
+.irq_timer_signal:
+	push	iy
+	push	bc
+	ld	l, (iy+TIMER_INTERNAL_THREAD)
+	ld	e, (ix+SIGEV_SIGNO)
+	call	signal.kill
+	pop	bc
+	pop	iy
+	ret
+.irq_timer_thread:
+; callback
+	push	iy
+	push	bc
+	ld	hl, (ix+SIGEV_VALUE)
+	push	hl
+	ld	hl, (ix+SIGEV_NOTIFY_FUNCTION)
+	call	.irq_timer_thread_call
+	pop	hl
+	pop	bc
+	pop	iy
+	ret
+.irq_timer_thread_call:
+	jp	(hl)
+
 .irq_handler:
 	pop	hl
 if	CONFIG_PERF_COUNTER
@@ -300,7 +344,7 @@ end	if
 	dec	(iy+TIMER_COUNT)
 	jr	nz, .irq_crystal_next
 	dec	(iy+TIMER_COUNT+1)
-	call	z, ktimer.trigger
+	call	z, .irq_do_timer
 .irq_crystal_next:
 	ld	iy, (iy+TIMER_NEXT)
 	djnz	.irq_crystal_timers

@@ -52,22 +52,6 @@ virtual	at 0
 ; the real itimer within thread
 	KERNEL_THREAD_ITIMER:			rb	16	; timer structure
 	
-	
-; compat for now
-	define	THREAD_COMPAT			1
-; timer ;
-	KERNEL_THREAD_TIMER:
-	KERNEL_THREAD_TIMER_FLAGS:		rb	1
-	KERNEL_THREAD_TIMER_NEXT:		rb	3
-	KERNEL_THREAD_TIMER_PREVIOUS:		rb	3
-	KERNEL_THREAD_TIMER_COUNT:		rb	3
-	KERNEL_THREAD_TIMER_SIGEVENT:
-	KERNEL_THREAD_TIMER_EV_SIGNOTIFY:	rb	1
-	KERNEL_THREAD_TIMER_EV_SIGNO:		rb	1
-	KERNEL_THREAD_TIMER_EV_VALUE:		rb	3
-	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION:	rb	3
-	KERNEL_THREAD_TIMER_EV_NOTIFY_ATTRIBUTE:rb	3
-	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD:	rb	3
 assert $ < KERNEL_THREAD_TLS_SIZE
 end	virtual
 
@@ -260,7 +244,6 @@ kthread:
 	inc	(ix+KERNEL_VFS_INODE_REFERENCE)
 .__create_copy_signal:
 ; sig parameter mask ;
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 	ld	de, (iy+KERNEL_THREAD_SIGNAL_VECTOR)
 	ld	hl, signal.default_handler
 	ld	bc, KERNEL_THREAD_SIGNAL_VECTOR_SIZE
@@ -442,7 +425,6 @@ _clone:=$
 	ld	(iy+KERNEL_THREAD_SUID), SUPER_USER
 	ld	(iy+KERNEL_THREAD_RUID), SUPER_USER
 ; sig parameter mask ;
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD), iy
 ; set exit signal
 	ld	c, (ix+CLONE_EXIT_SIGNAL)
 	ld	(iy+KERNEL_THREAD_EXIT_SIGNAL), c
@@ -861,7 +843,7 @@ sysdef	_usleep
 ; we are back with interrupt
 ; this one is risky with interrupts, so disable them the time to do it
 	di
-	ld	hl, (iy+KERNEL_THREAD_TIMER_COUNT)
+	ld	hl, (iy+KERNEL_THREAD_ITIMER+TIMER_COUNT)
 	ld	a, l
 	or	a, h
 	ret	z
@@ -874,13 +856,13 @@ sysdef	_usleep
 	inc	hl
 	ld	l, e
 	ex	de, hl
-	lea	iy, iy+KERNEL_THREAD_TIMER
+	lea	iy, iy+KERNEL_THREAD_ITIMER
 	ld	hl, ktimer_queue
 	call	kqueue.remove_head
-	lea	iy, iy-KERNEL_THREAD_TIMER
 	or	a, a
 	sbc	hl, hl
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
+	ld	(iy+TIMER_COUNT), l
+	ld	(iy+TIMER_COUNT+1), h
 	ei
 ; de is time left, so get ms left
 	ld	l, d
@@ -1080,7 +1062,7 @@ sysdef	_pause
 	ld	(hl), $00
 	ld	hl, KERNEL_INTERRUPT_IPT
 	ld	(hl), $80
-	jr	task_switch_running
+	jp	task_switch_running
 
 .yield		= kscheduler.yield
 task_yield	= kscheduler.yield
@@ -1096,7 +1078,7 @@ task_switch_paused:
 	ld	l, (iy+KERNEL_THREAD_PRIORITY)
 	call	kqueue.remove
 	ld	l, kthread_queue_retire and $FF
-	jr	kqueue.insert_head
+	jp	kqueue.insert_head
 
 ; from TASK_READY to TASK_ZOMBIE
 ; may break if not in this state before
@@ -1138,15 +1120,20 @@ task_switch_sleep_ms:
 	dec	hl
 	inc	h
 	ld	l, e
-; add timer
-	ld	(iy+KERNEL_THREAD_TIMER_COUNT), hl
-	ld	(iy+KERNEL_THREAD_TIMER_EV_SIGNOTIFY), SIGEV_THREAD
-	ld	hl, ktimer.notify_default
-	ld	(iy+KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION), hl
-	lea	iy, iy+KERNEL_THREAD_TIMER
+	ld	a, (iy+KERNEL_THREAD_PID)
+	lea	iy, iy+KERNEL_THREAD_ITIMER
+; write the itimer value
+	ld	(iy+TIMER_COUNT), l
+	ld	(iy+TIMER_COUNT+1), h
+	or	a, a
+	sbc	hl, hl
+	ld	(iy+TIMER_INTERVAL), hl
+	ld	hl, ktimer.itimer_sleep
+	ld	(iy+TIMER_SIGEV), hl
+	ld	(iy+TIMER_INTERNAL_THREAD), a
 	ld	hl, ktimer_queue
 	call	kqueue.insert_head
-	lea	iy, iy-KERNEL_THREAD_TIMER
+	lea	iy, iy-KERNEL_THREAD_ITIMER
 	
 ; from TASK_READY to TASK_INTERRUPTIBLE
 task_switch_interruptible:
