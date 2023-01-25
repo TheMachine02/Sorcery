@@ -92,6 +92,9 @@ sysdef	_timer_create
 	ld	(hl), iy
 	ld	(iy+TIMER_SIGEV), ix
 	ld	(iy+TIMER_HASH), TIMER_REDZONE
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+	ld	(iy+TIMER_INTERNAL_THREAD), a
 	or	a, a
 	sbc	hl, hl
 	ret
