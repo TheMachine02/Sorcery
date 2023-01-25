@@ -197,6 +197,7 @@ kmem:
 	pop	ix
 	or	a, a
 	ret
+
 .cache_warning:
 	push	ix
 	push	hl
@@ -207,6 +208,7 @@ kmem:
 	pop	hl
 	pop	ix
 	ret
+
 .cache_overflow_warning:
  db	$01, KERNEL_WARNING, "warning: slab cache outgrew 32KB reserved memory",10,0
 

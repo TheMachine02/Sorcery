@@ -329,6 +329,9 @@ console:
 	ld	hl, .TOP
 	call	.check_builtin
 	jp	z, .top
+	ld	hl, .HELP
+	call	.check_builtin
+	jp	z, .help
 ; try to exec the program in /bin/xxxx
 ; bc = string size
 	ld	hl, console_line
@@ -519,6 +522,12 @@ console:
 	ld	sp, hl
 	ld	hl, console_line
 	ld	bc, 66
+	call	tty.phy_write
+	jp	.prompt
+
+.help:
+	ld	hl, .HELP_STR
+	ld	bc, 76
 	call	tty.phy_write
 	jp	.prompt
 
@@ -856,6 +865,8 @@ console:
  db 6, "dmesg",0
 .TOP:
  db 4, "top",0
+.HELP:
+ db 5, "help",0
  
 .BINARY_PATH:
  db "/bin/",0
@@ -863,6 +874,10 @@ console:
 .BIN_ARGV:
  dl	NULL
 
+.HELP_STR:
+ db "available command:", 10
+ db "echo,ls,exit,top,uptime,color,dmesg,free,reboot,shutdown", 10, 0
+ 
 .FREE_STR:
  db "available memory: %03d KiB",10 ; 26
  db "used: %03d KiB", 10

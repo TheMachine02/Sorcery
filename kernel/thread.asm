@@ -49,6 +49,10 @@ virtual	at 0
 	KERNEL_THREAD_WORKING_DIRECTORY:	rb	3	; pointer to the directory inode
 	KERNEL_THREAD_ROOT_DIRECTORY:		rb	3	; pointer to the root directory
 	KERNEL_THREAD_FILE_DESCRIPTOR:		rb	3	; pointer to file descriptor table
+; the real itimer within thread
+	KERNEL_THREAD_ITIMER:			rb	16	; timer structure
+	
+	
 ; compat for now
 	define	THREAD_COMPAT			1
 ; timer ;

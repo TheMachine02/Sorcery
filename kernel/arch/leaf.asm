@@ -20,6 +20,7 @@ leaf:
 
 .exec_dma:
 ; iy is pointer to start of the file (either through mmap or direct flash reading)
+; in ideal settings, vmalloc should detect mmap memory and try to reuse it directly with direct maping
 ; NOTE : return carry set if an error occured
 	call	.check_file
 	scf
