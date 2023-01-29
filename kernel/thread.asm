@@ -1068,6 +1068,9 @@ sysdef	_pause
 task_yield	= kscheduler.yield
 task_schedule	= kscheduler.schedule
 
+; switching ACTIVE to other state will almost always will be followed by a proprer task_yield if needed
+; however, switching to ACTIVE need to set the reschedule bit in order to proprely take account of the new thread emerging
+
 ; from TASK_READY to TASK_UNINTERRUPTIBLE
 ; may break if not in this state before
 ; need to be fully atomic
@@ -1150,6 +1153,8 @@ task_switch_interruptible:
 ; may break if not in this state before
 ; need to be fully atomic
 task_switch_running:
+	ld	hl, KERNEL_INTERRUPT_IPT
+	ld	(hl), $80
 	ld	(iy+KERNEL_THREAD_STATUS), TASK_READY
 	ld	hl, kthread_queue_retire
 ; we can consider removing the head of the queue here and update head pointer, since retire order doesn't matter ;
