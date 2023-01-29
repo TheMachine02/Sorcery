@@ -186,30 +186,47 @@ kinterrupt:
 	ld	a, (ix+SIGEV_SIGNOTIFY)
 	dec	a
 	ret	m
-	jr	nz, .irq_timer_thread
+; 	jr	nz, .irq_timer_thread
 .irq_timer_signal:
-	push	iy
+; if the timer signal is still pending, that mean we've got an overrun occured
 	push	bc
+	push	iy
+	call	signal.mask_operation
+	inc	hl
+	inc	hl
+	inc	hl
+; check if the bit is already set
+	and	a, (hl)
+; if set, increase overrun and exit already	
+	jr	nz, .irq_timer_overrun
+	pop	iy
+	push	iy
 	ld	l, (iy+TIMER_INTERNAL_THREAD)
 	ld	e, (ix+SIGEV_SIGNO)
 	call	signal.kill
-	pop	bc
 	pop	iy
-	ret
-.irq_timer_thread:
-; callback
-	push	iy
-	push	bc
-	ld	hl, (ix+SIGEV_VALUE)
-	push	hl
-	ld	hl, (ix+SIGEV_NOTIFY_FUNCTION)
-	call	.irq_timer_thread_call
-	pop	hl
 	pop	bc
-	pop	iy
 	ret
-.irq_timer_thread_call:
-	jp	(hl)
+.irq_timer_overrun:
+	pop	iy
+	inc	(iy+TIMER_INTERNAL_OVERRUN)
+	pop	bc
+	ret
+; .irq_timer_thread:
+; ; TODO : not valid per se since we do not wake the thread and automatically update our state information
+; ; callback
+; 	push	iy
+; 	push	bc
+; 	ld	hl, (ix+SIGEV_VALUE)
+; 	push	hl
+; 	ld	hl, (ix+SIGEV_NOTIFY_FUNCTION)
+; 	call	.irq_timer_thread_call
+; 	pop	hl
+; 	pop	bc
+; 	pop	iy
+; 	ret
+; .irq_timer_thread_call:
+; 	jp	(hl)
 
 .irq_handler:
 	pop	hl
@@ -297,11 +314,6 @@ end	if
 	ld	c, a
 ; mask operation destroy b but not c
 	call	signal.mask_operation
-; ; save the signal status (0 is blocked, 1 is unblocked)
-; 	ld	b, a
-; 	and	a, (hl)
-; 	ld	(iy+KERNEL_THREAD_SIGNAL_SAVE), a
-; 	ld	a, b
 	cpl
 ; block current signal
 	and	a, (hl)

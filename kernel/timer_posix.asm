@@ -98,3 +98,27 @@ sysdef	_timer_create
 	or	a, a
 	sbc	hl, hl
 	ret
+
+sysdef	_timer_getoverrun
+; int timer_getoverrun(timer_t timerid);
+	ld	bc, $D07FFF
+	or	a, a
+	sbc	hl, bc
+	ex	de, hl
+	ld	hl, -EINVAL
+	ret	c
+	ex	de, hl
+	add	hl, bc
+	push	hl
+	pop	iy
+	ld	a, (iy+TIMER_HASH)
+	ld	c, TIMER_REDZONE
+	sub	a, c
+	ex	de, hl
+	scf
+	ret	nz
+	di
+	or	a, a
+	sbc	hl, hl
+	ld	l, (iy+TIMER_INTERNAL_OVERRUN)
+	ret

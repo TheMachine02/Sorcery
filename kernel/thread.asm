@@ -1127,7 +1127,8 @@ task_switch_sleep_ms:
 	ld	(iy+TIMER_COUNT+1), h
 	or	a, a
 	sbc	hl, hl
-	ld	(iy+TIMER_INTERVAL), hl
+	ld	(iy+TIMER_INTERVAL), l
+	ld	(iy+TIMER_INTERVAL+1), h
 	ld	hl, ktimer.itimer_sleep
 	ld	(iy+TIMER_SIGEV), hl
 	ld	(iy+TIMER_INTERNAL_THREAD), a

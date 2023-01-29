@@ -21,9 +21,10 @@ virtual	at 0
 	TIMER_HASH:			rb	1
 	TIMER_NEXT:			rb	3
 	TIMER_PREVIOUS:			rb	3
-	TIMER_INTERVAL:			rb	3
+	TIMER_INTERVAL:			rb	2
 	TIMER_COUNT:			rb	2
 	TIMER_INTERNAL_THREAD:		rb	1	; owner of the timer, pid
+	TIMER_INTERNAL_OVERRUN:		rb	1	; overrun count (in case of delayed trigger)
 ; here we have a pointer to a sigevent structure
 	TIMER_SIGEV:			rb	3
 end	virtual
@@ -100,12 +101,12 @@ sysdef	_setitimer
 	push	bc
 	pop	de
 	lea	hl, iy+TIMER_INTERVAL
-	ld	bc, 5
+	ld	bc, 4
 	ldir
 	pop	de
 	lea	hl, iy+TIMER_INTERVAL
 	ex	de, hl
-	ld	c, 5
+	ld	c, 4
 	ldir
 	ld	a, (iy-KERNEL_THREAD_ITIMER+KERNEL_THREAD_PID)
 	ld	(iy+TIMER_INTERNAL_THREAD), a
@@ -122,7 +123,8 @@ sysdef	_setitimer
 	sbc	hl, hl
 	ld	(iy+TIMER_COUNT), l
 	ld	(iy+TIMER_COUNT+1), h
-	ld	(iy+TIMER_INTERVAL), hl
+	ld	(iy+TIMER_INTERVAL), l
+	ld	(iy+TIMER_INTERVAL+1), h
 	ret 
 
 ; TODO : convert ticks from direct timer value to actual itimerval structure
@@ -143,7 +145,7 @@ sysdef	_getitimer
 ; to keep a consistant reading, disable interrupts
 	di
 	lea	hl, iy+TIMER_INTERVAL + KERNEL_THREAD_ITIMER
-	ld	bc, 5
+	ld	bc, 4
 	ldir
 	or	a, a
 	sbc	hl, hl
@@ -186,7 +188,8 @@ end if
 	ld	(iy+TIMER_COUNT+1), h
 	or	a, a
 	sbc	hl, hl
-	ld	(iy+TIMER_INTERVAL), hl
+	ld	(iy+TIMER_INTERVAL), l
+	ld	(iy+TIMER_INTERVAL+1), h
 	ld	hl, .itimer_sys
 	ld	(iy+TIMER_SIGEV), hl
 	ld	a, (iy-KERNEL_THREAD_ITIMER+KERNEL_THREAD_PID)
