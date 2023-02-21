@@ -13,22 +13,7 @@ uadmin : acess to flash unlock
 * use thread group id share by a parent and all its children
 * uid
 
-* thread cleanup :
-- clean the timer fixed data inside the thread and instead create a timer framework detached from thread TLS. Function like alarm() or sleep() just use a 'simplified' timer attached to thread TLS, we don't need sigevent for exemple, but just following >>> this is the "interval" timer
-
-define	KERNEL_THREAD_TIMER			0
-define	KERNEL_THREAD_TIMER_FLAGS		0
-define	KERNEL_THREAD_TIMER_NEXT		1
-define	KERNEL_THREAD_TIMER_PREVIOUS		4
-define	KERNEL_THREAD_TIMER_COUNT		7
-define	KERNEL_THREAD_TIMER_EV_SIGNOTIFY	10
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_FUNCTION	11
-define	KERNEL_THREAD_TIMER_EV_NOTIFY_THREAD	14
-(total 17 bytes, remove 5 bytes)
-
 - execve cleanup fd & clean all memory allocated to the thread (except stack which is reset)
 
 * timer cleanup
-- allocate memory for timer data
-- push those data correclty into the queue
 - better function / correct function

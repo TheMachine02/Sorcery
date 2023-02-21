@@ -16,6 +16,7 @@ end	virtual
 
 define	TIMER_SIZE			16
 define	TIMER_REDZONE			$CF
+; for thread itimer, redzone stay NULL
 virtual	at 0
 	TIMER:
 	TIMER_HASH:			rb	1
@@ -210,7 +211,38 @@ end if
 ; 
 ;        *  timer_delete(2): Disarm and delete a timer.
 
+.drop:
+	ld	hl, ktimer_queue
+	ld	b, (hl)
+	inc	b
+	ret	z
+	tsti
+	inc	hl
+; this is first timer
+	ld	iy, (hl)
+	ld	hl, (kthread_current)
+	ld	a, (hl)
+.__drop_timer_loop:
+	cp	a, (iy+TIMER_INTERNAL_THREAD)
+	jr	nz, .__drop_timer_next
+; we can cleanup the timer right there
+	push	af
+	ld	hl, ktimer_queue
+	call	kqueue.remove_head
+	lea	hl, iy+0
+assert	TIMER_HASH = 0
+	ld	a, TIMER_REDZONE
+	sub	a, (hl)
+	call	z, kmem.cache_free
+	pop	af
+.__drop_timer_next:
+	ld	iy, (iy+TIMER_NEXT)
+	djnz	.__drop_timer_loop
+	rsti
+	ret
+
 sysdef	_timer_delete
+.delete_posix:
 ; int timer_delete(timer_t timerid);
 ; check we have a RAM adress
 	ld	bc, $D07FFF
@@ -233,16 +265,14 @@ sysdef	_timer_delete
 ; disarm the timer & then delete it
 	ld	hl, ktimer_queue
 	call	kqueue.remove_head
-	ld	hl, (iy+TIMER_SIGEV)
-	or	a, a
-	sbc	hl, bc
-	add	hl, bc
-	call	nz, kmem.cache_free
+	lea	hl, iy+0
+	call	kmem.cache_free
 	or	a, a
 	sbc	hl, hl
 	ret
 	
 sysdef	_timer_create
+.create_posix:
 ; int timer_create(clockid_t clockid, struct sigevent *restrict sevp, timer_t *restrict timerid)
 ; we have hl as the clockid wanted, de is sigevent pointer, and timerid is the buffer were we will store id
 	ld	a, l
@@ -299,6 +329,7 @@ sysdef	_timer_create
 	ret
 
 sysdef	_timer_getoverrun
+.overrun_posix:
 ; int timer_getoverrun(timer_t timerid);
 	ld	bc, $D07FFF
 	or	a, a

@@ -186,7 +186,7 @@ kinterrupt:
 	ld	a, (ix+SIGEV_SIGNOTIFY)
 	dec	a
 	ret	m
-; 	jr	nz, .irq_timer_thread
+	jr	nz, .irq_timer_thread
 .irq_timer_signal:
 ; if the timer signal is still pending, that mean we've got an overrun occured
 	push	bc
@@ -212,21 +212,20 @@ kinterrupt:
 	inc	(iy+TIMER_INTERNAL_OVERRUN)
 	pop	bc
 	ret
-; .irq_timer_thread:
-; ; TODO : not valid per se since we do not wake the thread and automatically update our state information
-; ; callback
-; 	push	iy
-; 	push	bc
-; 	ld	hl, (ix+SIGEV_VALUE)
-; 	push	hl
-; 	ld	hl, (ix+SIGEV_NOTIFY_FUNCTION)
-; 	call	.irq_timer_thread_call
-; 	pop	hl
-; 	pop	bc
-; 	pop	iy
-; 	ret
-; .irq_timer_thread_call:
-; 	jp	(hl)
+.irq_timer_thread:
+; wake the thread corresponding to the timer, and it will be processed later, we also need to push down the routine called with attribute
+; if already on stack, increase overrun
+	push	iy
+	ld	hl, kthread_pid_map + 1
+	ld	l, (iy+TIMER_INTERNAL_THREAD)
+	ld	iy, (hl)
+	call	task_switch_running
+; now we need to push down the routine in the thread stack, with parameter value
+; push down within thread stack
+; copy stack frame to an new stack frame higher, push correct return adress and
+; TODO
+	pop	iy
+	ret
 
 .irq_handler:
 	pop	hl

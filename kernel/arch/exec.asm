@@ -88,7 +88,7 @@ execve:
 ; various thread reset
 ; various close on exec etc
 ; reset attached timers
-;	call	ktimer.drop
+	call	ktimer.drop
 ; check for fd with close on exec flags and close them
 ; close all fd
 	ld	ix, (iy+KERNEL_THREAD_FILE_DESCRIPTOR)
